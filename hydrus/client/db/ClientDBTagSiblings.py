@@ -5,11 +5,12 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaster
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
@@ -34,7 +35,7 @@ def GenerateTagSiblingsLookupCacheTableNames( service_id ):
     
     return ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name )
     
-class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
+class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags ):
         
@@ -47,7 +48,7 @@ class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
         self._service_ids_to_applicable_service_ids = None
         self._service_ids_to_interested_service_ids = None
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client tag siblings', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client tag siblings', cursor )
         
     
     def _GenerateApplicationDicts( self ):
@@ -69,14 +70,82 @@ class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        index_generation_tuples = [
-            ( 'tag_siblings', [ 'service_id', 'good_tag_id' ], False ),
-            ( 'tag_sibling_petitions', [ 'service_id', 'good_tag_id' ], False ),
+        index_generation_dict = {}
+        
+        index_generation_dict[ 'tag_siblings' ] = [
+            ( [ 'service_id', 'good_tag_id' ], False, 420 )
         ]
         
-        return index_generation_tuples
+        index_generation_dict[ 'tag_sibling_petitions' ] = [
+            ( [ 'service_id', 'good_tag_id' ], False, 420 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'main.tag_siblings' : ( 'CREATE TABLE {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
+            'main.tag_sibling_petitions' : ( 'CREATE TABLE {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
+            'main.tag_sibling_application' : ( 'CREATE TABLE {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
+        }
+        
+    
+    def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
+        
+        ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
+        
+        index_generation_dict = {}
+        
+        index_generation_dict[ cache_actual_tag_siblings_lookup_table_name ] = [
+            ( [ 'ideal_tag_id' ], False, 414 )
+        ]
+        
+        index_generation_dict[ cache_ideal_tag_siblings_lookup_table_name ] = [
+            ( [ 'ideal_tag_id' ], False, 414 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetServiceTableGenerationDict( self, service_id ) -> dict:
+        
+        ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
+        
+        return {
+            cache_actual_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 ),
+            cache_ideal_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 )
+        }
+        
+    
+    def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
+        
+        return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+    
+    def _RepairRepopulateTables( self, repopulate_table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+        
+        for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
+            
+            table_generation_dict = self._GetServiceTableGenerationDict( service_id )
+            
+            this_service_table_names = set( table_generation_dict.keys() )
+            
+            this_service_needs_repopulation = len( this_service_table_names.intersection( repopulate_table_names ) ) > 0
+            
+            if this_service_needs_repopulation:
+                
+                self._service_ids_to_applicable_service_ids = None
+                self._service_ids_to_interested_service_ids = None
+                
+                self.Regen( ( service_id, ) )
+                
+                cursor_transaction_wrapper.CommitAndBegin()
+                
+            
         
     
     def AddTagSiblings( self, service_id, pairs ):
@@ -97,14 +166,6 @@ class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
             
             del self._service_ids_to_display_application_status[ service_id ]
             
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE tag_siblings ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
-        self._Execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
-        
-        self._Execute( 'CREATE TABLE tag_sibling_application ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );' )
         
     
     def DeleteTagSiblings( self, service_id, pairs ):
@@ -195,16 +256,19 @@ class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
     
     def Generate( self, tag_service_id ):
         
-        self._service_ids_to_applicable_service_ids = None
-        self._service_ids_to_interested_service_ids = None
+        table_generation_dict = self._GetServiceTableGenerationDict( tag_service_id )
         
-        ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
+        for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
+            
+            self._Execute( create_query_without_name.format( table_name ) )
+            
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_actual_tag_siblings_lookup_table_name ) )
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );'.format( cache_ideal_tag_siblings_lookup_table_name ) )
+        index_generation_dict = self._GetServiceIndexGenerationDict( tag_service_id )
         
-        self._CreateIndex( cache_actual_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
-        self._CreateIndex( cache_ideal_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
+        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
+            
+            self._CreateIndex( table_name, columns, unique = unique )
+            
         
         self._Execute( 'INSERT OR IGNORE INTO tag_sibling_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( tag_service_id, 0, tag_service_id ) )
         
@@ -333,17 +397,6 @@ class ClientDBTagSiblings( HydrusDBModule.HydrusDBModule ):
         
         # tags to lookup
         self._Execute( 'INSERT OR IGNORE INTO {} ( tag_id ) SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( results_table_name, ideal_tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'tag_siblings',
-            'tag_sibling_petitions',
-            'tag_sibling_application'
-        ]
-        
-        return expected_table_names
         
     
     def GetIdeal( self, display_type, tag_service_id, tag_id ) -> int:

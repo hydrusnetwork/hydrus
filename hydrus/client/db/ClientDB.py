@@ -1137,32 +1137,6 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheCombinedFilesDisplayMappingsRegeneratePending( tag_service_id, status_hook = status_hook )
         
     
-    def _CacheLocalHashIdsGenerate( self ):
-        
-        self.modules_hashes_local_cache.ClearCache()
-        
-        self._controller.frame_splash_status.SetSubtext( 'reading local file data' )
-        
-        local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
-        
-        BLOCK_SIZE = 10000
-        num_to_do = len( local_hash_ids )
-        
-        for ( i, block_of_hash_ids ) in enumerate( HydrusData.SplitListIntoChunks( local_hash_ids, BLOCK_SIZE ) ):
-            
-            self._controller.frame_splash_status.SetSubtext( 'caching local file data {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
-            
-            self.modules_hashes_local_cache.AddHashIdsToCache( block_of_hash_ids )
-            
-        
-        table_names = self.modules_hashes_local_cache.GetExpectedTableNames()
-        
-        for table_name in table_names:
-            
-            self.modules_db_maintenance.AnalyzeTable( table_name )
-            
-        
-    
     def _CacheLocalTagIdsGenerate( self ):
         
         # update this to be a thing for the self.modules_tags_local_cache, maybe give it the ac cach as a param, or just boot that lad with it
@@ -1189,7 +1163,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_tags_local_cache.AddTagIdsToCache( block_of_tag_ids )
             
         
-        table_names = self.modules_tags_local_cache.GetExpectedTableNames()
+        table_names = self.modules_tags_local_cache.GetExpectedInitialTableNames()
         
         for table_name in table_names:
             
@@ -11668,19 +11642,21 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self.modules_services, self.modules_texts )
+        
+        self._modules.append( self.modules_files_storage )
+        
+        #
+        
         self.modules_tags_local_cache = ClientDBDefinitionsCache.ClientDBCacheLocalTags( self._c, self.modules_tags )
         
         self._modules.append( self.modules_tags_local_cache )
         
-        self.modules_hashes_local_cache = ClientDBDefinitionsCache.ClientDBCacheLocalHashes( self._c, self.modules_hashes )
+        self.modules_hashes_local_cache = ClientDBDefinitionsCache.ClientDBCacheLocalHashes( self._c, self.modules_hashes, self.modules_services, self.modules_files_storage )
         
         self._modules.append( self.modules_hashes_local_cache )
         
         #
-        
-        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self.modules_services, self.modules_texts )
-        
-        self._modules.append( self.modules_files_storage )
         
         self.modules_mappings_storage = ClientDBMappingsStorage.ClientDBMappingsStorage( self._c, self.modules_services )
         
@@ -13244,7 +13220,7 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_text_1', message )
             self._controller.frame_splash_status.SetSubtext( message )
             
-            self._CacheLocalHashIdsGenerate()
+            self.modules_hashes_local_cache.Repopulate()
             
         finally:
             
@@ -13682,6 +13658,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CacheSpecificMappingsGenerate( file_service_id, tag_service_id )
                 
+                self._cursor_transaction_wrapper.CommitAndBegin()
+                
             
             for tag_service_id in tag_service_ids:
                 
@@ -13703,6 +13681,8 @@ class DB( HydrusDB.HydrusDB ):
                 self._CacheCombinedFilesMappingsDrop( tag_service_id )
                 
                 self._CacheCombinedFilesMappingsGenerate( tag_service_id )
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
                 
             
             if tag_service_key is None:
@@ -13889,220 +13869,22 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepairDB( self ):
+    def _RepairDB( self, version ):
         
         # migrate most of this gubbins to the new modules system, and HydrusDB tbh!
         
         self._controller.frame_splash_status.SetText( 'checking database' )
         
-        ( version, ) = self._Execute( 'SELECT version FROM version;' ).fetchone()
-        
-        HydrusDB.HydrusDB._RepairDB( self )
+        HydrusDB.HydrusDB._RepairDB( self, version )
         
         self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
         
         tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
         file_service_ids = self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
         
-        # master
-        
-        existing_master_tables = self._STS( self._Execute( 'SELECT name FROM external_master.sqlite_master WHERE type = ?;', ( 'table', ) ) )
-        
-        main_master_tables = set()
-        
-        main_master_tables.add( 'hashes' )
-        main_master_tables.add( 'namespaces' )
-        main_master_tables.add( 'subtags' )
-        main_master_tables.add( 'tags' )
-        main_master_tables.add( 'texts' )
-        
-        if version >= 396:
-            
-            main_master_tables.add( 'labels' )
-            main_master_tables.add( 'notes' )
-            
-        
-        missing_main_tables = main_master_tables.difference( existing_master_tables )
-        
-        if len( missing_main_tables ) > 0:
-            
-            message = 'On boot, some required master tables were missing. This could be due to the entire \'master\' database file being missing or due to some other problem. Critical data is missing, so the client cannot boot! The exact missing tables were:'
-            message += os.linesep * 2
-            message += os.linesep.join( missing_main_tables )
-            message += os.linesep * 2
-            message += 'The boot will fail once you click ok. If you do not know what happened and how to fix this, please take a screenshot and contact hydrus dev.'
-            
-            self._controller.SafeShowCriticalMessage( 'Error', message )
-            
-            raise Exception( 'Master database was invalid!' )
-            
-        
-        if 'local_hashes' not in existing_master_tables:
-            
-            message = 'On boot, the \'local_hashes\' tables was missing.'
-            message += os.linesep * 2
-            message += 'If you wish, click ok on this message and the client will recreate it--empty, without data--which should at least let the client boot. The client can repopulate the table in through the file maintenance jobs, the \'regenerate non-standard hashes\' job. But if you want to solve this problem otherwise, kill the hydrus process now.'
-            message += os.linesep * 2
-            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-            
-            BlockingSafeShowMessage( message )
-            
-            self._Execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-            
-        
-        self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
-        self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
-        self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
-        
-        # mappings
-        
-        existing_mapping_tables = self._STS( self._Execute( 'SELECT name FROM external_mappings.sqlite_master WHERE type = ?;', ( 'table', ) ) )
-        
-        main_mappings_tables = set()
-        
-        for service_id in tag_service_ids:
-            
-            main_mappings_tables.update( ( name.split( '.' )[1] for name in ClientDBMappingsStorage.GenerateMappingsTableNames( service_id ) ) )
-            
-        
-        missing_main_tables = sorted( main_mappings_tables.difference( existing_mapping_tables ) )
-        
-        if len( missing_main_tables ) > 0:
-            
-            message = 'On boot, some important mappings tables were missing! This could be due to the entire \'mappings\' database file being missing or some other problem. The tags in these tables are lost. The exact missing tables were:'
-            message += os.linesep * 2
-            message += os.linesep.join( missing_main_tables )
-            message += os.linesep * 2
-            message += 'If you wish, click ok on this message and the client will recreate these tables--empty, without data--which should at least let the client boot. If the affected tag service(s) are tag repositories, you will want to reset the processing cache so the client can repopulate the tables from your cached update files. But if you want to solve this problem otherwise, kill the hydrus process now.'
-            message += os.linesep * 2
-            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-            
-            BlockingSafeShowMessage( message )
-            
-            for service_id in tag_service_ids:
-                
-                self.modules_mappings_storage.GenerateMappingsTables( service_id )
-                
-            
-        
         # caches
         
         existing_cache_tables = self._STS( self._Execute( 'SELECT name FROM external_caches.sqlite_master WHERE type = ?;', ( 'table', ) ) )
-        
-        main_cache_tables = set()
-        
-        main_cache_tables.add( 'shape_vptree' )
-        main_cache_tables.add( 'shape_maintenance_branch_regen' )
-        
-        missing_main_tables = sorted( main_cache_tables.difference( existing_cache_tables ) )
-        
-        if len( missing_main_tables ) > 0:
-            
-            message = 'On boot, some important caches tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. Data related to duplicate file search may have been lost. The exact missing tables were:'
-            message += os.linesep * 2
-            message += os.linesep.join( missing_main_tables )
-            message += os.linesep * 2
-            message += 'If you wish, click ok on this message and the client will recreate these tables--empty, without data--which should at least let the client boot. But if you want to solve this problem otherwise, kill the hydrus process now.'
-            message += os.linesep * 2
-            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-            
-            BlockingSafeShowMessage( message )
-            
-        
-        if version >= 414:
-            
-            # tag display caches
-            
-            tag_display_cache_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
-            
-            missing_tag_sibling_cache_tables = []
-            
-            for tag_service_id in tag_display_cache_service_ids:
-                
-                ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-                
-                actual_missing = cache_actual_tag_siblings_lookup_table_name.split( '.' )[1] not in existing_cache_tables
-                
-                ideal_missing = cache_ideal_tag_siblings_lookup_table_name.split( '.' )[1] not in existing_cache_tables
-                
-                if actual_missing:
-                    
-                    missing_tag_sibling_cache_tables.append( cache_actual_tag_siblings_lookup_table_name )
-                    
-                
-                if ideal_missing:
-                    
-                    missing_tag_sibling_cache_tables.append( cache_ideal_tag_siblings_lookup_table_name )
-                    
-                
-                if actual_missing or ideal_missing:
-                    
-                    self.modules_tag_siblings.Generate( tag_service_id )
-                    
-                
-                self._CreateIndex( cache_actual_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
-                self._CreateIndex( cache_ideal_tag_siblings_lookup_table_name, [ 'ideal_tag_id' ] )
-                
-            
-            if len( missing_tag_sibling_cache_tables ) > 0:
-                
-                missing_tag_sibling_cache_tables.sort()
-                
-                message = 'On boot, some important tag sibling cache tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. All of this data can be regenerated. The exact missing tables were:'
-                message += os.linesep * 2
-                message += os.linesep.join( missing_tag_sibling_cache_tables )
-                message += os.linesep * 2
-                message += 'If you wish, click ok on this message and the client will recreate and repopulate these tables with the correct data. But if you want to solve this problem otherwise, kill the hydrus process now.'
-                message += os.linesep * 2
-                message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-                
-                BlockingSafeShowMessage( message )
-                
-            
-            missing_tag_parent_cache_tables = []
-            
-            for tag_service_id in tag_display_cache_service_ids:
-                
-                ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
-                
-                actual_missing = cache_actual_tag_parents_lookup_table_name.split( '.' )[1] not in existing_cache_tables
-                
-                ideal_missing = cache_ideal_tag_parents_lookup_table_name.split( '.' )[1] not in existing_cache_tables
-                
-                if actual_missing:
-                    
-                    missing_tag_parent_cache_tables.append( cache_actual_tag_parents_lookup_table_name )
-                    
-                
-                if ideal_missing:
-                    
-                    missing_tag_parent_cache_tables.append( cache_ideal_tag_parents_lookup_table_name )
-                    
-                
-                if actual_missing or ideal_missing:
-                    
-                    self.modules_tag_parents.Generate( tag_service_id )
-                    
-                
-                self._CreateIndex( cache_actual_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
-                self._CreateIndex( cache_ideal_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
-                
-            
-            if len( missing_tag_parent_cache_tables ) > 0:
-                
-                missing_tag_parent_cache_tables.sort()
-                
-                message = 'On boot, some important tag parent cache tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. All of this data can be regenerated. The exact missing tables were:'
-                message += os.linesep * 2
-                message += os.linesep.join( missing_tag_parent_cache_tables )
-                message += os.linesep * 2
-                message += 'If you wish, click ok on this message and the client will recreate and repopulate these tables with the correct data. But if you want to solve this problem otherwise, kill the hydrus process now.'
-                message += os.linesep * 2
-                message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-                
-                BlockingSafeShowMessage( message )
-                
-            
         
         mappings_cache_tables = set()
         
@@ -14140,12 +13922,10 @@ class DB( HydrusDB.HydrusDB ):
             
             BlockingSafeShowMessage( message )
             
-            # quick hack
-            self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
-            
             self._RegenerateTagMappingsCache()
             
         
+        # delete this when mappings caches are moved to modules that will auto-heal this!
         for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
             
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
@@ -14161,6 +13941,8 @@ class DB( HydrusDB.HydrusDB ):
                 self._CreateIndex( cache_display_current_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
                 self._CreateIndex( cache_display_pending_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
                 
+            
+            self._cursor_transaction_wrapper.CommitAndBegin()
             
         
         if version >= 424:
@@ -14225,6 +14007,8 @@ class DB( HydrusDB.HydrusDB ):
                     self._CacheTagsDrop( file_service_id, tag_service_id )
                     self._CacheTagsGenerate( file_service_id, tag_service_id )
                     self._CacheTagsPopulate( file_service_id, tag_service_id )
+                    
+                    self._cursor_transaction_wrapper.CommitAndBegin()
                     
                 
             
@@ -16391,7 +16175,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._CacheLocalHashIdsGenerate()
+            self.modules_hashes_local_cache.Repopulate()
             
         
         if version == 447:

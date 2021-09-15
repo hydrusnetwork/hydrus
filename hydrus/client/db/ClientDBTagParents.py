@@ -5,9 +5,10 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 
 from hydrus.client.db import ClientDBDefinitionsCache
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.metadata import ClientTags
@@ -33,7 +34,7 @@ def GenerateTagParentsLookupCacheTableNames( service_id ):
     
     return ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name )
     
-class ClientDBTagParents( HydrusDBModule.HydrusDBModule ):
+class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def __init__(
         self,
@@ -52,17 +53,85 @@ class ClientDBTagParents( HydrusDBModule.HydrusDBModule ):
         self._service_ids_to_applicable_service_ids = None
         self._service_ids_to_interested_service_ids = None
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client tag parents', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client tag parents', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        index_generation_tuples = [
-            ( 'tag_parents', [ 'service_id', 'parent_tag_id' ], False ),
-            ( 'tag_parent_petitions', [ 'service_id', 'parent_tag_id' ], False ),
+        index_generation_dict = {}
+        
+        index_generation_dict[ 'tag_parents' ] = [
+            ( [ 'service_id', 'parent_tag_id' ], False, 420 )
         ]
         
-        return index_generation_tuples
+        index_generation_dict[ 'tag_parent_petitions' ] = [
+            ( [ 'service_id', 'parent_tag_id' ], False, 420 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'main.tag_parents' : ( 'CREATE TABLE {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
+            'main.tag_parent_petitions' : ( 'CREATE TABLE {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
+            'main.tag_parent_application' : ( 'CREATE TABLE {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
+        }
+        
+    
+    def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
+        
+        ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
+        
+        index_generation_dict = {}
+        
+        index_generation_dict[ cache_actual_tag_parents_lookup_table_name ] = [
+            ( [ 'ancestor_tag_id' ], False, 414 )
+        ]
+        
+        index_generation_dict[ cache_ideal_tag_parents_lookup_table_name ] = [
+            ( [ 'ancestor_tag_id' ], False, 414 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetServiceTableGenerationDict( self, service_id ) -> dict:
+        
+        ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
+        
+        return {
+            cache_actual_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 ),
+            cache_ideal_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 )
+        }
+        
+    
+    def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
+        
+        return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+    
+    def _RepairRepopulateTables( self, repopulate_table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+        
+        for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
+            
+            table_generation_dict = self._GetServiceTableGenerationDict( service_id )
+            
+            this_service_table_names = set( table_generation_dict.keys() )
+            
+            this_service_needs_repopulation = len( this_service_table_names.intersection( repopulate_table_names ) ) > 0
+            
+            if this_service_needs_repopulation:
+                
+                self._service_ids_to_applicable_service_ids = None
+                self._service_ids_to_interested_service_ids = None
+                
+                self.Regen( ( service_id, ) )
+                
+                cursor_transaction_wrapper.CommitAndBegin()
+                
+            
         
     
     def AddTagParents( self, service_id, pairs ):
@@ -83,14 +152,6 @@ class ClientDBTagParents( HydrusDBModule.HydrusDBModule ):
             
             del self._service_ids_to_display_application_status[ service_id ]
             
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE tag_parents ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
-        self._Execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
-        
-        self._Execute( 'CREATE TABLE tag_parent_application ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );' )
         
     
     def DeleteTagParents( self, service_id, pairs ):
@@ -155,13 +216,19 @@ class ClientDBTagParents( HydrusDBModule.HydrusDBModule ):
     
     def Generate( self, tag_service_id ):
         
-        ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
+        table_generation_dict = self._GetServiceTableGenerationDict( tag_service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );'.format( cache_actual_tag_parents_lookup_table_name ) )
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );'.format( cache_ideal_tag_parents_lookup_table_name ) )
+        for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
+            
+            self._Execute( create_query_without_name.format( table_name ) )
+            
         
-        self._CreateIndex( cache_actual_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
-        self._CreateIndex( cache_ideal_tag_parents_lookup_table_name, [ 'ancestor_tag_id' ] )
+        index_generation_dict = self._GetServiceIndexGenerationDict( tag_service_id )
+        
+        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
+            
+            self._CreateIndex( table_name, columns, unique = unique )
+            
         
         self._Execute( 'INSERT OR IGNORE INTO tag_parent_application ( master_service_id, service_index, application_service_id ) VALUES ( ?, ?, ? );', ( tag_service_id, 0, tag_service_id ) )
         
@@ -362,17 +429,6 @@ class ClientDBTagParents( HydrusDBModule.HydrusDBModule ):
         descendant_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} WHERE ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ) ) )
         
         return descendant_ids
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'tag_parents',
-            'tag_parent_petitions',
-            'tag_parent_application'
-        ]
-        
-        return expected_table_names
         
     
     def GetInterestedServiceIds( self, tag_service_id ):

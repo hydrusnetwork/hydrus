@@ -6,8 +6,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core.networking import HydrusNetwork
 
@@ -16,6 +15,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenance
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
 def GenerateRepositoryDefinitionTableNames( service_id: int ):
@@ -47,12 +47,12 @@ def GenerateRepositoryUpdatesTableNames( service_id: int ):
     
     return ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name )
     
-class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
+class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def __init__(
         self,
         cursor: sqlite3.Cursor,
-        cursor_transaction_wrapper: HydrusDB.DBCursorTransactionWrapper,
+        cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
@@ -63,7 +63,7 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         
         # since we'll mostly be talking about hashes and tags we don't have locally, I think we shouldn't use the local caches
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client repositories', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client repositories', cursor )
         
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_services = modules_services
@@ -96,11 +96,40 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
         
-        index_generation_tuples = []
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        return index_generation_tuples
+        index_generation_dict = {}
+        
+        index_generation_dict[ repository_updates_table_name ] = [
+            ( [ 'hash_id' ], True, 449 )
+        ]
+        
+        index_generation_dict[ repository_updates_processed_table_name ] = [
+            ( [ 'content_type' ], False, 449 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetServiceTableGenerationDict( self, service_id ) -> dict:
+        
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
+        
+        return {
+            repository_updates_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );', 449 ),
+            repository_unregistered_updates_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 449 ),
+            repository_updates_processed_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );', 449 ),
+            hash_id_map_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );', 400 ),
+            tag_id_map_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );', 400 )
+        }
+        
+    
+    def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
+        
+        return self.modules_services.GetServiceIds( HC.REPOSITORIES )
         
     
     def _HandleCriticalRepositoryDefinitionError( self, service_id, name, bad_ids ):
@@ -216,11 +245,6 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
         self._RegisterUpdates( service_id )
         
     
-    def CreateInitialTables( self ):
-        
-        pass
-        
-    
     def DropRepositoryTables( self, service_id: int ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
@@ -247,28 +271,19 @@ class ClientDBRepositories( HydrusDBModule.HydrusDBModule ):
     
     def GenerateRepositoryTables( self, service_id: int ):
         
-        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+        table_generation_dict = self._GetServiceTableGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( update_index INTEGER, hash_id INTEGER, PRIMARY KEY ( update_index, hash_id ) );'.format( repository_updates_table_name ) )
-        self._CreateIndex( repository_updates_table_name, [ 'hash_id' ] )   
+        for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
+            
+            self._Execute( create_query_without_name.format( table_name ) )
+            
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( repository_unregistered_updates_table_name ) )
+        index_generation_dict = self._GetServiceIndexGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, content_type INTEGER, processed INTEGER_BOOLEAN, PRIMARY KEY ( hash_id, content_type ) );'.format( repository_updates_processed_table_name ) )
-        self._CreateIndex( repository_updates_processed_table_name, [ 'content_type' ] )
-        
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_hash_id INTEGER PRIMARY KEY, hash_id INTEGER );'.format( hash_id_map_table_name ) )
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );'.format( tag_id_map_table_name ) )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-        ]
-        
-        return expected_table_names
+        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
+            
+            self._CreateIndex( table_name, columns, unique = unique )
+            
         
     
     def GetRepositoryProgress( self, service_key: bytes ):

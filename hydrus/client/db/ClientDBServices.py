@@ -3,19 +3,19 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
+from hydrus.client.db import ClientDBModule
 
-class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
+class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client services master', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client services master', cursor )
         
         self._service_ids_to_services = {}
         self._service_keys_to_service_ids = {}
@@ -29,11 +29,18 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
         self._InitCaches()
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
-        index_generation_tuples = []
+        return {
+            'main.services'
+        }
         
-        return index_generation_tuples
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'main.services' : ( 'CREATE TABLE {} ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );', 400 )
+        }
         
     
     def _InitCaches( self ):
@@ -59,20 +66,6 @@ class ClientDBMasterServices( HydrusDBModule.HydrusDBModule ):
             self.combined_file_service_id = self.GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
             self.combined_tag_service_id = self.GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
             
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'services'
-        ]
-        
-        return expected_table_names
         
     
     def AddService( self, service_key, service_type, name, dictionary: HydrusSerialisable.SerialisableBase ) -> int:

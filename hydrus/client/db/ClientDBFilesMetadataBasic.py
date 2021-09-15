@@ -4,32 +4,43 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusExceptions
 
-class ClientDBFilesMetadataBasic( HydrusDBModule.HydrusDBModule ):
+from hydrus.client.db import ClientDBModule
+
+class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client files metadata', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client files metadata', cursor )
         
         self.inbox_hash_ids = set()
         
         self._InitCaches()
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
+        index_generation_dict = {}
         
-        index_generation_tuples.append( ( 'files_info', [ 'size' ], False ) )
-        index_generation_tuples.append( ( 'files_info', [ 'mime' ], False ) )
-        index_generation_tuples.append( ( 'files_info', [ 'width' ], False ) )
-        index_generation_tuples.append( ( 'files_info', [ 'height' ], False ) )
-        index_generation_tuples.append( ( 'files_info', [ 'duration' ], False ) )
-        index_generation_tuples.append( ( 'files_info', [ 'num_frames' ], False ) )
+        index_generation_dict[ 'main.files_info' ] = [
+            ( [ 'size' ], False, 400 ),
+            ( [ 'mime' ], False, 400 ),
+            ( [ 'width' ], False, 400 ),
+            ( [ 'height' ], False, 400 ),
+            ( [ 'duration' ], False, 400 ),
+            ( [ 'num_frames' ], False, 400 )
+        ]
         
-        return index_generation_tuples
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'main.file_inbox' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
+            'main.files_info' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 )
+        }
         
     
     def _InitCaches( self ):
@@ -72,22 +83,6 @@ class ClientDBFilesMetadataBasic( HydrusDBModule.HydrusDBModule ):
             
         
         return archiveable_hash_ids
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
-        self._Execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'file_inbox',
-            'files_info'
-        ]
-        
-        return expected_table_names
         
     
     def GetMime( self, hash_id: int ) -> int:

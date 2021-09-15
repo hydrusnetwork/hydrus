@@ -1,6 +1,7 @@
 import collections
 import sqlite3
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 class TemporaryIntegerTableNameCache( object ):
@@ -179,11 +180,6 @@ class DBBase( object ):
         self._c.executemany( query, args_iterator )
         
     
-    def _GenerateIndexName( self, table_name, columns ):
-        
-        return '{}_{}_index'.format( table_name, '_'.join( columns ) )
-        
-    
     def _ExecuteManySelectSingleParam( self, query, single_param_iterator ):
         
         select_args_iterator = ( ( param, ) for param in single_param_iterator )
@@ -208,6 +204,27 @@ class DBBase( object ):
             
         
     
+    def _GenerateIndexName( self, table_name, columns ):
+        
+        return '{}_{}_index'.format( table_name, '_'.join( columns ) )
+        
+    
+    def _GetAttachedDatabaseNames( self, include_temp = False ):
+        
+        if include_temp:
+            
+            f = lambda schema_name, path: True
+            
+        else:
+            
+            f = lambda schema_name, path: schema_name != 'temp' and path != ''
+            
+        
+        names = [ schema_name for ( number, schema_name, path ) in self._Execute( 'PRAGMA database_list;' ) if f( schema_name, path ) ]
+        
+        return names
+        
+    
     def _GetLastRowId( self ) -> int:
         
         return self._c.lastrowid
@@ -225,6 +242,13 @@ class DBBase( object ):
             
             return row_count
             
+        
+    
+    def _IndexExists( self, table_name, columns ):
+        
+        index_name = self._GenerateIndexName( table_name, columns )
+        
+        return self._TableOrIndexExists( index_name, 'index' )
         
     
     def _MakeTemporaryIntegerTable( self, integer_iterable, column_name ):
@@ -257,4 +281,149 @@ class DBBase( object ):
         
         return { item for ( item, ) in iterable_cursor }
         
+    
+    def _TableExists( self, table_name ):
+        
+        return self._TableOrIndexExists( table_name, 'table' )
+        
+    
+    def _TableOrIndexExists( self, name, item_type ):
+        
+        if '.' in name:
+            
+            ( schema, name ) = name.split( '.', 1 )
+            
+            search_schemas = [ schema ]
+            
+        else:
+            
+            search_schemas = self._GetAttachedDatabaseNames()
+            
+        
+        for schema in search_schemas:
+            
+            result = self._Execute( 'SELECT 1 FROM {}.sqlite_master WHERE name = ? AND type = ?;'.format( schema ), ( name, item_type ) ).fetchone()
+            
+            if result is not None:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+class DBCursorTransactionWrapper( DBBase ):
+    
+    def __init__( self, c: sqlite3.Cursor, transaction_commit_period: int ):
+        
+        DBBase.__init__( self )
+        
+        self._SetCursor( c )
+        
+        self._transaction_commit_period = transaction_commit_period
+        
+        self._transaction_start_time = 0
+        self._in_transaction = False
+        self._transaction_contains_writes = False
+        
+        self._last_mem_refresh_time = HydrusData.GetNow()
+        self._last_wal_checkpoint_time = HydrusData.GetNow()
+        
+    
+    def BeginImmediate( self ):
+        
+        if not self._in_transaction:
+            
+            self._Execute( 'BEGIN IMMEDIATE;' )
+            self._Execute( 'SAVEPOINT hydrus_savepoint;' )
+            
+            self._transaction_start_time = HydrusData.GetNow()
+            self._in_transaction = True
+            self._transaction_contains_writes = False
+            
+        
+    
+    def Commit( self ):
+        
+        if self._in_transaction:
+            
+            self._Execute( 'COMMIT;' )
+            
+            self._in_transaction = False
+            self._transaction_contains_writes = False
+            
+            if HG.db_journal_mode == 'WAL' and HydrusData.TimeHasPassed( self._last_wal_checkpoint_time + 1800 ):
+                
+                self._Execute( 'PRAGMA wal_checkpoint(PASSIVE);' )
+                
+                self._last_wal_checkpoint_time = HydrusData.GetNow()
+                
+            
+            if HydrusData.TimeHasPassed( self._last_mem_refresh_time + 600 ):
+                
+                self._Execute( 'DETACH mem;' )
+                self._Execute( 'ATTACH ":memory:" AS mem;' )
+                
+                TemporaryIntegerTableNameCache.instance().Clear()
+                
+                self._last_mem_refresh_time = HydrusData.GetNow()
+                
+            
+        else:
+            
+            HydrusData.Print( 'Received a call to commit, but was not in a transaction!' )
+            
+        
+    
+    def CommitAndBegin( self ):
+        
+        if self._in_transaction:
+            
+            self.Commit()
+            
+            self.BeginImmediate()
+            
+        
+    
+    def InTransaction( self ):
+        
+        return self._in_transaction
+        
+    
+    def NotifyWriteOccuring( self ):
+        
+        self._transaction_contains_writes = True
+        
+    
+    def Rollback( self ):
+        
+        if self._in_transaction:
+            
+            self._Execute( 'ROLLBACK TO hydrus_savepoint;' )
+            
+            # any temp int tables created in this lad will be rolled back, so 'initialised' can't be trusted. just reset, no big deal
+            TemporaryIntegerTableNameCache.instance().Clear()
+            
+            # still in transaction
+            # transaction may no longer contain writes, but it isn't important to figure out that it doesn't
+            
+        else:
+            
+            HydrusData.Print( 'Received a call to rollback, but was not in a transaction!' )
+            
+        
+    
+    def Save( self ):
+        
+        self._Execute( 'RELEASE hydrus_savepoint;' )
+        
+        self._Execute( 'SAVEPOINT hydrus_savepoint;' )
+        
+    
+    def TimeToCommit( self ):
+        
+        return self._in_transaction and self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
+        
+    
     

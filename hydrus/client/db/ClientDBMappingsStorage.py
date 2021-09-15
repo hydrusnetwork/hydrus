@@ -2,8 +2,8 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusDBModule
 
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
 def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
@@ -20,32 +20,55 @@ def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str
     
     return ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name )
     
-class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
+class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices ):
         
         self.modules_services = modules_services
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client mappings storage', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client mappings storage', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
         
-        index_generation_tuples = []
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        return index_generation_tuples
+        index_generation_dict = {}
+        
+        index_generation_dict[ current_mappings_table_name ] = [
+            ( [ 'hash_id', 'tag_id' ], True, 400 )
+        ]
+        
+        index_generation_dict[ deleted_mappings_table_name ] = [
+            ( [ 'hash_id', 'tag_id' ], True, 400 )
+        ]
+        
+        index_generation_dict[ pending_mappings_table_name ] = [
+            ( [ 'hash_id', 'tag_id' ], True, 400 )
+        ]
+        
+        index_generation_dict[ petitioned_mappings_table_name ] = [
+            ( [ 'hash_id', 'tag_id' ], True, 400 )
+        ]
+        
+        return index_generation_dict
         
     
-    def CreateInitialTables( self ):
+    def _GetServiceTableGenerationDict( self, service_id ) -> dict:
         
-        pass
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        return {
+            current_mappings_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;', 400 ),
+            deleted_mappings_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;', 400 ),
+            pending_mappings_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;', 400 ),
+            petitioned_mappings_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;', 400 )
+        }
         
     
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
+    def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
-        expected_table_names = []
-        
-        return expected_table_names
+        return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
         
     
     def ClearMappingsTables( self, service_id: int ):
@@ -70,19 +93,19 @@ class ClientDBMappingsStorage( HydrusDBModule.HydrusDBModule ):
     
     def GenerateMappingsTables( self, service_id: int ):
         
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        table_generation_dict = self._GetServiceTableGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( current_mappings_table_name ) )
-        self._CreateIndex( current_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
+        for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
+            
+            self._Execute( create_query_without_name.format( table_name ) )
+            
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( deleted_mappings_table_name ) )
-        self._CreateIndex( deleted_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
+        index_generation_dict = self._GetServiceIndexGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( pending_mappings_table_name ) )
-        self._CreateIndex( pending_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( tag_id, hash_id ) ) WITHOUT ROWID;'.format( petitioned_mappings_table_name ) )
-        self._CreateIndex( petitioned_mappings_table_name, [ 'hash_id', 'tag_id' ], unique = True )
+        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
+            
+            self._CreateIndex( table_name, columns, unique = unique )
+            
         
     
     def GetCurrentFilesCount( self, service_id: int ) -> int:
