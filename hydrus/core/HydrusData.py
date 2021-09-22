@@ -1,5 +1,6 @@
 import collections
 import cProfile
+import decimal
 import fractions
 import io
 import itertools
@@ -435,7 +436,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = 
         return 'unparseable time {}'.format( timestamp )
         
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
+def BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
     
     if timestamp is None:
         
@@ -479,6 +480,8 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
         return 'unparseable time {}'.format( timestamp )
         
     
+TimestampToPrettyTimeDelta = BaseTimestampToPrettyTimeDelta
+
 def ConvertUglyNamespaceToPrettyString( namespace ):
     
     if namespace is None or namespace == '':
@@ -1553,12 +1556,61 @@ def TimeUntil( timestamp ):
     
     return timestamp - GetNow()
     
-def ToHumanBytes( size ):
+def BaseToHumanBytes( size, sig_figs = 3 ):
+    
+    #
+    #               ░█▓▓▓▓▓▒  ░▒░   ▒   ▒ ░  ░ ░▒ ░░     ░▒  ░  ░▒░ ▒░▒▒▒░▓▓▒▒▓  
+    #            ▒▓▒▒▓▒  ░      ░   ▒                ░░       ░░  ░▒▒▒▓▒▒▓▓      
+    #             ▓█▓▒░ ▒▒░    ▒░  ▒▓░ ░  ░░░ ░   ░░░▒▒ ░     ░░░  ▒▓▓▓▒▓▓▒      
+    #              ▒▒░▒▒░░     ▒░░▒▓░▒░▒░░░░░░░░ ░▒▒▒▓   ░     ░▒▒░ ▒▓▒▓█▒       
+    #                ░█▓  ░░░ ▒▒░▒▒   ▒▒▒░░░░▒▒░░▒▒▒░░▒▒ ▒░     ░░░░░░▒█▒        
+    #               ░░▒▒ ▒░░▒░▒▒▒░     ░░░▒▒▒░░▒░ ░    ▓▒▒░    ░  ▒█▓░▒░         
+    #             ░░░ ░▒ ▓▒░▒░▒           ░▒▒▒▒         ▒▓░ ░  ▒  ▒█▓            
+    #           ░░░    ▓░▒▒░░▒   ▒▒▒▒░░    ░░░            ░░░  ▒ ░▒░ ░           
+    #         ░▒░      ▓░▒▒░░▒░▒▓▓████▓         ░▒▒▒▒▒   ░▒░░ ▓▒ ▒▒  ░▒░         
+    #       ░░░░ ░░    ░░▒░▒░░░    ░░░     ░    ░▒▒▒▒▓█▓ ▒░░░▒▓░▒▒░   ░░░░       
+    #       ▒ ░  ░░░░░░ ░▓░▓▒░░░  ░       ░░           ░▒▒░▒▒▒▒░▓░     ░ ░▒░     
+    #       ▒░░  ░░░░░░ ▒▒░▒░▒▒░░░░░░            ░░░░░░▒▒░▓▒░▒▒▓░      ░   ░░    
+    #   ░░░░▒▒▒░░░  ░░  ▓░▒░░▒▒░                  ░░░░░░ ░▒▒▒▒▓▓  ░  ░ ░░   ▒░░  
+    #   ▒▒░   ▒▒░  ░░  ▒▒▒▓░░▒ ░        ░░░░░░░          ░░▒░░▒▓  ░░░░ ░░  ░▒░░▒ 
+    # ▒░░   ░ ▒▒  ░░  ▒▓▒▓▒ ▒░░▒▓                      ▓▒░▒▒░░░▓▒  ░░  ░░ ▒▒░  ░░
+    # ░  ░▒▒░░▒▒░░  ░▒▒▒▒▒  ▒░░▒▓▒░                  ░▒▓█▒░▒ ░░▒▓▒     ▒▒▒ ▒░▒░  
+    # ▒░▒▓▓░░░░░▒▒▒▒░░░▓▒   ▒░ ▒▓░░▒▒░            ░░▒▒░▒▓░ ▒░ ▒░▒▒▒ ░░░░▓   ▒░▒░ 
+    # ▒ ▒▒ ▒░░░▒░░    ▒▒    ░░░▒▒░░░░▒▒▒░     ░░▒▒░▒▒░░▒▓▒░▒  ░ ▒░▒▒░░░░░▒░░▒▒▒▒ 
+    # ░ ▒▒▒░        ░░▒      ▒░░▒░░░░░▒▒▒▒▒▒▒▒▒▒▓▒░░▒░▒▒░▒▒░   ░ ▒░░░▒░░░░░░░▒▒▒░
+    # ▒  ▒▓        ░▒▒      ░▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒░▒▒▒▒▒░░▒░      ▒░   ░▒▒░▒░ ▒  
+    # ▒   ▒▒░     ░▒░   ░  ▒░░▒▒░  ░▒▒▒▒ ░▒▒▒░  ▒░▒▒   ▒▒ ▒▒       ▒        ▓░░▒░
+    # ░░  ░▒    ░▒▒░   ░ ░▒░░░░   ░░       ░   ▒▒▓▓█▒   ░░▒▓▒░      ▒░     ░▒▒░░░
+    # ▒░  ░░▒ ▒▒▒     ░░▒▒░░░   ░ ▒░  ░░▒▒▒▒▒░██▓▒▓██     ▒▓▒▒░  ░   ▒▒   ▒▓▒  ░░
+    # ░░▒▒▒▒▒▒░      ░░░   ░    ▒▒░▒  ░▒▒░▓█░ ██▓▓▓▓  ▒   ░▓ ░░▒░     ░▒░ ▒░░░░▒ 
+    #   ▒▒░       ░▒▒           ▒▓▒ ▓▓▓▓█▒▓▓▓▒▒▓▓▓▓ ▒▓▒   ▒▒    ░░░     ░▒▒░░░▒░ 
+    #      ░   ░░▒▒▓▒▒          ░░▓▓▓███▒▒█▓██▒░░ ▒▒▒▒░   ▒▓     ░▒▒░ ░   ░▒▒▒░  
+    # ░  ░░ ░▒▒▒▒▒▓▓▒▒░         ▒▒▒█▓▓▓░ ▓▓▒▓▓▒░░░▒▓▒░░   ▒▒     ░▒█▓░ ░░   ░░░  
+    #   ▒░░▒▓▒░▒░ ▒▒ ▒▒░  ░░░░▒▓▓▓▒▓▓▓▓ ▒▓▒▒▓▓░▒▒▒▒▒▒▒▓▒  ▒▒    ░▒▒▒▓▓▒░░▒   ░▒▒▒
+    # ▒▒▒░ ▒░ ░░   ▒ ░▓▓▒▒░░░░░░░                       ▓░▒░  ░▓▓▓░  ░▒▓░▒▓▒▓▒▓▓▓
+    # ▓░  ▒░  ▒▓   ▓░               ░░░░░░░░░░░▒▒▒▒▒▒▓▓▒ ▒▒▓▓▓▓▓▓▓▓▓░ ▒▓▒▓▓▓▒▓▓▓▓
+    #     ░░  ▓▒   ░▒▓▓▒▒▒▓▓▓▒▓▓▓▓▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ▓▒▒▒▒▒▓▓▓▓▒▓▓▒▒▒▒▒▓▓▓▓▒ 
+    #    ░░░ ▒▒▒▒▓▓░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░▓▒▒▒▒▒▒▒▓▓▓▓▓▓▓▒▒▒▒▒░ ░ 
+    #   ░░   ▒▓  ██░▓▓▓▓▓▓▓▓▓▓█▓▓▒▒▒ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░▒▓▒▒▒▒▒▒▒▒▒░▒▒░░▒▒░ ░░░░░
+    #   ░▒░░░▒▓   ▓░▒▓▓▓▓▓▓▓▓▓▒      ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓ ▓░ ▒▒▒▒▒▒▒▒░   ░▒▒▒▒░░░░
+    #   ▒▒░ ░▒▓   ▒▓░▓▓▓▓█▓▒      ░▓▓▓▓▓▓▓█▒▓▒ ▒▓▓▓▓▓▒▓░ ▓    ░▒▒░▒░░░░▒▒▒▒▒░░░░░
+    # ▓▒▒▒▒▒▒▓▓   ▒▓▒▓▓▓▒░     ░▓▓██▓▓▓█▓▒  ░  ▒▓▓▓▓▒▓▒ ▒▓         ▒ ░▓▓▓▓▒ ░░░░▒
+    # ░░▓▓▓▓▒▓▓  ░░▓▓      ░▓████▓▓▓▒▒▒      ▒██▓▒▓█▒   ▓▒         ▒  ░░▒▓▓▒▓▒▒▒ 
+    #    ░░▒▒▒▒   ▒▒     ▒▓█▓▒░░          ░▓██▓▒░░░█░   ▓          ▒ ░  ░▓▒▒▓▓▒▓▒
+    # ░░░░░ ▒▒    ▓▒ ░░             ▒░░▒▒▓▓▓▒░░ ░█▓█▒  ▒▓          ▒░░  ░▓▒▒     
+    # ▒░░░░▒▓▒   ░██          ▒▒▒▒░░▒▓   ▒▒  ░▒░▒███░  ▓▒          ▒░░  ░▓▒░░░░▒ 
+    # ░ ░░░▓▒░ ▒█▒▓█░             ░  ▒░  ░░      ▒▓▒   ▓          ░▒    ░▓▓▒░▒░░░
+    # ░░▒▒▒▓▓▓▓░▓▓ ██▒    ░▒░▒▒▒▒░░▒ ▒▓           ▓   ▒▓          ▒░   ░░▓▓▒░▒▒▒░
+    # ░░▒▒▓█▓░   █ ░█▒      ░ ░ ░▒▒░░▓░   ▓░     ░▓░  █░     ░░   ▒░   ░ ▓▓▒░ ░▒░
+    # ░░▒▓░       █ ██          ░ ░▒ ▒    █▓▒▒▒░░▒▒░ ▓▒           ░       ▒▓▒░ ░ 
+    #
     
     if size is None:
         
         return 'unknown size'
         
+    
+    # my definition of sig figs is nonsense here. basically I mean 'can we show decimal places and not look stupid long?'
     
     if size < 1024:
         
@@ -1578,19 +1630,44 @@ def ToHumanBytes( size ):
     
     suffix = suffixes[ suffix_index ]
     
-    if size < 10.0:
+    d = decimal.Decimal( size )
+    
+    ctx = decimal.getcontext()
+    
+    # ok, if we have 237KB, we still want all 237, even if user said 2 sf
+    while d.log10() >= sig_figs:
         
-        # 3.1MB
-        
-        return '{:.1f}{}B'.format( size, suffix )
-        
-    else:
-        
-        # 23MB
-        
-        return '{:.0f}{}B'.format( size, suffix )
+        sig_figs += 1
         
     
+    ctx.prec = sig_figs
+    ctx.rounding = decimal.ROUND_HALF_EVEN
+    
+    d = d.normalize( ctx )
+    
+    try:
+        
+        # if we have 30, this will be normalised to 3E+1, so we want to quantize it back
+        
+        ( sign, digits, exp ) = d.as_tuple()
+        
+        if exp > 0:
+            
+            ctx.prec = 10 # careful to make precising bigger again though, or we get an error
+            
+            d = d.quantize( 0 )
+            
+        
+    except:
+        
+        # blarg
+        pass
+        
+    
+    return '{}{}B'.format( d, suffix )
+    
+ToHumanBytes = BaseToHumanBytes
+
 def ToHumanInt( num ):
     
     num = int( num )

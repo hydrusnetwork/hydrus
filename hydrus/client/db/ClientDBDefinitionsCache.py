@@ -277,7 +277,11 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        ClientDBModule.BlockingSafeShowMessage( 'Unfortunately, the local tag cache cannot repopulate itself yet during repair. Once you boot, please run _database->regenerate->local tag cache_.' )
+        message = 'Unfortunately, the local tag cache cannot repopulate itself yet during repair. Once you boot, please run _database->regenerate->local tag cache_. This message has been printed to the log.'
+        
+        HydrusData.DebugPrint( message )
+        
+        ClientDBModule.BlockingSafeShowMessage( message )
         
     
     def AddTagIdsToCache( self, tag_ids ):

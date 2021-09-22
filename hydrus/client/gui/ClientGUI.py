@@ -577,6 +577,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._UpdateSystemTrayIcon( currently_booting = True )
         
+        self._notebook.freshSessionLoaded.connect( self.ReportFreshSessionLoaded )
+        
         self._controller.CallLaterQtSafe( self, 0.5, 'initialise session', self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
     
@@ -850,11 +852,16 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if result == QW.QDialog.Accepted:
             
-            session = self._notebook.GetCurrentGUISession( 'last session' )
+            only_changed_page_data = True
+            about_to_save = True
+            
+            session = self._notebook.GetCurrentGUISession( CC.LAST_SESSION_SESSION_NAME, only_changed_page_data, about_to_save )
+            
+            session = self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, CC.LAST_SESSION_SESSION_NAME, session )
             
             self._controller.SaveGUISession( session )
             
-            session.SetName( 'exit session' )
+            session.SetName( CC.EXIT_SESSION_SESSION_NAME )
             
             self._controller.SaveGUISession( session )
             
@@ -1735,6 +1742,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _FleshOutSessionWithCleanDataIfNeeded( self, notebook: ClientGUIPages.PagesNotebook, name: str, session: ClientGUISession.GUISessionContainer ):
+        
+        unchanged_page_data_hashes = session.GetUnchangedPageDataHashes()
+        
+        have_hashed_serialised_objects = self._controller.Read( 'have_hashed_serialised_objects', unchanged_page_data_hashes )
+        
+        if not have_hashed_serialised_objects:
+            
+            only_changed_page_data = False
+            about_to_save = True
+            
+            session = notebook.GetCurrentGUISession( name, only_changed_page_data, about_to_save )
+            
+        
+        return session
+        
+    
     def _FlipClipboardWatcher( self, option_name ):
         
         self._controller.new_options.FlipBoolean( option_name )
@@ -2274,7 +2298,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
         
-        self._controller.CallLaterQtSafe( self, 0.25, 'load a blank page', do_it, default_gui_session, load_a_blank_page )
+        self._controller.CallLaterQtSafe( self, 0.25, 'load initial session', do_it, default_gui_session, load_a_blank_page )
         
     
     def _LockServer( self, service_key, lock ):
@@ -4212,7 +4236,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 def qt_session_gubbins():
                     
-                    self.ProposeSaveGUISession( 'last session' )
+                    self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
                     
                     page = self._notebook.GetPageFromPageKey( bytes.fromhex( destination_page_key_hex ) )
                     
@@ -4220,7 +4244,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     self._notebook.CloseCurrentPage()
                     
-                    self.ProposeSaveGUISession( 'last session' )
+                    self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
                     
                     page = self._notebook.NewPageQuery( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                     
@@ -4310,7 +4334,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProposeSaveGUISession, 'last session'  )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self.ProposeSaveGUISession, CC.LAST_SESSION_SESSION_NAME  )
             
             return page_of_pages
             
@@ -5227,9 +5251,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            if HC.options[ 'default_gui_session' ] == 'last session':
+            if HC.options[ 'default_gui_session' ] == CC.LAST_SESSION_SESSION_NAME:
                 
-                session = self._notebook.GetCurrentGUISession( 'last session' )
+                only_changed_page_data = True
+                about_to_save = True
+                
+                session = self._notebook.GetCurrentGUISession( CC.LAST_SESSION_SESSION_NAME, only_changed_page_data, about_to_save )
+                
+                session = self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, CC.LAST_SESSION_SESSION_NAME, session )
                 
                 callable = self.AutoSaveLastSession
                 
@@ -6089,7 +6118,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'reset multi-column list settings to default', 'Reset all multi-column list widths and other display settings to default.', self._DebugResetColumnListManager )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, 'last session' )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, CC.LAST_SESSION_SESSION_NAME )
             
             ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
             
@@ -7089,7 +7118,12 @@ Try to keep this below 10 million!'''
         
         #
         
-        session = notebook.GetCurrentGUISession( name )
+        only_changed_page_data = True
+        about_to_save = True
+        
+        session = notebook.GetCurrentGUISession( name, only_changed_page_data, about_to_save )
+        
+        self._FleshOutSessionWithCleanDataIfNeeded( notebook, name, session )
         
         self._controller.CallToThread( self._controller.SaveGUISession, session )
         
@@ -7352,6 +7386,14 @@ Try to keep this below 10 million!'''
             
         
     
+    def ReportFreshSessionLoaded( self, gui_session: ClientGUISession.GUISessionContainer ):
+        
+        if gui_session.GetName() == CC.LAST_SESSION_SESSION_NAME:
+            
+            self._controller.ReportLastSessionLoaded( gui_session )
+            
+        
+    
     def ReplaceMenu( self, name, menu_or_none, label ):
         
         if menu_or_none is not None:
@@ -7501,11 +7543,16 @@ Try to keep this below 10 million!'''
             
             #
             
-            session = self._notebook.GetCurrentGUISession( 'last session' )
+            only_changed_page_data = True
+            about_to_save = True
+            
+            session = self._notebook.GetCurrentGUISession( CC.LAST_SESSION_SESSION_NAME, only_changed_page_data, about_to_save )
+            
+            session = self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, CC.LAST_SESSION_SESSION_NAME, session )
             
             self._controller.SaveGUISession( session )
             
-            session.SetName( 'exit session' )
+            session.SetName( CC.EXIT_SESSION_SESSION_NAME )
             
             self._controller.SaveGUISession( session )
             

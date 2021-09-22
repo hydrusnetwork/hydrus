@@ -223,6 +223,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._management_type = None
         
+        self._last_serialisable_change_timestamp = 0
+        
         self._keys = {}
         self._simples = {}
         self._serialisables = {}
@@ -271,6 +273,11 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         self._simples.update( dict( serialisable_simples ) )
         
         self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in list(serialisable_serialisables.items()) } )
+        
+    
+    def _SerialisableChangeMade( self ):
+        
+        self._last_serialisable_change_timestamp = HydrusData.GetNow()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -582,45 +589,42 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def GetValueRange( self ):
         
-        try:
+        if self.IsImporter():
             
-            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            try:
                 
-                hdd_import = self._serialisables[ 'hdd_import' ]
+                if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                    
+                    importer = self._serialisables[ 'hdd_import' ]
+                    
+                elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+                    
+                    importer = self._serialisables[ 'simple_downloader_import' ]
+                    
+                elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+                    
+                    importer = self._serialisables[ 'multiple_gallery_import' ]
+                    
+                elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+                    
+                    importer = self._serialisables[ 'multiple_watcher_import' ]
+                    
+                elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+                    
+                    importer = self._serialisables[ 'urls_import' ]
+                    
                 
-                return hdd_import.GetValueRange()
+                return importer.GetValueRange()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+            except KeyError:
                 
-                simple_downloader_import = self._serialisables[ 'simple_downloader_import' ]
-                
-                return simple_downloader_import.GetValueRange()
-                
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
-                
-                multiple_gallery_import = self._serialisables[ 'multiple_gallery_import' ]
-                
-                return multiple_gallery_import.GetValueRange()
-                
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
-                
-                multiple_watcher_import = self._serialisables[ 'multiple_watcher_import' ]
-                
-                return multiple_watcher_import.GetValueRange()
-                
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
-                
-                urls_import = self._serialisables[ 'urls_import' ]
-                
-                return urls_import.GetValueRange()
+                return ( 0, 0 )
                 
             
-        except KeyError:
+        else:
             
             return ( 0, 0 )
             
-        
-        return ( 0, 0 )
         
     
     def GetVariable( self, name ):
@@ -633,6 +637,40 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             return self._serialisables[ name ]
             
+        
+    
+    def HasSerialisableChangesSince( self, since_timestamp ):
+        
+        if self.IsImporter():
+            
+            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                
+                importer = self._serialisables[ 'hdd_import' ]
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+                
+                importer = self._serialisables[ 'simple_downloader_import' ]
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+                
+                importer = self._serialisables[ 'multiple_gallery_import' ]
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+                
+                importer = self._serialisables[ 'multiple_watcher_import' ]
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+                
+                importer = self._serialisables[ 'urls_import' ]
+                
+            
+            if importer.HasSerialisableChangesSince( since_timestamp ):
+                
+                return True
+                
+            
+        
+        return self._last_serialisable_change_timestamp > since_timestamp
         
     
     def HasVariable( self, name ):
@@ -649,10 +687,17 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._keys[ name ] = key
         
+        self._SerialisableChangeMade()
+        
     
     def SetPageName( self, name ):
         
-        self._page_name = name
+        if name != self._page_name:
+            
+            self._page_name = name
+            
+            self._SerialisableChangeMade()
+            
         
     
     def SetType( self, management_type ):
@@ -661,16 +706,28 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._InitialiseDefaults()
         
+        self._SerialisableChangeMade()
+        
     
     def SetVariable( self, name, value ):
         
         if isinstance( value, HydrusSerialisable.SerialisableBase ):
             
-            self._serialisables[ name ] = value
+            if name not in self._serialisables or value.DumpToString() != self._serialisables[ name ].DumpToString():
+                
+                self._serialisables[ name ] = value
+                
+                self._SerialisableChangeMade()
+                
             
         else:
             
-            self._simples[ name ] = value
+            if name not in self._simples or value != self._simples[ name ]:
+                
+                self._simples[ name ] = value
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -1819,7 +1876,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             self._highlighted_gallery_import = None
             
-            self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
+            self._multiple_gallery_import.ClearHighlightedGalleryImport()
             
             self._gallery_importers_listctrl_panel.UpdateButtons()
             
@@ -2638,7 +2695,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             self._highlighted_watcher = None
             
-            self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
+            self._multiple_watcher_import.ClearHighlightedWatcher()
             
             self._watchers_listctrl_panel.UpdateButtons()
             
@@ -2739,6 +2796,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         return ( display_tuple, sort_tuple )
         
     
+    def _CopySelectedSubjects( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) > 0:
+            
+            text = os.linesep.join( ( watcher.GetSubject() for watcher in watchers ) )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
     def _CopySelectedURLs( self ):
         
         watchers = self._watchers_listctrl.GetData( only_selected = True )
@@ -2766,12 +2835,16 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
         menu = QW.QMenu()
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
         ClientGUIMenus.AppendMenuItem( menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'copy subjects', 'Copy all the selected watchers\' subjects to clipboard.', self._CopySelectedSubjects )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' presented files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='presented' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' new files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='new' )
         ClientGUIMenus.AppendMenuItem( menu, 'show all watchers\' files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show='all' )

@@ -172,12 +172,14 @@ NUMBER_TEST_OPERATOR_LESS_THAN = 0
 NUMBER_TEST_OPERATOR_GREATER_THAN = 1
 NUMBER_TEST_OPERATOR_EQUAL = 2
 NUMBER_TEST_OPERATOR_APPROXIMATE = 3
+NUMBER_TEST_OPERATOR_NOT_EQUAL = 4
 
 number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_LESS_THAN : '<',
     NUMBER_TEST_OPERATOR_GREATER_THAN : '>',
     NUMBER_TEST_OPERATOR_EQUAL : '=',
-    NUMBER_TEST_OPERATOR_APPROXIMATE : '\u2248'
+    NUMBER_TEST_OPERATOR_APPROXIMATE : CC.UNICODE_ALMOST_EQUAL_TO,
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : CC.UNICODE_NOT_EQUAL_TO
 }
 
 number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() }
@@ -380,7 +382,7 @@ class FileSystemPredicates( object ):
                         
                         self._common_info[ max_label ] = now - age
                         
-                    elif operator == '\u2248':
+                    elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
                         self._common_info[ min_label ] = now - int( age * 1.15 )
                         self._common_info[ max_label ] = now - int( age * 0.85 )
@@ -408,7 +410,7 @@ class FileSystemPredicates( object ):
                         self._common_info[ min_label ] = timestamp
                         self._common_info[ max_label ] = timestamp + 86400
                         
-                    elif operator == '\u2248':
+                    elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
                         self._common_info[ min_label ] = timestamp - 86400 * 30
                         self._common_info[ max_label ] = timestamp + 86400 * 30
@@ -432,7 +434,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_duration' ] = duration
                 elif operator == '>': self._common_info[ 'min_duration' ] = duration
                 elif operator == '=': self._common_info[ 'duration' ] = duration
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_duration' ] = duration
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     if duration == 0:
                         
@@ -453,6 +456,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_framerate' ] = framerate
                 elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
                 elif operator == '=': self._common_info[ 'framerate' ] = framerate
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_framerate' ] = framerate
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
@@ -462,7 +466,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
                 elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
                 elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_frames' ] = num_frames
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     if num_frames == 0:
                         
@@ -496,7 +501,11 @@ class FileSystemPredicates( object ):
                     
                     self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
                     
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO:
+                    
+                    self._common_info[ 'not_ratio' ] = ( ratio_width, ratio_height )
+                    
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
                     self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
@@ -512,7 +521,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_size' ] = size
                 elif operator == '>': self._common_info[ 'min_size' ] = size
                 elif operator == '=': self._common_info[ 'size' ] = size
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_size' ] = size
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     self._common_info[ 'min_size' ] = int( size * 0.85 )
                     self._common_info[ 'max_size' ] = int( size * 1.15 )
@@ -530,7 +540,7 @@ class FileSystemPredicates( object ):
                 
                 if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
                 elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
                     self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
@@ -544,7 +554,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_width' ] = width
                 elif operator == '>': self._common_info[ 'min_width' ] = width
                 elif operator == '=': self._common_info[ 'width' ] = width
-                elif operator == '\u2248':
+                elif operator == '\u2260': self._common_info[ 'not_width' ] = width
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     if width == 0: self._common_info[ 'width' ] = 0
                     else:
@@ -564,7 +575,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
                 elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
                 elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_pixels' ] = num_pixels
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
                     self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
@@ -578,9 +590,13 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_height' ] = height
                 elif operator == '>': self._common_info[ 'min_height' ] = height
                 elif operator == '=': self._common_info[ 'height' ] = height
-                elif operator == '\u2248':
+                elif operator == '\u2260': self._common_info[ 'not_height' ] = height
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
-                    if height == 0: self._common_info[ 'height' ] = 0
+                    if height == 0:
+                        
+                        self._common_info[ 'height' ] = 0
+                        
                     else:
                         
                         self._common_info[ 'min_height' ] = int( height * 0.85 )
@@ -626,7 +642,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_words' ] = num_words
                 elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
                 elif operator == '=': self._common_info[ 'num_words' ] = num_words
-                elif operator == '\u2248':
+                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_words' ] = num_words
+                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     if num_words == 0: self._common_info[ 'num_words' ] = 0
                     else:
@@ -2227,7 +2244,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                             pretty_operator = 'before '
                             
-                        elif operator == '\u2248':
+                        elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                             
                             pretty_operator = 'around '
                             
@@ -2255,7 +2272,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                             pretty_operator = 'on the day of '
                             
-                        elif operator == '\u2248':
+                        elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                             
                             pretty_operator = 'a month either side of '
                             
@@ -2452,7 +2469,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         n_text = namespace
                         
                     
-                    if operator == '\u2248':
+                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
                         o_text = ' about '
                         
@@ -2476,7 +2493,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_relationships, dupe_type ) = self._value
                     
-                    if operator == '\u2248':
+                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
                         o_text = ' about '
                         

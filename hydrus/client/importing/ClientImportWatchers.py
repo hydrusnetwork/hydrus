@@ -66,6 +66,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._last_time_watchers_changed = HydrusData.GetNowPrecise()
         
+        self._last_serialisable_change_timestamp = 0
+        
         self._last_pubbed_value_range = ( 0, 0 )
         self._next_pub_value_check_time = 0
         
@@ -158,6 +160,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._last_time_watchers_changed = HydrusData.GetNowPrecise()
         
         del self._watcher_keys_to_watchers[ watcher_key ]
+        
+    
+    def _SerialisableChangeMade( self ):
+        
+        self._last_serialisable_change_timestamp = HydrusData.GetNow()
         
     
     def _SetDirty( self ):
@@ -259,6 +266,19 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._AddWatcher( watcher )
             
             self._SetDirty()
+            
+        
+    
+    def ClearHighlightedWatcher( self ):
+        
+        with self._lock:
+            
+            if self._highlighted_watcher_url is not None:
+                
+                self._highlighted_watcher_url = None
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -427,6 +447,27 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         return watcher.GetSimpleStatus()
         
     
+    def HasSerialisableChangesSince( self, since_timestamp ):
+        
+        with self._lock:
+            
+            if self._last_serialisable_change_timestamp > since_timestamp:
+                
+                return True
+                
+            
+            for watcher in self._watchers:
+                
+                if watcher.HasSerialisableChangesSince( since_timestamp ):
+                    
+                    return True
+                    
+                
+            
+            return False
+            
+        
+    
     def RemoveWatcher( self, watcher_key ):
         
         with self._lock:
@@ -435,19 +476,21 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._SetDirty()
             
+            self._SerialisableChangeMade()
+            
         
     
     def SetHighlightedWatcher( self, highlighted_watcher ):
         
         with self._lock:
             
-            if highlighted_watcher is None:
+            highlighted_watcher_url = highlighted_watcher.GetURL()
+            
+            if highlighted_watcher_url != self._highlighted_watcher_url:
                 
-                self._highlighted_watcher_url = None
+                self._highlighted_watcher_url = highlighted_watcher_url
                 
-            else:
-                
-                self._highlighted_watcher_url = highlighted_watcher.GetURL()
+                self._SerialisableChangeMade()
                 
             
         
@@ -456,9 +499,26 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._checker_options = checker_options
-            self._file_import_options = file_import_options
-            self._tag_import_options = tag_import_options
+            if checker_options.DumpToString() != self._checker_options.DumpToString():
+                
+                self._checker_options = checker_options
+                
+                self._SerialisableChangeMade()
+                
+            
+            if file_import_options.DumpToString() != self._file_import_options.DumpToString():
+                
+                self._file_import_options = file_import_options
+                
+                self._SerialisableChangeMade()
+                
+            
+            if tag_import_options.DumpToString() != self._tag_import_options.DumpToString():
+                
+                self._tag_import_options = tag_import_options
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -594,6 +654,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._files_repeating_job = None
         self._checker_repeating_job = None
+        
+        self._last_serialisable_change_timestamp = 0
         
         HG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
@@ -843,6 +905,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
+    def _SerialisableChangeMade( self ):
+        
+        self._last_serialisable_change_timestamp = HydrusData.GetNow()
+        
+    
     def _UpdateFileVelocityStatus( self ):
         
         self._file_velocity_status = self._checker_options.GetPrettyCurrentVelocity( self._file_seed_cache, self._last_check_time )
@@ -1088,6 +1155,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             self._UpdateNextCheckTime()
             
             ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
+            
+            self._SerialisableChangeMade()
             
         
     
@@ -1368,6 +1437,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def HasSerialisableChangesSince( self, since_timestamp ):
+        
+        return self._last_serialisable_change_timestamp > since_timestamp
+        
+    
     def HasURL( self ):
         
         with self._lock:
@@ -1395,6 +1469,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             ClientImporting.WakeRepeatingJob( self._files_repeating_job )
             
+            self._SerialisableChangeMade()
+            
         
     
     def PausePlayChecking( self ):
@@ -1411,6 +1487,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
                 
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -1421,6 +1499,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             self._files_paused = not self._files_paused
             
             ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+            
+            self._SerialisableChangeMade()
             
         
     
@@ -1446,6 +1526,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._file_seed_cache.RetryFailed()
             
+            self._SerialisableChangeMade()
+            
         
     
     def RetryIgnored( self, ignored_regex = None ):
@@ -1454,27 +1536,39 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
             
-        
-    
-    def SetCheckerOptions( self, checker_options ):
-        
-        with self._lock:
-            
-            self._checker_options = checker_options
-            
-            self._UpdateNextCheckTime()
-            
-            self._UpdateFileVelocityStatus()
-            
-            ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
+            self._SerialisableChangeMade()
             
         
     
-    def SetFileImportOptions( self, file_import_options ):
+    def SetCheckerOptions( self, checker_options: ClientImportOptions.CheckerOptions ):
         
         with self._lock:
             
-            self._file_import_options = file_import_options
+            if checker_options.DumpToString() != self._checker_options.DumpToString():
+                
+                self._checker_options = checker_options
+                
+                self._UpdateNextCheckTime()
+                
+                self._UpdateFileVelocityStatus()
+                
+                ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
+                
+                self._SerialisableChangeMade()
+                
+            
+        
+    
+    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+        
+        with self._lock:
+            
+            if file_import_options.DumpToString() != self._file_import_options.DumpToString():
+                
+                self._file_import_options = file_import_options
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -1482,7 +1576,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
+            external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
+            
+            if external_additional_service_keys_to_tags.DumpToString() != self._external_additional_service_keys_to_tags.DumpToString():
+                
+                self._external_additional_service_keys_to_tags = external_additional_service_keys_to_tags
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -1490,15 +1591,27 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._external_filterable_tags = set( tags )
+            tags_set = set( tags )
+            
+            if tags_set != self._external_filterable_tags:
+                
+                self._external_filterable_tags = tags_set
+                
+                self._SerialisableChangeMade()
+                
             
         
     
-    def SetTagImportOptions( self, tag_import_options ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
         
         with self._lock:
             
-            self._tag_import_options = tag_import_options
+            if tag_import_options.DumpToString() != self._tag_import_options.DumpToString():
+                
+                self._tag_import_options = tag_import_options
+                
+                self._SerialisableChangeMade()
+                
             
         
     
@@ -1526,6 +1639,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             self._url = url
             
             ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
+            
+            self._SerialisableChangeMade()
             
         
     
@@ -1623,6 +1738,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 HG.client_controller.WaitUntilViewFree()
                 
+                self._SerialisableChangeMade()
+                
             except Exception as e:
                 
                 HydrusData.ShowException( e )
@@ -1683,6 +1800,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             try:
                 
                 self._CheckWatchableURL()
+                
+                self._SerialisableChangeMade()
                 
             except Exception as e:
                 

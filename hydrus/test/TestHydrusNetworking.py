@@ -444,7 +444,7 @@ class TestBandwidthTracker( unittest.TestCase ):
             bandwidth_tracker.ReportDataUsed( 1024 )
             bandwidth_tracker.ReportRequestUsed()
             
-            self.assertEqual( bandwidth_tracker.GetCurrentMonthSummary(), 'used 1.0KB in 1 requests this month' )
+            self.assertEqual( bandwidth_tracker.GetCurrentMonthSummary(), 'used 1KB in 1 requests this month' )
             
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 0 ), 0 )
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 0 ), 0 )
@@ -497,7 +497,7 @@ class TestBandwidthTracker( unittest.TestCase ):
             bandwidth_tracker.ReportDataUsed( 32 )
             bandwidth_tracker.ReportRequestUsed()
             
-            self.assertEqual( bandwidth_tracker.GetCurrentMonthSummary(), 'used 1.1KB in 3 requests this month' )
+            self.assertEqual( bandwidth_tracker.GetCurrentMonthSummary(), 'used 1.06KB in 3 requests this month' )
             
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 0 ), 0 )
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 0 ), 0 )

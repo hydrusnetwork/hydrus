@@ -554,6 +554,19 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
+    def HaveHashedJSONDumps( self, hashes ):
+        
+        for hash in hashes:
+            
+            if not self.HaveHashedJSONDump( hash ):
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     def MaintainHashedStorage( self, force_start = False ):
         
         maintenance_tracker = MaintenanceTracker.instance()
@@ -659,9 +672,9 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER:
                 
-                if not obj.HasAllPageData():
+                if not obj.HasAllDirtyPageData():
                     
-                    raise Exception( 'A session with name "{}" was set to save, but it did not have all its page data!'.format( dump_name ) )
+                    raise Exception( 'A session with name "{}" was set to save, but it did not have all its dirty page data!'.format( dump_name ) )
                     
                 
                 hashes_to_page_data = obj.GetHashesToPageData()

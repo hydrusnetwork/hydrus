@@ -180,7 +180,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         else:
             
-            operator = '\u2248'
+            operator = CC.UNICODE_ALMOST_EQUAL_TO
             score = 0
             
         

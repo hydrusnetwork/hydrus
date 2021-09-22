@@ -5052,7 +5052,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # doesn't work for '= 0' or '< 1'
         
-        if operator == '\u2248':
+        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
             
             lower_bound = 0.8 * num_relationships
             upper_bound = 1.2 * num_relationships
@@ -7478,7 +7478,7 @@ class DB( HydrusDB.HydrusDB ):
             content_phrase = viewtime_phrase
             
         
-        if operator == '\u2248':
+        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
             
             lower_bound = int( 0.8 * viewing_value )
             upper_bound = int( 1.2 * viewing_value )
@@ -7676,6 +7676,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
         if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
+        if 'not_size' in simple_preds: files_info_predicates.append( 'size != ' + str( simple_preds[ 'not_size' ] ) )
         if 'max_size' in simple_preds: files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
         
         if 'mimes' in simple_preds:
@@ -7703,14 +7704,17 @@ class DB( HydrusDB.HydrusDB ):
         
         if 'min_width' in simple_preds: files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
         if 'width' in simple_preds: files_info_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
+        if 'not_width' in simple_preds: files_info_predicates.append( 'width != ' + str( simple_preds[ 'not_width' ] ) )
         if 'max_width' in simple_preds: files_info_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
         
         if 'min_height' in simple_preds: files_info_predicates.append( 'height > ' + str( simple_preds[ 'min_height' ] ) )
         if 'height' in simple_preds: files_info_predicates.append( 'height = ' + str( simple_preds[ 'height' ] ) )
+        if 'not_height' in simple_preds: files_info_predicates.append( 'height != ' + str( simple_preds[ 'not_height' ] ) )
         if 'max_height' in simple_preds: files_info_predicates.append( 'height < ' + str( simple_preds[ 'max_height' ] ) )
         
         if 'min_num_pixels' in simple_preds: files_info_predicates.append( 'width * height > ' + str( simple_preds[ 'min_num_pixels' ] ) )
         if 'num_pixels' in simple_preds: files_info_predicates.append( 'width * height = ' + str( simple_preds[ 'num_pixels' ] ) )
+        if 'not_num_pixels' in simple_preds: files_info_predicates.append( 'width * height != ' + str( simple_preds[ 'not_num_pixels' ] ) )
         if 'max_num_pixels' in simple_preds: files_info_predicates.append( 'width * height < ' + str( simple_preds[ 'max_num_pixels' ] ) )
         
         if 'min_ratio' in simple_preds:
@@ -7724,6 +7728,12 @@ class DB( HydrusDB.HydrusDB ):
             ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
             
             files_info_predicates.append( '( width * 1.0 ) / height = ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
+            
+        if 'not_ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'not_ratio' ]
+            
+            files_info_predicates.append( '( width * 1.0 ) / height != ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
             
         if 'max_ratio' in simple_preds:
             
@@ -7739,6 +7749,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if num_words == 0: files_info_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
             else: files_info_predicates.append( 'num_words = ' + str( num_words ) )
+            
+        if 'not_num_words' in simple_preds:
+            
+            num_words = simple_preds[ 'not_num_words' ]
+            
+            files_info_predicates.append( '( num_words IS NULL OR num_words != {} )'.format( num_words ) )
             
         if 'max_num_words' in simple_preds:
             
@@ -7762,6 +7778,12 @@ class DB( HydrusDB.HydrusDB ):
                 files_info_predicates.append( 'duration = ' + str( duration ) )
                 
             
+        if 'not_duration' in simple_preds:
+            
+            duration = simple_preds[ 'not_duration' ]
+            
+            files_info_predicates.append( '( duration IS NULL OR duration != {} )'.format( duration ) )
+            
         if 'max_duration' in simple_preds:
             
             max_duration = simple_preds[ 'max_duration' ]
@@ -7770,38 +7792,50 @@ class DB( HydrusDB.HydrusDB ):
             else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
             
         
-        if 'min_framerate' in simple_preds or 'framerate' in simple_preds or 'max_framerate' in simple_preds:
+        if 'min_framerate' in simple_preds or 'framerate' in simple_preds or 'max_framerate' in simple_preds or 'not_framerate' in simple_preds:
             
-            min_framerate_sql = None
-            max_framerate_sql = None
-            
-            if 'min_framerate' in simple_preds:
+            if 'not_framerate' in simple_preds:
                 
-                min_framerate_sql = simple_preds[ 'min_framerate' ] * 1.05
+                pred = '( duration IS NULL OR num_frames = 0 OR ( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {} ) )'
                 
-            if 'framerate' in simple_preds:
+                min_framerate_sql = simple_preds[ 'not_framerate' ] * 0.95
+                max_framerate_sql = simple_preds[ 'not_framerate' ] * 1.05
                 
-                min_framerate_sql = simple_preds[ 'framerate' ] * 0.95
-                max_framerate_sql = simple_preds[ 'framerate' ] * 1.05
-                
-            if 'max_framerate' in simple_preds:
-                
-                max_framerate_sql = simple_preds[ 'max_framerate' ] * 0.95
-                
-            
-            pred = '( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {})'
-            
-            if min_framerate_sql is None:
-                
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) < {}'.format( max_framerate_sql ) )
-                
-            elif max_framerate_sql is None:
-                
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) > {}'.format( min_framerate_sql ) )
+                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) NOT BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
                 
             else:
                 
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
+                min_framerate_sql = None
+                max_framerate_sql = None
+                
+                pred = '( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {} )'
+                
+                if 'min_framerate' in simple_preds:
+                    
+                    min_framerate_sql = simple_preds[ 'min_framerate' ] * 1.05
+                    
+                if 'framerate' in simple_preds:
+                    
+                    min_framerate_sql = simple_preds[ 'framerate' ] * 0.95
+                    max_framerate_sql = simple_preds[ 'framerate' ] * 1.05
+                    
+                if 'max_framerate' in simple_preds:
+                    
+                    max_framerate_sql = simple_preds[ 'max_framerate' ] * 0.95
+                    
+                
+                if min_framerate_sql is None:
+                    
+                    pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) < {}'.format( max_framerate_sql ) )
+                    
+                elif max_framerate_sql is None:
+                    
+                    pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) > {}'.format( min_framerate_sql ) )
+                    
+                else:
+                    
+                    pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
+                    
                 
             
             files_info_predicates.append( pred )
@@ -7814,6 +7848,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if num_frames == 0: files_info_predicates.append( '( num_frames IS NULL OR num_frames = 0 )' )
             else: files_info_predicates.append( 'num_frames = ' + str( num_frames ) )
+            
+        if 'not_num_frames' in simple_preds:
+            
+            num_frames = simple_preds[ 'not_num_frames' ]
+            
+            files_info_predicates.append( '( num_frames IS NULL OR num_frames != {} )'.format( num_frames ) )
             
         if 'max_num_frames' in simple_preds:
             
@@ -8029,7 +8069,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # floats are a pain! as is storing rating as 0.0-1.0 and then allowing number of stars to change!
                 
-                if operator == '\u2248':
+                if operator == CC.UNICODE_ALMOST_EQUAL_TO:
                     
                     predicate = str( ( value - half_a_star_value ) * 0.8 ) + ' < rating AND rating < ' + str( ( value + half_a_star_value ) * 1.2 )
                     
@@ -8061,7 +8101,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
-            only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -8084,7 +8124,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -8434,7 +8474,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
-            only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -8525,7 +8565,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -13061,6 +13101,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'gui_session': result = self.modules_serialisable.GetGUISession( *args, **kwargs )
         elif action == 'hash_ids_to_hashes': result = self.modules_hashes_local_cache.GetHashIdsToHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
+        elif action == 'have_hashed_serialised_objects': result = self.modules_serialisable.HaveHashedJSONDumps( *args, **kwargs )
         elif action == 'ideal_client_files_locations': result = self._GetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'imageboards': result = self.modules_serialisable.GetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'inbox_hashes': result = self._FilterInboxHashes( *args, **kwargs )

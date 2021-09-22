@@ -178,7 +178,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
         self._date = QW.QCalendarWidget( self )
         
@@ -239,7 +239,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
         
         self._years = QP.MakeQSpinBox( self, max=30, width = 60 )
         self._months = QP.MakeQSpinBox( self, max=60, width = 60 )
@@ -297,7 +297,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
         self._date = QW.QCalendarWidget( self )
         
@@ -358,7 +358,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
         
         self._years = QP.MakeQSpinBox( self, max=30 )
         self._months = QP.MakeQSpinBox( self, max=60 )
@@ -416,7 +416,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', '\u2248', '=', '>' ]
+        choices = [ '<', CC.UNICODE_ALMOST_EQUAL_TO, '=', '>' ]
         
         self._sign = QP.RadioBox( self, choices = choices )
         
@@ -472,7 +472,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', '\u2248', '=', '>' ]
+        choices = [ '<', CC.UNICODE_ALMOST_EQUAL_TO, '=', CC.UNICODE_NOT_EQUAL_TO, '>' ]
         
         self._sign = QP.RadioBox( self, choices = choices )
         
@@ -592,7 +592,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
         self._num = QP.MakeQSpinBox( self, min=0, max=1000000 )
         
@@ -664,7 +664,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
         self._time_delta = ClientGUITime.TimeDeltaCtrl( self, min = 0, days = True, hours = True, minutes = True, seconds = True )
         
@@ -731,7 +731,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', '=', '>' ]
+        choices = [ '<', '=', CC.UNICODE_NOT_EQUAL_TO, '>' ]
         
         self._sign = QP.RadioBox( self, choices = choices )
         
@@ -907,7 +907,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
         self._height = QP.MakeQSpinBox( self, max=200000, width = 60 )
         
@@ -1350,7 +1350,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=[ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=[ '<', CC.UNICODE_ALMOST_EQUAL_TO, '=', CC.UNICODE_NOT_EQUAL_TO, '>' ] )
         
         self._num_pixels = QP.MakeQSpinBox( self, max=1048576, width = 60 )
         
@@ -1384,7 +1384,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '\u2248'
+        sign = CC.UNICODE_ALMOST_EQUAL_TO
         num_pixels = 2
         unit = 1000000
         
@@ -1404,7 +1404,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', '\u2248', '=', '>' ]
+        choices = [ '<', CC.UNICODE_ALMOST_EQUAL_TO, '=', CC.UNICODE_NOT_EQUAL_TO, '>' ]
         
         self._sign = QP.RadioBox( self, choices = choices )
         
@@ -1456,7 +1456,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         self._namespace = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'all tags' )
         self._namespace.setToolTip( 'Enable but leave blank for unnamespaced tags.' )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
         self._num_tags = QP.MakeQSpinBox( self, max=2000, width = 60 )
         
@@ -1579,7 +1579,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
         self._num_words = QP.MakeQSpinBox( self, max=1000000, width = 60 )
         
@@ -1627,7 +1627,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['=','wider than','taller than','\u2248'] )
+        self._sign = QP.RadioBox( self, choices=['=','wider than','taller than',CC.UNICODE_ALMOST_EQUAL_TO,CC.UNICODE_NOT_EQUAL_TO] )
         
         self._width = QP.MakeQSpinBox( self, max=50000, width = 60 )
         
@@ -1710,7 +1710,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar_to'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hashes, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, QW.QLabel( '\u2248', self ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, QW.QLabel( CC.UNICODE_ALMOST_EQUAL_TO, self ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
@@ -1743,7 +1743,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
         self._bytes = ClientGUIControls.BytesControl( self )
         
@@ -1796,7 +1796,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         self._namespace = QW.QLineEdit( self )
         
-        choices = [ '<', '\u2248', '>' ]
+        choices = [ '<', CC.UNICODE_ALMOST_EQUAL_TO, '>' ]
         
         self._sign = QP.RadioBox( self, choices = choices )
         
@@ -1848,7 +1848,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
         self._width = QP.MakeQSpinBox( self, max=200000, width = 60 )
         

@@ -367,18 +367,41 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         permitted_reason_choices.append( ( default_reason, default_reason ) )
         
-        for s in HG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ):
+        last_advanced_file_deletion_reason = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_reason' )
+        
+        if last_advanced_file_deletion_reason is None:
+            
+            selection_index = 0 # default, top row
+            
+        else:
+            
+            selection_index = None # text or custom
+            
+        
+        for ( i, s ) in enumerate( HG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ) ):
             
             permitted_reason_choices.append( ( s, s ) )
+            
+            if last_advanced_file_deletion_reason is not None and s == last_advanced_file_deletion_reason:
+                
+                selection_index = i + 1
+                
             
         
         permitted_reason_choices.append( ( 'custom', None ) )
         
         self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, vertical = True )
         
-        self._reason_radio.Select( 0 )
-        
         self._custom_reason = QW.QLineEdit( self._reason_panel )
+        
+        if selection_index is None:
+            
+            selection_index = len( permitted_reason_choices ) - 1 # custom
+            
+            self._custom_reason.setText( last_advanced_file_deletion_reason )
+            
+        
+        self._reason_radio.Select( selection_index )
         
         #
         
@@ -610,6 +633,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         reason = self._GetReason()
         
+        save_reason = False
+        
         local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, )
         
         if file_service_key in local_file_services:
@@ -622,6 +647,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             jobs = [ { file_service_key : [ content_update ] } for content_update in content_updates ]
             
+            save_reason = True
+            
         elif file_service_key == 'physical_delete':
             
             chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
@@ -633,6 +660,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
             
             involves_physical_delete = True
+            
+            save_reason = True
             
         elif file_service_key == 'clear_delete':
             
@@ -655,6 +684,20 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'admin' ) ]
             
             jobs = [ { file_service_key : content_updates } ]
+            
+        
+        if save_reason:
+            
+            if self._reason_radio.GetCurrentIndex() <= 0:
+                
+                last_advanced_file_deletion_reason = None
+                
+            else:
+                
+                last_advanced_file_deletion_reason = reason
+                
+            
+            HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
             
         
         return ( involves_physical_delete, jobs )

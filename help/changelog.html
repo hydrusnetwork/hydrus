@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_455"><a href="#version_455">version 455</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>many of the simple system predicates (width, size, duration, etc..) now support the '≠' (not equal) operator! searches only support one of these at once for now (e.g. you can't say height != 640 AND height != 1080--it'll pick one of these pseudorandomly)</li>
+					<li>the watcher page list right-click menu now has 'copy subjects', which copies the selected watchers' 'subject' texts to clipboard</li>
+					<li>the advanced file deletion panel now remembers which reason you last used. it remembers if you selected the 'default' value up top versus specific reason text, and if you enter custom text, it remembers that for next time too</li>
+					<li>the network job widget now shows the current URL as tooltip over the progress gauge, and under the cog menu, where clicking it copies it to clipboard</li>
+					<li>the various menu labels across the program should now show ampersand (&) correctly (e.g. in URLs)</li>
+					<li>the way byte sizes (like 21.7KB or 1.24GB) above 1KB are rendered to strings has been overhauled. they now generally show three significant figures. a new EXPERIMENTAL option in 'gui' options panel lets you change this, but only 2 or 3 are really helpful</li>
+					<li>if a repository clears the message on your account, you no longer get a popup telling you 'hey, new message from server x: ...'</li>
+					<li>the new ≠ system preds should be parseable (but be careful, likely buggy) using the client api's new system predicate parser, with '≠', '!=', 'is not', or 'isn't'</li>
+					<li>cleaned up some old data presentation methods and improved how client specific options are patched in to base hydrus string conversion code</li>
+					<li>.</li>
+					<li>ui freezes:</li>
+					<li>session pages can now detect if they have had no saveable changes since a certain time. they use this ability to skip redundant session save CPU time for pages with no changes since the last session save</li>
+					<li>for now, since the smallest atom of the session system is a whole page, gallery and watcher pages can only save time if _every_ downloader in the page has had no changes, so in their case this optimisation mostly only applies to completely finished/paused pages. it is still better to have several medium size downloader pages than one gigantic one</li>
+					<li>a new database maintenance task ensures that optimisation cannot accidentally lose a page (from something like an unfortunate timing of a session save after many manual session deletes)</li>
+					<li>the existing optimisation that skips 'last session' save on no changes now initialises its data as the 'last session' is first loaded (rather than on first save), meaning that if there are no changes while the client is open, no new 'last session's will be saved at all</li>
+					<li>misc session save code cleanup</li>
+					<li>.</li>
+					<li>database repair, mostly boring:</li>
+					<li>a client can now boot with client.caches.db missing and will rebuild that file. almost all of its tables are now able to automatically repopulate (issue #975)</li>
+					<li>all the new modules I have been working on are now responsible for their own repair. this includes missing indices, missing tables, and table repopulation where possible. modules now know which of their tables are critical to a boot, what version each table and index was added, and now manage both initial and later-created service tables and indices</li>
+					<li>essentially, all newer database repair code is now modularised rather than hardcoded. the repair and creation code actually now share the same table and index definitions. the code is more reliable, checkpoints its good work in case of later failure, and will be much easier to maintain and expand in future</li>
+					<li>lots of module repair and initialisation code is refactored and generally given a full pass</li>
+					<li>the core mappings cache regeneration routine now takes transaction checkpoints throughout its job to save progress and reduce journal size</li>
+					<li>master definition critical error detection code is no longer hardcoded!</li>
+					<li>mapping storage repair code is no longer hardcoded!</li>
+					<li>similar files repair code is no longer hardcoded!</li>
+					<li>parent or sibling cache repair repopulation is no longer hardcoded!</li>
+					<li>the local hashes cache module can now repopulate itself during repair</li>
+					<li>the notes fast search table can now repopulate itself during repair</li>
+					<li>the similar files search tree table can now rebuild itself during repair</li>
+				</ul>
 				<li><h3 id="version_454"><a href="#version_454">version 454</a></h3></li>
 				<ul>
 					<li>misc:</li>

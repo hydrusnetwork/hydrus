@@ -1,4 +1,5 @@
 import collections
+import hashlib
 import os
 import typing
 
@@ -466,6 +467,10 @@ class Page( QW.QSplitter ):
         
         self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
+        self._current_session_page_container = None
+        self._current_session_page_container_hashes_hash = self._GetCurrentSessionPageHashesHash()
+        self._current_session_page_container_timestamp = 0
+        
         self._ConnectMediaPanelSignals()
         
     
@@ -477,6 +482,22 @@ class Page( QW.QSplitter ):
         self._media_panel.statusTextChanged.connect( self._SetPrettyStatus )
         
         self._management_panel.ConnectMediaPanelSignals( self._media_panel )
+        
+    
+    def _GetCurrentSessionPageHashesHash( self ):
+        
+        hashlist = self.GetHashes()
+        
+        hashlist_hashable = tuple( hashlist )
+        
+        return hash( hashlist_hashable )
+        
+    
+    def _SetCurrentPageContainer( self, page_container: ClientGUISession.GUISessionContainerPageSingle ):
+        
+        self._current_session_page_container = page_container
+        self._current_session_page_container_hashes_hash = self._GetCurrentSessionPageHashesHash()
+        self._current_session_page_container_timestamp = HydrusData.GetNow()
         
     
     def _SetPrettyStatus( self, status: str ):
@@ -684,7 +705,16 @@ class Page( QW.QSplitter ):
         return self._parent_notebook
         
     
-    def GetSerialisablePage( self ):
+    def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
+        
+        if only_changed_page_data and not self.IsCurrentSessionPageDirty():
+            
+            hashes_to_page_data = {}
+            
+            skipped_unchanged_page_hashes = { self._current_session_page_container.GetPageDataHash() }
+            
+            return ( self._current_session_page_container, hashes_to_page_data, skipped_unchanged_page_hashes )
+            
         
         name = self.GetName()
         
@@ -698,7 +728,14 @@ class Page( QW.QSplitter ):
         
         hashes_to_page_data = { page_data_hash : page_data }
         
-        return ( page_container, hashes_to_page_data )
+        if about_to_save:
+            
+            self._SetCurrentPageContainer( page_container )
+            
+        
+        skipped_unchanged_page_hashes = set()
+        
+        return ( page_container, hashes_to_page_data, skipped_unchanged_page_hashes )
         
     
     def GetSessionAPIInfoDict( self, is_selected = False ):
@@ -753,6 +790,23 @@ class Page( QW.QSplitter ):
         num_seeds = self._management_controller.GetNumSeeds()
         
         return num_hashes + ( num_seeds * 20 )
+        
+    
+    def IsCurrentSessionPageDirty( self ):
+        
+        if self._current_session_page_container is None:
+            
+            return True
+            
+        else:
+            
+            if self._GetCurrentSessionPageHashesHash() != self._current_session_page_container_hashes_hash:
+                
+                return True
+                
+            
+            return self._management_controller.HasSerialisableChangesSince( self._current_session_page_container_timestamp )
+            
         
     
     def IsGalleryDownloaderPage( self ):
@@ -817,6 +871,11 @@ class Page( QW.QSplitter ):
     def SetName( self, name ):
         
         return self._management_controller.SetPageName( name )
+        
+    
+    def SetPageContainerClean( self, page_container: ClientGUISession.GUISessionContainerPageSingle ):
+        
+        self._SetCurrentPageContainer( page_container )
         
     
     def SetPrettyStatus( self, page_key, status ):
@@ -998,6 +1057,8 @@ directions_for_notebook_tabs[ CC.DIRECTION_RIGHT ] = QW.QTabWidget.East
 directions_for_notebook_tabs[ CC.DIRECTION_DOWN ] = QW.QTabWidget.South
 
 class PagesNotebook( QP.TabWidgetWithDnD ):
+    
+    freshSessionLoaded = QC.Signal( ClientGUISession.GUISessionContainer )
     
     def __init__( self, parent, controller, name ):
         
@@ -1226,13 +1287,16 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page = self.widget( index )
         
-        ( container, hashes_to_page_data ) = page.GetSerialisablePage()
+        only_changed_page_data = False
+        about_to_save = False
+        
+        ( container, hashes_to_page_data, skipped_unchanged_page_hashes ) = page.GetSerialisablePage( only_changed_page_data, about_to_save )
         
         top_notebook_container = ClientGUISession.GUISessionContainerPageNotebook( 'dupe top notebook', page_containers = [ container ] )
         
         session = ClientGUISession.GUISessionContainer( 'dupe session', top_notebook_container = top_notebook_container, hashes_to_page_data = hashes_to_page_data )
         
-        self.InsertSession( index + 1, session )
+        self.InsertSession( index + 1, session, session_is_clean = False )
         
     
     def _GetDefaultPageInsertionIndex( self ):
@@ -1937,6 +2001,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         destination.AppendGUISession( session )
         
+        self.freshSessionLoaded.emit( session )
+        
         job_key.Delete()
         
     
@@ -2087,11 +2153,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return {}
         
     
-    def GetCurrentGUISession( self, name ):
+    def GetCurrentGUISession( self, name: str, only_changed_page_data: bool, about_to_save: bool ):
         
-        ( page_container, hashes_to_page_data ) = self.GetSerialisablePage()
+        ( page_container, hashes_to_page_data, skipped_unchanged_page_hashes ) = self.GetSerialisablePage( only_changed_page_data, about_to_save )
         
-        session = ClientGUISession.GUISessionContainer( name, top_notebook_container = page_container, hashes_to_page_data = hashes_to_page_data )
+        session = ClientGUISession.GUISessionContainer( name, top_notebook_container = page_container, hashes_to_page_data = hashes_to_page_data, skipped_unchanged_page_hashes = skipped_unchanged_page_hashes )
         
         return session
         
@@ -2314,24 +2380,27 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._parent_notebook
         
     
-    def GetSerialisablePage( self ):
+    def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
         
         page_containers = []
         
         hashes_to_page_data = {}
         
+        skipped_unchanged_page_hashes = set()
+        
         for page in self._GetPages():
             
-            ( sub_page_container, some_hashes_to_page_data ) = page.GetSerialisablePage()
+            ( sub_page_container, some_hashes_to_page_data, some_skipped_unchanged_page_hashes ) = page.GetSerialisablePage( only_changed_page_data, about_to_save )
             
             page_containers.append( sub_page_container )
             
             hashes_to_page_data.update( some_hashes_to_page_data )
+            skipped_unchanged_page_hashes.update( some_skipped_unchanged_page_hashes )
             
         
         page_container = ClientGUISession.GUISessionContainerPageNotebook( self._name, page_containers = page_containers )
         
-        return ( page_container, hashes_to_page_data )
+        return ( page_container, hashes_to_page_data, skipped_unchanged_page_hashes )
         
     
     def GetSessionAPIInfoDict( self, is_selected = True ):
@@ -2513,7 +2582,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return False
         
     
-    def InsertSession( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer ):
+    def InsertSession( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, session_is_clean = True ):
         
         # get the top notebook, then for every page in there...
         
@@ -2522,10 +2591,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page_containers = top_notebook_container.GetPageContainers()
         select_first_page = True
         
-        self.InsertSessionNotebookPages( forced_insertion_index, session, page_containers, select_first_page )
+        self.InsertSessionNotebookPages( forced_insertion_index, session, page_containers, select_first_page, session_is_clean = session_is_clean )
         
     
-    def InsertSessionNotebook( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, notebook_page_container: ClientGUISession.GUISessionContainerPageNotebook, select_first_page: bool ):
+    def InsertSessionNotebook( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, notebook_page_container: ClientGUISession.GUISessionContainerPageNotebook, select_first_page: bool, session_is_clean = True ):
         
         name = notebook_page_container.GetName()
         
@@ -2533,10 +2602,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page_containers = notebook_page_container.GetPageContainers()
         
-        page.InsertSessionNotebookPages( 0, session, page_containers, select_first_page )
+        page.InsertSessionNotebookPages( 0, session, page_containers, select_first_page, session_is_clean = session_is_clean )
         
     
-    def InsertSessionNotebookPages( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_containers: typing.Collection[ ClientGUISession.GUISessionContainerPage ], select_first_page: bool ):
+    def InsertSessionNotebookPages( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_containers: typing.Collection[ ClientGUISession.GUISessionContainerPage ], select_first_page: bool, session_is_clean = True ):
         
         done_first_page = False
         
@@ -2548,11 +2617,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if isinstance( page_container, ClientGUISession.GUISessionContainerPageNotebook ):
                     
-                    self.InsertSessionNotebook( forced_insertion_index, session, page_container, select_page )
+                    self.InsertSessionNotebook( forced_insertion_index, session, page_container, select_page, session_is_clean = session_is_clean )
                     
                 else:
                     
-                    result = self.InsertSessionPage( forced_insertion_index, session, page_container, select_page )
+                    result = self.InsertSessionPage( forced_insertion_index, session, page_container, select_page, session_is_clean = session_is_clean )
                     
                     if result is None:
                         
@@ -2571,7 +2640,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def InsertSessionPage( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_container: ClientGUISession.GUISessionContainerPageSingle, select_page: bool ):
+    def InsertSessionPage( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, page_container: ClientGUISession.GUISessionContainerPageSingle, select_page: bool, session_is_clean = True ):
         
         try:
             
@@ -2589,7 +2658,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         management_controller = page_data.GetManagementController()
         initial_hashes = page_data.GetHashes()
         
-        return self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
+        page = self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
+        
+        if session_is_clean and page is not None:
+            
+            page.SetPageContainerClean( page_container )
+            
+        
+        return page
         
     
     def IsMultipleWatcherPage( self ):

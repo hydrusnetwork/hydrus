@@ -383,9 +383,19 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_no
         
     else:
         
-        return HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, history_suffix = history_suffix, show_seconds = show_seconds, no_prefix = no_prefix )
+        return HydrusData.BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, history_suffix = history_suffix, show_seconds = show_seconds, no_prefix = no_prefix )
         
     
+HydrusData.TimestampToPrettyTimeDelta = TimestampToPrettyTimeDelta
+
+def ToHumanBytes( size ):
+    
+    sig_figs = HG.client_controller.new_options.GetInteger( 'human_bytes_sig_figs' )
+    
+    return HydrusData.BaseToHumanBytes( size, sig_figs = sig_figs )
+    
+HydrusData.ToHumanBytes = ToHumanBytes
+
 class Booru( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = '!Booru'
