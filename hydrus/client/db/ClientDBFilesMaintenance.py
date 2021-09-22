@@ -3,17 +3,17 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBMaster
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.media import ClientMediaResultCache
 
-class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
+class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
     
     def __init__(
         self,
@@ -25,7 +25,7 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
         weakref_media_result_cache: ClientMediaResultCache.MediaResultCache
         ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client files maintenance', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client files maintenance', cursor )
         
         self.modules_hashes = modules_hashes
         self.modules_hashes_local_cache = modules_hashes_local_cache
@@ -34,11 +34,11 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
         self._weakref_media_result_cache = weakref_media_result_cache
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
+        return {
+            'external_caches.file_maintenance_jobs' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );', 400 )
+        }
         
     
     def AddJobs( self, hash_ids, job_type, time_can_start = 0 ):
@@ -70,11 +70,6 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
     def CancelJobs( self, job_type ):
         
         self._Execute( 'DELETE FROM file_maintenance_jobs WHERE job_type = ?;', ( job_type, ) )
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
         
     
     def ClearJobs( self, cleared_job_tuples ):
@@ -192,15 +187,6 @@ class ClientDBFilesMaintenance( HydrusDBModule.HydrusDBModule ):
                 HG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
                 
             
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_caches.file_maintenance_jobs'
-        ]
-        
-        return expected_table_names
         
     
     def GetJob( self, job_types = None ):

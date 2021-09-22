@@ -1,29 +1,35 @@
 import sqlite3
 import typing
 
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusData
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
+from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMaster
+from hydrus.client.db import ClientDBModule
+from hydrus.client.db import ClientDBServices
 
-class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
+class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_hashes: ClientDBMaster.ClientDBMasterHashes ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_services: ClientDBServices.ClientDBMasterServices, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
         
         self.modules_hashes = modules_hashes
+        self.modules_services = modules_services
+        self.modules_files_storage = modules_files_storage
         
         self._hash_ids_to_hashes_cache = {}
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client hashes local cache', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client hashes local cache', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
+        return {
+            'external_caches.local_hashes_cache' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );', 429 )
+        }
         
     
     def _PopulateHashIdsToHashesCache( self, hash_ids ):
@@ -71,9 +77,9 @@ class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateInitialTables( self ):
+    def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_hashes_cache ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+        self.Repopulate()
         
     
     def AddHashIdsToCache( self, hash_ids ):
@@ -91,15 +97,6 @@ class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
     def DropHashIdsFromCache( self, hash_ids ):
         
         self._ExecuteMany( 'DELETE FROM local_hashes_cache WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_caches.local_hashes_cache'
-        ]
-        
-        return expected_table_names
         
     
     def GetHash( self, hash_id ) -> str:
@@ -196,7 +193,26 @@ class ClientDBCacheLocalHashes( HydrusDBModule.HydrusDBModule ):
         return result is not None
         
     
-class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
+    def Repopulate( self ):
+        
+        self.ClearCache()
+        
+        HG.client_controller.frame_splash_status.SetSubtext( 'reading local file data' )
+        
+        local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+        
+        BLOCK_SIZE = 10000
+        num_to_do = len( local_hash_ids )
+        
+        for ( i, block_of_hash_ids ) in enumerate( HydrusData.SplitListIntoChunks( local_hash_ids, BLOCK_SIZE ) ):
+            
+            HG.client_controller.frame_splash_status.SetSubtext( 'caching local file data {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
+            
+            self.AddHashIdsToCache( block_of_hash_ids )
+            
+        
+    
+class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_tags: ClientDBMaster.ClientDBMasterTags ):
         
@@ -204,14 +220,14 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
         
         self._tag_ids_to_tags_cache = {}
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client tags local cache', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client tags local cache', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
+        return {
+            'external_caches.local_tags_cache' : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );', 400 )
+        }
         
     
     def _PopulateTagIdsToTagsCache( self, tag_ids ):
@@ -259,9 +275,13 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
             
         
     
-    def CreateInitialTables( self ):
+    def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+        message = 'Unfortunately, the local tag cache cannot repopulate itself yet during repair. Once you boot, please run _database->regenerate->local tag cache_. This message has been printed to the log.'
+        
+        HydrusData.DebugPrint( message )
+        
+        ClientDBModule.BlockingSafeShowMessage( message )
         
     
     def AddTagIdsToCache( self, tag_ids ):
@@ -279,15 +299,6 @@ class ClientDBCacheLocalTags( HydrusDBModule.HydrusDBModule ):
     def DropTagIdsFromCache( self, tag_ids ):
         
         self._ExecuteMany( 'DELETE FROM local_tags_cache WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids ) )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_caches.local_tags_cache'
-        ]
-        
-        return expected_table_names
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

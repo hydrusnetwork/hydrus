@@ -4,31 +4,48 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTags
 
+from hydrus.client.db import ClientDBModule
 from hydrus.client.networking import ClientNetworkingDomain
 
-class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
+class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client hashes master', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client hashes master', cursor )
         
         self._hash_ids_to_hashes_cache = {}
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
-        index_generation_tuples = []
+        return {
+            'external_master.hashes'
+        }
         
-        index_generation_tuples.append( ( 'external_master.local_hashes', [ 'md5' ], False ) )
-        index_generation_tuples.append( ( 'external_master.local_hashes', [ 'sha1' ], False ) )
-        index_generation_tuples.append( ( 'external_master.local_hashes', [ 'sha512' ], False ) )
+    
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        return index_generation_tuples
+        index_generation_dict = {}
+        
+        index_generation_dict[ 'external_master.local_hashes' ] = [
+            ( [ 'md5' ], False, 400 ),
+            ( [ 'sha1' ], False, 400 ),
+            ( [ 'sha512' ], False, 400 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'external_master.hashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );', 400 ),
+            'external_master.local_hashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );', 400 )
+        }
         
     
     def _PopulateHashIdsToHashesCache( self, hash_ids, exception_on_error = False ):
@@ -96,23 +113,6 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
             
             self._hash_ids_to_hashes_cache.update( uncached_hash_ids_to_hashes )
             
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_master.hashes',
-            'external_master.local_hashes'
-        ]
-        
-        return expected_table_names
         
     
     def GetExtraHash( self, hash_type, hash_id ) -> bytes:
@@ -312,41 +312,29 @@ class ClientDBMasterHashes( HydrusDBModule.HydrusDBModule ):
         self._Execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
         
     
-class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
+class ClientDBMasterTexts( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client texts master', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client texts master', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.labels ( label_id INTEGER PRIMARY KEY, label TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.notes ( note_id INTEGER PRIMARY KEY, note TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.texts ( text_id INTEGER PRIMARY KEY, text TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE VIRTUAL TABLE IF NOT EXISTS external_caches.notes_fts4 USING fts4( note );' )
+        return {
+            'external_master.labels' : ( 'CREATE TABLE IF NOT EXISTS {} ( label_id INTEGER PRIMARY KEY, label TEXT UNIQUE );', 400 ),
+            'external_master.notes' : ( 'CREATE TABLE IF NOT EXISTS {} ( note_id INTEGER PRIMARY KEY, note TEXT UNIQUE );', 400 ),
+            'external_master.texts' : ( 'CREATE TABLE IF NOT EXISTS {} ( text_id INTEGER PRIMARY KEY, text TEXT UNIQUE );', 400 ),
+            'external_caches.notes_fts4' : ( 'CREATE VIRTUAL TABLE IF NOT EXISTS {} USING fts4( note );', 400 )
+        }
         
     
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
+    def _RepairRepopulateTables( self, repopulate_table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        expected_table_names = [
-            'external_master.labels',
-            'external_master.notes',
-            'external_master.texts',
-            'external_caches.notes_fts4'
-        ]
-        
-        return expected_table_names
+        if 'external_caches.notes_fts4' in repopulate_table_names:
+            
+            self._Execute( 'REPLACE INTO notes_fts4 ( docid, note ) SELECT note_id, note FROM notes;' )
+            
         
     
     def GetLabelId( self, label ):
@@ -424,25 +412,45 @@ class ClientDBMasterTexts( HydrusDBModule.HydrusDBModule ):
         return text_id
         
     
-class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
+class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client tags master', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client tags master', cursor )
         
         self.null_namespace_id = None
         
         self._tag_ids_to_tags_cache = {}
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
-        index_generation_tuples = []
+        return {
+            'external_master.namespaces',
+            'external_master.subtags',
+            'external_master.tags'
+        }
         
-        index_generation_tuples.append( ( 'external_master.tags', [ 'subtag_id' ], False ) )
-        index_generation_tuples.append( ( 'external_master.tags', [ 'namespace_id', 'subtag_id' ], True ) )
+    
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        return index_generation_tuples
+        index_generation_dict = {}
+        
+        index_generation_dict[ 'external_master.tags' ] = [
+            ( [ 'subtag_id' ], False, 400 ),
+            ( [ 'namespace_id', 'subtag_id' ], True, 412 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'external_master.namespaces' : ( 'CREATE TABLE IF NOT EXISTS {} ( namespace_id INTEGER PRIMARY KEY, namespace TEXT UNIQUE );', 400 ),
+            'external_master.subtags' : ( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );', 400 ),
+            'external_master.tags' : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );', 400 )
+        }
         
     
     def _PopulateTagIdsToTagsCache( self, tag_ids ):
@@ -500,26 +508,6 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
             
             self._tag_ids_to_tags_cache.update( uncached_tag_ids_to_tags )
             
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.subtags ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_master.namespaces',
-            'external_master.subtags',
-            'external_master.tags'
-        ]
-        
-        return expected_table_names
         
     
     def GetNamespaceId( self, namespace ) -> int:
@@ -738,37 +726,30 @@ class ClientDBMasterTags( HydrusDBModule.HydrusDBModule ):
             
         
     
-class ClientDBMasterURLs( HydrusDBModule.HydrusDBModule ):
+class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client urls master', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client urls master', cursor )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
+        index_generation_dict = {}
         
-        index_generation_tuples.append( ( 'external_master.urls', [ 'domain_id' ], False ) )
-        
-        return index_generation_tuples
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.url_domains ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain_id INTEGER, url TEXT UNIQUE );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'external_master.url_domains',
-            'external_master.urls'
+        index_generation_dict[ 'external_master.urls' ] = [
+            ( [ 'domain_id' ], False, 400 )
         ]
         
-        return expected_table_names
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'external_master.url_domains' : ( 'CREATE TABLE IF NOT EXISTS {} ( domain_id INTEGER PRIMARY KEY, domain TEXT UNIQUE );', 400 ),
+            'external_master.urls' : ( 'CREATE TABLE IF NOT EXISTS {} ( url_id INTEGER PRIMARY KEY, domain_id INTEGER, url TEXT UNIQUE );', 400 )
+        }
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

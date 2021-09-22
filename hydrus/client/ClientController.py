@@ -396,7 +396,7 @@ class Controller( HydrusController.HydrusController ):
                         
                     else:
                         
-                        raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
+                        raise HydrusExceptions.QtDeadWindowException( 'Parent Window was destroyed before Qt command was called!' )
                         
                     
                 
@@ -1386,6 +1386,14 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def ReportLastSessionLoaded( self, gui_session ):
+        
+        if self._last_last_session_hash is None:
+            
+            self._last_last_session_hash = gui_session.GetSerialisedHash()
+            
+        
+    
     def ReportFirstSessionLoaded( self ):
         
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
@@ -1609,7 +1617,7 @@ class Controller( HydrusController.HydrusController ):
         
         name = session.GetName()
         
-        if name == 'last session':
+        if name == CC.LAST_SESSION_SESSION_NAME:
             
             session_hash = session.GetSerialisedHash()
             

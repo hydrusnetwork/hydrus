@@ -333,8 +333,11 @@ def parse_operator(string, spec):
     if spec is None:
         return string, None
     elif spec == Operators.RELATIONAL:
-        ops = ['\u2248', '=', '<', '>']
+        ops = ['\u2248', '=', '<', '>', '\u2260']
         if string.startswith('=='): return string[2:], '='
+        if string.startswith('!='): return string[2:], '\u2260'
+        if string.startswith('is not'): return string[6:], '\u2260'
+        if string.startswith('isn\'t'): return string[5:], '\u2260'
         if string.startswith( '~=' ): return string[2:], '\u2248'
         for op in ops:
             if string.startswith(op): return string[len(op):], op
@@ -344,6 +347,7 @@ def parse_operator(string, spec):
         if string.startswith('=='): return string[2:], '='
         if string.startswith('='): return string[1:], '='
         if string.startswith('is'): return string[2:], '='
+        if string.startswith( '\u2260' ): return string[1:], '!='
         if string.startswith('!='): return string[2:], '!='
         if string.startswith('is not'): return string[6:], '!='
         if string.startswith('isn\'t'): return string[5:], '!='
@@ -359,7 +363,7 @@ def parse_operator(string, spec):
         if match: return string[len(match[0]):], 'is not pending to'
         raise ValueError("Invalid operator, expected a file service relationship")
     elif spec == Operators.TAG_RELATIONAL:
-        match = re.match('(?P<tag>.*)\s+(?P<op>(<|>|=|==|~=|\u2248|is))', string)
+        match = re.match('(?P<tag>.*)\s+(?P<op>(<|>|=|==|~=|\u2248|\u2260|is|is not))', string)
         if re.match:
             tag = match['tag']
             op = match['op']

@@ -6,26 +6,28 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
+from hydrus.client.db import ClientDBModule
 
-class ClientDBMaintenance( HydrusDBModule.HydrusDBModule ):
+class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Collection[ str ] ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client db maintenance', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client db maintenance', cursor )
         
         self._db_dir = db_dir
         self._db_filenames = db_filenames
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
+        return {
+            'main.last_shutdown_work_time' : ( 'CREATE TABLE {} ( last_shutdown_work_time INTEGER );', 400 ),
+            'main.analyze_timestamps' : ( 'CREATE TABLE {} ( name TEXT, num_rows INTEGER, timestamp INTEGER );', 400 ),
+            'main.vacuum_timestamps' : ( 'CREATE TABLE {} ( name TEXT, timestamp INTEGER );', 400 )
+        }
         
     
     def _TableHasAtLeastRowCount( self, name, row_count ):
@@ -138,25 +140,6 @@ class ClientDBMaintenance( HydrusDBModule.HydrusDBModule ):
         self._Execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
         self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusData.GetNow() ) )
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
-        
-        self._Execute( 'CREATE TABLE analyze_timestamps ( name TEXT, num_rows INTEGER, timestamp INTEGER );' )
-        self._Execute( 'CREATE TABLE vacuum_timestamps ( name TEXT, timestamp INTEGER );' )
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'last_shutdown_work_time',
-            'analyze_timestamps',
-            'vacuum_timestamps'
-        ]
-        
-        return expected_table_names
         
     
     def GetLastShutdownWorkTime( self ):

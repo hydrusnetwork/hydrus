@@ -6,13 +6,13 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
 YAML_DUMP_ID_SINGLE = 0
@@ -142,32 +142,35 @@ class MaintenanceTracker( object ):
         self._total_new_hashed_serialisable_bytes += num_bytes
         
     
-class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
+class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, db_dir, cursor_transaction_wrapper: HydrusDB.DBCursorTransactionWrapper, modules_services: ClientDBServices.ClientDBMasterServices ):
+    def __init__( self, cursor: sqlite3.Cursor, db_dir, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules_services: ClientDBServices.ClientDBMasterServices ):
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client serialisable', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client serialisable', cursor )
         
         self._db_dir = db_dir
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_services = modules_services
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
-        index_generation_tuples = []
-        
-        return index_generation_tuples
+        return {
+            'main.json_dict',
+            'main.json_dumps',
+            'main.yaml_dumps'
+        }
         
     
-    def CreateInitialTables( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        self._Execute( 'CREATE TABLE json_dict ( name TEXT PRIMARY KEY, dump BLOB_BYTES );' )
-        self._Execute( 'CREATE TABLE json_dumps ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );' )
-        self._Execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );' )
-        self._Execute( 'CREATE TABLE json_dumps_hashed ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );' )
-        
-        self._Execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+        return {
+            'main.json_dict' : ( 'CREATE TABLE {} ( name TEXT PRIMARY KEY, dump BLOB_BYTES );', 400 ),
+            'main.json_dumps' : ( 'CREATE TABLE {} ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );', 400 ),
+            'main.json_dumps_named' : ( 'CREATE TABLE {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );', 400 ),
+            'main.json_dumps_hashed' : ( 'CREATE TABLE {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 ),
+            'main.yaml_dumps' : ( 'CREATE TABLE {} ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );', 400 )
+        }
         
     
     def DeleteJSONDump( self, dump_type ):
@@ -229,18 +232,6 @@ class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
             
         
         return all_expected_hashes
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'json_dict',
-            'json_dumps',
-            'json_dumps_named',
-            'yaml_dumps'
-        ]
-        
-        return expected_table_names
         
     
     def GetHashedJSONDumps( self, hashes ):
@@ -563,6 +554,19 @@ class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
         return result is not None
         
     
+    def HaveHashedJSONDumps( self, hashes ):
+        
+        for hash in hashes:
+            
+            if not self.HaveHashedJSONDump( hash ):
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     def MaintainHashedStorage( self, force_start = False ):
         
         maintenance_tracker = MaintenanceTracker.instance()
@@ -668,9 +672,9 @@ class ClientDBSerialisable( HydrusDBModule.HydrusDBModule ):
             
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER:
                 
-                if not obj.HasAllPageData():
+                if not obj.HasAllDirtyPageData():
                     
-                    raise Exception( 'A session with name "{}" was set to save, but it did not have all its page data!'.format( dump_name ) )
+                    raise Exception( 'A session with name "{}" was set to save, but it did not have all its dirty page data!'.format( dump_name ) )
                     
                 
                 hashes_to_page_data = obj.GetHashesToPageData()

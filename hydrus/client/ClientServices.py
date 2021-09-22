@@ -1334,7 +1334,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     ( message, message_created ) = self._account.GetMessageAndTimestamp()
                     
-                    if message_created != original_message_created and not HydrusData.TimeHasPassed( message_created + ( 86400 * 5 ) ):
+                    if message != '' and message_created != original_message_created and not HydrusData.TimeHasPassed( message_created + ( 86400 * 5 ) ):
                         
                         m = 'New message for your account on {}:'.format( self._name )
                         m += os.linesep * 2

@@ -103,6 +103,9 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     
 def AppendMenuLabel( menu, label, description = '' ):
     
+    original_label_text = label
+    label = SanitiseLabel( label )
+    
     if description is None:
         
         description = ''
@@ -123,7 +126,7 @@ def AppendMenuLabel( menu, label, description = '' ):
 
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', label )
+    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', original_label_text )
     
     return menu_item
     

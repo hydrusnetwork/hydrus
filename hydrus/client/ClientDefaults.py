@@ -22,7 +22,7 @@ def GetClientDefaultOptions():
     options[ 'fullscreen_cache_size' ] = 150 * 1048576
     options[ 'thumbnail_dimensions' ] = [ 150, 125 ]
     options[ 'password' ] = None
-    options[ 'default_gui_session' ] = 'last session'
+    options[ 'default_gui_session' ] = CC.LAST_SESSION_SESSION_NAME
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_normal' ] = True

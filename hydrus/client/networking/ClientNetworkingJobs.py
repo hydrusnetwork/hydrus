@@ -273,77 +273,6 @@ class NetworkJob( object ):
         return ( connect_timeout, read_timeout )
         
     
-    def _SendRequestAndGetResponse( self ) -> requests.Response:
-        
-        with self._lock:
-            
-            ncs = list( self._network_contexts )
-            
-        
-        headers = self.engine.domain_manager.GetHeaders( ncs )
-        
-        with self._lock:
-            
-            method = self._method
-            url = self._url
-            data = self._body
-            files = self._files
-            
-            if self.IS_HYDRUS_SERVICE or self.IS_IPFS_SERVICE:
-                
-                headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
-                
-            
-            referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
-            
-            url_headers = self.engine.domain_manager.GetURLClassHeaders( self._url )
-            
-            headers.update( url_headers )
-            
-            if HG.network_report_mode:
-                
-                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( self._url, os.linesep, self._referral_url, os.linesep, referral_url ) )
-                
-            
-            if referral_url is not None:
-                
-                try:
-                    
-                    referral_url.encode( 'latin-1' )
-                    
-                except UnicodeEncodeError:
-                    
-                    # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
-                    referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
-                    
-                    if HG.network_report_mode:
-                        
-                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( self._url, os.linesep, referral_url ) )
-                        
-                    
-                
-                headers[ 'referer' ] = referral_url
-                
-            
-            for ( key, value ) in self._additional_headers.items():
-                
-                headers[ key ] = value
-                
-            
-            self._status_text = 'sending request\u2026'
-            
-            snc = self._session_network_context
-            
-        
-        session = self.engine.session_manager.GetSession( snc )
-        
-        ( connect_timeout, read_timeout ) = self._GetTimeouts()
-        
-        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
-        
-        return response
-        
-    
     def _IsCancelled( self ):
         
         if self._is_cancelled:
@@ -516,6 +445,10 @@ class NetworkJob( object ):
                 
             
         
+        # ok the issue with some larger files failing here is they are actually 206, or at least would be (rather than 200), if we sent "Range: bytes=0-" or similar header
+        # if 206 and/or "Accept-Ranges: bytes" response header exists, then we may well be in this situation
+        # essentially we'll have to build infrastructure to recognise this situation and try with an actual fresh request with a new range and resume from where we left off, which means preserving bytes_read and so on
+        
         if self._num_bytes_to_read is not None and num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read:
             
             raise HydrusExceptions.ShouldReattemptNetworkException( 'Incomplete response: Was expecting {} but actually got {} !'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._num_bytes_read ) ) )
@@ -527,6 +460,77 @@ class NetworkJob( object ):
         self._bandwidth_tracker.ReportDataUsed( num_bytes )
         
         self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
+        
+    
+    def _SendRequestAndGetResponse( self ) -> requests.Response:
+        
+        with self._lock:
+            
+            ncs = list( self._network_contexts )
+            
+        
+        headers = self.engine.domain_manager.GetHeaders( ncs )
+        
+        with self._lock:
+            
+            method = self._method
+            url = self._url
+            data = self._body
+            files = self._files
+            
+            if self.IS_HYDRUS_SERVICE or self.IS_IPFS_SERVICE:
+                
+                headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
+                
+            
+            referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
+            
+            url_headers = self.engine.domain_manager.GetURLClassHeaders( self._url )
+            
+            headers.update( url_headers )
+            
+            if HG.network_report_mode:
+                
+                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( self._url, os.linesep, self._referral_url, os.linesep, referral_url ) )
+                
+            
+            if referral_url is not None:
+                
+                try:
+                    
+                    referral_url.encode( 'latin-1' )
+                    
+                except UnicodeEncodeError:
+                    
+                    # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
+                    referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
+                    
+                    if HG.network_report_mode:
+                        
+                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( self._url, os.linesep, referral_url ) )
+                        
+                    
+                
+                headers[ 'referer' ] = referral_url
+                
+            
+            for ( key, value ) in self._additional_headers.items():
+                
+                headers[ key ] = value
+                
+            
+            self._status_text = 'sending request\u2026'
+            
+            snc = self._session_network_context
+            
+        
+        session = self.engine.session_manager.GetSession( snc )
+        
+        ( connect_timeout, read_timeout ) = self._GetTimeouts()
+        
+        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+        
+        return response
         
     
     def _SetCancelled( self ):
@@ -1180,7 +1184,6 @@ class NetworkJob( object ):
                     # SessionRedirectMixin here https://requests.readthedocs.io/en/latest/_modules/requests/sessions/
                     # but this will do as a patch for now
                     self._actual_fetched_url = response.url
-                    
                     
                     if self._actual_fetched_url != self._url and HG.network_report_mode:
                         

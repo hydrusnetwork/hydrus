@@ -5,24 +5,24 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
 def GenerateFilesTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
     
-    current_files_table_name = 'current_files_{}'.format( suffix )
+    current_files_table_name = 'main.current_files_{}'.format( suffix )
     
-    deleted_files_table_name = 'deleted_files_{}'.format( suffix )
+    deleted_files_table_name = 'main.deleted_files_{}'.format( suffix )
     
-    pending_files_table_name = 'pending_files_{}'.format( suffix )
+    pending_files_table_name = 'main.pending_files_{}'.format( suffix )
     
-    petitioned_files_table_name = 'petitioned_files_{}'.format( suffix )
+    petitioned_files_table_name = 'main.petitioned_files_{}'.format( suffix )
     
     return ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name )
     
@@ -85,23 +85,62 @@ class DBLocationSearchContext( object ):
             
         
     
-class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
+class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_texts: ClientDBMaster.ClientDBMasterTexts ):
         
         self.modules_services = modules_services
         self.modules_texts = modules_texts
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client files storage', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client files storage', cursor )
         
         self.temp_file_storage_table_name = None
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialTableGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
+        return {
+            'main.local_file_deletion_reasons' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );', 400 )
+        }
         
-        return index_generation_tuples
+    
+    def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        index_generation_dict = {}
+        
+        index_generation_dict[ current_files_table_name ] = [
+            ( [ 'timestamp' ], False, 447 )
+        ]
+        
+        index_generation_dict[ deleted_files_table_name ] = [
+            ( [ 'timestamp' ], False, 447 ),
+            ( [ 'original_timestamp' ], False, 447 )
+        ]
+        
+        index_generation_dict[ petitioned_files_table_name ] = [
+            ( [ 'reason_id' ], False, 447 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetServiceTableGenerationDict( self, service_id ) -> dict:
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        
+        return {
+            current_files_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );', 447 ),
+            deleted_files_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER, original_timestamp INTEGER );', 447 ),
+            pending_files_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 447 ),
+            petitioned_files_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );', 447 )
+        }
+        
+    
+    def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
+        
+        return self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES )
         
     
     def AddFiles( self, service_id, insert_rows ):
@@ -192,11 +231,6 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
         
         return service_ids_to_nums_cleared
-        
-    
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
         
     
     def DeletePending( self, service_id: int ):
@@ -309,19 +343,19 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
     
     def GenerateFilesTables( self, service_id: int ):
         
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
+        table_generation_dict = self._GetServiceTableGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );'.format( current_files_table_name ) )
-        self._CreateIndex( current_files_table_name, [ 'timestamp' ] )
+        for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
+            
+            self._Execute( create_query_without_name.format( table_name ) )
+            
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER, original_timestamp INTEGER );'.format( deleted_files_table_name ) )
-        self._CreateIndex( deleted_files_table_name, [ 'timestamp' ] )
-        self._CreateIndex( deleted_files_table_name, [ 'original_timestamp' ] )
+        index_generation_dict = self._GetServiceIndexGenerationDict( service_id )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( pending_files_table_name ) )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );'.format( petitioned_files_table_name ) )
-        self._CreateIndex( petitioned_files_table_name, [ 'reason_id' ] )
+        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
+            
+            self._CreateIndex( table_name, columns, unique = unique )
+            
         
     
     def GetAPendingHashId( self, service_id ):
@@ -550,15 +584,6 @@ class ClientDBFilesStorage( HydrusDBModule.HydrusDBModule ):
             
         
         return db_location_search_context
-        
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = [
-            'local_file_deletion_reasons',
-        ]
-        
-        return expected_table_names
         
     
     def GetHashIdsToCurrentServiceIds( self, temp_hash_ids_table_name ):

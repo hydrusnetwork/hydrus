@@ -158,119 +158,6 @@ def VacuumDB( db_path ):
     
     c.execute( 'PRAGMA journal_mode = {};'.format( HG.db_journal_mode ) )
     
-class DBCursorTransactionWrapper( HydrusDBBase.DBBase ):
-    
-    def __init__( self, c: sqlite3.Cursor, transaction_commit_period: int ):
-        
-        HydrusDBBase.DBBase.__init__( self )
-        
-        self._SetCursor( c )
-        
-        self._transaction_commit_period = transaction_commit_period
-        
-        self._transaction_start_time = 0
-        self._in_transaction = False
-        self._transaction_contains_writes = False
-        
-        self._last_mem_refresh_time = HydrusData.GetNow()
-        self._last_wal_checkpoint_time = HydrusData.GetNow()
-        
-    
-    def BeginImmediate( self ):
-        
-        if not self._in_transaction:
-            
-            self._Execute( 'BEGIN IMMEDIATE;' )
-            self._Execute( 'SAVEPOINT hydrus_savepoint;' )
-            
-            self._transaction_start_time = HydrusData.GetNow()
-            self._in_transaction = True
-            self._transaction_contains_writes = False
-            
-        
-    
-    def Commit( self ):
-        
-        if self._in_transaction:
-            
-            self._Execute( 'COMMIT;' )
-            
-            self._in_transaction = False
-            self._transaction_contains_writes = False
-            
-            if HG.db_journal_mode == 'WAL' and HydrusData.TimeHasPassed( self._last_wal_checkpoint_time + 1800 ):
-                
-                self._Execute( 'PRAGMA wal_checkpoint(PASSIVE);' )
-                
-                self._last_wal_checkpoint_time = HydrusData.GetNow()
-                
-            
-            if HydrusData.TimeHasPassed( self._last_mem_refresh_time + 600 ):
-                
-                self._Execute( 'DETACH mem;' )
-                self._Execute( 'ATTACH ":memory:" AS mem;' )
-                
-                HydrusDBBase.TemporaryIntegerTableNameCache.instance().Clear()
-                
-                self._last_mem_refresh_time = HydrusData.GetNow()
-                
-            
-        else:
-            
-            HydrusData.Print( 'Received a call to commit, but was not in a transaction!' )
-            
-        
-    
-    def CommitAndBegin( self ):
-        
-        if self._in_transaction:
-            
-            self.Commit()
-            
-            self.BeginImmediate()
-            
-        
-    
-    def InTransaction( self ):
-        
-        return self._in_transaction
-        
-    
-    def NotifyWriteOccuring( self ):
-        
-        self._transaction_contains_writes = True
-        
-    
-    def Rollback( self ):
-        
-        if self._in_transaction:
-            
-            self._Execute( 'ROLLBACK TO hydrus_savepoint;' )
-            
-            # any temp int tables created in this lad will be rolled back, so 'initialised' can't be trusted. just reset, no big deal
-            HydrusDBBase.TemporaryIntegerTableNameCache.instance().Clear()
-            
-            # still in transaction
-            # transaction may no longer contain writes, but it isn't important to figure out that it doesn't
-            
-        else:
-            
-            HydrusData.Print( 'Received a call to rollback, but was not in a transaction!' )
-            
-        
-    
-    def Save( self ):
-        
-        self._Execute( 'RELEASE hydrus_savepoint;' )
-        
-        self._Execute( 'SAVEPOINT hydrus_savepoint;' )
-        
-    
-    def TimeToCommit( self ):
-        
-        return self._in_transaction and self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
-        
-    
 class HydrusDB( HydrusDBBase.DBBase ):
     
     READ_WRITE_ACTIONS = []
@@ -361,7 +248,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             raise Exception( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
             
         
-        self._RepairDB()
+        self._RepairDB( version )
         
         while version < HC.SOFTWARE_VERSION:
             
@@ -575,7 +462,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._is_connected = True
             
-            self._cursor_transaction_wrapper = DBCursorTransactionWrapper( self._c, HG.db_transaction_commit_period )
+            self._cursor_transaction_wrapper = HydrusDBBase.DBCursorTransactionWrapper( self._c, HG.db_transaction_commit_period )
             
             self._LoadModules()
             
@@ -743,9 +630,12 @@ class HydrusDB( HydrusDBBase.DBBase ):
         raise NotImplementedError()
         
     
-    def _RepairDB( self ):
+    def _RepairDB( self, version ):
         
-        pass
+        for module in self._modules:
+            
+            module.Repair( version, self._cursor_transaction_wrapper )
+            
         
     
     def _ReportOverupdatedDB( self, version ):

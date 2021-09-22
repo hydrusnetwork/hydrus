@@ -372,7 +372,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port" to use for http and https traffic. It should take effect immediately on dialog ok.'
             text += os.linesep * 2
-            text += 'no_proxy takes the form of comma-separated hosts/domains, just as in curl or the NO_PROXY environment variable. When http and/or https proxies are set, they will not be used for these.'
+            text += 'NO PROXY DOES NOT WORK UNLESS YOU HAVE A CUSTOM BUILD OF REQUESTS, SORRY! no_proxy takes the form of comma-separated hosts/domains, just as in curl or the NO_PROXY environment variable. When http and/or https proxies are set, they will not be used for these.'
             text += os.linesep * 2
             
             if ClientNetworkingSessions.SOCKS_PROXY_OK:
@@ -1215,6 +1215,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
             self._always_show_iso_time.setToolTip( tt )
             
+            self._human_bytes_sig_figs = QP.MakeQSpinBox( self._misc_panel, min = 1, max = 6 )
+            self._human_bytes_sig_figs.setToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.')
+            
             self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
@@ -1250,6 +1253,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
             
             self._always_show_iso_time.setChecked( self._new_options.GetBoolean( 'always_show_iso_time' ) )
+            
+            self._human_bytes_sig_figs.setValue( self._new_options.GetInteger( 'human_bytes_sig_figs' ) )
             
             self._popup_message_character_width.setValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
             
@@ -1307,6 +1312,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'Discord drag-and-drop filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( 'Export pattern shortcuts: ', ClientGUICommon.ExportPatternButton( self ) ) )
+            rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
@@ -1371,6 +1377,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.isChecked()
             
             self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.isChecked() )
+            
+            self._new_options.SetInteger( 'human_bytes_sig_figs', self._human_bytes_sig_figs.value() )
             
             self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
@@ -1494,9 +1502,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
             
-            if 'last session' not in gui_session_names:
+            if CC.LAST_SESSION_SESSION_NAME not in gui_session_names:
                 
-                gui_session_names.insert( 0, 'last session' )
+                gui_session_names.insert( 0, CC.LAST_SESSION_SESSION_NAME )
                 
             
             self._default_gui_session.addItem( 'just a blank page', None )

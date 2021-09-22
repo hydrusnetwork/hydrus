@@ -102,6 +102,12 @@ class NetworkJobControl( QW.QFrame ):
         
         if self._network_job is not None and self._network_job.engine is not None:
             
+            url = self._network_job.GetURL()
+            
+            ClientGUIMenus.AppendMenuLabel( menu, url, description = 'copy URL to the clipboard' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             network_contexts = self._network_job.GetNetworkContexts()
             
             if len( network_contexts ) > 0:
@@ -340,6 +346,8 @@ class NetworkJobControl( QW.QFrame ):
                 
                 self._network_job = None
                 
+                self._gauge.setToolTip( '' )
+                
                 self._Update()
                 
                 HG.client_controller.gui.UnregisterUIUpdateWindow( self )
@@ -350,6 +358,8 @@ class NetworkJobControl( QW.QFrame ):
             if self._network_job != network_job:
                 
                 self._network_job = network_job
+                
+                self._gauge.setToolTip( self._network_job.GetURL() )
                 
                 self._Update()
                 

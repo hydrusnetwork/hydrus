@@ -5,22 +5,22 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBModule
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
-class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
+class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
         
         self.modules_services = modules_services
         self.modules_files_storage = modules_files_storage
         
-        HydrusDBModule.HydrusDBModule.__init__( self, 'client similar files', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client similar files', cursor )
         
     
     def _AddLeaf( self, phash_id, phash ):
@@ -193,14 +193,30 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         self._ExecuteMany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
         
     
-    def _GetInitialIndexGenerationTuples( self ):
+    def _GetInitialIndexGenerationDict( self ) -> dict:
         
-        index_generation_tuples = []
+        index_generation_dict = {}
         
-        index_generation_tuples.append( ( 'external_master.shape_perceptual_hash_map', [ 'hash_id' ], False ) )
-        index_generation_tuples.append( ( 'external_caches.shape_vptree', [ 'parent_id' ], False ) )
+        index_generation_dict[ 'external_master.shape_perceptual_hash_map' ] = [
+            ( [ 'hash_id' ], False, 451 )
+        ]
         
-        return index_generation_tuples
+        index_generation_dict[ 'external_caches.shape_vptree' ] = [
+            ( [ 'parent_id' ], False, 400 )
+        ]
+        
+        return index_generation_dict
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {
+            'external_master.shape_perceptual_hashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );', 451 ),
+            'external_master.shape_perceptual_hash_map' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );', 451 ),
+            'external_caches.shape_vptree' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );', 400 ),
+            'external_caches.shape_maintenance_branch_regen' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY );', 400 ),
+            'main.shape_search_cache' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );', 451 )
+        }
         
     
     def _GetPHashId( self, phash ):
@@ -383,6 +399,14 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
             
         
     
+    def _RepairRepopulateTables( self, repopulate_table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+        
+        if 'external_caches.shape_vptree' in repopulate_table_names or 'external_caches.shape_maintenance_branch_regen' in repopulate_table_names:
+            
+            self.RegenerateTree()
+            
+        
+    
     def AssociatePHashes( self, hash_id, phashes ):
         
         phash_ids = set()
@@ -404,19 +428,6 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         return phash_ids
         
     
-    def CreateInitialTables( self ):
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_vptree ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
-        
-    
     def DisassociatePHashes( self, hash_id, phash_ids ):
         
         self._ExecuteMany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
@@ -433,14 +444,6 @@ class ClientDBSimilarFiles( HydrusDBModule.HydrusDBModule ):
         result = self._Execute( 'SELECT 1 FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
         return result is not None
-        
-    
-    
-    def GetExpectedTableNames( self ) -> typing.Collection[ str ]:
-        
-        expected_table_names = []
-        
-        return expected_table_names
         
     
     def GetMaintenanceStatus( self ):
