@@ -64,6 +64,7 @@ phash_generation_report_mode = False
 network_report_mode = False
 pubsub_report_mode = False
 daemon_report_mode = False
+mpv_report_mode = False
 force_idle_mode = False
 no_page_limit_mode = False
 thumbnail_debug_mode = False

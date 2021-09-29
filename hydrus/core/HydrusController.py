@@ -1,5 +1,4 @@
 import collections
-import gc
 import os
 import random
 import sys
@@ -618,8 +617,6 @@ class HydrusController( object ):
         
     
     def MaintainMemorySlow( self ):
-        
-        gc.collect()
         
         HydrusPaths.CleanUpOldTempPaths()
         

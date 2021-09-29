@@ -1,5 +1,4 @@
 import collections
-import gc
 import os
 import random
 import threading
@@ -1321,8 +1320,6 @@ class FilesMaintenanceManager( object ):
         self._idle_work_rules = HydrusNetworking.BandwidthRules()
         self._active_work_rules = HydrusNetworking.BandwidthRules()
         
-        self._jobs_since_last_gc_collect = 0
-        
         self._ReInitialiseWorkRules()
         
         self._maintenance_lock = threading.Lock()
@@ -1748,6 +1745,8 @@ class FilesMaintenanceManager( object ):
         
         try:
             
+            big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
+            
             cleared_jobs = []
             
             num_to_do = len( media_results )
@@ -1758,6 +1757,8 @@ class FilesMaintenanceManager( object ):
                 
             
             for ( i, media_result ) in enumerate( media_results ):
+                
+                big_pauser.Pause()
                 
                 hash = media_result.GetHash()
                 
@@ -1863,15 +1864,6 @@ class FilesMaintenanceManager( object ):
                     self._work_tracker.ReportRequestUsed( num_requests = regen_file_enum_to_job_weight_lookup[ job_type ] )
                     
                     cleared_jobs.append( ( hash, job_type, additional_data ) )
-                    
-                
-                self._jobs_since_last_gc_collect += 1
-                
-                if self._jobs_since_last_gc_collect > 100:
-                    
-                    gc.collect()
-                    
-                    self._jobs_since_last_gc_collect = 0
                     
                 
                 if len( cleared_jobs ) > 100:

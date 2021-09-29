@@ -398,7 +398,8 @@ class ParsedRequestArguments( dict ):
     
     def GetValue( self, key, expected_type, expected_list_type = None, default_value = None ):
         
-        if key in self:
+        # not None because in JSON sometimes people put 'null' to mean 'did not enter this optional parameter'
+        if key in self and self[ key ] is not None:
             
             value = self[ key ]
             

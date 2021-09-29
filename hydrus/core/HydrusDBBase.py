@@ -416,9 +416,23 @@ class DBCursorTransactionWrapper( DBBase ):
     
     def Save( self ):
         
-        self._Execute( 'RELEASE hydrus_savepoint;' )
-        
-        self._Execute( 'SAVEPOINT hydrus_savepoint;' )
+        if self._in_transaction:
+            
+            try:
+                
+                self._Execute( 'RELEASE hydrus_savepoint;' )
+                
+            except sqlite3.OperationalError:
+                
+                HydrusData.Print( 'Tried to release a database savepoint, but failed!' )
+                
+            
+            self._Execute( 'SAVEPOINT hydrus_savepoint;' )
+            
+        else:
+            
+            HydrusData.Print( 'Received a call to save, but was not in a transaction!' )
+            
         
     
     def TimeToCommit( self ):

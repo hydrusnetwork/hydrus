@@ -12,6 +12,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
+from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -818,7 +819,7 @@ class LoginCredentialDefinition( HydrusSerialisable.SerialisableBaseNamed ):
         
         if string_match is None:
             
-            string_match = ClientParsing.StringMatch()
+            string_match = ClientStrings.StringMatch()
             
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
@@ -1100,7 +1101,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( name, value_string_match ) in list(old_required_cookies_info.items()):
                 
-                key_string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = name, example_string = name )
+                key_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = name, example_string = name )
                 
                 new_required_cookies_info[ key_string_match ] = value_string_match
                 
@@ -1533,7 +1534,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( name, value_string_match ) in list(old_required_cookies_info.items()):
                 
-                key_string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = name, example_string = name )
+                key_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = name, example_string = name )
                 
                 new_required_cookies_info[ key_string_match ] = value_string_match
                 
@@ -1649,9 +1650,11 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             params = ''
             fragment = ''
             
+            single_value_parameters = []
+            
             if self._method == 'GET':
                 
-                query = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
+                query = ClientNetworkingDomain.ConvertQueryDictToText( query_dict, single_value_parameters )
                 body = None
                 test_result_body = ''
                 
@@ -1659,7 +1662,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query = ''
                 body = query_dict
-                test_result_body = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
+                test_result_body = ClientNetworkingDomain.ConvertQueryDictToText( query_dict, single_value_parameters )
                 
             
             r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )

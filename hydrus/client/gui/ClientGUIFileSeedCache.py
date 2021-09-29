@@ -27,6 +27,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.metadata import ClientTagSorting
 
 def GetRetryIgnoredParam( window ):
     
@@ -198,6 +199,83 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendMenuItem( menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
         ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+        
+        if len( selected_file_seeds ) == 1:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ( selected_file_seed, ) = selected_file_seeds
+            
+            hash_types_to_hashes = selected_file_seed.GetHashTypesToHashes()
+            
+            if len( hash_types_to_hashes ) == 0:
+                
+                ClientGUIMenus.AppendMenuLabel( menu, 'no hashes yet' )
+                
+            else:
+                
+                hash_submenu = QW.QMenu( menu )
+                
+                for hash_type in ( 'sha256', 'md5', 'sha1', 'sha512' ):
+                    
+                    if hash_type in hash_types_to_hashes:
+                        
+                        h = hash_types_to_hashes[ hash_type ]
+                        
+                        ClientGUIMenus.AppendMenuLabel( hash_submenu, '{}:{}'.format( hash_type, h.hex() ) )
+                        
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, hash_submenu, 'hashes' )
+                
+            
+            #
+            
+            if selected_file_seed.IsURLFileImport():
+                
+                urls = sorted( selected_file_seed.GetURLs() )
+                
+                if len( urls ) == 0:
+                    
+                    ClientGUIMenus.AppendMenuLabel( menu, 'no parsed urls' )
+                    
+                else:
+                    
+                    url_submenu = QW.QMenu( menu )
+                    
+                    for url in urls:
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, url_submenu, 'parsed urls' )
+                    
+                
+                #
+                
+                tags = list( selected_file_seed.GetExternalTags() )
+                
+                tag_sort = ClientTagSorting.TagSort( sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG, sort_order = CC.SORT_ASC )
+                
+                ClientTagSorting.SortTags( tag_sort, tags )
+                
+                if len( tags ) == 0:
+                    
+                    ClientGUIMenus.AppendMenuLabel( menu, 'no parsed tags' )
+                    
+                else:
+                    
+                    tag_submenu = QW.QMenu( menu )
+                    
+                    for tag in tags:
+                        
+                        ClientGUIMenus.AppendMenuLabel( tag_submenu, tag )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, tag_submenu, 'parsed tags' )
+                    
+                
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         

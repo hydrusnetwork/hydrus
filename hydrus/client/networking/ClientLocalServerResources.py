@@ -96,7 +96,17 @@ def ParseClientAPIPOSTByteArgs( args ):
             
             try:
                 
-                v = bytes.fromhex( parsed_request_args[ var_name ] )
+                raw_value = parsed_request_args[ var_name ]
+                
+                # In JSON, if someone puts 'null' for an optional value, treat that as 'did not enter anything'
+                if raw_value is None:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                    continue
+                    
+                
+                v = bytes.fromhex( raw_value )
                 
                 if len( v ) == 0:
                     
@@ -120,7 +130,17 @@ def ParseClientAPIPOSTByteArgs( args ):
             
             try:
                 
-                v_list = [ bytes.fromhex( hash_hex ) for hash_hex in parsed_request_args[ var_name ] ]
+                raw_value = parsed_request_args[ var_name ]
+                
+                # In JSON, if someone puts 'null' for an optional value, treat that as 'did not enter anything'
+                if raw_value is None:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                    continue
+                    
+                
+                v_list = [ bytes.fromhex( hash_hex ) for hash_hex in raw_value ]
                 
                 v_list = [ v for v in v_list if len( v ) > 0 ]
                 

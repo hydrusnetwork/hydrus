@@ -559,6 +559,10 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             self.ProcessDeleteAction()
             
+        elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            
+            self.ProcessActivateAction()
+            
         elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
             
             self.selectAll()
@@ -631,6 +635,14 @@ class BetterListCtrl( QW.QTreeWidget ):
     def HasSelected( self ):
         
         return len( self.selectedItems() ) > 0 
+        
+    
+    def ProcessActivateAction( self ):
+        
+        if self._activation_callback is not None:
+            
+            self._activation_callback()
+            
         
     
     def ProcessDeleteAction( self ):

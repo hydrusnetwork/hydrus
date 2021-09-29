@@ -385,6 +385,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return None
         
     
+    def GetHashTypesToHashes( self ):
+        
+        return dict( self._hashes )
+        
+    
     def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> ClientImportFiles.FileImportStatus:
         
         hash_match_found = False
@@ -587,6 +592,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return search_file_seeds
         
     
+    def GetExternalTags( self ):
+        
+        t = set( self._tags )
+        t.update( self._external_filterable_tags )
+        
+        return t
+        
+    
+    def GetURLs( self ):
+        
+        return set( self._urls )
+        
+    
     def HasHash( self ):
         
         return self.GetHash() is not None
@@ -696,6 +714,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.status == CC.STATUS_DELETED
         
     
+    def IsLocalFileImport( self ):
+        
+        return self.file_seed_type == FILE_SEED_TYPE_HDD
+        
+    
     def IsProbablyMasterPostURL( self ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
@@ -722,6 +745,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
         return True
+        
+    
+    def IsURLFileImport( self ):
+        
+        return self.file_seed_type == FILE_SEED_TYPE_URL
         
     
     def Normalise( self ):

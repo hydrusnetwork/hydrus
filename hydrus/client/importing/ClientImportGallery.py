@@ -1467,7 +1467,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_limit ):
+    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit ):
         
         with self._lock:
             
@@ -1493,8 +1493,8 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             gallery_import.SetFileLimit( file_limit )
             
-            gallery_import.SetFileImportOptions( self._file_import_options )
-            gallery_import.SetTagImportOptions( self._tag_import_options )
+            gallery_import.SetFileImportOptions( file_import_options )
+            gallery_import.SetTagImportOptions( tag_import_options )
             
             publish_to_page = False
             

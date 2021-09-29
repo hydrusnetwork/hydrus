@@ -24,6 +24,7 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
+from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -1444,7 +1445,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
         self._parse_rule_type.addItem( 'indexed item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
-        string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
+        string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
         
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
         
@@ -1651,7 +1652,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
+            new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
             
             panel = EditJSONParsingRulePanel( dlg, new_rule )
             
@@ -1858,7 +1859,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._veto_panel = QW.QWidget( self._content_panel )
         
         self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
-        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel, ClientParsing.StringMatch() )
+        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel, ClientStrings.StringMatch() )
         
         self._temp_variable_panel = QW.QWidget( self._content_panel )
         
@@ -3853,7 +3854,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         url = ''
         query_type = HC.GET
         file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-        file_identifier_string_converter = ClientParsing.StringConverter( ( ( ClientParsing.STRING_CONVERSION_ENCODE, 'hex' ), ), 'some hash bytes' )
+        file_identifier_string_converter = ClientStrings.StringConverter( ( ( ClientStrings.STRING_CONVERSION_ENCODE, 'hex' ), ), 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
         children = []
@@ -4611,7 +4612,7 @@ class TestPanelFormula( TestPanel ):
         
         try:
             
-            formula.SetStringProcessor( ClientParsing.StringProcessor() )
+            formula.SetStringProcessor( ClientStrings.StringProcessor() )
             
             texts = formula.Parse( example_parsing_context, self._example_data_raw )
             

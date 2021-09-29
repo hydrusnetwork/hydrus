@@ -1361,7 +1361,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         job_key.SetStatusTitle( 'sub gap downloader test' )
         
-        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', 2 )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
+        
+        from hydrus.client.importing.options import TagImportOptions
+        
+        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', file_import_options, tag_import_options, 2 )
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
@@ -4842,21 +4848,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SwitchBoolean( self, name ):
         
-        if name == 'callto_report_mode':
-            
-            HG.callto_report_mode = not HG.callto_report_mode
-            
-        elif name == 'daemon_report_mode':
-            
-            HG.daemon_report_mode = not HG.daemon_report_mode
-            
-        elif name == 'cache_report_mode':
+        if name == 'cache_report_mode':
             
             HG.cache_report_mode = not HG.cache_report_mode
+            
+        elif name == 'callto_report_mode':
+            
+            HG.callto_report_mode = not HG.callto_report_mode
             
         elif name == 'canvas_tile_outline_mode':
             
             HG.canvas_tile_outline_mode = not HG.canvas_tile_outline_mode
+            
+        elif name == 'daemon_report_mode':
+            
+            HG.daemon_report_mode = not HG.daemon_report_mode
             
         elif name == 'db_report_mode':
             
@@ -4885,6 +4891,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'media_load_report_mode':
             
             HG.media_load_report_mode = not HG.media_load_report_mode
+            
+        elif name == 'mpv_report_mode':
+            
+            HG.mpv_report_mode = not HG.mpv_report_mode
+            
+            level = 'debug' if HG.mpv_report_mode else 'fatal'
+            
+            self._controller.pub( 'set_mpv_log_level', level )
             
         elif name == 'network_report_mode':
             
@@ -5292,7 +5306,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         event.ignore() # we always ignore, as we'll close through the window through other means
         
     
-    def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_limit ):
+    def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit ):
         
         page = self._notebook.GetOrMakeGalleryDownloaderPage( desired_page_name = 'subscription gap downloaders', select_page = True )
         
@@ -5305,7 +5319,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         multiple_gallery_import = management_controller.GetVariable( 'multiple_gallery_import' )
         
-        multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_limit )
+        multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
         
         self._notebook.ShowPage( page )
         
@@ -6094,6 +6108,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'mpv report mode', 'Have the client report significant mpv debug information.', HG.mpv_report_mode, self._SwitchBoolean, 'mpv_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )

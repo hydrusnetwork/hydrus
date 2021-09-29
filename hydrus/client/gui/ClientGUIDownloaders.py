@@ -12,8 +12,8 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
+from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -891,10 +891,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     def __init__( self, parent: QW.QWidget, url_class: ClientNetworkingDomain.URLClass ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-
+        
         self._update_already_in_progress = False # Used to avoid infinite recursion on control updates.
         
         self._original_url_class = url_class
+        
+        ( url_type, preferred_scheme, netloc, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, example_url ) = url_class.ToTuple()
         
         self._name = QW.QLineEdit( self )
         
@@ -905,22 +907,22 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             self._url_type.addItem( HC.url_type_string_lookup[ url_type ], url_type )
             
         
-        self._preferred_scheme = ClientGUICommon.BetterChoice( self )
+        self._notebook = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        self._matching_panel = ClientGUICommon.StaticBox( self._notebook, 'matching' )
+        
+        #
+        
+        self._preferred_scheme = ClientGUICommon.BetterChoice( self._matching_panel )
         
         self._preferred_scheme.addItem( 'http', 'http' )
         self._preferred_scheme.addItem( 'https', 'https' )
         
-        self._netloc = QW.QLineEdit( self )
+        self._netloc = QW.QLineEdit( self._matching_panel )
         
-        self._alphabetise_get_parameters = QW.QCheckBox( self )
-        
-        tt = 'Normally, to ensure the same URLs are merged, hydrus will alphabetise GET parameters as part of the normalisation process.'
-        tt += os.linesep * 2
-        tt += 'Almost all servers support GET params in any order. One or two do not. Uncheck this if you know there is a problem.'
-        
-        self._alphabetise_get_parameters.setToolTip( tt )
-        
-        self._match_subdomains = QW.QCheckBox( self )
+        self._match_subdomains = QW.QCheckBox( self._matching_panel )
         
         tt = 'Should this class apply to subdomains as well?'
         tt += os.linesep * 2
@@ -930,51 +932,15 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_subdomains.setToolTip( tt )
         
-        self._keep_matched_subdomains = QW.QCheckBox( self )
-        
-        tt = 'Should this url keep its matched subdomains when it is normalised?'
-        tt += os.linesep * 2
-        tt += 'This is typically useful for direct file links that are often served on a numbered CDN subdomain like \'img3.example.com\' but are also valid on the neater main domain.'
-        
-        self._keep_matched_subdomains.setToolTip( tt )
-        
-        self._can_produce_multiple_files = QW.QCheckBox( self )
-        
-        tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
-        tt += os.linesep * 2
-        tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
-        
-        self._can_produce_multiple_files.setToolTip( tt )
-        
-        self._should_be_associated_with_files = QW.QCheckBox( self )
-        
-        tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
-        tt += os.linesep * 2
-        tt += 'If this URL is a File or Post URL and the client comes across it after having already downloaded it once, it can skip the redundant download since it knows it already has (or has already deleted) the file once before.'
-        tt += os.linesep * 2
-        tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for booru gallery or thread urls, which alter regularly, but is for static Post URLs or some fixed doujin galleries.'
-        
-        self._should_be_associated_with_files.setToolTip( tt )
-        
-        self._keep_fragment = QW.QCheckBox( self )
-        
-        tt = 'If checked, fragment text will be kept. This is the component sometimes after an URL that starts with a "#", such as "#kwGFb3xhA3k8B".'
-        tt += os.linesep * 2
-        tt += 'This data is never sent to a server, so in normal cases should never be kept, but for some clever services such as Mega, with complicated javascript navigation, it may contain unique clientside navigation data if you open the URL in your browser.'
-        tt += os.linesep * 2
-        tt += 'Only turn this on if you know it is needed. For almost all sites, it only hurts the normalisation process.'
-        
-        self._keep_fragment.setToolTip( tt )
-        
         #
         
-        path_components_panel = ClientGUICommon.StaticBox( self, 'path components' )
+        path_components_panel = ClientGUICommon.StaticBox( self._matching_panel, 'path components' )
         
         self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, 6, self._ConvertPathComponentRowToString, self._AddPathComponent, self._EditPathComponent )
         
         #
         
-        parameters_panel = ClientGUICommon.StaticBox( self, 'parameters' )
+        parameters_panel = ClientGUICommon.StaticBox( self._matching_panel, 'parameters' )
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
@@ -988,7 +954,125 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        headers_panel = ClientGUICommon.StaticBox( self, 'header overrides' )
+        ( has_single_value_parameters, single_value_parameters_string_match ) = url_class.GetSingleValueParameterData()
+        
+        self._has_single_value_parameters = QW.QCheckBox( self._matching_panel )
+        
+        tt = 'Some URLs have parameters with just a key or a value, not a "key=value" pair. Normally these are removed on normalisation, but if you turn this on, then this URL will keep them and require at least one.'
+        
+        self._has_single_value_parameters.setToolTip( tt )
+        
+        self._has_single_value_parameters.setChecked( has_single_value_parameters )
+        
+        self._single_value_parameters_string_match = ClientGUIStringControls.StringMatchButton( self._matching_panel, single_value_parameters_string_match )
+        
+        tt = 'All single-value parameters must match this!'
+        
+        #
+        
+        self._notebook.addTab( self._matching_panel, 'match rules' )
+        
+        #
+        
+        self._options_panel = ClientGUICommon.StaticBox( self._notebook, 'options' )
+        
+        #
+        
+        self._keep_matched_subdomains = QW.QCheckBox( self._options_panel )
+        
+        tt = 'Should this url keep its matched subdomains when it is normalised?'
+        tt += os.linesep * 2
+        tt += 'This is typically useful for direct file links that are often served on a numbered CDN subdomain like \'img3.example.com\' but are also valid on the neater main domain.'
+        
+        self._keep_matched_subdomains.setToolTip( tt )
+        
+        self._alphabetise_get_parameters = QW.QCheckBox( self._options_panel )
+        
+        tt = 'Normally, to ensure the same URLs are merged, hydrus will alphabetise GET parameters as part of the normalisation process.'
+        tt += os.linesep * 2
+        tt += 'Almost all servers support GET params in any order. One or two do not. Uncheck this if you know there is a problem.'
+        
+        self._alphabetise_get_parameters.setToolTip( tt )
+        
+        self._can_produce_multiple_files = QW.QCheckBox( self._options_panel )
+        
+        tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
+        tt += os.linesep * 2
+        tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
+        
+        self._can_produce_multiple_files.setToolTip( tt )
+        
+        self._should_be_associated_with_files = QW.QCheckBox( self._options_panel )
+        
+        tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
+        tt += os.linesep * 2
+        tt += 'If this URL is a File or Post URL and the client comes across it after having already downloaded it once, it can skip the redundant download since it knows it already has (or has already deleted) the file once before.'
+        tt += os.linesep * 2
+        tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for booru gallery or thread urls, which alter regularly, but is for static Post URLs or some fixed doujin galleries.'
+        
+        self._should_be_associated_with_files.setToolTip( tt )
+        
+        self._keep_fragment = QW.QCheckBox( self._options_panel )
+        
+        tt = 'If checked, fragment text will be kept. This is the component sometimes after an URL that starts with a "#", such as "#kwGFb3xhA3k8B".'
+        tt += os.linesep * 2
+        tt += 'This data is never sent to a server, so in normal cases should never be kept, but for some clever services such as Mega, with complicated javascript navigation, it may contain unique clientside navigation data if you open the URL in your browser.'
+        tt += os.linesep * 2
+        tt += 'Only turn this on if you know it is needed. For almost all sites, it only hurts the normalisation process.'
+        
+        self._keep_fragment.setToolTip( tt )
+        
+        #
+        
+        self._referral_url_panel = ClientGUICommon.StaticBox( self._options_panel, 'referral url' )
+        
+        self._send_referral_url = ClientGUICommon.BetterChoice( self._referral_url_panel )
+        
+        for send_referral_url_type in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
+            
+            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
+            
+        
+        tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
+        
+        self._send_referral_url.setToolTip( tt )
+        
+        self._referral_url_converter = ClientGUIStringControls.StringConverterButton( self._referral_url_panel, referral_url_converter )
+        
+        tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
+        
+        self._referral_url_converter.setToolTip( tt )
+        
+        self._referral_url = QW.QLineEdit( self._referral_url_panel )
+        self._referral_url.setReadOnly( True )
+        
+        #
+        
+        self._api_url_panel = ClientGUICommon.StaticBox( self._options_panel, 'api url' )
+        
+        self._api_lookup_converter = ClientGUIStringControls.StringConverterButton( self._api_url_panel, api_lookup_converter )
+        
+        tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
+        
+        self._api_lookup_converter.setToolTip( tt )
+        
+        self._api_url = QW.QLineEdit( self._api_url_panel )
+        self._api_url.setReadOnly( True )
+        
+        #
+        
+        self._next_gallery_page_panel = ClientGUICommon.StaticBox( self._options_panel, 'next gallery page' )
+        
+        self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
+        
+        self._next_gallery_page_delta = QP.MakeQSpinBox( self._next_gallery_page_panel, min=1, max=65536 )
+        
+        self._next_gallery_page_url = QW.QLineEdit( self._next_gallery_page_panel )
+        self._next_gallery_page_url.setReadOnly( True )
+        
+        #
+        
+        headers_panel = ClientGUICommon.StaticBox( self._options_panel, 'header overrides' )
         
         header_overrides = url_class.GetHeaderOverrides()
         
@@ -996,11 +1080,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._next_gallery_page_panel = ClientGUICommon.StaticBox( self, 'next gallery page' )
-        
-        self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
-        
-        self._next_gallery_page_delta = QP.MakeQSpinBox( self._next_gallery_page_panel, min=1, max=65536 )
+        self._notebook.addTab( self._options_panel, 'options' )
         
         #
         
@@ -1016,40 +1096,6 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex conversion into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
         
         self._normalised_url.setToolTip( tt )
-        
-        ( url_type, preferred_scheme, netloc, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, example_url ) = url_class.ToTuple()
-        
-        self._send_referral_url = ClientGUICommon.BetterChoice( self )
-        
-        for send_referral_url_type in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
-            
-            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
-            
-        
-        tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
-        
-        self._send_referral_url.setToolTip( tt )
-        
-        self._referral_url_converter = ClientGUIStringControls.StringConverterButton( self, referral_url_converter )
-        
-        tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
-        
-        self._referral_url_converter.setToolTip( tt )
-        
-        self._referral_url = QW.QLineEdit()
-        self._referral_url.setReadOnly( True )
-        
-        self._api_lookup_converter = ClientGUIStringControls.StringConverterButton( self, api_lookup_converter )
-        
-        tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
-        
-        self._api_lookup_converter.setToolTip( tt )
-        
-        self._api_url = QW.QLineEdit( self )
-        self._api_url.setReadOnly( True )
-        
-        self._next_gallery_page_url = QW.QLineEdit( self )
-        self._next_gallery_page_url.setReadOnly( True )
         
         #
         
@@ -1074,7 +1120,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._path_components.AddDatas( path_components )
         
-        self._parameters.AddDatas( list(parameters.items()) )
+        self._parameters.AddDatas( list( parameters.items() ) )
         
         self._parameters.Sort()
         
@@ -1106,7 +1152,29 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        headers_panel.Add( self._header_overrides, CC.FLAGS_EXPAND_PERPENDICULAR )
+        headers_panel.Add( self._header_overrides, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
+        rows.append( ( 'network location: ', self._netloc ) )
+        rows.append( ( 'should subdomains also match this class?: ', self._match_subdomains ) )
+        
+        gridbox_1 = ClientGUICommon.WrapInGrid( self._matching_panel, rows )
+        
+        rows = []
+        
+        rows.append( ( 'has single-value parameter(s): ', self._has_single_value_parameters ) )
+        rows.append( ( 'string match for single-value parameters: ', self._single_value_parameters_string_match ) )
+        
+        gridbox_2 = ClientGUICommon.WrapInGrid( self._matching_panel, rows )
+        
+        self._matching_panel.Add( gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._matching_panel.Add( path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._matching_panel.Add( parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._matching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1115,7 +1183,49 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( hbox, self._next_gallery_page_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._next_gallery_page_delta, CC.FLAGS_CENTER_PERPENDICULAR )
         
+        rows = []
+        
+        rows.append( ( 'next gallery page url: ', self._next_gallery_page_url ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._next_gallery_page_panel, rows )
+        
         self._next_gallery_page_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._next_gallery_page_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'send referral url?: ', self._send_referral_url ) )
+        rows.append( ( 'optional referral url converter: ', self._referral_url_converter ) )
+        rows.append( ( 'referral url: ', self._referral_url ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._referral_url_panel, rows )
+        
+        self._referral_url_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
+        rows.append( ( 'api url: ', self._api_url ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._api_url_panel, rows )
+        
+        self._api_url_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'if matching by subdomain, keep it when normalising?: ', self._keep_matched_subdomains ) )
+        rows.append( ( 'alphabetise GET parameters when normalising?: ', self._alphabetise_get_parameters ) )
+        rows.append( ( 'keep fragment when normalising?: ', self._keep_fragment ) )
+        rows.append( ( 'post page can produce multiple files?: ', self._can_produce_multiple_files ) )
+        rows.append( ( 'associate a \'known url\' with resulting files?: ', self._should_be_associated_with_files ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
+        
+        self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( self._api_url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( self._referral_url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( headers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -1123,37 +1233,20 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'url type: ', self._url_type ) )
-        rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
-        rows.append( ( 'network location: ', self._netloc ) )
-        rows.append( ( 'should alphabetise GET parameters when normalising?: ', self._alphabetise_get_parameters ) )
-        rows.append( ( 'should subdomains also match this class?: ', self._match_subdomains ) )
-        rows.append( ( 'keep those subdomains when normalising?: ', self._keep_matched_subdomains ) )
-        rows.append( ( 'post page can produce multiple files?: ', self._can_produce_multiple_files ) )
-        rows.append( ( 'associate a \'known url\' with resulting files?: ', self._should_be_associated_with_files ) )
-        rows.append( ( 'keep fragment?: ', self._keep_fragment ) )
         
-        gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
+        gridbox_1 = ClientGUICommon.WrapInGrid( self._matching_panel, rows )
         
         rows = []
         
         rows.append( ( 'example url: ', self._example_url ) )
         rows.append( ( 'normalised url: ', self._normalised_url ) )
-        rows.append( ( 'send referral url?: ', self._send_referral_url ) )
-        rows.append( ( 'optional referral url converter: ', self._referral_url_converter ) )
-        rows.append( ( 'referral url: ', self._referral_url ) )
-        rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
-        rows.append( ( 'api url: ', self._api_url ) )
-        rows.append( ( 'next gallery page url: ', self._next_gallery_page_url ) )
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, headers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._example_url_classes, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1176,6 +1269,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._send_referral_url.currentIndexChanged.connect( self._UpdateControls )
         self._referral_url_converter.valueChanged.connect( self._UpdateControls )
         self._api_lookup_converter.valueChanged.connect( self._UpdateControls )
+        self._has_single_value_parameters.clicked.connect( self._UpdateControls )
+        self._single_value_parameters_string_match.valueChanged.connect( self._UpdateControls )
         
         self._should_be_associated_with_files.clicked.connect( self.EventAssociationUpdate )
         
@@ -1203,7 +1298,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        string_match = ClientParsing.StringMatch()
+        string_match = ClientStrings.StringMatch()
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
             
@@ -1257,7 +1352,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddPathComponent( self ):
         
-        string_match = ClientParsing.StringMatch()
+        string_match = ClientStrings.StringMatch()
         default = None
         
         return self._EditPathComponent( ( string_match, default ) )
@@ -1464,6 +1559,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         netloc = self._netloc.text()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
+        has_single_value_parameters = self._has_single_value_parameters.isChecked()
+        single_value_parameters_string_match = self._single_value_parameters_string_match.GetValue()
         header_overrides = self._header_overrides.GetValue()
         api_lookup_converter = self._api_lookup_converter.GetValue()
         send_referral_url = self._send_referral_url.GetValue()
@@ -1482,6 +1579,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             netloc = netloc,
             path_components = path_components,
             parameters = parameters,
+            has_single_value_parameters = has_single_value_parameters,
+            single_value_parameters_string_match = single_value_parameters_string_match,
             header_overrides = header_overrides,
             api_lookup_converter = api_lookup_converter,
             send_referral_url = send_referral_url,
@@ -1567,6 +1666,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._next_gallery_page_panel.setEnabled( False )
             
+        
+        self._single_value_parameters_string_match.setEnabled( self._has_single_value_parameters.isChecked() )
         
         #
         

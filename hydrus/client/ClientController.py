@@ -1,4 +1,3 @@
-import gc
 import hashlib
 import os
 import psutil
@@ -2029,8 +2028,6 @@ class Controller( HydrusController.HydrusController ):
     def THREADExitEverything( self ):
         
         try:
-            
-            gc.collect()
             
             self.frame_splash_status.SetTitleText( 'shutting down gui\u2026' )
             

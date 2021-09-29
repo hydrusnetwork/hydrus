@@ -2568,6 +2568,8 @@ class ServerServiceRestricted( ServerService ):
         
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
+        dictionary[ 'service_options' ] = self._service_options
+        
         dictionary[ 'server_message' ] = self._server_message
         
         return dictionary

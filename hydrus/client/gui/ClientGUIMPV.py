@@ -67,6 +67,10 @@ def GetClientAPIVersionString():
         
     '''
 
+def log_handler( loglevel, component, message ):
+    
+    HydrusData.DebugPrint( '[{}] {}: {}'.format( loglevel, component, message ) )
+    
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
 class mpvWidget( QW.QWidget ):
@@ -88,8 +92,10 @@ class mpvWidget( QW.QWidget ):
         self.setAttribute( QC.Qt.WA_DontCreateNativeAncestors )
         self.setAttribute( QC.Qt.WA_NativeWindow )
         
+        loglevel = 'debug' if HG.mpv_report_mode else 'fatal'
+        
         # loglevels: fatal, error, debug
-        self._player = mpv.MPV( wid = str( int( self.winId() ) ), log_handler = print, loglevel = 'fatal' )
+        self._player = mpv.MPV( wid = str( int( self.winId() ) ), log_handler = log_handler, loglevel = loglevel )
         
         # hydev notes on OSC:
         # OSC is by default off, default input bindings are by default off
@@ -130,6 +136,7 @@ class mpvWidget( QW.QWidget ):
         HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
         HG.client_controller.sub( self, 'UpdateConf', 'notify_new_options' )
+        HG.client_controller.sub( self, 'SetLogLevel', 'set_mpv_log_level' )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
         
@@ -454,6 +461,11 @@ class mpvWidget( QW.QWidget ):
             
         
         self._my_shortcut_handler.SetShortcuts( [ shortcut_set ] )
+        
+    
+    def SetLogLevel( self, level: str ):
+        
+        self._player.set_loglevel( level )
         
     
     def SetMedia( self, media, start_paused = False ):

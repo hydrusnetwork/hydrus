@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_456"><a href="#version_456">version 456</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>the client no longer regularly commits a full garbage collection during memory maintenance. this debug-tier operation can take up to 15s on very large clients, resulting in awful lag. various instances of forcing it after big operations complete (e.g. to encourage post-subscription memory cleanup), are now replaced with regular pauses to allow python to clean itself more granularly. this may result in temporary memory bloat for some very subscription-heavy clients, so feedback would be appreciated</li>
+					<li>right-clicking on a single url import item in a 'file log' now shows you all the known hashes, parsed urls, and parsed tags for that item. I hope this will help debug some weird problems!</li>
+					<li>all multi-column lists across the program now convert an enter/return key press into an 'activate' command, as if you had double-clicked. this should make it easier to, for instance, highlight a downloader or shift/ctrl select a bunch of sibling rows and mass-delete (issue #933)</li>
+					<li>the subscription gap filler button now propagates file import options and tag import options from the subscription to the downloader it creates (issue #910)</li>
+					<li>a new 'mpv report mode' now prints a huge amount of mpv debug information to the hydrus log when activated</li>
+					<li>improved how mpv prints log messages to the hydrus log, including immediate log flushing</li>
+					<li>fixed a bug that meant the hydrus server was not saving custom update period or anonymisation period for next boot. thank you for the reports, and sorry for the trouble! (issue #976)</li>
+					<li>cleaned up some database savepoint handling after a serious transaction error occurs</li>
+					<li>the client api now ignores any parameter with a value of null, as if it were not there, rather than moaning about invalid datatypes (issue #922)</li>
+					<li>.</li>
+					<li>url classes:</li>
+					<li>the edit url class dialog is now broken into two notebook pages--'match rules', which strictly covers how to recognise a url, and 'options', which handles url storage, conversion, and normalisation</li>
+					<li>url classes can now support single-value parameters (a parameter with just a value, not a key/value pair). if turned on, then at least one single-value parameter is required to match the url, and multiple are permitted. a checkbox in the dialog turns this on and a string match lets you determine if the url class matches the received single value params</li>
+					<li>added unit tests to test the new single-value parameter matching</li>
+					<li>fixed an issue where StringMatch buttons were not emitting their valueChanged signal, guess how I discovered that bug this week</li>
+					<li>fixed the insertion of default parameter values when the URL Class has non-alphabetised params</li>
+					<li>refactored and cleaned up some related parsing and string convertion code into new ClientString module</li>
+				</ul>
 				<li><h3 id="version_455"><a href="#version_455">version 455</a></h3></li>
 				<ul>
 					<li>misc:</li>

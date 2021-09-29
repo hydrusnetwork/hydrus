@@ -1,4 +1,3 @@
-import gc
 import os
 import psutil
 import re
@@ -98,8 +97,6 @@ def CleanUpTempPath( os_file_handle, temp_path ):
         os.close( os_file_handle )
         
     except OSError:
-        
-        gc.collect()
         
         try:
             

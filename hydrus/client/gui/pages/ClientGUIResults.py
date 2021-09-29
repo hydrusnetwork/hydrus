@@ -19,9 +19,9 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
+from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -42,6 +42,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):

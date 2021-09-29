@@ -15,7 +15,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientParsing
+from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.networking import ClientNetworkingContexts
 
@@ -39,12 +39,6 @@ def AddCookieToSession( session, name, value, domain, path, expires, secure = Fa
     cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
     
     session.cookies.set_cookie( cookie )
-    
-def AlphabetiseQueryText( query_text ):
-    
-    ( query_dict, param_order ) = ConvertQueryTextToDict( query_text )
-    
-    return ConvertQueryDictToText( query_dict )
     
 def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
     
@@ -119,21 +113,53 @@ def ConvertHTTPToHTTPS( url ):
         raise Exception( 'Given a url that did not have a scheme!' )
         
     
-def ConvertQueryDictToText( query_dict, param_order = None ):
+def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = None ):
     
     # we now do everything with requests, which does all the unicode -> %20 business naturally, phew
     # we still want to call str explicitly to coerce integers and so on that'll slip in here and there
     
     if param_order is None:
         
-        param_pairs = sorted( query_dict.items() )
+        param_order = sorted( query_dict.keys() )
         
-    else:
+        single_value_parameters = list( single_value_parameters )
+        single_value_parameters.sort()
         
-        param_pairs = [ ( key, query_dict[ key ] ) for key in param_order if key in query_dict ]
+        for i in range( len( single_value_parameters ) ):
+            
+            param_order.append( None )
+            
         
     
-    query_text = '&'.join( ( str( key ) + '=' + str( value ) for ( key, value ) in param_pairs ) )
+    params = []
+    
+    single_value_parameter_index = 0
+    
+    for key in param_order:
+        
+        if key is None:
+            
+            try:
+                
+                params.append( single_value_parameters[ single_value_parameter_index ] )
+                
+            except IndexError:
+                
+                continue
+                
+            
+            single_value_parameter_index += 1
+            
+        else:
+            
+            if key in query_dict:
+                
+                params.append( '{}={}'.format( key, query_dict[ key ] ) )
+                
+            
+        
+    
+    query_text = '&'.join( params )
     
     return query_text
     
@@ -153,6 +179,7 @@ def ConvertQueryTextToDict( query_text ):
     param_order = []
     
     query_dict = {}
+    single_value_parameters = []
     
     pairs = query_text.split( '&' )
     
@@ -162,7 +189,38 @@ def ConvertQueryTextToDict( query_text ):
         
         # for the moment, ignore tracker bugs and so on that have only key and no value
         
-        if len( result ) == 2:
+        if len( result ) == 1:
+            
+            ( value, ) = result
+            
+            if value == '':
+                
+                continue
+                
+            
+            try:
+                
+                unquoted_value = urllib.parse.unquote( value )
+                
+                if True not in ( bad_char in unquoted_value for bad_char in bad_chars ):
+                    
+                    requoted_value = urllib.parse.quote( unquoted_value )
+                    
+                    if requoted_value == value:
+                        
+                        value = unquoted_value
+                        
+                    
+                
+            except:
+                
+                pass
+                
+            
+            single_value_parameters.append( value )
+            param_order.append( None )
+            
+        elif len( result ) == 2:
             
             ( key, value ) = result
             
@@ -210,7 +268,7 @@ def ConvertQueryTextToDict( query_text ):
             
         
     
-    return ( query_dict, param_order )
+    return ( query_dict, single_value_parameters, param_order )
     
 def ConvertURLClassesIntoAPIPairs( url_classes ):
     
@@ -1772,7 +1830,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 netloc = p.netloc
                 path = p.path
                 params = p.params
-                query = AlphabetiseQueryText( p.query )
+                
+                ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( p.query )
+                
+                query = ConvertQueryDictToText( query_dict, single_value_parameters )
+                
                 fragment = ''
                 
                 r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
@@ -2979,7 +3041,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 10
+    SERIALISABLE_VERSION = 11
     
     def __init__(
         self,
@@ -2990,6 +3052,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         netloc = 'hostname.com',
         path_components = None,
         parameters = None,
+        has_single_value_parameters = False,
+        single_value_parameters_string_match = None,
         header_overrides = None,
         api_lookup_converter = None,
         send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED,
@@ -3014,16 +3078,21 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             path_components = []
             
-            path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
-            path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+            path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+            path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
             
         
         if parameters is None:
             
             parameters = {}
             
-            parameters[ 's' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
-            parameters[ 'id' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' ), None )
+            parameters[ 's' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
+            parameters[ 'id' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ), None )
+            
+        
+        if single_value_parameters_string_match is None:
+            
+            single_value_parameters_string_match = ClientStrings.StringMatch()
             
         
         if header_overrides is None:
@@ -3033,12 +3102,12 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         if api_lookup_converter is None:
             
-            api_lookup_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
+            api_lookup_converter = ClientStrings.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
             
         
         if referral_url_converter is None:
             
-            referral_url_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
+            referral_url_converter = ClientStrings.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
             
         
         # if the args are not serialisable stuff, lets overwrite here
@@ -3062,6 +3131,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._path_components = path_components
         self._parameters = parameters
+        self._has_single_value_parameters = has_single_value_parameters
+        self._single_value_parameters_string_match = single_value_parameters_string_match
         self._header_overrides = header_overrides
         self._api_lookup_converter = api_lookup_converter
         
@@ -3145,7 +3216,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ClipAndFleshOutQuery( self, query, allow_clip = True ):
         
-        ( query_dict, param_order ) = ConvertQueryTextToDict( query )
+        ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( query )
         
         if allow_clip:
             
@@ -3164,6 +3235,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     query_dict[ key ] = default
                     
+                    param_order.append( key )
+                    
                 
             
         
@@ -3172,7 +3245,12 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             param_order = None
             
         
-        query = ConvertQueryDictToText( query_dict, param_order = param_order )
+        if not self._has_single_value_parameters:
+            
+            single_value_parameters = []
+            
+        
+        query = ConvertQueryDictToText( query_dict, single_value_parameters, param_order = param_order )
         
         return query
         
@@ -3181,25 +3259,63 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_url_class_key = self._url_class_key.hex()
         serialisable_path_components = [ ( string_match.GetSerialisableTuple(), default ) for ( string_match, default ) in self._path_components ]
-        serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in list(self._parameters.items()) ]
+        serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in self._parameters.items() ]
+        serialisable_single_value_parameters_string_match = self._single_value_parameters_string_match.GetSerialisableTuple()
         serialisable_header_overrides = list( self._header_overrides.items() )
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         serialisable_referral_url_converter = self._referral_url_converter.GetSerialisableTuple()
         
         booleans = ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
         
-        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
+        return (
+            serialisable_url_class_key,
+            self._url_type,
+            self._preferred_scheme,
+            self._netloc,
+            booleans,
+            serialisable_path_components,
+            serialisable_parameters,
+            self._has_single_value_parameters,
+            serialisable_single_value_parameters_string_match,
+            serialisable_header_overrides,
+            serialisable_api_lookup_converter,
+            self._send_referral_url,
+            serialisable_referral_url_converter,
+            self._gallery_index_type,
+            self._gallery_index_identifier,
+            self._gallery_index_delta,
+            self._example_url
+        )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
+        (
+            serialisable_url_class_key,
+            self._url_type,
+            self._preferred_scheme,
+            self._netloc,
+            booleans,
+            serialisable_path_components,
+            serialisable_parameters,
+            self._has_single_value_parameters,
+            serialisable_single_value_parameters_string_match,
+            serialisable_header_overrides,
+            serialisable_api_lookup_converter,
+            self._send_referral_url,
+            serialisable_referral_url_converter,
+            self._gallery_index_type,
+            self._gallery_index_identifier,
+            self._gallery_index_delta,
+            self._example_url
+            ) = serialisable_info
         
         ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
         
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
         self._parameters = { key : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( key, ( serialisable_string_match, default ) ) in serialisable_parameters }
+        self._single_value_parameters_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_single_value_parameters_string_match )
         self._header_overrides = dict( serialisable_header_overrides )
         self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
         self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter )
@@ -3215,7 +3331,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             serialisable_url_class_key = url_class_key.hex()
             
-            api_lookup_converter = ClientParsing.StringConverter( example_string = example_url )
+            api_lookup_converter = ClientStrings.StringConverter( example_string = example_url )
             
             serialisable_api_lookup_converter = api_lookup_converter.GetSerialisableTuple()
             
@@ -3289,7 +3405,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
             
             send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED
-            referral_url_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
+            referral_url_converter = ClientStrings.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
             
             serialisable_referrel_url_converter = referral_url_converter.GetSerialisableTuple()
             
@@ -3333,6 +3449,38 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( serialisable_url_class_key, url_type, preferred_scheme, netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
             
             return ( 10, new_serialisable_info )
+            
+        
+        if version == 10:
+            
+            ( serialisable_url_class_key, url_type, preferred_scheme, netloc, booleans, serialisable_path_components, serialisable_parameters, serialisable_header_overrides, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
+            
+            has_single_value_parameters = False
+            single_value_parameters_string_match = ClientStrings.StringMatch()
+            
+            serialisable_single_value_parameters_match = single_value_parameters_string_match.GetSerialisableTuple()
+            
+            new_serialisable_info = (
+                serialisable_url_class_key,
+                url_type,
+                preferred_scheme,
+                netloc,
+                booleans,
+                serialisable_path_components,
+                serialisable_parameters,
+                has_single_value_parameters,
+                serialisable_single_value_parameters_match,
+                serialisable_header_overrides,
+                serialisable_api_lookup_converter,
+                send_referral_url,
+                serialisable_referrel_url_converter,
+                gallery_index_type,
+                gallery_index_identifier,
+                gallery_index_delta,
+                example_url
+            )
+            
+            return ( 11, new_serialisable_info )
             
         
     
@@ -3455,7 +3603,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             page_index_name = self._gallery_index_identifier
             
-            ( query_dict, param_order ) = ConvertQueryTextToDict( query )
+            ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( query )
             
             if page_index_name not in query_dict:
                 
@@ -3480,7 +3628,12 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 param_order = None
                 
             
-            query = ConvertQueryDictToText( query_dict, param_order = param_order )
+            if not self._has_single_value_parameters:
+                
+                single_value_parameters = []
+                
+            
+            query = ConvertQueryDictToText( query_dict, single_value_parameters, param_order = param_order )
             
         else:
             
@@ -3532,6 +3685,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     def GetSafeSummary( self ):
         
         return 'URL Class "' + self._name + '" - ' + ConvertURLIntoDomain( self.GetExampleURL() )
+        
+    
+    def GetSingleValueParameterData( self ):
+        
+        return ( self._has_single_value_parameters, self._single_value_parameters_string_match )
         
     
     def GetSortingComplexityKey( self ):
@@ -3649,14 +3807,25 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._url_class_key = HydrusData.GenerateKey()
         
     
-    def SetExampleURL( self, example_url ):
+    def SetAlphabetiseGetParameters( self, alphabetise_get_parameters: bool ):
         
-        self._example_url = example_url
+        self._alphabetise_get_parameters = alphabetise_get_parameters
         
     
     def SetClassKey( self, match_key ):
         
         self._url_class_key = match_key
+        
+    
+    def SetExampleURL( self, example_url ):
+        
+        self._example_url = example_url
+        
+    
+    def SetSingleValueParameterData( self, has_single_value_parameters: bool, single_value_parameters_string_match: ClientStrings.StringMatch ):
+        
+        self._has_single_value_parameters = has_single_value_parameters
+        self._single_value_parameters_string_match = single_value_parameters_string_match
         
     
     def SetURLBooleans(
@@ -3731,9 +3900,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        ( url_parameters, param_order ) = ConvertQueryTextToDict( p.query )
+        ( url_parameters, single_value_parameters, param_order ) = ConvertQueryTextToDict( p.query )
         
-        for ( key, ( string_match, default ) ) in list(self._parameters.items()):
+        for ( key, ( string_match, default ) ) in self._parameters.items():
             
             if key not in url_parameters:
                 
@@ -3756,6 +3925,26 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             except HydrusExceptions.StringMatchException as e:
                 
                 raise HydrusExceptions.URLClassException( str( e ) )
+                
+            
+        
+        if self._has_single_value_parameters:
+            
+            if len( single_value_parameters ) == 0:
+                
+                raise HydrusExceptions.URLClassException( 'Was expecting single-value parameter(s), but this URL did not seem to have any.' )
+                
+            
+            for single_value_parameter in single_value_parameters:
+                
+                try:
+                    
+                    self._single_value_parameters_string_match.Test( single_value_parameter )
+                    
+                except HydrusExceptions.StringMatchException as e:
+                    
+                    raise HydrusExceptions.URLClassException( str( e ) )
+                    
                 
             
         

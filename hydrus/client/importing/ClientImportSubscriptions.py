@@ -1,4 +1,3 @@
-import gc
 import os
 import random
 import threading
@@ -226,7 +225,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         message += os.linesep
         message += 'Either a user uploaded a lot of files to that query in a short period, in which case there is a gap in your subscription you may wish to fill, or the site has just changed its URL format, in which case you may see several of these messages for this site over the coming weeks, and you should ignore them.'
         
-        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, file_limit * 5 )
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, self._file_import_options.Duplicate(), self._tag_import_options.Duplicate(), file_limit * 5 )
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
@@ -1707,6 +1706,8 @@ class SubscriptionsManager( object ):
         
         self._wake_event = threading.Event()
         
+        self._big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
+        
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         
     
@@ -1724,11 +1725,6 @@ class SubscriptionsManager( object ):
                 
                 done_some = True
                 
-            
-        
-        if done_some:
-            
-            gc.collect()
             
         
     
@@ -1900,6 +1896,8 @@ class SubscriptionsManager( object ):
                     
                     wait_time = self._GetMainLoopWaitTime()
                     
+                
+                self._big_pauser.Pause()
                 
                 self._wake_event.wait( wait_time )
                 
