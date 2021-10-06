@@ -165,7 +165,7 @@ def ReadFetch(
         
         fetch_from_db = True
         
-        if synchronised and qt_media_callable is not None:
+        if synchronised and qt_media_callable is not None and not file_search_context.GetSystemPredicates().HasSystemLimit():
             
             try:
                 
@@ -1783,7 +1783,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _SignalNewSearchState( self ):
         
-        file_search_context = self.GetFileSearchContext()
+        self._file_search_context.SetPredicates( self._predicates_listbox.GetPredicates() )
+        
+        file_search_context = self._file_search_context.Duplicate()
         
         self.searchChanged.emit( file_search_context )
         
@@ -2040,6 +2042,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, 'set stub predicates', self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
+        fsc = self.GetFileSearchContext()
+        
         if self._under_construction_or_predicate is None:
             
             under_construction_or_predicate = None
@@ -2049,7 +2053,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             under_construction_or_predicate = self._under_construction_or_predicate.Duplicate()
             
         
-        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, self._file_search_context.Duplicate(), self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
+        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, fsc, self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -2195,10 +2199,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context = file_search_context.Duplicate()
         
+        self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
+        
         self._ChangeFileService( self._file_search_context.GetFileServiceKey() )
         self._ChangeTagService( self._file_search_context.GetTagSearchContext().service_key )
-        
-        self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
         self._SignalNewSearchState()
         
@@ -2230,6 +2234,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._SignalNewSearchState()
         
         self._RestoreTextCtrlFocus()
+        
+        if not self._search_pause_play.IsOn() and not self._file_search_context.GetSystemPredicates().HasSystemLimit():
+            
+            # update if user goes from sync to non-sync
+            self._SetListDirty()
+            
         
     
     def PausePlaySearch( self ):

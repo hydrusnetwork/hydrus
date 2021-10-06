@@ -1876,9 +1876,23 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             ( file_network_job, gallery_network_job ) = self._gallery_import.GetNetworkJobs()
             
-            self._file_download_control.SetNetworkJob( file_network_job )
+            if file_network_job is None:
+                
+                self._file_download_control.ClearNetworkJob()
+                
+            else:
+                
+                self._file_download_control.SetNetworkJob( file_network_job )
+                
             
-            self._gallery_download_control.SetNetworkJob( gallery_network_job )
+            if gallery_network_job is None:
+                
+                self._gallery_download_control.ClearNetworkJob()
+                
+            else:
+                
+                self._gallery_download_control.SetNetworkJob( gallery_network_job )
+                
             
         
     
@@ -2513,9 +2527,23 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
             ( file_network_job, checker_network_job ) = self._watcher.GetNetworkJobs()
             
-            self._file_download_control.SetNetworkJob( file_network_job )
+            if file_network_job is None:
+                
+                self._file_download_control.ClearNetworkJob()
+                
+            else:
+                
+                self._file_download_control.SetNetworkJob( file_network_job )
+                
             
-            self._checker_download_control.SetNetworkJob( checker_network_job )
+            if checker_network_job is None:
+                
+                self._checker_download_control.ClearNetworkJob()
+                
+            else:
+                
+                self._checker_download_control.SetNetworkJob( checker_network_job )
+                
             
         
     

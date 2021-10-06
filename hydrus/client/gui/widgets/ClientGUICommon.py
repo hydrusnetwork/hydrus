@@ -714,6 +714,11 @@ class CheckboxManagerOptions( CheckboxManager ):
         
         new_options.InvertBoolean( self._boolean_name )
         
+        if self._boolean_name == 'advanced_mode':
+            
+            HG.client_controller.pub( 'notify_advanced_mode' )
+            
+        
         HG.client_controller.pub( 'checkbox_manager_inverted' )
         HG.client_controller.pub( 'notify_new_menu_option' )
         

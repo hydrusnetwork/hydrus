@@ -2016,6 +2016,26 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def ScrubDomainErrors( self, url ):
+        
+        with self._lock:
+            
+            try:
+                
+                domain = ConvertURLIntoSecondLevelDomain( url )
+                
+            except:
+                
+                return
+                
+            
+            if domain in self._second_level_domains_to_network_infrastructure_errors:
+                
+                del self._second_level_domains_to_network_infrastructure_errors[ domain ]
+                
+            
+        
+    
     def SetClean( self ):
         
         with self._lock:

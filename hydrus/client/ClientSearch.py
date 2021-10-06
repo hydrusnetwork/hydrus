@@ -787,6 +787,11 @@ class FileSystemPredicates( object ):
         return self._has_system_everything
         
     
+    def HasSystemLimit( self ):
+        
+        return self._limit is not None
+        
+    
     def MustBeArchive( self ): return self._archive
     
     def MustBeInbox( self ): return self._inbox

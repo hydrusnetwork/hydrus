@@ -175,6 +175,11 @@ class NetworkJobControl( QW.QFrame ):
                 ClientGUIMenus.AppendMenuItem( menu, 'reattempt connection now', 'Stop waiting on a connection error and reattempt the job now.', self._network_job.OverrideConnectionErrorWait )
                 
             
+            if not self._network_job.DomainOK():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'scrub domain errors', 'Clear recent domain errors and allow this job to go now.', self._network_job.ScrubDomainErrors )
+                
+            
             if self._network_job.CurrentlyWaitingOnServersideBandwidth():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'reattempt request now (server reports low bandwidth)', 'Stop waiting on a serverside bandwidth delay and reattempt the job now.', self._network_job.OverrideServersideBandwidthWait )
@@ -330,7 +335,16 @@ class NetworkJobControl( QW.QFrame ):
     
     def ClearNetworkJob( self ):
         
-        self.SetNetworkJob( None )
+        if self._network_job is not None:
+            
+            self._network_job = None
+            
+            self._gauge.setToolTip( '' )
+            
+            self._Update()
+            
+            HG.client_controller.gui.UnregisterUIUpdateWindow( self )
+            
         
     
     def FlipAutoOverrideBandwidth( self ):
@@ -338,33 +352,17 @@ class NetworkJobControl( QW.QFrame ):
         self._auto_override_bandwidth_rules = not self._auto_override_bandwidth_rules
         
     
-    def SetNetworkJob( self, network_job: typing.Optional[ ClientNetworkingJobs.NetworkJob ] ):
+    def SetNetworkJob( self, network_job: ClientNetworkingJobs.NetworkJob ):
         
-        if network_job is None:
+        if self._network_job != network_job:
             
-            if self._network_job is not None:
-                
-                self._network_job = None
-                
-                self._gauge.setToolTip( '' )
-                
-                self._Update()
-                
-                HG.client_controller.gui.UnregisterUIUpdateWindow( self )
-                
+            self._network_job = network_job
             
-        else:
+            self._gauge.setToolTip( self._network_job.GetURL() )
             
-            if self._network_job != network_job:
-                
-                self._network_job = network_job
-                
-                self._gauge.setToolTip( self._network_job.GetURL() )
-                
-                self._Update()
-                
-                HG.client_controller.gui.RegisterUIUpdateWindow( self )
-                
+            self._Update()
+            
+            HG.client_controller.gui.RegisterUIUpdateWindow( self )
             
         
     

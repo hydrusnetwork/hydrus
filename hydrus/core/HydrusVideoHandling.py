@@ -1,6 +1,7 @@
 import numpy
 import os
 import re
+import struct
 import subprocess
 
 from hydrus.core import HydrusAudioHandling
@@ -41,6 +42,12 @@ def CheckFFMPEGError( lines ):
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'FFMPEG could not parse.' )
         
+    
+def GetAPNGNumFrames( file_header_bytes ):
+    
+    ( num_frames, ) = struct.unpack( '>I', file_header_bytes[ 41 : 45 ] )
+    
+    return num_frames
     
 def GetFFMPEGVersion():
     
@@ -216,6 +223,34 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     CheckFFMPEGError( lines )
     
     return lines
+    
+def GetFFMPEGAPNGProperties( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        file_header_bytes = f.read( 256 )
+        
+    
+    num_frames = GetAPNGNumFrames( file_header_bytes )
+    
+    lines = GetFFMPEGInfoLines( path )
+    
+    resolution = ParseFFMPEGVideoResolution( lines )
+    
+    ( fps, confident_fps ) = ParseFFMPEGFPS( lines )
+    
+    if not confident_fps:
+        
+        fps = 24
+        
+    
+    duration = num_frames / fps
+    
+    duration_in_ms = int( duration * 1000 )
+    
+    has_audio = False
+    
+    return ( resolution, duration_in_ms, num_frames, has_audio )
     
 def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     

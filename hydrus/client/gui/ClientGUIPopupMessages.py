@@ -687,7 +687,10 @@ class PopupMessageManager( QW.QWidget ):
     
     def _DoDebugHide( self ):
         
-        if not QP.isValid( self ): return
+        if not QP.isValid( self ):
+            
+            return
+            
         
         parent = self.parentWidget()
         
@@ -1113,6 +1116,7 @@ class PopupMessageManager( QW.QWidget ):
             raise
             
         
+    
 # This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
 class PopupMessageDialogPanel( QW.QWidget ):
     

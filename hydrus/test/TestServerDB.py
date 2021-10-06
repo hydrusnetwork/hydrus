@@ -65,7 +65,7 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._deletee_user_account_type.GetAccountTypeKey(), 86400 * 365 )
+        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._deletee_user_account_type.GetAccountTypeKey(), HydrusData.GetNow() + 86400 * 365 )
         
         access_keys = [ self._read( 'access_key', self._tag_service_key, r_key ) for r_key in r_keys ]
         
@@ -97,7 +97,7 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._regular_user_account_type.GetAccountTypeKey(), 86400 * 365 )
+        r_keys = self._read( 'registration_keys', self._tag_service_key, self._tag_service_account, 5, self._regular_user_account_type.GetAccountTypeKey(), HydrusData.GetNow() + 86400 * 365 )
         
         self.assertEqual( len( r_keys ), 5 )
         

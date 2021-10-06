@@ -3017,7 +3017,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryProcessClientToServerUpdate( self, service_key, account, client_to_server_update, timestamp ):
+    def _RepositoryProcessClientToServerUpdate( self, service_key: bytes, account: HydrusNetwork.Account, client_to_server_update: HydrusNetwork.ClientToServerUpdate, timestamp: int ):
         
         service_id = self._GetServiceId( service_key )
         

@@ -12250,7 +12250,14 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self.modules_files_storage.RescindPendFiles( service_id, hash_ids )
                                 
-                                notify_new_pending = True
+                                if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                                    
+                                    notify_new_downloads = True
+                                    
+                                else:
+                                    
+                                    notify_new_pending = True
+                                    
                                 
                             elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
                                 
@@ -12439,6 +12446,11 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
+                            
                         elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                             
                             ( child_tag, parent_tag ) = row
@@ -12471,7 +12483,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
-                            notify_new_pending = True
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
                             
                         elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                             
@@ -12501,7 +12516,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_parent_tag_ids.update( ( child_tag_id, parent_tag_id ) )
                             
-                            notify_new_pending = True
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
                             
                         
                         notify_new_parents = True
@@ -12536,6 +12554,11 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
+                            
                         elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                             
                             ( bad_tag, good_tag ) = row
@@ -12568,7 +12591,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
-                            notify_new_pending = True
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
                             
                         elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                             
@@ -12598,7 +12624,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             changed_sibling_tag_ids.update( ( bad_tag_id, good_tag_id ) )
                             
-                            notify_new_pending = True
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                notify_new_pending = True
+                                
                             
                         
                         notify_new_siblings = True
@@ -12698,7 +12727,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._UpdateMappings( service_id, mappings_ids = ultimate_mappings_ids, deleted_mappings_ids = ultimate_deleted_mappings_ids, pending_mappings_ids = ultimate_pending_mappings_ids, pending_rescinded_mappings_ids = ultimate_pending_rescinded_mappings_ids, petitioned_mappings_ids = ultimate_petitioned_mappings_ids, petitioned_rescinded_mappings_ids = ultimate_petitioned_rescinded_mappings_ids )
                 
-                notify_new_pending = True
+                if service_type == HC.TAG_REPOSITORY:
+                    
+                    notify_new_pending = True
+                    
                 
             
             if len( changed_sibling_tag_ids ) > 0:

@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_457"><a href="#version_457">version 457</a></h3></li>
+				<ul>
+					<li>smoother menubar updates:</li>
+					<li>improved the way the menubar menus update. rather than generating a whole new (e.g. 'pages') menu and replacing the existing out of date one, now there is a static menu skeleton that has subsections or labels updated in place. this means fewer objects changing, less flicker/jank, and should allow you to upload pending even if you have, say, a bunch of subscriptions running</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>thanks to a user's help, the filetype parser now detects pngs (this mostly happens during import) much faster! the problem previously was determining if a png is actually an apng--figuring out if they are truly apngs is now done with very fast file header scanning, rather than the previous method that booted ffmpeg. this brings filetype parse time for pngs down from 50-150ms to 1-2ms</li>
+					<li>getting apng metadata is also now faster. num_frames is now pulled from the file header, it no longer has to be manually counted by ffmpeg</li>
+					<li>clicking the session weight item in the 'pages' menu now gives you more detailed info on your session weight, including on currently closed pages in the undo list</li>
+					<li>stripped out a lot of ancient wx-era safety code that stops the client from doing certain UI work while it is minimised or minimised to tray. also brushed up some ugly update routines for menus refresh and modal message presentation that could lead to a pile-up of updates as soon as the client was unminimised, causing lag or freezes. with luck, the client should be better about restoring itself from minimised to system tray. if you minimise to tray, feedback on how this works out for you would be appreciated</li>
+					<li>when a network job stalls with the 'this domain had some errors recently' message, the cog menu on the widget now allows you to 'scrub domain errors' and try again immediately</li>
+					<li>if your search has system:limit, then any tag search you type in the autocomplete will now search the database, not your thumbnails. previously, the hack to enable this behaviour was to flip 'searching immediately' off. let's see if this new behaviour is ultimately confusing/annoying, I am mixed on it and think this subtle search option needs more thought and UI to make it more obvious and user friendly</li>
+					<li>if you have autocomplete tag search typed, and results from thumbnails displayed, and you flip 'searching immediately' off, the search will now automatically update and give you full database numbers immediately</li>
+					<li>.</li>
+					<li>help:</li>
+					<li>I moved 'searching with wildcards' from the advanced help to the 'more getting started with files' help here: https://hydrusnetwork.github.io/hydrus/help/getting_started_more_files.html</li>
+					<li>I also wrote a more detailed description of what the autocomplete dropdown buttons do in that page</li>
+					<li>I also wrote a brief description of how a system:limit query will try to clip according to the current file sort, getting the n 'biggest files' and so on</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>cleaned some network job widget update calls</li>
+					<li>improved some misc autocomplete search status tracking</li>
+					<li>improved some account object permission checking and tests. accounts now never say they have permissions (e.g. if you click the 'see account permissions' button on review services) if they are banned or expired</li>
+					<li>file and pages menus now uses the new update routine</li>
+					<li>pending menu now uses the new update routine, with an emphasis on anti-jitter so you can interact while it is updating</li>
+					<li>database, network, service, and undo menu now use newer async update code and also use the new update routine</li>
+					<li>cleaned up help and tags menu init code</li>
+					<li>the signal that causes the pending menu to update is now only sent on tag changes if the tag service is a repository (previously, local-only updates were janking this for no reason)</li>
+					<li>the pending menu now updates its sibling/parent numbers when repository processing causes a clever row change to stuff you have pending</li>
+					<li>also, some menubar items that only show when in advanced mode now update their visibility when advanced mode is flipped on or off</li>
+					<li>misc menubar code cleanup and improvements</li>
+				</ul>
 				<li><h3 id="version_456"><a href="#version_456">version 456</a></h3></li>
 				<ul>
 					<li>misc:</li>

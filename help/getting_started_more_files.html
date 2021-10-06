@@ -7,6 +7,47 @@
 	<body>
 		<div class="content">
 			<p><a href="getting_started_files.html"><---- Back</a></p>
+                        <h3 id="wildcards"><a href="#wildcards">searching with wildcards</a></h3>
+			<p>The autocomplete tag dropdown supports wildcard searching with '*'.</p>
+			<p><img src="wildcard_gelion.png"/></p>
+			<p>The '*' will match any number of characters. Every normal autocomplete search has a secret '*' on the end that you don't see, which is how full words get matched from you only typing in a few letters.</p>
+			<p>This is useful when you can only remember part of a word, or can't spell part of it. You can put '*' characters anywhere, but you should experiment to get used to the exact way these searches work. Some results can be surprising!</p>
+			<p><img src="wildcard_vage.png"/></p>
+			<p>You can select the special predicate inserted at the top of your autocomplete results (the highlighted '*gelion' and '*va*ge*' above). <b>It will return all files that match that wildcard,</b> i.e. every file for every other tag in the dropdown list.</p>
+			<p>This is particularly useful if you have a number of files with commonly structured over-informationed tags, like this:</p>
+			<p><img src="wildcard_cool_pic.png"/></p>
+			<p>In this case, selecting the 'title:cool pic*' predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like 'series:cool pic' and 'page:1', 'page:2', 'page:3'.</p>
+                        <h3 id="more_searching"><a href="#more_searching">more searching</a></h3>
+                        <p>Let's look at the tag autocomplete dropdown again:</p>
+                        <p><img src="ac_dropdown.png"/></p>
+                        <ul>
+				<li>
+					<p><b>favourite searches star</b></p>
+					<p>Once you get experience with the client, have a play with this. Rather than leaving common search pages open, save them in here and load them up as needed. You will keep your client lightweight and save time.</p>
+				</li>
+				<li>
+					<p><b>include current/pending tags</b></p>
+					<p>Turn these on and off to control whether tag <i>search predicates</i> apply to tags the exist, or limit just to those pending to be uploaded to a tag repository. Just searching 'pending' tags is useful if you want to scan what you have pending to go up to the PTR--just turn off 'current' tags and search 'system:num tags > 0'.</p>
+				</li>
+				<li>
+					<p><b>searching immediately</b></p>
+					<p>This controls whether a change to the search tags will instantly run the new search and get new results. Turning this off is helpful if you want to add, remove, or replace several heavy search terms in a row without getting UI lag.</p>
+				</li>
+				<li>
+					<p><b>OR</b></p>
+					<p>You only see this if you have 'advanced mode' on. It is an experimental module. Have a play with it--it lets you enter some pretty complicated tags!</p>
+				</li>
+                                <li>
+					<p><b>file/tag domains</b></p>
+					<p>By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for 'character:samus aran', then you will get file results from your 'my files' domain that have 'character:samus aran' in any tag service. For most purposes, this search domain is fine, but as you use the client more, you may want to access different search domains.</p>
+                                        <p>For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a 'system:num_tags' or a 'character:samus aran' will only look 'my tags'.</p>
+                                        <p>Turning on 'advanced mode' gives access to more search domains. Some of them are subtly complicated and only useful for clever jobs--most of the time, you still want 'my files' and 'all known tags'.</p>
+				</li>
+                        </ul>
+			<h3 id="sorting_with_system_limit"><a href="#sorting_with_system_limit">sorting with system limit</a></h3>
+                        <p>If you add system:limit to a search, the client will consider what that page's file sort currently is. If it is simple enough--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.</p>
+                        <p>If you change the sort, hydrus will not refresh the search, it'll just re-sort the n files you have. Hit F5 to refresh the search with a new sort.</p>
+                        <p>Not all sorts are supported. Anything complicated like tag sort will result in a random sample instead.</p>
 			<h3 id="intro"><a href="#intro">exporting and uploading</a></h3>
 			<p>There are many ways to export files from the client:</p>
 			<ul>

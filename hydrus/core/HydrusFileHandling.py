@@ -1,5 +1,6 @@
 import hashlib
 import os
+import struct
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
@@ -311,7 +312,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
             elif mime == HC.UNDETERMINED_PNG:
                 
-                if HydrusVideoHandling.HasVideoStream( path ):
+                if IsPNGAnimated( bit_to_check ):
                     
                     return HC.IMAGE_APNG
                     
@@ -378,4 +379,23 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
     
     return HC.APPLICATION_UNKNOWN
+    
+def IsPNGAnimated( file_header_bytes ):
+    
+    if file_header_bytes[ 37: ].startswith( b'acTL' ):
+        
+        # this is an animated png
+        
+        # acTL chunk in an animated png is 4 bytes of num frames, then 4 bytes of num times to loop
+        # https://wiki.mozilla.org/APNG_Specification#.60acTL.60:_The_Animation_Control_Chunk
+        
+        num_frames = HydrusVideoHandling.GetAPNGNumFrames( file_header_bytes )
+        
+        if num_frames > 1:
+            
+            return True
+            
+        
+    
+    return False
     

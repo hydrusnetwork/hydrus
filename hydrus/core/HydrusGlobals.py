@@ -68,7 +68,6 @@ mpv_report_mode = False
 force_idle_mode = False
 no_page_limit_mode = False
 thumbnail_debug_mode = False
-currently_uploading_pending = False
 
 do_idle_shutdown_work = False
 shutdown_complete = False

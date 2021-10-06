@@ -1098,6 +1098,16 @@ class NetworkJob( object ):
             
         
     
+    def ScrubDomainErrors( self ):
+        
+        with self._lock:
+            
+            self.engine.domain_manager.ScrubDomainErrors( self._url )
+            
+            self._wake_time_float = 0.0
+            
+        
+    
     def SetError( self, e, error ):
         
         with self._lock:

@@ -31,6 +31,18 @@ from hydrus.client.gui.pages import ClientGUIResults
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
 
+def ConvertNumHashesToWeight( num_hashes: int ) -> int:
+    
+    return num_hashes
+    
+def ConvertNumHashesAndSeedsToWeight( num_hashes: int, num_seeds: int ) -> int:
+    
+    return ConvertNumHashesToWeight( num_hashes ) + ConvertNumSeedsToWeight( num_seeds )
+    
+def ConvertNumSeedsToWeight( num_seeds: int ) -> int:
+    
+    return num_seeds * 20
+    
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, controller ):
@@ -784,12 +796,19 @@ class Page( QW.QSplitter ):
         return ( hpos, vpos )
         
     
-    def GetTotalWeight( self ):
+    def GetTotalNumHashesAndSeeds( self ):
         
         num_hashes = len( self.GetHashes() )
         num_seeds = self._management_controller.GetNumSeeds()
         
-        return num_hashes + ( num_seeds * 20 )
+        return ( num_hashes, num_seeds )
+        
+    
+    def GetTotalWeight( self ) -> int:
+        
+        ( num_hashes, num_seeds ) = self.GetTotalNumHashesAndSeeds()
+        
+        return ConvertNumHashesAndSeedsToWeight( num_hashes, num_seeds )
         
     
     def IsCurrentSessionPageDirty( self ):
@@ -1241,7 +1260,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         else:
             
             self._controller.pub( 'notify_closed_page', page )
-            self._controller.pub( 'notify_new_undo' )
             
         
         return True
@@ -2492,7 +2510,23 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def GetTotalWeight( self ):
+    def GetTotalNumHashesAndSeeds( self ) -> int:
+        
+        total_num_hashes = 0
+        total_num_seeds = 0
+        
+        for page in self._GetPages():
+            
+            ( num_hashes, num_seeds ) = page.GetTotalNumHashesAndSeeds()
+            
+            total_num_hashes += num_hashes
+            total_num_seeds += num_seeds
+            
+        
+        return ( total_num_hashes, total_num_seeds )
+        
+    
+    def GetTotalWeight( self ) -> int:
         
         total_weight = sum( ( page.GetTotalWeight() for page in self._GetPages() ) )
         
@@ -2874,7 +2908,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
         MAX_TOTAL_PAGES = 500
         
-        ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self._controller.gui.GetTotalPageCounts()
+        (
+            total_active_page_count,
+            total_active_num_hashes,
+            total_active_num_seeds,
+            total_closed_page_count,
+            total_closed_num_hashes,
+            total_closed_num_seeds
+        ) = self._controller.gui.GetTotalPageCounts()
         
         if total_active_page_count + total_closed_page_count >= WARNING_TOTAL_PAGES:
             

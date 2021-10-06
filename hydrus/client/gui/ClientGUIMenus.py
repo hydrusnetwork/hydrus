@@ -180,7 +180,7 @@ def GetEventCallable( callable, *args, **kwargs ):
     
     return event_callable
     
-def SanitiseLabel( label ):
+def SanitiseLabel( label: str ) -> str:
     
     if label == '':
         
@@ -188,4 +188,16 @@ def SanitiseLabel( label ):
         
     
     return label.replace( '&', '&&' )
+    
+def SetMenuItemLabel( menu_item: QW.QAction, label: str ):
+    
+    label = SanitiseLabel( label )
+    
+    menu_item.setText( label )
+    
+def SetMenuTitle( menu: QW.QMenu, label: str ):
+    
+    label = SanitiseLabel( label )
+    
+    menu.setTitle( label )
     

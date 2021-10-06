@@ -172,6 +172,22 @@ class Account( object ):
         return self.__repr__()
         
     
+    def _CheckBanned( self ):
+        
+        if self._IsBanned():
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'This account is banned: ' + self._GetBannedString() )
+            
+        
+    
+    def _CheckExpired( self ):
+        
+        if self._IsExpired():
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'This account is expired: ' + self._GetExpiresString() )
+            
+        
+    
     def _CheckFunctional( self ):
         
         if self._created == 0:
@@ -179,20 +195,15 @@ class Account( object ):
             raise HydrusExceptions.ConflictException( 'account is unsynced' )
             
         
-        if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE ):
+        if self._IsAdmin():
             
-            return # admins can do anything
-            
-        
-        if self._IsBanned():
-            
-            raise HydrusExceptions.InsufficientCredentialsException( 'This account is banned: ' + self._GetBannedString() )
+            # admins can do anything
+            return
             
         
-        if self._IsExpired():
-            
-            raise HydrusExceptions.InsufficientCredentialsException( 'This account is expired: ' + self._GetExpiresString() )
-            
+        self._CheckBanned()
+        
+        self._CheckExpired()
         
         if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
             
@@ -217,6 +228,11 @@ class Account( object ):
     def _GetExpiresString( self ):
         
         return HydrusData.ConvertTimestampToPrettyExpires( self._expires )
+        
+    
+    def _IsAdmin( self ):
+        
+        return self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
         
     
     def _IsBanned( self ):
@@ -298,6 +314,15 @@ class Account( object ):
     def CheckPermission( self, content_type, action ):
         
         with self._lock:
+            
+            if self._IsAdmin():
+                
+                return
+                
+            
+            self._CheckBanned()
+            
+            self._CheckExpired()
             
             if not self._account_type.HasPermission( content_type, action ):
                 
@@ -440,6 +465,16 @@ class Account( object ):
     def HasPermission( self, content_type, action ):
         
         with self._lock:
+            
+            if self._IsAdmin():
+                
+                return True
+                
+            
+            if self._IsBanned() or self._IsExpired():
+                
+                return False
+                
             
             return self._account_type.HasPermission( content_type, action )
             

@@ -3700,9 +3700,23 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
         
-        self._file_download_control.SetNetworkJob( file_network_job )
+        if file_network_job is None:
+            
+            self._file_download_control.ClearNetworkJob()
+            
+        else:
+            
+            self._file_download_control.SetNetworkJob( file_network_job )
+            
         
-        self._page_download_control.SetNetworkJob( page_network_job )
+        if page_network_job is None:
+            
+            self._page_download_control.ClearNetworkJob()
+            
+        else:
+            
+            self._page_download_control.SetNetworkJob( page_network_job )
+            
         
     
     def CheckAbleToClose( self ):
@@ -3923,9 +3937,23 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()
         
-        self._file_download_control.SetNetworkJob( file_network_job )
+        if file_network_job is None:
+            
+            self._file_download_control.ClearNetworkJob()
+            
+        else:
+            
+            self._file_download_control.SetNetworkJob( file_network_job )
+            
         
-        self._gallery_download_control.SetNetworkJob( gallery_network_job )
+        if gallery_network_job is None:
+            
+            self._gallery_download_control.ClearNetworkJob()
+            
+        else:
+            
+            self._gallery_download_control.SetNetworkJob( gallery_network_job )
+            
         
     
     def CheckAbleToClose( self ):
