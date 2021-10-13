@@ -734,6 +734,205 @@ class TestClientDBTags( unittest.TestCase ):
             } ) )
         
     
+    def test_display_pairs_sync_transitive( self ):
+        
+        # ok, so say we have the situation where Sa -> Sb, and Sb -> P, all files with Sa should get P, right? let's check
+        # we're trying to reproduce a particular reported bug here, so forgive the stochastic design
+        
+        pre_combined_file_1 = os.urandom( 32 )
+        pre_combined_file_2 = os.urandom( 32 )
+        pre_combined_file_3 = os.urandom( 32 )
+        
+        post_combined_file_1 = os.urandom( 32 )
+        post_combined_file_2 = os.urandom( 32 )
+        post_combined_file_3 = os.urandom( 32 )
+        
+        child_tag_1 = 'samus_aran'
+        child_tag_2 = 'samus aran'
+        child_tag_3 = 'character:samus aran'
+        
+        parent_1 = 'series:metroid'
+        parent_2 = 'series:nintendo'
+        
+        def do_specific_imports():
+            
+            import_hashes = []
+            filenames = [ 'muh_gif.gif', 'muh_jpg.jpg', 'muh_mp4.mp4', 'muh_mpeg.mpeg', 'muh_png.png', 'muh_webm.webm' ]
+            
+            for filename in filenames:
+                
+                HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+                
+                path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+                
+                file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+                
+                file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+                
+                file_import_job.GeneratePreImportHashAndStatus()
+                
+                file_import_job.GenerateInfo()
+                
+                self._write( 'import_file', file_import_job )
+                
+                import_hashes.append( file_import_job.GetHash() )
+                
+            
+            return import_hashes
+            
+        
+        def get_display_content_updates_in_random_order():
+            
+            content_updates = []
+            
+            child_tags = [ child_tag_1, child_tag_2, child_tag_3 ]
+            
+            random.shuffle( child_tags )
+            
+            for tag in child_tags[ 1 : ]:
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( tag, child_tags[ 0 ] ) ) )
+                
+            
+            parent_tags = [ parent_1, parent_2 ]
+            
+            random.shuffle( parent_tags )
+            
+            random.shuffle( child_tags )
+            
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[0] ) ) )
+            
+            child_tags.append( parent_tags[0] )
+            
+            random.shuffle( child_tags )
+            
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[1] ) ) )
+            
+            return content_updates
+            
+        
+        self._clear_db()
+        
+        (
+            pre_specific_file_1,
+            pre_specific_file_2,
+            pre_specific_file_3,
+            post_specific_file_1,
+            post_specific_file_2,
+            post_specific_file_3
+        ) = do_specific_imports()
+        
+        def get_post_mapping_content_updates():
+            
+            rows = [
+                ( child_tag_1, ( post_combined_file_1, ) ),
+                ( child_tag_2, ( post_combined_file_2, ) ),
+                ( child_tag_3, ( post_combined_file_3, ) ),
+                ( child_tag_1, ( post_specific_file_1, ) ),
+                ( child_tag_2, ( post_specific_file_2, ) ),
+                ( child_tag_3, ( post_specific_file_3, ) )
+            ]
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+            
+            return content_updates
+            
+        
+        def get_pre_mapping_content_updates():
+            
+            rows = [
+                ( child_tag_1, ( pre_combined_file_1, ) ),
+                ( child_tag_2, ( pre_combined_file_2, ) ),
+                ( child_tag_3, ( pre_combined_file_3, ) ),
+                ( child_tag_1, ( pre_specific_file_1, ) ),
+                ( child_tag_2, ( pre_specific_file_2, ) ),
+                ( child_tag_3, ( pre_specific_file_3, ) )
+            ]
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+            
+            return content_updates
+            
+        
+        services = self._read( 'services' )
+        
+        other_service_keys = [ HydrusData.GenerateKey() for i in range( 32 ) ]
+        
+        for other_service_key in other_service_keys:
+            
+            services.append( ClientServices.GenerateService( other_service_key, HC.LOCAL_TAG, other_service_key.hex() ) )
+            
+        
+        self._write( 'update_services', services )
+        
+        # let's do it a bunch of times in different orders with different structures
+        
+        for other_service_key in other_service_keys:
+            
+            self._write( 'content_updates', { other_service_key : get_pre_mapping_content_updates() } )
+            
+            content_updates = get_display_content_updates_in_random_order()
+            
+            # let's test a mix of atomic and complete sync
+            block_size = random.choice( [ 1, 3, 5 ] )
+            
+            for block_of_content_updates in HydrusData.SplitListIntoChunks( content_updates, block_size ):
+                
+                self._write( 'content_updates', { other_service_key : block_of_content_updates } )
+                
+                still_work_to_do = True
+                
+                while still_work_to_do:
+                    
+                    still_work_to_do = self._write( 'sync_tag_display_maintenance', other_service_key, 1 )
+                    
+                
+            
+            self._write( 'content_updates', { other_service_key : get_post_mapping_content_updates() } )
+            
+            ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
+            # get ideal from here too
+            
+            self.assertEqual( siblings, { child_tag_1, child_tag_2, child_tag_3 } )
+            self.assertEqual( ancestors, { parent_1, parent_2 } )
+            
+            for ( storage_tag, file_hash ) in [
+                ( child_tag_1, pre_combined_file_1 ),
+                ( child_tag_2, pre_combined_file_2 ),
+                ( child_tag_3, pre_combined_file_3 ),
+                ( child_tag_1, pre_specific_file_1 ),
+                ( child_tag_2, pre_specific_file_2 ),
+                ( child_tag_3, pre_specific_file_3 ),
+                ( child_tag_1, post_combined_file_1 ),
+                ( child_tag_2, post_combined_file_2 ),
+                ( child_tag_3, post_combined_file_3 ),
+                ( child_tag_1, post_specific_file_1 ),
+                ( child_tag_2, post_specific_file_2 ),
+                ( child_tag_3, post_specific_file_3 )
+            ]:
+                
+                # fetch the mappings of all six files, should be the same, with whatever ideal in place, and both parents
+                # we do combined and specific to test cached specific values and on-the-fly calculated combined
+                # we do pre and post to test synced vs content updates
+                
+                ( media_result, ) = self._read( 'media_results', ( file_hash, ) )
+                
+                tags_manager = media_result.GetTagsManager()
+                
+                self.assertIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
+                
+                if storage_tag != ideal_sibling:
+                    
+                    self.assertNotIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                    
+                
+                self.assertIn( ideal_sibling, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                self.assertIn( parent_1, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                self.assertIn( parent_2, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                
+            
+        
+    
     def test_display_pairs_lookup_bonkers( self ):
         
         self._clear_db()

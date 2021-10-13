@@ -832,6 +832,10 @@ class Controller( object ):
             TestClientDBDuplicates
         ]
         
+        module_lookup[ 'db_tags' ] = [
+            TestClientDBTags
+        ]
+        
         module_lookup[ 'nat' ] = [
             TestHydrusNATPunch
         ]

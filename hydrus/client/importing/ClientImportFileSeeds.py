@@ -35,7 +35,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
         
@@ -65,7 +65,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._external_filterable_tags = set()
         self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
-        self._urls = set()
+        self._primary_urls = set()
+        self._source_urls = set()
         self._tags = set()
         self._hashes = {}
         
@@ -90,6 +91,28 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.__hash__() != other.__hash__()
         
     
+    def _AddPrimaryURLs( self, urls ):
+        
+        urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
+        
+        urls.discard( self.file_seed_data )
+        urls.discard( self._referral_url )
+        
+        self._primary_urls.update( urls )
+        self._source_urls.difference_update( urls )
+        
+    
+    def _AddSourceURLs( self, urls ):
+        
+        urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
+        
+        urls.discard( self.file_seed_data )
+        urls.discard( self._referral_url )
+        urls.difference_update( self._primary_urls )
+        
+        self._source_urls.update( urls )
+        
+    
     def _CheckTagsVeto( self, tags, tag_import_options: TagImportOptions.TagImportOptions ):
         
         if len( tags ) > 0:
@@ -107,46 +130,55 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         serialisable_external_filterable_tags = list( self._external_filterable_tags )
         serialisable_external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags.GetSerialisableTuple()
         
-        serialisable_urls = list( self._urls )
+        serialisable_primary_urls = list( self._primary_urls )
+        serialisable_source_urls = list( self._source_urls )
         serialisable_tags = list( self._tags )
         serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in list(self._hashes.items()) if hash is not None ]
         
-        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
+        return (
+            self.file_seed_type,
+            self.file_seed_data,
+            self.created,
+            self.modified,
+            self.source_time,
+            self.status,
+            self.note,
+            self._referral_url,
+            serialisable_external_filterable_tags,
+            serialisable_external_additional_service_keys_to_tags,
+            serialisable_primary_urls,
+            serialisable_source_urls,
+            serialisable_tags,
+            serialisable_hashes
+        )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
+        (
+            self.file_seed_type,
+            self.file_seed_data,
+            self.created,
+            self.modified,
+            self.source_time,
+            self.status,
+            self.note,
+            self._referral_url,
+            serialisable_external_filterable_tags,
+            serialisable_external_additional_service_keys_to_tags,
+            serialisable_primary_urls,
+            serialisable_source_urls,
+            serialisable_tags,
+            serialisable_hashes
+        ) = serialisable_info
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
         self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
         
-        self._urls = set( serialisable_urls )
+        self._primary_urls = set( serialisable_primary_urls )
+        self._source_urls = set( serialisable_source_urls )
         self._tags = set( serialisable_tags )
         self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
-        
-    
-    def _NormaliseAndFilterAssociableURLs( self, urls ):
-        
-        normalised_urls = set()
-        
-        for url in urls:
-            
-            try:
-                
-                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
-                
-            except HydrusExceptions.URLClassException:
-                
-                continue # not a url--something like "file:///C:/Users/Tall%20Man/Downloads/maxresdefault.jpg" ha ha ha
-                
-            
-            normalised_urls.add( url )
-            
-        
-        associable_urls = { url for url in normalised_urls if HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
-        
-        return associable_urls
         
     
     def _SetupTagImportOptions( self, given_tag_import_options: TagImportOptions.TagImportOptions ) -> TagImportOptions.TagImportOptions:
@@ -223,6 +255,47 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            (
+                file_seed_type,
+                file_seed_data,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_urls,
+                serialisable_tags,
+                serialisable_hashes
+            ) = old_serialisable_info
+            
+            serialisable_primary_urls = serialisable_urls
+            serialisable_source_urls = []
+            
+            new_serialisable_info = (
+                file_seed_type,
+                file_seed_data,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_primary_urls,
+                serialisable_source_urls,
+                serialisable_tags,
+                serialisable_hashes
+            )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def AddParseResults( self, parse_results, file_import_options: FileImportOptions.FileImportOptions ):
         
@@ -234,16 +307,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if file_import_options.ShouldAssociateSourceURLs():
-            
-            source_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_SOURCE, ) )
-            
-            associable_urls = self._NormaliseAndFilterAssociableURLs( source_urls )
-            
-            associable_urls.discard( self.file_seed_data )
-            
-            self._urls.update( associable_urls )
-            
+        source_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_SOURCE, ) )
+        
+        self._AddSourceURLs( source_urls )
         
         tags = ClientParsing.GetTagsFromParseResults( parse_results )
         
@@ -270,15 +336,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def AddURL( self, url: str ):
+    def AddPrimaryURLs( self, urls ):
         
-        urls = ( url, )
+        self._AddPrimaryURLs( urls )
         
-        associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
+    
+    def AddSourceURLs( self, urls ):
         
-        associable_urls.discard( self.file_seed_data )
-        
-        self._urls.update( associable_urls )
+        self._AddSourceURLs( urls )
         
     
     def CheckPreFetchMetadata( self, tag_import_options: TagImportOptions.TagImportOptions ):
@@ -288,7 +353,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def DownloadAndImportRawFile( self, file_url: str, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False ):
         
-        self.AddURL( file_url )
+        self.AddPrimaryURLs( ( file_url, ) )
         
         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
@@ -471,11 +536,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             urls.append( file_url )
             
         
-        # we now only trust url-matched single urls and the post/file urls
-        # trusting unmatched source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
+        urls.extend( self._primary_urls )
         
-        urls.extend( ( url for url in self._urls if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ) )
+        # now that we store primary and source urls separately, we'll trust any primary but be careful about source
+        # trusting classless source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
         
+        urls.extend( ( url for url in self._source_urls if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ) )
+        
+        # now discard gallery pages or post urls that can hold multiple files
         urls = [ url for url in urls if not HG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
         
         unrecognised_url_results = set()
@@ -600,9 +668,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return t
         
     
-    def GetURLs( self ):
+    def GetPrimaryURLs( self ):
         
-        return set( self._urls )
+        return set( self._primary_urls )
+        
+    
+    def GetReferralURL( self ):
+        
+        return self._referral_url
+        
+    
+    def GetSourceURLs( self ):
+        
+        return set( self._source_urls )
         
     
     def HasHash( self ):
@@ -676,7 +754,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                 
             
-            self.WriteContentUpdates()
+            self.WriteContentUpdates( file_import_options = file_import_options )
             
         except HydrusExceptions.UnsupportedFileException as e:
             
@@ -1082,8 +1160,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             file_seed.SetExternalFilterableTags( self._external_filterable_tags )
                             file_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                             
-                            file_seed._urls.update( self._urls )
-                            file_seed._tags.update( self._tags )
+                            file_seed.AddPrimaryURLs( set( self._primary_urls ) )
+                            
+                            file_seed.AddSourceURLs( set( self._source_urls ) )
+                            
+                            file_seed.AddTags( set( self._tags ) )
                             
                         
                         try:
@@ -1176,7 +1257,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 if self._referral_url is not None:
                                     
-                                    duplicate_file_seed.AddURL( self._referral_url )
+                                    duplicate_file_seed.AddSourceURLs( ( self._referral_url, ) )
                                     
                                 
                                 child_file_seeds.append( duplicate_file_seed )
@@ -1217,7 +1298,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            did_substantial_work |= self.WriteContentUpdates( tag_import_options )
+            did_substantial_work |= self.WriteContentUpdates( file_import_options = file_import_options, tag_import_options = tag_import_options )
             
         except HydrusExceptions.ShutdownException:
             
@@ -1278,7 +1359,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return did_substantial_work
         
     
-    def WriteContentUpdates( self, tag_import_options: typing.Optional[ TagImportOptions.TagImportOptions ] = None ):
+    def WriteContentUpdates( self, file_import_options: typing.Optional[ FileImportOptions.FileImportOptions ] = None, tag_import_options: typing.Optional[ TagImportOptions.TagImportOptions ] = None ):
         
         did_work = False
         
@@ -1299,19 +1380,32 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_content_updates = collections.defaultdict( list )
         
-        urls = set( self._urls )
+        potentially_associable_urls = set()
         
-        if self.file_seed_type == FILE_SEED_TYPE_URL:
+        if file_import_options is not None:
             
-            urls.add( self.file_seed_data )
+            if file_import_options.ShouldAssociatePrimaryURLs():
+                
+                potentially_associable_urls.update( self._primary_urls )
+                
+                if self.file_seed_type == FILE_SEED_TYPE_URL:
+                    
+                    potentially_associable_urls.add( self.file_seed_data )
+                    
+                
+                if self._referral_url is not None:
+                    
+                    potentially_associable_urls.add( self._referral_url )
+                    
+                
+            
+            if file_import_options.ShouldAssociateSourceURLs():
+                
+                potentially_associable_urls.update( self._source_urls )
+                
             
         
-        if self._referral_url is not None:
-            
-            urls.add( self._referral_url )
-            
-        
-        associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
+        associable_urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( potentially_associable_urls )
         
         if len( associable_urls ) > 0:
             

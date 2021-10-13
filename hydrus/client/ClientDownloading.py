@@ -323,12 +323,13 @@ class QuickDownloadManager( object ):
                                     min_resolution = None
                                     max_resolution = None
                                     automatic_archive = False
+                                    associate_primary_urls = True
                                     associate_source_urls = True
                                     
                                     file_import_options = FileImportOptions.FileImportOptions()
                                     
                                     file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-                                    file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+                                    file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                                     
                                     file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
                                     

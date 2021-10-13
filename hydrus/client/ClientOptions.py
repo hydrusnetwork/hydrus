@@ -134,8 +134,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
+        
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_MACOS
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
+        self._dictionary[ 'booleans' ][ 'freeze_message_manager_when_mouse_on_other_monitor' ] = False
+        self._dictionary[ 'booleans' ][ 'freeze_message_manager_when_main_gui_minimised' ] = False
         
         self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = False
         
@@ -174,6 +177,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
         
         self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
+        self._dictionary[ 'booleans' ][ 'boot_with_network_traffic_paused' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_file_queues' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_watcher_checkers' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_gallery_searches' ] = False
@@ -233,6 +237,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'show_session_size_warnings' ] = True
         
         self._dictionary[ 'booleans' ][ 'delete_lock_for_archived_files' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_reason' ] = True
+        self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_special_action' ] = False
         
         #
         
@@ -448,6 +455,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'qt_style_name' ] = None
         self._dictionary[ 'noneable_strings' ][ 'qt_stylesheet_name' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_reason' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_special_action' ] = None
         
         self._dictionary[ 'strings' ] = {}
         
@@ -560,6 +568,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         max_resolution = None
         
         automatic_archive = False
+        associate_primary_urls = True
         associate_source_urls = True
         
         present_new_files = True
@@ -571,7 +580,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         quiet_file_import_options = FileImportOptions.FileImportOptions()
         
         quiet_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+        quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         quiet_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
@@ -583,7 +592,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         loud_file_import_options = FileImportOptions.FileImportOptions()
         
         loud_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        loud_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+        loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         loud_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options

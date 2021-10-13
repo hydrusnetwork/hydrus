@@ -45,7 +45,6 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportSubscriptions
-from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -792,6 +791,60 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def FlipQueryPlannerMode( self ):
+        
+        if not HG.query_planner_mode:
+            
+            now = HydrusData.GetNow()
+            
+            HG.query_planner_start_time = now
+            HG.query_planner_query_count = 0
+            
+            HG.query_planner_mode = True
+            
+            HydrusData.ShowText( 'Query Planner mode on!' )
+            
+        else:
+            
+            HG.query_planner_mode = False
+            
+            HG.queries_planned = set()
+            
+            HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
+            
+        
+    
+    def FlipProfileMode( self ):
+        
+        if not HG.profile_mode:
+            
+            now = HydrusData.GetNow()
+            
+            with HG.profile_counter_lock:
+                
+                HG.profile_start_time = now
+                HG.profile_slow_count = 0
+                HG.profile_fast_count = 0
+                
+            
+            
+            HG.profile_mode = True
+            
+            HydrusData.ShowText( 'Profile mode on!' )
+            
+        else:
+            
+            HG.profile_mode = False
+            
+            with HG.profile_counter_lock:
+                
+                ( slow, fast ) = ( HG.profile_slow_count, HG.profile_fast_count )
+                
+            
+            HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
+            
+        
+    
     def GetClipboardText( self ):
         
         clipboard_text = QW.QApplication.clipboard().text()
@@ -940,6 +993,11 @@ class Controller( HydrusController.HydrusController ):
         #
         
         self.frame_splash_status.SetSubtext( 'network' )
+        
+        if self.new_options.GetBoolean( 'boot_with_network_traffic_paused' ):
+            
+            HG.client_controller.new_options.SetBoolean( 'pause_all_new_network_traffic', True )
+            
         
         self.parsing_cache = ClientCaches.ParsingCache()
         

@@ -157,7 +157,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
                 
             
         
-        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, mime = mime )
         
     except Exception as e:
         

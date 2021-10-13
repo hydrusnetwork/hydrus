@@ -765,11 +765,9 @@ class PopupMessageManager( QW.QWidget ):
             
             gui_frame = self.parentWidget()
             
-            possibly_on_hidden_virtual_desktop = not ClientGUIFunctions.MouseIsOnMyDisplay( gui_frame )
-            
             gui_is_hidden = not gui_frame.isVisible()
             
-            going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop or gui_is_hidden
+            going_to_bug_out_at_hide_or_show = gui_is_hidden
             
             current_focus_tlw = QW.QApplication.activeWindow()
             
@@ -864,13 +862,37 @@ class PopupMessageManager( QW.QWidget ):
         
         main_gui = self.parentWidget()
         
-        # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
-        # this may need a better test for virtual display dismissal
-        not_on_hidden_or_virtual_display = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui ) or ClientGUIFunctions.MouseIsOnMyDisplay( self )
+        gui_is_hidden = not main_gui.isVisible()
         
-        main_gui_up = not main_gui.isMinimized()
+        if gui_is_hidden:
+            
+            return False
+            
         
-        return not_on_hidden_or_virtual_display and main_gui_up
+        if HG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor' ):
+            
+            # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
+            # this may need a better test for virtual display dismissal
+            # this is also a proxy for hidden/virtual displays, which is really what it is going on about
+            on_my_monitor = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui ) or ClientGUIFunctions.MouseIsOnMyDisplay( self )
+            
+            if not on_my_monitor:
+                
+                return False
+                
+            
+        
+        if HG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_main_gui_minimised' ):
+            
+            main_gui_up = not main_gui.isMinimized()
+            
+            if not main_gui_up:
+                
+                return False
+                
+            
+        
+        return True
         
     
     def _TryToMergeMessage( self, job_key ):

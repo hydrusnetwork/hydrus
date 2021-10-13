@@ -11,7 +11,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self ):
         
@@ -27,6 +27,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._min_resolution = None
         self._max_resolution = None
         self._automatic_archive = False
+        self._associate_primary_urls = True
         self._associate_source_urls = True
         self._present_new_files = True
         self._present_already_in_inbox_files = True
@@ -36,7 +37,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
-        post_import_options = ( self._automatic_archive, self._associate_source_urls )
+        post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls )
         presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
         
         return ( pre_import_options, post_import_options, presentation_options )
@@ -47,7 +48,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         ( pre_import_options, post_import_options, presentation_options ) = serialisable_info
         
         ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
-        ( self._automatic_archive, self._associate_source_urls ) = post_import_options
+        ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls ) = post_import_options
         ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files ) = presentation_options 
         
     
@@ -106,13 +107,28 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( pre_import_options, post_import_options, presentation_options ) = old_serialisable_info
+            
+            ( automatic_archive, associate_source_urls ) = post_import_options
+            
+            associate_primary_urls = True
+            
+            post_import_options = ( automatic_archive, associate_primary_urls, associate_source_urls )
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, presentation_options )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def AllowsDecompressionBombs( self ):
         
         return self._allow_decompression_bombs
         
     
-    def AutomaticallyArchives( self ):
+    def AutomaticallyArchives( self ) -> bool:
         
         return self._automatic_archive
         
@@ -197,13 +213,6 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def ExcludesDeleted( self ):
         
         return self._exclude_deleted
-        
-    
-    def GetPostImportOptions( self ):
-        
-        post_import_options = ( self._automatic_archive, self._associate_source_urls )
-        
-        return post_import_options
         
     
     def GetPresentationOptions( self ):
@@ -307,9 +316,10 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
-    def SetPostImportOptions( self, automatic_archive, associate_source_urls ):
+    def SetPostImportOptions( self, automatic_archive: bool, associate_primary_urls: bool, associate_source_urls: bool ):
         
         self._automatic_archive = automatic_archive
+        self._associate_primary_urls = associate_primary_urls
         self._associate_source_urls = associate_source_urls
         
     
@@ -333,7 +343,12 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._max_resolution = max_resolution
         
     
-    def ShouldAssociateSourceURLs( self ):
+    def ShouldAssociatePrimaryURLs( self ) -> bool:
+        
+        return self._associate_primary_urls
+        
+    
+    def ShouldAssociateSourceURLs( self ) -> bool:
         
         return self._associate_source_urls
         

@@ -233,22 +233,49 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if selected_file_seed.IsURLFileImport():
                 
-                urls = sorted( selected_file_seed.GetURLs() )
+                referral_url = selected_file_seed.GetReferralURL()
+                primary_urls = sorted( selected_file_seed.GetPrimaryURLs() )
+                source_urls = sorted( selected_file_seed.GetSourceURLs() )
                 
-                if len( urls ) == 0:
+                if referral_url is None and len( primary_urls ) + len( source_urls ) == 0:
                     
-                    ClientGUIMenus.AppendMenuLabel( menu, 'no parsed urls' )
+                    ClientGUIMenus.AppendMenuLabel( menu, 'no additional urls' )
                     
                 else:
                     
                     url_submenu = QW.QMenu( menu )
                     
-                    for url in urls:
+                    if referral_url is not None:
                         
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'referral url:' )
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, referral_url )
                         
                     
-                    ClientGUIMenus.AppendMenu( menu, url_submenu, 'parsed urls' )
+                    if len( primary_urls ) > 0:
+                        
+                        ClientGUIMenus.AppendSeparator( url_submenu )
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'primary urls:' )
+                        
+                        for url in primary_urls:
+                            
+                            ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                            
+                        
+                    
+                    if len( source_urls ) > 0:
+                        
+                        ClientGUIMenus.AppendSeparator( url_submenu )
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'source urls:' )
+                        
+                        for url in source_urls:
+                            
+                            ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                            
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, url_submenu, 'additional urls' )
                     
                 
                 #

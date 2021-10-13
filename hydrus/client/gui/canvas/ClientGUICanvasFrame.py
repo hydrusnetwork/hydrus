@@ -134,6 +134,10 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
                 
                 ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
                 
+            elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
+                
+                HG.client_controller.FlipProfileMode()
+                
             else:
                 
                 command_processed = False

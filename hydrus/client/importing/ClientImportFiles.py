@@ -282,7 +282,7 @@ class FileImportJob( object ):
             status_hook( 'generating file metadata' )
             
         
-        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
+        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime = mime )
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
         

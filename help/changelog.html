@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_458"><a href="#version_458">version 458</a></h3></li>
+				<ul>
+					<li>quality of life:</li>
+					<li>under _options->files and trash_, you can now govern whether the advanced file deletion dialog remembers action and reason. being able to save action (trash, physical delete, vs physical delete and clear history) is new, default off for now, and won't _always_ save (if you are currently set to trash, but the next dialog doesn't have trash as an option, then it won't overwrite to physical delete). if you try it out, let me know how you like it</li>
+					<li>a new option under 'network->pause' now lets you always boot the client with paused network traffic</li>
+					<li>the main file import object now stores primary urls (such as post and file url) separately from source url (which is produced by many parsers and typically refers to another website). a new checkbox in 'file import options' (when in advanced mode) now allows you to not associate primary urls separately to source urls (which is useful in some one-time technical jobs that talk to some unusual proxy etc...)</li>
+					<li>the new import object right-click menu that shows urls now separates primary and source urls, and also shows any referral url</li>
+					<li>when you flip between two images in the dupe filter, the zoom preservation calculation, which previously only locked to the same width, now tries to choose width or height based on the relative ratios of the two images to keep both images completely in view on a canvas zoom start. it should ensure that lower watermark banners stay in view and don't accidentally spill over the bottom of your monitor</li>
+					<li>moved popup toaster options from 'gui' options page to the new 'popup' page</li>
+					<li>added options for whether the popup toaster should update while the client is minimised and while the mouse is on a different monitor than the main gui window. these options now default to false, so if you have any trouble, please try turning them back on</li>
+					<li>a new shortcut action in the 'global' set now flips profile mode on and off. please note for now 'global' only works on main gui and media viewer--I will add a hook to every window in the future!</li>
+					<li>.</li>
+					<li>bug fixes:</li>
+					<li>you now cannot start an 'upload pending' job for a service more than once at a time. the menu is now disabled for each service while uploading is happening</li>
+					<li>fixed a bug in media load where if the file was not in a specific domain (i.e. somewhere in all known files), its tags would not show implied parents. for non-specific files, this calculation happens on the fly, and previously it was only doing siblings</li>
+					<li>fixed a bug from the somewhat recent file deletion update that meant many files' custom deletion reasons were being overwritten to 'No reason given' when trash was clearing. I am sorry for the inconvenience!</li>
+					<li>fixed an issue with parsing 'string' from html 'script' tags (and perhaps some other 'meta' tag types) on recent versions of the built hydrus release. this should fix the newgrounds gallery parser</li>
+					<li>fixed some gallery parsing error handling, for when the actually fetched url differs from  the original and cannot be parsed, and when the actually fetched url redirects straight to a file page from a 1-length search result</li>
+					<li>.</li>
+					<li>update file handling bug fixes:</li>
+					<li>when repository processing runs into an update file problem, it now specifies if the file was content or definitions type</li>
+					<li>when the database gathers updates to process, it discriminates between definitions and content updates more carefully</li>
+					<li>when a hydrus update file goes through file maintenance and changes filetype, the repository update progress tracker now 'reregisters' that file, updating what content types it can expect from it and clearing out incorrect data</li>
+					<li>during normal update file registration, incorrect old data is now cleared out</li>
+					<li>.</li>
+					<li>boring cleanup:</li>
+					<li>cleaned some of the positioning code that places icons and text on thumbnails, removing hardcoded numbers and letting custom icons position better</li>
+					<li>cleaned some import url tracking, checking, and association code</li>
+					<li>refactored profile mode and query planner mode switching up out of UI code into the controller</li>
+					<li>added a hefty unit test to test that siblings and parents are transitively applied to mappings correctly for files outside and inside specific file services, and for tag sync and the normal tag pipeline</li>
+					<li>refactored some database file maintenance code to decouple the queue from the worker</li>
+				</ul>
 				<li><h3 id="version_457"><a href="#version_457">version 457</a></h3></li>
 				<ul>
 					<li>smoother menubar updates:</li>

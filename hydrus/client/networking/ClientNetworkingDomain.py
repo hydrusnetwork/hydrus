@@ -329,13 +329,6 @@ def ConvertURLIntoSecondLevelDomain( url ):
     
     return ConvertDomainIntoSecondLevelDomain( domain )
     
-def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
-    
-    # domain is either the same or starts with www. or www2. or something
-    rule = r'^(www[^\.]*\.)?' + re.escape( wwwable_domain ) + '$'
-    
-    return re.search( rule, test_domain ) is not None
-    
 def CookieDomainMatches( cookie, search_domain ):
     
     cookie_domain = cookie.domain
@@ -350,6 +343,13 @@ def CookieDomainMatches( cookie, search_domain ):
     valid_subdomain = cookie_domain.startswith( '.' ) and search_domain.endswith( cookie_domain )
     
     return matches_exactly or matches_dot or valid_subdomain
+    
+def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
+    
+    # domain is either the same or starts with www. or www2. or something
+    rule = r'^(www[^\.]*\.)?' + re.escape( wwwable_domain ) + '$'
+    
+    return re.search( rule, test_domain ) is not None
     
 def GetCookie( cookies, search_domain, cookie_name_string_match ):
     
@@ -437,6 +437,28 @@ def GetSearchURLs( url ):
         
     
     return search_urls
+    
+def NormaliseAndFilterAssociableURLs( urls ):
+    
+    normalised_urls = set()
+    
+    for url in urls:
+        
+        try:
+            
+            url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            
+        except HydrusExceptions.URLClassException:
+            
+            continue # not a url--something like "file:///C:/Users/Tall%20Man/Downloads/maxresdefault.jpg" ha ha ha
+            
+        
+        normalised_urls.add( url )
+        
+    
+    associable_urls = { url for url in normalised_urls if HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
+    
+    return associable_urls
     
 def ParseURL( url: str ) -> urllib.parse.ParseResult:
     

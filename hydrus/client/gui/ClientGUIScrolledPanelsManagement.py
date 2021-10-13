@@ -67,6 +67,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'search', 'search', self._SearchPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
+        self._listbook.AddPage( 'popups', 'popups', self._PopupPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
@@ -956,6 +957,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_advanced_file_deletion_dialog = QW.QCheckBox( advanced_file_deletion_panel )
             self._use_advanced_file_deletion_dialog.setToolTip( 'If this is set, the client will present a more complicated file deletion confirmation dialog that will permit you to set your own deletion reason and perform \'clean\' deletes that leave no deletion record (making later re-import easier).' )
             
+            self._remember_last_advanced_file_deletion_special_action = QW.QCheckBox( advanced_file_deletion_panel )
+            self._remember_last_advanced_file_deletion_special_action.setToolTip( 'This will try to remember and restore the last action you set, whether that was trash, physical delete, or physical delete and clear history.')
+            
+            self._remember_last_advanced_file_deletion_reason = QW.QCheckBox( advanced_file_deletion_panel )
+            self._remember_last_advanced_file_deletion_reason.setToolTip( 'This will remember and restore the last reason you set for a delete.' )
+            
             self._advanced_file_deletion_reasons = ClientGUIListBoxes.QueueListBox( advanced_file_deletion_panel, 5, str, add_callable = self._AddAFDR, edit_callable = self._EditAFDR )
             
             #
@@ -988,6 +995,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_advanced_file_deletion_dialog.setChecked( self._new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ) )
             
             self._use_advanced_file_deletion_dialog.clicked.connect( self._UpdateAdvancedControls )
+            
+            self._remember_last_advanced_file_deletion_special_action.setChecked( HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ) )
+            self._remember_last_advanced_file_deletion_reason.setChecked( HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ) )
             
             self._advanced_file_deletion_reasons.AddDatas( self._new_options.GetStringList( 'advanced_file_deletion_reasons' ) )
             
@@ -1034,6 +1044,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Use the advanced file deletion dialog: ', self._use_advanced_file_deletion_dialog ) )
+            rows.append( ( 'Remember the last action: ', self._remember_last_advanced_file_deletion_special_action ) )
+            rows.append( ( 'Remember the last reason: ', self._remember_last_advanced_file_deletion_reason ) )
             
             gridbox = ClientGUICommon.WrapInGrid( advanced_file_deletion_panel, rows )
             
@@ -1073,14 +1085,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _UpdateAdvancedControls( self ):
             
-            if self._use_advanced_file_deletion_dialog.isChecked():
-                
-                self._advanced_file_deletion_reasons.setEnabled( True )
-                
-            else:
-                
-                self._advanced_file_deletion_reasons.setEnabled( False )
-                
+            advanced_enabled = self._use_advanced_file_deletion_dialog.isChecked()
+            
+            self._remember_last_advanced_file_deletion_special_action.setEnabled( advanced_enabled )
+            self._remember_last_advanced_file_deletion_reason.setEnabled( advanced_enabled )
+            self._advanced_file_deletion_reasons.setEnabled( advanced_enabled )
             
         
         def UpdateOptions( self ):
@@ -1195,20 +1204,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._popup_panel = ClientGUICommon.StaticBox( self, 'popup window toaster' )
-            
-            self._popup_message_character_width = QP.MakeQSpinBox( self._popup_panel, min = 16, max = 256 )
-            
-            self._popup_message_force_min_width = QW.QCheckBox( self._popup_panel )
-            
-            self._hide_message_manager_on_gui_iconise = QW.QCheckBox( self._popup_panel )
-            self._hide_message_manager_on_gui_iconise.setToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
-            
-            self._hide_message_manager_on_gui_deactive = QW.QCheckBox( self._popup_panel )
-            self._hide_message_manager_on_gui_deactive.setToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
-            
-            #
-            
             self._misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
             self._always_show_iso_time = QW.QCheckBox( self._misc_panel )
@@ -1226,9 +1221,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
-            
-            self._notify_client_api_cookies = QW.QCheckBox( self._misc_panel )
-            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie information over the Client API.' )
             
             self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
             self._use_qt_file_dialogs.setToolTip( 'If you get crashes opening file/directory dialogs, try this.' )
@@ -1256,20 +1248,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._human_bytes_sig_figs.setValue( self._new_options.GetInteger( 'human_bytes_sig_figs' ) )
             
-            self._popup_message_character_width.setValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
-            
-            self._popup_message_force_min_width.setChecked( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
-            
             self._discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
             
             self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
             
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
-            
-            self._hide_message_manager_on_gui_iconise.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
-            self._hide_message_manager_on_gui_deactive.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
-            
-            self._notify_client_api_cookies.setChecked( self._new_options.GetBoolean( 'notify_client_api_cookies' ) )
             
             self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
             
@@ -1296,19 +1279,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
-            rows.append( ( 'Make a short-lived popup on cookie updates through the Client API: ', self._notify_client_api_cookies ) )
-            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
-            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._popup_panel, rows )
-            
-            self._popup_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            rows = []
-            
             rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
-            rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'Discord drag-and-drop filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( 'Export pattern shortcuts: ', ClientGUICommon.ExportPatternButton( self ) ) )
@@ -1331,7 +1302,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._main_gui_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._popup_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._misc_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -1382,22 +1352,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
-            self._new_options.SetInteger( 'popup_message_character_width', self._popup_message_character_width.value() )
-            
-            self._new_options.SetBoolean( 'popup_message_force_min_width', self._popup_message_force_min_width.isChecked() )
-            
             title = self._main_gui_title.text()
             
             self._new_options.SetString( 'main_gui_title', title )
             
             HG.client_controller.pub( 'main_gui_title', title )
             
-            self._new_options.SetBoolean( 'notify_client_api_cookies', self._notify_client_api_cookies.isChecked() )
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
             self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
-            self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.isChecked() )
-            self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
@@ -2367,6 +2330,91 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._new_options.SetMediaViewOptions( mimes_to_media_view_options )
+            
+        
+    
+    class _PopupPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            self._popup_panel = ClientGUICommon.StaticBox( self, 'popup window toaster' )
+            
+            self._popup_message_character_width = QP.MakeQSpinBox( self._popup_panel, min = 16, max = 256 )
+            
+            self._popup_message_force_min_width = QW.QCheckBox( self._popup_panel )
+            
+            self._freeze_message_manager_when_mouse_on_other_monitor = QW.QCheckBox( self._popup_panel )
+            self._freeze_message_manager_when_mouse_on_other_monitor.setToolTip( 'This is useful if you have a virtual desktop and find the popup manager restores strangely when you hop back to the hydrus display.' )
+            
+            self._freeze_message_manager_when_main_gui_minimised = QW.QCheckBox( self._popup_panel )
+            self._freeze_message_manager_when_main_gui_minimised.setToolTip( 'This is useful if the popup toaster restores strangely after minimised changes.' )
+            
+            self._hide_message_manager_on_gui_iconise = QW.QCheckBox( self._popup_panel )
+            self._hide_message_manager_on_gui_iconise.setToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
+            
+            self._hide_message_manager_on_gui_deactive = QW.QCheckBox( self._popup_panel )
+            self._hide_message_manager_on_gui_deactive.setToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
+            
+            self._notify_client_api_cookies = QW.QCheckBox( self._popup_panel )
+            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie information over the Client API.' )
+            
+            #
+            
+            self._popup_message_character_width.setValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
+            
+            self._popup_message_force_min_width.setChecked( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
+            
+            self._freeze_message_manager_when_mouse_on_other_monitor.setChecked( self._new_options.GetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor' ) )
+            self._freeze_message_manager_when_main_gui_minimised.setChecked( self._new_options.GetBoolean( 'freeze_message_manager_when_main_gui_minimised' ) )
+            
+            self._hide_message_manager_on_gui_iconise.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
+            self._hide_message_manager_on_gui_deactive.setChecked( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
+            
+            self._notify_client_api_cookies.setChecked( self._new_options.GetBoolean( 'notify_client_api_cookies' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
+            rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
+            rows.append( ( 'Freeze the popup toaster when mouse is on another display: ', self._freeze_message_manager_when_mouse_on_other_monitor ) )
+            rows.append( ( 'Freeze the popup toaster when the main gui is minimised: ', self._freeze_message_manager_when_main_gui_minimised ) )
+            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
+            rows.append( ( 'BUGFIX: Hide the popup toaster when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
+            rows.append( ( 'Make a short-lived popup on cookie updates through the Client API: ', self._notify_client_api_cookies ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._popup_panel, rows )
+            
+            self._popup_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._popup_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetInteger( 'popup_message_character_width', self._popup_message_character_width.value() )
+            
+            self._new_options.SetBoolean( 'popup_message_force_min_width', self._popup_message_force_min_width.isChecked() )
+            
+            self._new_options.SetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor', self._freeze_message_manager_when_mouse_on_other_monitor.isChecked() )
+            self._new_options.SetBoolean( 'freeze_message_manager_when_main_gui_minimised', self._freeze_message_manager_when_main_gui_minimised.isChecked() )
+            
+            self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.isChecked() )
+            self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.isChecked() )
+            
+            self._new_options.SetBoolean( 'notify_client_api_cookies', self._notify_client_api_cookies.isChecked() )
             
         
     

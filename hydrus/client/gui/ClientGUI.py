@@ -427,7 +427,7 @@ def THREADUploadPending( service_key ):
             HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
             
         
-        HG.client_controller.pub( 'notify_new_pending' )
+        HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
     
 class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
@@ -479,6 +479,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._garbage_snapshot = collections.Counter()
         
+        self._currently_uploading_pending = set()
+        
         self._last_clipboard_watched_text = ''
         self._clipboard_watcher_destination_page_watcher = None
         self._clipboard_watcher_destination_page_urls = None
@@ -517,6 +519,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
+        self._controller.sub( self, 'NotifyPendingUploadFinished', 'notify_pending_upload_finished' )
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
@@ -2630,19 +2633,28 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     if num_pending + num_petitioned > 0:
                         
-                        submessages = []
+                        if service_key in self._currently_uploading_pending:
+                            
+                            title = '{}: currently uploading {}'.format( name, HydrusData.ToHumanInt( num_pending + num_petitioned ) )
+                            
+                        else:
+                            
+                            submessages = []
+                            
+                            if num_pending > 0:
+                                
+                                submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_pending ), pending_phrase ) )
+                                
+                            
+                            if num_petitioned > 0:
+                                
+                                submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_petitioned ), petitioned_phrase ) )
+                                
+                            
+                            title = '{}: {}'.format( name, ', '.join( submessages ) )
+                            
                         
-                        if num_pending > 0:
-                            
-                            submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_pending ), pending_phrase ) )
-                            
-                        
-                        if num_petitioned > 0:
-                            
-                            submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_petitioned ), petitioned_phrase ) )
-                            
-                        
-                        title = '{}: {}'.format( name, ', '.join( submessages ) )
+                        submenu.setEnabled( service_key not in self._currently_uploading_pending )
                         
                         ClientGUIMenus.SetMenuTitle( submenu, title )
                         
@@ -3097,8 +3109,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
         
         ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
-        ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, self._SwitchBoolean, 'profile_mode' )
-        ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, self._SwitchBoolean, 'query_planner_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, HG.client_controller.FlipProfileMode )
+        ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, HG.client_controller.FlipQueryPlannerMode )
         
         ClientGUIMenus.AppendMenu( debug, profiling, 'profiling' )
         
@@ -3201,6 +3213,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
         
         self._menubar_network_all_traffic_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self.FlipNetworkTrafficPaused )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'always boot the client with paused network traffic', 'Always start the program with network traffic paused.', self._controller.new_options.GetBoolean( 'boot_with_network_traffic_paused' ), self._controller.new_options.FlipBoolean, 'boot_with_network_traffic_paused' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -6186,58 +6199,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.phash_generation_report_mode = not HG.phash_generation_report_mode
             
-        elif name == 'profile_mode':
-            
-            if not HG.profile_mode:
-                
-                now = HydrusData.GetNow()
-                
-                with HG.profile_counter_lock:
-                    
-                    HG.profile_start_time = now
-                    HG.profile_slow_count = 0
-                    HG.profile_fast_count = 0
-                    
-                
-                
-                HG.profile_mode = True
-                
-                HydrusData.ShowText( 'Profile mode on!' )
-                
-            else:
-                
-                HG.profile_mode = False
-                
-                with HG.profile_counter_lock:
-                    
-                    ( slow, fast ) = ( HG.profile_slow_count, HG.profile_fast_count )
-                    
-                
-                HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
-                
-            
-        elif name == 'query_planner_mode':
-            
-            if not HG.query_planner_mode:
-                
-                now = HydrusData.GetNow()
-                
-                HG.query_planner_start_time = now
-                HG.query_planner_query_count = 0
-                
-                HG.query_planner_mode = True
-                
-                HydrusData.ShowText( 'Query Planner mode on!' )
-                
-            else:
-                
-                HG.query_planner_mode = False
-                
-                HG.queries_planned = set()
-                
-                HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
-                
-            
         elif name == 'pubsub_report_mode':
             
             HG.pubsub_report_mode = not HG.pubsub_report_mode
@@ -6348,6 +6309,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return
             
+        
+        self._currently_uploading_pending.add( service_key )
+        
+        self._menu_updater_pending.update()
         
         self._controller.CallToThread( THREADUploadPending, service_key )
         
@@ -7104,6 +7069,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_undo.update()
         
     
+    def NotifyPendingUploadFinished( self, service_key: bytes ):
+        
+        self._currently_uploading_pending.discard( service_key )
+        
+        self._menu_updater_pending.update()
+        
+    
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
         self._notebook.PresentImportedFilesToPage( hashes, page_name )
@@ -7227,6 +7199,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE_FLIP:
                 
                 ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
+                
+            elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
+                
+                HG.client_controller.FlipProfileMode()
                 
             elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 

@@ -12,7 +12,7 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
-from hydrus.client.db import ClientDBFilesMaintenance
+from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
@@ -58,7 +58,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags,
-        modules_files_maintenance: ClientDBFilesMaintenance.ClientDBFilesMaintenance
+        modules_files_maintenance_queue: ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue
         ):
         
         # since we'll mostly be talking about hashes and tags we don't have locally, I think we shouldn't use the local caches
@@ -69,7 +69,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         self.modules_files_storage = modules_files_storage
         self.modules_files_metadata_basic = modules_files_metadata_basic
-        self.modules_files_maintenance = modules_files_maintenance
+        self.modules_files_maintenance_queue = modules_files_maintenance_queue
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_tags_local_cache = modules_tags_local_cache
         
@@ -217,7 +217,32 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
-        self.modules_files_maintenance.AddJobs( update_hash_ids, job_type )
+        self.modules_files_maintenance_queue.AddJobs( update_hash_ids, job_type )
+        
+    
+    def _UnregisterUpdates( self, service_id, hash_ids = None ):
+        
+        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+        
+        if hash_ids is None:
+            
+            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_processed_table_name ) ) )
+            
+        else:
+            
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_updates_processed_table_name ) ) )
+                
+            
+        
+        if len( hash_ids ) > 0:
+            
+            self._ClearOutstandingWorkCache( service_id )
+            
+            self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+            
         
     
     def AssociateRepositoryUpdateHashes( self, service_key: bytes, metadata_slice: HydrusNetwork.Metadata ):
@@ -385,15 +410,13 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         definition_hashes_and_content_types = []
         content_hashes_and_content_types = []
         
-        definitions_content_types = { HC.CONTENT_TYPE_DEFINITIONS }
-        
         if len( update_indices_to_unprocessed_hash_ids ) > 0:
             
             for update_index in sorted( update_indices_to_unprocessed_hash_ids.keys() ):
                 
                 unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
                 
-                definition_hash_ids = { hash_id for hash_id in unprocessed_hash_ids if hash_ids_to_content_types_to_process[ hash_id ] == definitions_content_types }
+                definition_hash_ids = { hash_id for hash_id in unprocessed_hash_ids if HC.CONTENT_TYPE_DEFINITIONS in hash_ids_to_content_types_to_process[ hash_id ] }
                 content_hash_ids = { hash_id for hash_id in unprocessed_hash_ids if hash_id not in definition_hash_ids }
                 
                 for ( hash_ids, hashes_and_content_types ) in [
@@ -547,6 +570,15 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         ( tag_id, ) = result
         
         return tag_id
+        
+    
+    def NotifyUpdatesChanged( self, hash_ids ):
+        
+        for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
+            
+            self._UnregisterUpdates( service_id, hash_ids )
+            self._RegisterUpdates( service_id, hash_ids )
+            
         
     
     def NotifyUpdatesImported( self, hash_ids ):

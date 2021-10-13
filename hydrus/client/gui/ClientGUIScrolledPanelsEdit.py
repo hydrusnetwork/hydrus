@@ -354,6 +354,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
         
         self._permitted_action_choices = []
+        self._this_dialog_includes_service_keys = False
         
         self._InitialisePermittedActionChoices( suggested_file_service_key = suggested_file_service_key )
         
@@ -361,13 +362,44 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._action_radio.Select( 0 )
         
+        if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
+            
+            last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
+            
+        else:
+            
+            last_advanced_file_deletion_special_action = None
+            
+        
+        if last_advanced_file_deletion_special_action is not None:
+            
+            for ( i, choice ) in enumerate( self._permitted_action_choices ):
+                
+                deletee_file_service_key = choice[1][0]
+                
+                if deletee_file_service_key == last_advanced_file_deletion_special_action:
+                    
+                    self._action_radio.Select( i )
+                    
+                    break
+                    
+                
+            
+        
         self._reason_panel = ClientGUICommon.StaticBox( self, 'reason' )
         
         permitted_reason_choices = []
         
         permitted_reason_choices.append( ( default_reason, default_reason ) )
         
-        last_advanced_file_deletion_reason = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_reason' )
+        if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
+            
+            last_advanced_file_deletion_reason = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_reason' )
+            
+        else:
+            
+            last_advanced_file_deletion_reason = None
+            
         
         if last_advanced_file_deletion_reason is None:
             
@@ -534,6 +566,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if deletee_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
+                    self._this_dialog_includes_service_keys = True
+                    
                     if not HC.options[ 'confirm_trash' ]:
                         
                         # this dialog will never show
@@ -561,6 +595,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     
                 else:
+                    
+                    self._this_dialog_includes_service_keys = True
                     
                     if num_to_delete == 1: text = 'Admin-delete this file?'
                     else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
@@ -686,7 +722,31 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             jobs = [ { file_service_key : content_updates } ]
             
         
-        if save_reason:
+        save_action = True
+        
+        if isinstance( file_service_key, bytes ):
+            
+            last_advanced_file_deletion_special_action = None
+            
+        else:
+            
+            previous_last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
+            
+            # if there is nothing to do but physically delete, then we don't want to overwrite an existing 'use service' setting
+            if previous_last_advanced_file_deletion_special_action is None and not self._this_dialog_includes_service_keys:
+                
+                save_action = False
+                
+            
+            last_advanced_file_deletion_special_action = file_service_key
+            
+        
+        if save_action and HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
+            
+            HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_special_action', last_advanced_file_deletion_special_action )
+            
+        
+        if save_reason and HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
             
             if self._reason_radio.GetCurrentIndex() <= 0:
                 
@@ -1201,7 +1261,14 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
         
         self._auto_archive = QW.QCheckBox( post_import_panel )
+        self._associate_primary_urls = QW.QCheckBox( post_import_panel )
         self._associate_source_urls = QW.QCheckBox( post_import_panel )
+        
+        tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
+        tt += os.linesep * 2
+        tt += 'If you are doing a one-off job and do not want to associate these URLs, disable it here. Do not unset this unless you have a reason to!'
+        
+        self._associate_primary_urls.setToolTip( tt )
         
         tt = 'If the parser discovers and additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
         tt += os.linesep * 2
@@ -1233,9 +1300,12 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( automatic_archive, associate_source_urls ) = file_import_options.GetPostImportOptions()
+        automatic_archive = file_import_options.AutomaticallyArchives()
+        associate_primary_urls = file_import_options.ShouldAssociatePrimaryURLs()
+        associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
         
         self._auto_archive.setChecked( automatic_archive )
+        self._associate_primary_urls.setChecked( associate_primary_urls )
         self._associate_source_urls.setChecked( associate_source_urls )
         
         #
@@ -1282,10 +1352,12 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
+            rows.append( ( 'associate primary urls: ', self._associate_primary_urls ) )
             rows.append( ( 'associate (and trust) additional source urls: ', self._associate_source_urls ) )
             
         else:
             
+            self._associate_primary_urls.setVisible( False )
             self._associate_source_urls.setVisible( False )
             
         
@@ -1357,6 +1429,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         max_resolution = self._max_resolution.GetValue()
         
         automatic_archive = self._auto_archive.isChecked()
+        associate_primary_urls = self._associate_primary_urls.isChecked()
         associate_source_urls = self._associate_source_urls.isChecked()
         
         present_new_files = self._present_new_files.isChecked()
@@ -1366,7 +1439,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         file_import_options = FileImportOptions.FileImportOptions()
         
         file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         return file_import_options

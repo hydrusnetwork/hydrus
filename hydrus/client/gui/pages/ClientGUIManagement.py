@@ -306,12 +306,13 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 max_resolution = None
                 
                 automatic_archive = advanced_import_options[ 'automatic_archive' ]
+                associate_primary_urls = True
                 associate_source_urls = True
                 
                 file_import_options = FileImportOptions.FileImportOptions()
                 
                 file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-                file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+                file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                 
                 paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in additional_service_keys_to_tags } for ( path, additional_service_keys_to_tags ) in paths_to_tags.items() }
                 

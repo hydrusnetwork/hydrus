@@ -320,27 +320,23 @@ def GetHashesFromParseResults( results ):
     
     return hash_results
     
-def GetHTMLTagString( tag ):
+def GetHTMLTagString( tag: bs4.Tag ):
+    
+    # don't mess about with tag.string, tag.strings or tag.get_text
+    # on a version update, these suddenly went semi bonkers and wouldn't pull text unless the types of the subtag were explicitly set
+    # so we'll just do it ourselves
     
     try:
         
-        all_strings = [ s for s in tag.strings if len( s ) > 0 ]
+        all_strings = [ str( c ) for c in tag.descendants if isinstance( c, ( bs4.NavigableString, bs4.CData ) ) ]
+        all_strings = [ s for s in all_strings if len( s ) > 0 ]
         
     except:
         
-        return ''
+        all_strings = []
         
     
-    if len( all_strings ) == 0:
-        
-        result = ''
-        
-    else:
-        
-        result = all_strings[0]
-        
-    
-    return result
+    return ''.join( all_strings )
     
 def GetNamespacesFromParsableContent( parsable_content ):
     

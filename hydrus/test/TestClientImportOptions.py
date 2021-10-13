@@ -223,9 +223,10 @@ class TestFileImportOptions( unittest.TestCase ):
         file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         automatic_archive = False
+        associate_primary_urls = False
         associate_source_urls = False
         
-        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         
         present_new_files = True
         present_already_in_inbox_files = True
@@ -238,6 +239,7 @@ class TestFileImportOptions( unittest.TestCase ):
         self.assertFalse( file_import_options.ExcludesDeleted() )
         self.assertFalse( file_import_options.AllowsDecompressionBombs() )
         self.assertFalse( file_import_options.AutomaticallyArchives() )
+        self.assertFalse( file_import_options.ShouldAssociatePrimaryURLs() )
         self.assertFalse( file_import_options.ShouldAssociateSourceURLs() )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
@@ -273,13 +275,15 @@ class TestFileImportOptions( unittest.TestCase ):
         #
         
         automatic_archive = True
+        associate_primary_urls = True
         associate_source_urls  = True
         
-        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertTrue( file_import_options.AllowsDecompressionBombs() )
         self.assertTrue( file_import_options.AutomaticallyArchives() )
+        self.assertTrue( file_import_options.ShouldAssociatePrimaryURLs() )
         self.assertTrue( file_import_options.ShouldAssociateSourceURLs() )
         
         #

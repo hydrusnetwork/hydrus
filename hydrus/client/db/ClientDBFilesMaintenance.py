@@ -7,9 +7,11 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
+from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
+from hydrus.client.db import ClientDBRepositories
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.media import ClientMediaResultCache
 
@@ -18,58 +20,24 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
     def __init__(
         self,
         cursor: sqlite3.Cursor,
+        modules_files_maintenance_queue: ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue,
         modules_hashes: ClientDBMaster.ClientDBMasterHashes,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
+        modules_repositories: ClientDBRepositories.ClientDBRepositories,
         weakref_media_result_cache: ClientMediaResultCache.MediaResultCache
         ):
         
         ClientDBModule.ClientDBModule.__init__( self, 'client files maintenance', cursor )
         
+        self.modules_files_maintenance_queue = modules_files_maintenance_queue
         self.modules_hashes = modules_hashes
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_files_metadata_basic = modules_files_metadata_basic
         self.modules_similar_files = modules_similar_files
+        self.modules_repositories = modules_repositories
         self._weakref_media_result_cache = weakref_media_result_cache
-        
-    
-    def _GetInitialTableGenerationDict( self ) -> dict:
-        
-        return {
-            'external_caches.file_maintenance_jobs' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );', 400 )
-        }
-        
-    
-    def AddJobs( self, hash_ids, job_type, time_can_start = 0 ):
-        
-        deletee_job_types =  ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ]
-        
-        for deletee_job_type in deletee_job_types:
-            
-            self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, deletee_job_type ) for hash_id in hash_ids ) )
-            
-        
-        #
-        
-        self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
-        
-    
-    def AddJobsHashes( self, hashes, job_type, time_can_start = 0 ):
-        
-        hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
-        
-        self.AddJobs( hash_ids, job_type, time_can_start = time_can_start )
-        
-    
-    def CancelFiles( self, hash_ids ):
-        
-        self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
-        
-    
-    def CancelJobs( self, job_type ):
-        
-        self._Execute( 'DELETE FROM file_maintenance_jobs WHERE job_type = ?;', ( job_type, ) )
         
     
     def ClearJobs( self, cleared_job_tuples ):
@@ -85,6 +53,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                 if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                     
                     original_resolution = self.modules_files_metadata_basic.GetResolution( hash_id )
+                    original_mime = self.modules_files_metadata_basic.GetMime( hash_id )
                     
                     ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = additional_data
                     
@@ -100,20 +69,25 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         
                         if not self.modules_hashes.HasExtraHashes( hash_id ):
                             
-                            self.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
+                            self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                             
                         
                         result = self._Execute( 'SELECT 1 FROM file_modified_timestamps WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                         
                         if result is None:
                             
-                            self.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP )
+                            self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP )
                             
+                        
+                    
+                    if mime != original_mime and ( mime in HC.HYDRUS_UPDATE_FILES or original_mime in HC.HYDRUS_UPDATE_FILES ):
+                        
+                        self.modules_repositories.NotifyUpdatesChanged( ( hash_id, ) )
                         
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS and resolution_changed:
                         
-                        self.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                        self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                         
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
@@ -144,7 +118,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         
                         if not self.modules_similar_files.FileIsInSystem( hash_id ):
                             
-                            self.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+                            self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
                             
                         
                     else:
@@ -187,52 +161,5 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                 HG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
                 
             
-        
-    
-    def GetJob( self, job_types = None ):
-        
-        if job_types is None:
-            
-            possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER
-            
-        else:
-            
-            possible_job_types = job_types
-            
-        
-        for job_type in possible_job_types:
-            
-            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), 256 ) ) )
-            
-            if len( hash_ids ) > 0:
-                
-                hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
-                
-                return ( hashes, job_type )
-                
-            
-        
-        return None
-        
-    
-    def GetJobCounts( self ):
-        
-        result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusData.GetNow(), ) ).fetchall()
-        
-        job_types_to_count = dict( result )
-        
-        return job_types_to_count
-        
-    
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
-        
-        tables_and_columns = []
-        
-        if HC.CONTENT_TYPE_HASH:
-            
-            tables_and_columns.append( ( 'file_maintenance_jobs', 'hash_id' ) )
-            
-        
-        return tables_and_columns
         
     

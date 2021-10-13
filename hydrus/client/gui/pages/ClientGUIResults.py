@@ -4772,7 +4772,7 @@ class Thumbnail( Selectable ):
         
         painter.setBrush( QG.QBrush( new_options.GetColour( background_colour_type ) ) )
         
-        painter.drawRect( thumbnail_border, thumbnail_border, width-(thumbnail_border*2), height-(thumbnail_border*2) )
+        painter.drawRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ) )
         
         thumbnail_fill = HG.client_controller.new_options.GetBoolean( 'thumbnail_fill' )
         
@@ -4948,6 +4948,8 @@ class Thumbnail( Selectable ):
             painter.drawRects( rectangles )
             
         
+        ICON_MARGIN = 1
+        
         locations_manager = self.GetLocationsManager()
         
         icons_to_draw = []
@@ -4974,19 +4976,26 @@ class Thumbnail( Selectable ):
         
         if len( icons_to_draw ) > 0:
             
-            icon_x = -thumbnail_border
+            icon_x = - ( thumbnail_border + ICON_MARGIN )
             
             for icon in icons_to_draw:
                 
-                painter.drawPixmap( width + icon_x - 18, thumbnail_border, icon )
+                icon_x -= icon.width()
                 
-                icon_x -= 18
+                painter.drawPixmap( width + icon_x, thumbnail_border, icon )
+                
+                icon_x -= 2 * ICON_MARGIN
                 
             
         
         if self.IsCollection():
             
-            painter.drawPixmap( 1, height-17, CC.global_pixmaps().collection )
+            icon = CC.global_pixmaps().collection
+            
+            icon_x = thumbnail_border + ICON_MARGIN
+            icon_y = ( height - 1 ) - thumbnail_border - ICON_MARGIN - icon.height()
+            
+            painter.drawPixmap( icon_x, icon_y, icon )
             
             num_files_str = HydrusData.ToHumanInt( self.GetNumFiles() )
             
@@ -5001,11 +5010,19 @@ class Thumbnail( Selectable ):
             
             painter.setPen( QC.Qt.NoPen )
             
-            painter.drawRect( 17, height - text_height - 3, text_width + 2, text_height + 2 )
+            box_width = text_width + ( ICON_MARGIN * 2 )
+            box_x = icon_x + icon.width() + ICON_MARGIN
+            box_height = text_height + ( ICON_MARGIN * 2 )
+            box_y = ( height - 1 ) - box_height
+            
+            painter.drawRect( box_x, height - text_height - 3, box_width, box_height )
             
             painter.setPen( QG.QPen( CC.COLOUR_SELECTED_DARK ) )
             
-            ClientGUIFunctions.DrawText( painter, 18, height - text_height - 2, num_files_str )
+            text_x = box_x + ICON_MARGIN
+            text_y = box_y + ICON_MARGIN
+            
+            ClientGUIFunctions.DrawText( painter, text_x, text_y, num_files_str )
             
         
         # top left icons
@@ -5073,16 +5090,13 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.global_pixmaps().ipfs_petitioned )
             
         
-        ICON_MARGIN = 1
-        ICON_SPACING = 2
-        
         top_left_x = thumbnail_border + ICON_MARGIN
         
         for icon_to_draw in icons_to_draw:
             
             painter.drawPixmap( top_left_x, thumbnail_border + ICON_MARGIN, icon_to_draw )
             
-            top_left_x += icon_to_draw.width() + ICON_SPACING
+            top_left_x += icon_to_draw.width() + ( ICON_MARGIN * 2 )
             
         
         return qt_image

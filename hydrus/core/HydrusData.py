@@ -1927,6 +1927,11 @@ class ContentUpdate( object ):
         return len( self.GetHashes() )
         
     
+    def HasReason( self ):
+        
+        return self._reason is not None
+        
+    
     def IsInboxRelated( self ):
         
         return self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX )

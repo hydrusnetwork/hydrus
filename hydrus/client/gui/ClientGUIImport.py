@@ -1747,7 +1747,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
-    def _SetFileImportOptions( self, file_import_options ):
+    def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
         
         if self._gallery_import is not None:
             
@@ -1755,7 +1755,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def _SetTagImportOptions( self, tag_import_options ):
+    def _SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
         
         if self._gallery_import is not None:
             

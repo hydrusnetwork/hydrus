@@ -384,6 +384,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
+                        do_parse = False
+                        
                         status = CC.STATUS_ERROR
                         
                         note = 'Could not parse {}: {}'.format( match_name, cannot_parse_reason )
@@ -401,7 +403,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_seeds = [ file_seed ]
                     
-                    all_parse_results = []
+                    file_seeds_callable( ( file_seed, ) )
                     
                     status = CC.STATUS_SUCCESSFUL_AND_NEW
                     

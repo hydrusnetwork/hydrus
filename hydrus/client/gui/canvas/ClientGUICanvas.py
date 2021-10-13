@@ -727,13 +727,33 @@ class Canvas( QW.QWidget ):
             
             ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, media_show_action )
             
-            # for init zoom, we want the _width_ to stay the same as previous
+            # previously, we always matched width, but this causes a problem in dupe viewer when the alternate has a little watermark on the bottom of the B file, spilling below bottom of screen
+            # we want to preserve zoom so that if user scrolls on canvas zoom we won't have overlap
             
             ( previous_width, previous_height ) = CalculateMediaSize( previous_media, self._current_zoom )
             
             ( current_media_100_width, current_media_100_height ) = self._current_media.GetResolution()
             
-            self._current_zoom = previous_width / current_media_100_width
+            potential_zooms = ( previous_width / current_media_100_width, previous_height / current_media_100_height )
+            
+            both_smaller = True not in ( self._current_zoom > potential_zoom for potential_zoom in potential_zooms )
+            both_bigger = True not in ( self._current_zoom < potential_zoom for potential_zoom in potential_zooms )
+            
+            if both_smaller:
+                
+                # keep the bigger dimension change in view
+                self._current_zoom = max( potential_zooms )
+                
+            elif both_bigger:
+                
+                # do the reverse of the above
+                self._current_zoom = min( potential_zooms )
+                
+            else:
+                
+                # fallback to width in weird situation
+                self._current_zoom = potential_zooms[0]
+                
             
             HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
             
