@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusNetworking
@@ -80,7 +81,7 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
                 
             else:
                 
-                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                 
                 request.temp_file_info = ( os_file_handle, temp_path )
                 

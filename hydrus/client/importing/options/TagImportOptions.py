@@ -472,6 +472,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def CanAddTags( self ):
+        
+        return self.HasAdditionalTags() or self.WorthFetchingTags()
+        
+    
     def CheckTagsVeto( self, tags: typing.Collection[ str ], sibling_tags: typing.Collection[ str ] ):
         
         tags = set( tags )
@@ -662,7 +667,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def HasAdditionalTags( self ):
         
-        return True in ( service_tag_import_options.HasAdditionalTags() for service_tag_import_options in list(self._service_keys_to_service_tag_import_options.values()) )
+        return True in ( service_tag_import_options.HasAdditionalTags() for service_tag_import_options in self._service_keys_to_service_tag_import_options.values() )
         
     
     def IsDefault( self ):
@@ -687,7 +692,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def WorthFetchingTags( self ):
         
-        return True in ( service_tag_import_options.WorthFetchingTags() for service_tag_import_options in list(self._service_keys_to_service_tag_import_options.values()) )
+        return True in ( service_tag_import_options.WorthFetchingTags() for service_tag_import_options in self._service_keys_to_service_tag_import_options.values() )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions

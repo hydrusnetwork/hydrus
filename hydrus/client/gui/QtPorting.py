@@ -2627,8 +2627,8 @@ class CollectComboCtrl( QW.QComboBox ):
     
     def GetValues( self ):
 
-        namespaces = [ ]
-        rating_service_keys = [ ]
+        namespaces = []
+        rating_service_keys = []
 
         for index in self.GetCheckedItems():
 

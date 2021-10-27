@@ -15,8 +15,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -2812,7 +2812,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
 class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, parser, formula = None, test_data = None ):
+    def __init__( self, parent, parser: ClientParsing.PageParser, formula = None, test_data = None ):
         
         self._original_parser = parser
         
@@ -3261,11 +3261,15 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def UserIsOKToCancel( self ):
         
-        if self._original_parser.GetSerialisableTuple() != self.GetValue().GetSerialisableTuple():
+        original_parser = self._original_parser.Duplicate()
+        current_parser = self.GetValue()
+        
+        original_parser.NullifyTestData()
+        current_parser.NullifyTestData()
+        
+        if original_parser.GetSerialisableTuple() != current_parser.GetSerialisableTuple():
             
             text = 'It looks like you have made changes to the parser--are you sure you want to cancel?'
-            text += os.linesep * 2
-            text += 'If this is a subsidiary page parser and you think you have made no changes, it might just be example test data, auto-populated from the parent, that changed.'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
@@ -4440,7 +4444,7 @@ class TestPanel( QW.QWidget ):
                 
                 if example_bytes is not None:
                     
-                    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                     
                     try:
                         
@@ -4457,7 +4461,7 @@ class TestPanel( QW.QWidget ):
                         
                     finally:
                         
-                        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                        HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                         
                     
                 else:

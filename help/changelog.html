@@ -8,6 +8,44 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_459"><a href="#version_459">version 459</a></h3></li>
+				<ul>
+					<li>main highlights:</li>
+					<li>to help debugging from screenshots etc..., the client now puts its version name on every window title, like 'review services - hydrus client 459'. (issue #447)</li>
+					<li>the 'main gui title' option is reset and replaced with 'application display name' this week. it now alters the 'hydrus client' part on every window title. the actual 'main gui title' is now "main" lmao</li>
+					<li>wrote a new help document, 'help my media files are broke' in the db directory. this collects the different recovery routines I have developed while helping users after drive failure or other problems cause many missing files or a desynced database and file storage structure. I will be pointing people to this in future, please feel free to do the same</li>
+					<li>two new file maintenance jobs are added: for 'presence' and 'integrity' checks, you can now do 'if has URL, then try to redownload, else remove record'. this tidily combines the two more specific jobs that are commonly run after a hard drive problem. the 'presence' version is now the default selected job and recommended for most simple situations</li>
+					<li>a new easy-select button on the review file maintenance panel  lets you select all media files</li>
+					<li>I put some more time into the new duplicate filter zoom locking calculation. thank you to users who sent in examples of my code not working well--I have scaled back what it tried to do. now it will tend to heigh-lock for landscape images and width-lock for everything else _unless_ you are currently viewing the default zoom and that roughly fills the canvas on a dimension and doing the default lock would cause the next image to spill over the screen. the 'solution' here hence targets the 'watermark spilled over' problem more specifically and deals with all combinations of landscape/portrait A/B/canvas better. I'd still like to introduce some zoom locking options here for regular browsing, but pinning down what exactly is useful is trickier than I expected</li>
+					<li>the edit tag import options panel now shows 'THIS CURRENTLY GETS NO TAGS' warning red text if it is non default and no tags are set to parse and there are no additional tags</li>
+					<li>the status bar now shows '1,234 files in 20 collections' when you have just collections or just collections selected (previously, it wrongly said '1,234 collections') (issue #807)</li>
+					<li>macOS clients will now show dialog-created menus in a debug dialog unless the new BUGFIX checkbox under 'gui' options page is unchecked. this _should_ help Big Sur users who are unable to interact with menus created in dialogs like manage tags or manage services. I threw this together, so let me know how this works for you! (issue #986, issue #858)</li>
+					<li>the program now waits specifically for currently running subscriptions to stop work and save themselves before moving on with further shutdown tasks. hand in hand with this, subscriptions are now faster at stopping work on client exit, even when they have no popup message (through which some hackery dackery shutdown signals are sent otherwise) (issue #790)</li>
+					<li>physically deleting thousands of files in one go should no longer lock up the file manager and other systems for ages--physical delete is now serialised and processed on a new threaded mainloop, so it doesn't matter how fast the requests come it, it will chunter at a polite speed and take breaks and should not choke other consumers and freeze up other 'things are great, you can start new work' status checks</li>
+					<li>.</li>
+					<li>network job improvements:</li>
+					<li>hydrus network jobs now try to resume incomplete responses (previously they just dumped out and tried again from the beginning). if a server provides less content than it said it would, or it explicitly gives us a partial response, we now resume at that point! should fix dowmnloading of longer videos on 8chan.moe</li>
+					<li>hydrus network jobs now send a range header by default, letting servers return 206 (partial content) if they wish</li>
+					<li>SSL errors (cert verification and similar) are now caught in the network engine separately to generic connection errors. they will not be reattempted, and the failure note will display specific error info</li>
+					<li>refactored some response header parsing code, cleaning up how some variables are initialised</li>
+					<li>greatly improved the job reattempt system, resetting variables more neatly</li>
+					<li>improved some response range and content length calculations</li>
+					<li>.</li>
+					<li>smaller items, mostly bug fixes:</li>
+					<li>fixed a recent typo bug that caused the edit url class dialog to always spawn with 'file url' type set. sorry, this was stupid! (issue #982)</li>
+					<li>the edit url class dialog now sends the 'normalised' url as the example text for the api and referral string converter edit panels</li>
+					<li>fixed the new advanced file deletion 'remember last' checkboxes in _options->files and trash_. they weren't hooked up right, sorry!</li>
+					<li>fixed the tag menu's siblings submenu's copy command where it says 'ideal is "xxx" on: yyy'. despite the correct label, this was sometimes copying a different service's ideal (issue #855)</li>
+					<li>fixed the 'media zooms' text input under _options->media_ not turning off the 'red' invalid mode once its text is again valid</li>
+					<li>when you cancel the 'edit parser' dialog, it shouldn't say 'it looks like you made changes' so much when you didn't make any. the 'has changes' test now ignores some background test data updates that may have happened (issue #875)</li>
+					<li>if a JSON parsing formula is given HTML, the 'cannot parse' error now tries to detect this and present a better error text (issue #888)</li>
+					<li>I _think_ I fixed a problem in the new bytes rendering calculation (where it goes 1018825 to "995KB") where on some unlucky edge-case numbers it could non-determinitively choose different sig figs (e.g. flipping between 994.9KB and 995KB)</li>
+					<li>fixed a couple of file move actions that were unable to move across Windows partitions when the timestamp was before 1980-01-01 (issue #989)</li>
+					<li>mr bones now recognises you are not a new user if you deleted all your files. you can never exit</li>
+					<li>after some testing, it seems like large 'drop table' operations in SQLite sometimes work within seconds but generally take far longer, often working as slow as 10MB/s (and I just talked to a guy for whom it took _days_(!!!). writing a fix to make 'delete service' always run fast for something as large as the PTR will take planning and work, so for now I have attached a warning note to the delete service confirmation dialog</li>
+					<li>updated the file maintenance review panel to newer async code</li>
+					<li>fixed a typo bug in URL export when a file is missing/bad in file maintenance</li>
+				</ul>
 				<li><h3 id="version_458"><a href="#version_458">version 458</a></h3></li>
 				<ul>
 					<li>quality of life:</li>

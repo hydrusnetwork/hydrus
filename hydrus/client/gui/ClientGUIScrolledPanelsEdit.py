@@ -2243,6 +2243,10 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateTagWhitelistLabel()
         
+        self._no_tags_label = ClientGUICommon.BetterStaticText( self, label = 'THIS CURRENTLY GETS NO TAGS' )
+        
+        self._no_tags_label.setObjectName( 'HydrusWarning' )
+        
         self._services_vbox = QP.VBoxLayout()
         
         #
@@ -2297,6 +2301,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._no_tags_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._specific_options_panel.setLayout( vbox )
@@ -2318,6 +2323,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
+        
+        self._UpdateNoTagsLabel()
         
     
     def _EditWhitelist( self ):
@@ -2352,6 +2359,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
             
             QP.AddToLayout( self._services_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            panel.valueChanged.connect( self._UpdateNoTagsLabel )
             
         
     
@@ -2452,6 +2461,19 @@ Please note that once you know what tags you like, you can (and should) set up t
             
             self.window().adjustSize()
             
+        
+        self._UpdateNoTagsLabel()
+        
+    
+    def _UpdateNoTagsLabel( self ):
+        
+        tag_import_options = self.GetValue()
+        
+        we_explicitly_get_no_tags = ( not tag_import_options.IsDefault() ) and ( not tag_import_options.CanAddTags() )
+        
+        self._no_tags_label.setVisible( we_explicitly_get_no_tags )
+        
+        self.updateGeometry()
         
     
     def _UpdateTagWhitelistLabel( self ):
@@ -2637,6 +2659,8 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
@@ -2734,6 +2758,8 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateAdditionalTagsButtonLabel()
         
+        self.valueChanged.emit()
+        
     
     def _EditOnlyAddExistingTagsFilter( self ):
         
@@ -2816,6 +2842,8 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         should_enable_filter = get_tags
         
         self._get_tags_filter_button.setEnabled( should_enable_filter )
+        
+        self.valueChanged.emit()
         
     
     def GetValue( self ) -> TagImportOptions.ServiceTagImportOptions:

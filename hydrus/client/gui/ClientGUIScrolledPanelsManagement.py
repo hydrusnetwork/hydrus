@@ -1112,6 +1112,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetStringList( 'advanced_file_deletion_reasons', self._advanced_file_deletion_reasons.GetData() )
             
+            HG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_special_action', self._remember_last_advanced_file_deletion_special_action.isChecked() )
+            HG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_reason', self._remember_last_advanced_file_deletion_reason.isChecked() )
+            
         
     
     class _FileViewingStatisticsPanel( QW.QWidget ):
@@ -1192,7 +1195,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._main_gui_panel = ClientGUICommon.StaticBox( self, 'main window' )
             
-            self._main_gui_title = QW.QLineEdit( self._main_gui_panel )
+            self._app_display_name = QW.QLineEdit( self._main_gui_panel )
+            self._app_display_name.setToolTip( 'This is placed in every window title, with current version name. Rename if you want to personalise or differentiate.' )
             
             self._confirm_client_exit = QW.QCheckBox( self._main_gui_panel )
             
@@ -1222,6 +1226,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
             
+            self._do_macos_debug_dialog_menus = QW.QCheckBox( self._misc_panel )
+            self._do_macos_debug_dialog_menus.setToolTip( 'There is a bug in Big Sur Qt regarding interacting with some menus in dialogs. The menus show but cannot be clicked. This shows the menu items in a debug dialog instead.' )
+            
             self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
             self._use_qt_file_dialogs.setToolTip( 'If you get crashes opening file/directory dialogs, try this.' )
             
@@ -1238,7 +1245,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = HG.client_controller.new_options
             
-            self._main_gui_title.setText( self._new_options.GetString( 'main_gui_title' ) )
+            self._app_display_name.setText( self._new_options.GetString( 'app_display_name' ) )
             
             self._confirm_client_exit.setChecked( HC.options[ 'confirm_client_exit' ] )
             
@@ -1253,6 +1260,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
             
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
+            
+            self._do_macos_debug_dialog_menus.setChecked( self._new_options.GetBoolean( 'do_macos_debug_dialog_menus' ) )
             
             self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
             
@@ -1269,7 +1278,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Main gui title: ', self._main_gui_title ) )
+            rows.append( ( 'Application display name: ', self._app_display_name ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
             
@@ -1285,6 +1294,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Export pattern shortcuts: ', ClientGUICommon.ExportPatternButton( self ) ) )
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
+            rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1352,15 +1362,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
             
-            title = self._main_gui_title.text()
+            app_display_name = self._app_display_name.text()
             
-            self._new_options.SetString( 'main_gui_title', title )
+            if app_display_name == '':
+                
+                app_display_name = 'hydrus client'
+                
             
-            HG.client_controller.pub( 'main_gui_title', title )
+            self._new_options.SetString( 'app_display_name', app_display_name )
             
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
             self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
+            self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
@@ -2253,7 +2267,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.text().split( ',' ) ]
                 
-                self._media_zooms.setProperty( 'hydrus_text', 'default' )
+                self._media_zooms.setObjectName( '' )
                 
             except ValueError:
                 

@@ -17,6 +17,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTemp
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -355,7 +356,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.AddPrimaryURLs( ( file_url, ) )
         
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
         
         try:
             
@@ -392,7 +393,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         finally:
             
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     
@@ -714,7 +715,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Source file does not exist!' )
                 
             
-            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
             try:
                 
@@ -751,7 +752,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             finally:
                 
-                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                 
             
             self.WriteContentUpdates( file_import_options = file_import_options )
@@ -1115,7 +1116,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         it_was_a_real_file = False
                         
-                        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                         
                         try:
                             
@@ -1141,7 +1142,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                         finally:
                             
-                            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                             
                         
                         if not it_was_a_real_file:

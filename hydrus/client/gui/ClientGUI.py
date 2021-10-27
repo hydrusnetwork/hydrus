@@ -28,6 +28,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
@@ -436,14 +437,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._controller = controller
         
-        title = self._controller.new_options.GetString( 'main_gui_title' )
-        
-        if title is None or title == '':
-            
-            title = 'hydrus client'
-            
-        
-        ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, title, 'main_gui' )
+        ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, 'main', 'main_gui' )
         
         self._currently_minimised_to_system_tray = False
         
@@ -523,7 +517,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
-        self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         self._controller.sub( self, 'TryToOpenManageServicesForAutoAccountCreation', 'open_manage_services_and_try_to_auto_create_account' )
         
         vbox = QP.VBoxLayout()
@@ -585,6 +578,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._notebook.freshSessionLoaded.connect( self.ReportFreshSessionLoaded )
         
         self._controller.CallLaterQtSafe( self, 0.5, 'initialise session', self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
+        
+        ClientGUIFunctions.UpdateAppDisplayName()
         
     
     def _AboutWindow( self ):
@@ -681,7 +676,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
-        library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
+        library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )
         library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
         library_versions.append( ( 'db cache size per file', '{}MB'.format( HG.db_cache_size ) ) )
         library_versions.append( ( 'db transaction commit period', '{}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) ) )
@@ -4074,6 +4069,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             HydrusData.ShowException( e )
             
+        
+        ClientGUIFunctions.UpdateAppDisplayName()
         
         self._controller.pub( 'wake_daemons' )
         self.SetStatusBarDirty()

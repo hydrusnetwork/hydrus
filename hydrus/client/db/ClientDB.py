@@ -15,6 +15,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
@@ -16049,7 +16050,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    HydrusPaths.CheckHasSpaceForDBTransaction( self._db_dir, space_needed )
+                    HydrusDBBase.CheckHasSpaceForDBTransaction( self._db_dir, space_needed )
                     
                 except Exception as e:
                     

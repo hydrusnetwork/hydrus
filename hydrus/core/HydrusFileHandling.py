@@ -11,6 +11,7 @@ from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
@@ -65,7 +66,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         
     elif mime == HC.APPLICATION_PSD:
         
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
         
         try:
             
@@ -81,14 +82,14 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
         finally:
             
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     else:
         
         if mime == HC.APPLICATION_FLASH:
             
-            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
             try:
                 
@@ -104,7 +105,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
                 
             finally:
                 
-                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                 
             
         else:

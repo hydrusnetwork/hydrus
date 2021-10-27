@@ -127,9 +127,9 @@ Do not delete your original files for now. Just rename them to 'old' and move th
 
 ** repair **
 
-This is a newer command that tries to fix a database file in place. It sometimes works better than clone, but I have had reports of it not fixing all malformations, so you'll want to run integrity_check again and do a clone if needed.
+This command tries to fix a database file in place. It works very very slowly. While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
 
-It is very important you have a copy of the broken file here, as this edits the file in place.
+It is very important you have a backup copy of the broken file(s) here, as this edits the file in place.
 
 .open client.db
 .recover
@@ -204,7 +204,9 @@ When your recovery is done, your tag counts or siblings may be incorrect. If so 
 
 *** if caches was hit ***
 
-If client.caches.db was hit, this is the best scenario, since everything in there is just a mirror of some other data, and can be reprocessed. Run everything under _database->regenerate_ in turn. That'll likely be enough for almost all cases, but if you still get screwy behaviour with the duplicate system or something, let me know and I'll see what I can do.
+If client.caches.db was hit, this is the best scenario, since everything in there is just a mirror of some other data, and can be reprocessed. Run the main jobs under _database->regenerate_ in turn. Read the pre-run descriptions to make sure you aren't doing the same thing twice, since some of the mapping cache regen jobs there are big and do the work of other jobs too. That'll likely be enough for almost all cases, but if you still get screwy behaviour with the duplicate system or something, let me know and I'll see what I can do.
+
+An alternate answer, if your client.caches.db is really truncated/broken, is just to delete the file and boot without it. The client's repair code is now good enough to try to regenerate the entire file on boot. It may give you more post-boot regen instructions.
 
 
 *** the database broke again ***

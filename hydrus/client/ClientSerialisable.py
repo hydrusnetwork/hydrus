@@ -14,6 +14,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
@@ -162,7 +163,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
+    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
     
     try:
         
@@ -178,7 +179,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
         
     finally:
         
-        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+        HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     
 def GetPayloadBytes( payload_obj ):
@@ -239,7 +240,7 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
 def LoadFromPNG( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
     
     try:
         
@@ -272,7 +273,7 @@ def LoadFromPNG( path ):
         
     finally:
         
-        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+        HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     
     try:

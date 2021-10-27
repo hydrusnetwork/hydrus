@@ -2269,11 +2269,17 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._button_panel = ClientGUICommon.StaticBox( self._new_work_panel, 'select special files' )
+        self._button_panel = ClientGUICommon.StaticBox( self._new_work_panel, 'easy select' )
         
+        self._select_all_media_files = ClientGUICommon.BetterButton( self._button_panel, 'all media files', self._SelectAllMediaFiles )
         self._select_repo_files = ClientGUICommon.BetterButton( self._button_panel, 'all repository update files', self._SelectRepoUpdateFiles )
         
-        self._button_panel.Add( self._select_repo_files, CC.FLAGS_ON_RIGHT )
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._select_all_media_files, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._select_repo_files, CC.FLAGS_CENTER )
+        
+        self._button_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
         
         #
         
@@ -2336,27 +2342,6 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddJob( self ):
         
-        def qt_done():
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            QW.QMessageBox.information( self, 'Information', 'Jobs added!' )
-            
-            self._add_new_job.setEnabled( True )
-            
-            self._RefreshWorkDue()
-            
-        
-        def do_it( hash_ids, job_type ):
-            
-            HG.client_controller.files_maintenance_manager.ScheduleJobHashIds( hash_ids, job_type )
-            
-            QP.CallAfter( qt_done )
-            
-        
         hash_ids = self._hash_ids
         job_type = self._action_selector.GetValue()
         
@@ -2374,7 +2359,25 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._add_new_job.setEnabled( False )
         
-        HG.client_controller.CallToThread( do_it, hash_ids, job_type )
+        def work_callable():
+            
+            HG.client_controller.files_maintenance_manager.ScheduleJobHashIds( hash_ids, job_type )
+            
+            return True
+            
+        
+        def publish_callable( result ):
+            
+            QW.QMessageBox.information( self, 'Information', 'Jobs added!' )
+            
+            self._add_new_job.setEnabled( True )
+            
+            self._RefreshWorkDue()
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _ConvertJobTypeToListCtrlTuples( self, job_type ):
@@ -2401,26 +2404,6 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DeleteWork( self ):
         
-        def qt_done():
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._RefreshWorkDue()
-            
-        
-        def do_it( job_types ):
-            
-            for job_type in job_types:
-                
-                HG.client_controller.files_maintenance_manager.CancelJobs( job_type )
-                
-            
-            QP.CallAfter( qt_done )
-            
-        
         message = 'Clear all the selected scheduled work?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -2432,7 +2415,24 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         job_types = self._jobs_listctrl.GetData( only_selected = True )
         
-        HG.client_controller.CallToThread( do_it, job_types )
+        def work_callable():
+            
+            for job_type in job_types:
+                
+                HG.client_controller.files_maintenance_manager.CancelJobs( job_type )
+                
+            
+            return True
+            
+        
+        def publish_callable( result ):
+            
+            self._RefreshWorkDue()
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _DoAllWork( self ):
@@ -2454,12 +2454,14 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _RefreshWorkDue( self ):
         
-        def qt_done( job_types_to_counts ):
+        def work_callable():
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
+            job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
+            
+            return job_types_to_counts
+            
+        
+        def publish_callable( job_types_to_counts ):
             
             self._job_types_to_counts = job_types_to_counts
             
@@ -2468,38 +2470,12 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             self._jobs_listctrl.SetData( job_types )
             
         
-        def do_it():
-            
-            job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
-            
-            QP.CallAfter( qt_done, job_types_to_counts )
-            
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
-        HG.client_controller.CallToThread( do_it )
+        job.start()
         
     
     def _RunSearch( self ):
-        
-        def qt_done( hash_ids ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._run_search_st.setText( '{} files found'.format(HydrusData.ToHumanInt(len(hash_ids))) )
-            
-            self._run_search.setEnabled( True )
-            
-            self._SetHashIds( hash_ids )
-            
-        
-        def do_it( fsc ):
-            
-            query_hash_ids = HG.client_controller.Read( 'file_query_ids', fsc )
-            
-            QP.CallAfter( qt_done, query_hash_ids )
-            
         
         self._run_search_st.setText( 'loading\u2026' )
         
@@ -2507,7 +2483,25 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
-        HG.client_controller.CallToThread( do_it, file_search_context )
+        def work_callable():
+            
+            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context )
+            
+            return query_hash_ids
+            
+        
+        def publish_callable( hash_ids ):
+            
+            self._run_search_st.setText( '{} files found'.format( HydrusData.ToHumanInt( len( hash_ids ) ) ) )
+            
+            self._run_search.setEnabled( True )
+            
+            self._SetHashIds( hash_ids )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _SeeDescription( self ):
@@ -2521,26 +2515,34 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         QW.QMessageBox.information( self, 'Information', message )
         
     
-    def _SelectRepoUpdateFiles( self ):
+    def _SelectAllMediaFiles( self ):
         
-        def qt_done( hash_ids ):
+        self._select_all_media_files.setEnabled( False )
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        
+        def work_callable():
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
+            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context )
             
-            self._select_repo_files.setEnabled( True )
+            return query_hash_ids
+            
+        
+        def publish_callable( hash_ids ):
+            
+            self._select_all_media_files.setEnabled( True )
             
             self._SetHashIds( hash_ids )
             
         
-        def do_it( fsc ):
-            
-            query_hash_ids = HG.client_controller.Read( 'file_query_ids', fsc )
-            
-            QP.CallAfter( qt_done, query_hash_ids )
-            
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
+        
+    
+    def _SelectRepoUpdateFiles( self ):
         
         self._select_repo_files.setEnabled( False )
         
@@ -2548,7 +2550,23 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
         
-        HG.client_controller.CallToThread( do_it, file_search_context )
+        def work_callable():
+            
+            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context )
+            
+            return query_hash_ids
+            
+        
+        def publish_callable( hash_ids ):
+            
+            self._select_repo_files.setEnabled( True )
+            
+            self._SetHashIds( hash_ids )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _SetHashIds( self, hash_ids ):
@@ -2602,7 +2620,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        if num_total < 1000:
+        if num_supertotal < 1000:
             
             get_more = ClientGUICommon.BetterStaticText( self, label = 'I hope you enjoy my software. You might like to check out the downloaders! :^)' )
             
@@ -2610,7 +2628,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         elif num_inbox <= num_archive / 100:
             
-            hooray = ClientGUICommon.BetterStaticText( self, label = 'CONGRATULATIONS, YOU APPEAR TO BE UNBONED, BUT REMAIN EVER VIGILANT' )
+            hooray = ClientGUICommon.BetterStaticText( self, label = 'CONGRATULATIONS. YOU APPEAR TO BE UNBONED, BUT REMAIN EVER VIGILANT' )
             
             QP.AddToLayout( vbox, hooray, CC.FLAGS_CENTER )
             
@@ -2625,7 +2643,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
             
         
-        if num_total == 0:
+        if num_supertotal == 0:
             
             nothing_label = 'You have yet to board the ride.'
             

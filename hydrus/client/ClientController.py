@@ -16,8 +16,8 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
@@ -110,6 +110,7 @@ class App( QW.QApplication ):
         self._pubsub = pubsub
         
         self.setApplicationName( 'Hydrus Client' )
+        
         self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
         
         QC.qInstallMessageHandler( MessageHandler )
@@ -215,7 +216,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitTempDir( self ):
         
-        self.temp_dir = HydrusPaths.GetTempDir()
+        self.temp_dir = HydrusTemp.GetTempDir()
         
     
     def _DestroySplash( self ):
@@ -1135,6 +1136,8 @@ class Controller( HydrusController.HydrusController ):
         self.favourite_search_manager = favourite_search_manager
         
         #
+        
+        self.client_files_manager.Start()
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         

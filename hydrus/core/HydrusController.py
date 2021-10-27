@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTemp
 from hydrus.core.networking import HydrusNATPunch
 
 class HydrusController( object ):
@@ -160,7 +161,7 @@ class HydrusController( object ):
     
     def _InitTempDir( self ):
         
-        self.temp_dir = HydrusPaths.GetTempDir()
+        self.temp_dir = HydrusTemp.GetTempDir()
         
     
     def _MaintainCallToThreads( self ):
@@ -618,7 +619,7 @@ class HydrusController( object ):
     
     def MaintainMemorySlow( self ):
         
-        HydrusPaths.CleanUpOldTempPaths()
+        HydrusTemp.CleanUpOldTempPaths()
         
         self._MaintainCallToThreads()
         

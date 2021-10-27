@@ -896,16 +896,16 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_url_class = url_class
         
-        ( url_type, preferred_scheme, netloc, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, example_url ) = url_class.ToTuple()
-        
         self._name = QW.QLineEdit( self )
         
         self._url_type = ClientGUICommon.BetterChoice( self )
         
-        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE, HC.URL_TYPE_FILE ):
+        for u_t in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE, HC.URL_TYPE_FILE ):
             
-            self._url_type.addItem( HC.url_type_string_lookup[ url_type ], url_type )
+            self._url_type.addItem( HC.url_type_string_lookup[ u_t ], u_t )
             
+        
+        ( url_type, preferred_scheme, netloc, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, example_url ) = url_class.ToTuple()
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -1028,9 +1028,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._send_referral_url = ClientGUICommon.BetterChoice( self._referral_url_panel )
         
-        for send_referral_url_type in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
+        for s_r_u_t in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
             
-            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
+            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ s_r_u_t ], s_r_u_t )
             
         
         tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
@@ -1705,9 +1705,6 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = self._example_url.text()
             
-            self._referral_url_converter.SetExampleString( example_url )
-            self._api_lookup_converter.SetExampleString( example_url )
-            
             url_class.Test( example_url )
             
             self._example_url_classes.setText( 'Example matches ok!' )
@@ -1716,6 +1713,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             normalised = url_class.Normalise( example_url )
             
             self._normalised_url.setText( normalised )
+            
+            self._referral_url_converter.SetExampleString( normalised )
+            self._api_lookup_converter.SetExampleString( normalised )
             
             if url_class.UsesAPIURL():
                 

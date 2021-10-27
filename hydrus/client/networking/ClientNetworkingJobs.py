@@ -167,6 +167,16 @@ class NetworkJob( object ):
         self._actual_fetched_url = self._url
         self._temp_path = temp_path
         
+        if self._temp_path is None:
+            
+            # 100MB HTML file lmao
+            self._max_allowed_bytes = 104857600
+            
+        else:
+            
+            self._max_allowed_bytes = None
+            
+        
         self._files = None
         self._for_login = False
         
@@ -185,6 +195,7 @@ class NetworkJob( object ):
         self._wake_time_float = 0.0
         
         self._content_type = None
+        self._response_mime = None
         
         self._encoding = 'utf-8'
         self._encoding_confirmed = False
@@ -213,6 +224,7 @@ class NetworkJob( object ):
         self._status_text = 'initialising\u2026'
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
+        self._num_bytes_read_is_accurate = True
         
         self._file_import_options = None
         
@@ -349,61 +361,137 @@ class NetworkJob( object ):
             
         
     
-    def _ReadResponse( self, response, stream_dest, max_allowed = None ):
+    def _ParseFirstResponseHeaders( self, response: requests.Response ):
         
         with self._lock:
             
+            if 'Content-Type' in response.headers:
+                
+                self._content_type = response.headers[ 'Content-Type' ]
+                
+            
             if self._content_type is not None and self._content_type in HC.mime_enum_lookup:
                 
-                mime = HC.mime_enum_lookup[ self._content_type ]
+                self._response_mime = HC.mime_enum_lookup[ self._content_type ]
                 
             else:
                 
-                mime = None
+                self._response_mime = None
                 
             
             if 'content-length' in response.headers:
                 
                 self._num_bytes_to_read = int( response.headers[ 'content-length' ] )
                 
-                if max_allowed is not None and self._num_bytes_to_read > max_allowed:
-                    
-                    raise HydrusExceptions.NetworkException( 'The url was apparently ' + HydrusData.ToHumanBytes( self._num_bytes_to_read ) + ' but the max network size for this type of job is ' + HydrusData.ToHumanBytes( max_allowed ) + '!' )
-                    
-                
-                if self._file_import_options is not None:
-                    
-                    is_complete_file_size = True
-                    
-                    self._file_import_options.CheckNetworkDownload( mime, self._num_bytes_to_read, is_complete_file_size )
-                    
-                
             else:
                 
                 self._num_bytes_to_read = None
                 
             
+            if response.encoding is not None:
+                
+                self._encoding = response.encoding
+                
+            
+            if response.ok: # i.e. we got what we expected, not some error
+                
+                if 'content-length' in response.headers:
+                    
+                    if self._max_allowed_bytes is not None and self._num_bytes_to_read > self._max_allowed_bytes:
+                        
+                        raise HydrusExceptions.NetworkException( 'The url was apparently {} but the max network size for this type of job is {}!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
+                        
+                    
+                    if self._file_import_options is not None:
+                        
+                        is_complete_file_size = True
+                        
+                        self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_to_read, is_complete_file_size )
+                        
+                    
+                
+            
         
-        num_bytes_read_is_accurate = True
+    
+    def _ReadResponse( self, response: requests.Response, stream_dest ):
+        
+        if 'content-range' in response.headers:
+            
+            content_range = response.headers[ 'content-range' ]
+            
+            # Content-Range: <unit> <range-start>-<range-end>/<size>
+            # range and size can be *
+            if content_range.startswith( 'bytes ' ):
+                
+                content_range = content_range[6:]
+                
+                if '/' in content_range:
+                    
+                    ( byte_range, size ) = content_range.split( '/', 1 )
+                    
+                    if byte_range != '*' and '-' in byte_range:
+                        
+                        ( byte_start, byte_end ) = byte_range.split( '-', 1 )
+                        
+                        try:
+                            
+                            byte_start = int( byte_start )
+                            
+                            if byte_start != self._num_bytes_read:
+                                
+                                # this server be crazy
+                                # I guess in some cases we might be able to fast forward a < byte_start, but we don't have that raw byte access tech yet
+                                # and if byte_start > num_bytes_read, then lmao
+                                raise HydrusExceptions.NetworkException( 'This server delivered an undesired Range response! We asked for Range "{}" and got Content-Range "{}" back!'.format( response.request.headers[ 'range' ], response.headers[ 'content-range' ] ) )
+                                
+                            
+                        except:
+                            
+                            pass
+                            
+                        
+                    
+                    if size != '*':
+                        
+                        if self._num_bytes_to_read is None:
+                            
+                            try:
+                                
+                                num_bytes = int( size )
+                                
+                                self._num_bytes_to_read = num_bytes
+                                
+                            except:
+                                
+                                pass
+                                
+                            
+                        
+                    
+                
+            
+        
+        starting_num_bytes_read = self._num_bytes_read
         
         for chunk in response.iter_content( chunk_size = 65536 ):
             
             if self._IsCancelled():
                 
-                return
+                raise HydrusExceptions.CancelledException()
                 
             
             stream_dest.write( chunk )
             
-            total_bytes_read = response.raw.tell()
+            # get the raw bytes read, not the length of the chunk, as there may be transfer-encoding (chunked, gzip etc...)
+            total_bytes_read_in_this_response = response.raw.tell()
             
-            if total_bytes_read == 0:
+            if total_bytes_read_in_this_response == 0:
                 
-                # this seems to occur when the response is chunked transfer encoding (note, no Content-Length)
+                # this seems to occur when the response is Transfer-Encoding: chunked (note, no Content-Length)
                 # there's no great way to track raw bytes read in this case. the iter_content chunk can be unzipped from that
                 # nonetheless, requests does raise ChunkedEncodingError if it stops early, so not a huge deal to miss here, just slightly off bandwidth tracking
                 
-                num_bytes_read_is_accurate = False
+                self._num_bytes_read_is_accurate = False
                 
                 chunk_num_bytes = len( chunk )
                 
@@ -411,28 +499,30 @@ class NetworkJob( object ):
                 
             else:
                 
-                chunk_num_bytes = total_bytes_read - self._num_bytes_read
+                previous_num_bytes_read = self._num_bytes_read
                 
-                self._num_bytes_read = total_bytes_read
+                self._num_bytes_read = starting_num_bytes_read + total_bytes_read_in_this_response
+                
+                chunk_num_bytes = self._num_bytes_read - previous_num_bytes_read
                 
             
             with self._lock:
                 
-                if self._num_bytes_to_read is not None and num_bytes_read_is_accurate and self._num_bytes_read > self._num_bytes_to_read:
+                if self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read > self._num_bytes_to_read:
                     
                     raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {} but server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ) ) )
                     
                 
-                if max_allowed is not None and self._num_bytes_read > max_allowed:
+                if self._max_allowed_bytes is not None and self._num_bytes_read > self._max_allowed_bytes:
                     
-                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is ' + HydrusData.ToHumanBytes( max_allowed ) + '!' )
+                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is {}!'.format( HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
                     
                 
                 if self._file_import_options is not None:
                     
                     is_complete_file_size = False
                     
-                    self._file_import_options.CheckNetworkDownload( mime, self._num_bytes_read, is_complete_file_size )
+                    self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
                     
                 
             
@@ -445,14 +535,28 @@ class NetworkJob( object ):
                 
             
         
-        # ok the issue with some larger files failing here is they are actually 206, or at least would be (rather than 200), if we sent "Range: bytes=0-" or similar header
-        # if 206 and/or "Accept-Ranges: bytes" response header exists, then we may well be in this situation
-        # essentially we'll have to build infrastructure to recognise this situation and try with an actual fresh request with a new range and resume from where we left off, which means preserving bytes_read and so on
+        # stick with GET for now. if there is a complex way to range-chunk a POST, we'll deal with it then, but I don't want to spam file uploads to IQDB by accident etc...
+        download_is_definitely_incomplete = self._method == 'GET' and self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read
+        we_read_some_data = self._num_bytes_read > starting_num_bytes_read
         
-        if self._num_bytes_to_read is not None and num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read:
+        if download_is_definitely_incomplete and not we_read_some_data:
             
-            raise HydrusExceptions.ShouldReattemptNetworkException( 'Incomplete response: Was expecting {} but actually got {} !'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._num_bytes_read ) ) )
+            raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but this chunk was empty!' )
             
+        
+        more_to_download = we_read_some_data and download_is_definitely_incomplete
+        
+        if not more_to_download:
+            
+            if self._file_import_options is not None:
+                
+                is_complete_file_size = True
+                
+                self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
+                
+            
+        
+        return more_to_download
         
     
     def _ReportDataUsed( self, num_bytes ):
@@ -460,6 +564,23 @@ class NetworkJob( object ):
         self._bandwidth_tracker.ReportDataUsed( num_bytes )
         
         self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
+        
+    
+    def _ResetForAnotherConnectionAttempt( self ):
+        
+        self._current_connection_attempt_number += 1
+        
+        self._content_type = None
+        self._response_mime = None
+        
+        self._encoding = 'utf-8'
+        self._encoding_confirmed = False
+        
+        self._stream_io = io.BytesIO()
+        
+        self._num_bytes_read = 0
+        self._num_bytes_to_read = 1
+        self._num_bytes_read_is_accurate = True
         
     
     def _SendRequestAndGetResponse( self ) -> requests.Response:
@@ -482,6 +603,8 @@ class NetworkJob( object ):
                 
                 headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
                 
+            
+            headers[ 'Range' ] = 'bytes={}-'.format( self._num_bytes_read )
             
             referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
             
@@ -519,7 +642,10 @@ class NetworkJob( object ):
                 headers[ key ] = value
                 
             
-            self._status_text = 'sending request\u2026'
+            if self._num_bytes_read == 0:
+                
+                self._status_text = 'sending request\u2026'
+                
             
             snc = self._session_network_context
             
@@ -529,6 +655,14 @@ class NetworkJob( object ):
         ( connect_timeout, read_timeout ) = self._GetTimeouts()
         
         response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+        
+        with self._lock:
+            
+            if self._body is not None:
+                
+                self._ReportDataUsed( len( self._body ) )
+                
+            
         
         return response
         
@@ -1200,18 +1334,7 @@ class NetworkJob( object ):
                         HydrusData.ShowText( 'Network Jobs Redirect: {} -> {}'.format( self._url, self._actual_fetched_url ) )
                         
                     
-                    with self._lock:
-                        
-                        if self._body is not None:
-                            
-                            self._ReportDataUsed( len( self._body ) )
-                            
-                        
-                    
-                    if 'Content-Type' in response.headers:
-                        
-                        self._content_type = response.headers[ 'Content-Type' ]
-                        
+                    self._ParseFirstResponseHeaders( response )
                     
                     if response.ok:
                         
@@ -1220,20 +1343,45 @@ class NetworkJob( object ):
                             self._status_text = 'downloading\u2026'
                             
                         
-                        if response.encoding is not None:
-                            
-                            self._encoding = response.encoding
-                            
-                        
                         if self._temp_path is None:
                             
-                            self._ReadResponse( response, self._stream_io, 104857600 )
+                            stream_dest = self._stream_io
                             
                         else:
                             
-                            with open( self._temp_path, 'wb' ) as f:
+                            stream_dest = open( self._temp_path, 'wb' )
+                            
+                        
+                        try:
+                            
+                            more_to_download = True
+                            
+                            while more_to_download:
                                 
-                                self._ReadResponse( response, f )
+                                more_to_download = self._ReadResponse( response, stream_dest )
+                                
+                                if more_to_download:
+                                    
+                                    with self._lock:
+                                        
+                                        self._status_text = 'downloading next part\u2026'
+                                        
+                                    
+                                    # this will magically have new Range header
+                                    response = self._SendRequestAndGetResponse()
+                                    
+                                    if not response.ok:
+                                        
+                                        raise HydrusExceptions.NetworkException( 'Ranged response failed {}'.format( response.status_code ) )
+                                        
+                                    
+                                
+                            
+                        finally:
+                            
+                            if self._temp_path is not None:
+                                
+                                stream_dest.close()
                                 
                             
                         
@@ -1257,13 +1405,12 @@ class NetworkJob( object ):
                             self._SolveCloudFlare( response )
                             
                         
-                        self._ReadResponse( response, self._stream_io, 104857600 )
+                        # don't care about 'more_to_download' here. lmao if some server ever tried to pull it off anyway
+                        self._ReadResponse( response, self._stream_io )
+                        
+                        data = self.GetContentBytes()
                         
                         with self._lock:
-                            
-                            self._stream_io.seek( 0 )
-                            
-                            data = self._stream_io.read()
                             
                             ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data, self.IS_HYDRUS_SERVICE )
                             
@@ -1278,9 +1425,18 @@ class NetworkJob( object ):
                     
                     request_completed = True
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    with self._lock:
+                        
+                        self._status_text = 'Cancelled!'
+                        
+                    
+                    return
+                    
                 except HydrusExceptions.BandwidthException as e:
                     
-                    self._current_connection_attempt_number += 1
+                    self._ResetForAnotherConnectionAttempt()
                     
                     if self._CanReattemptRequest():
                         
@@ -1295,7 +1451,7 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     
-                    self._current_connection_attempt_number += 1
+                    self._ResetForAnotherConnectionAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1306,7 +1462,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ChunkedEncodingError:
                     
-                    self._current_connection_attempt_number += 1
+                    self._ResetForAnotherConnectionAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1315,9 +1471,17 @@ class NetworkJob( object ):
                     
                     self._WaitOnConnectionError( 'connection broke mid-request' )
                     
+                except requests.exceptions.SSLError as e:
+                    
+                    # note a requests SSLError is a ConnectionError, so careful about catching order here
+                    
+                    self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                    
+                    raise HydrusExceptions.ConnectionException( 'Problem with SSL: {}'.format( str( e ) ) )
+                    
                 except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
                     
-                    self._current_connection_attempt_number += 1
+                    self._ResetForAnotherConnectionAttempt()
                     
                     if self._CanReattemptConnection():
                         
@@ -1332,7 +1496,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ReadTimeout:
                     
-                    self._current_connection_attempt_number += 1
+                    self._ResetForAnotherConnectionAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1348,7 +1512,7 @@ class NetworkJob( object ):
                         # this is that weird requests 2.25.x(?) urllib3 maybe thread safety error
                         # we'll just try and pause a bit I guess!
                         
-                        self._current_connection_attempt_number += 1
+                        self._ResetForAnotherConnectionAttempt()
                         
                         if self._CanReattemptConnection():
                             

@@ -241,6 +241,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_reason' ] = True
         self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_special_action' ] = False
         
+        self._dictionary[ 'booleans' ][ 'do_macos_debug_dialog_menus' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -459,7 +461,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'strings' ] = {}
         
-        self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
+        self._dictionary[ 'strings' ][ 'app_display_name' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'

@@ -76,11 +76,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._have_made_an_initial_sync_bandwidth_notification = False
         self._file_error_count = 0
         
+        self._stop_work_for_shutdown = False
+        
     
     def _CanDoWorkNow( self ):
         
         p1 = not ( self._paused or HG.client_controller.options[ 'pause_subs_sync' ] or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
-        p2 = not ( HG.view_shutdown or HydrusThreading.IsThreadShuttingDown() )
+        p2 = not ( HG.view_shutdown or self._stop_work_for_shutdown )
         p3 = self._NoDelays()
         
         if HG.subscription_report_mode:
@@ -89,7 +91,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             message += os.linesep
             message += 'Paused/Global/Network Pause: {}/{}/{}'.format( self._paused, HG.client_controller.options[ 'pause_subs_sync' ], HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             message += os.linesep
-            message += 'View/Thread shutdown: {}/{}'.format( HG.view_shutdown, HydrusThreading.IsThreadShuttingDown() )
+            message += 'View/Sub shutdown: {}/{}'.format( HG.view_shutdown, self._stop_work_for_shutdown )
             message += os.linesep
             message += 'No delays: {}'.format( self._NoDelays() )
             
@@ -1516,6 +1518,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._no_work_until_reason = ''
         
     
+    def StopWorkForShutdown( self ):
+        
+        self._stop_work_for_shutdown = True
+        
+    
     def Sync( self ):
         
         log_sync_work_to_do = self._SyncQueryLogContainersCanDoWork()
@@ -1715,7 +1722,7 @@ class SubscriptionsManager( object ):
         
         done_some = False
         
-        for ( name, ( thread, job, subscription ) ) in list( self._names_to_running_subscription_info.items() ):
+        for ( name, ( job, subscription ) ) in list( self._names_to_running_subscription_info.items() ):
             
             if job.IsDone():
                 
@@ -1885,11 +1892,9 @@ class SubscriptionsManager( object ):
                         
                         job = SubscriptionJob( self._controller, subscription )
                         
-                        thread = threading.Thread( target = job.Work, name = 'subscription thread' )
+                        HG.client_controller.CallToThread( job.Work )
                         
-                        thread.start()
-                        
-                        self._names_to_running_subscription_info[ subscription.GetName() ] = ( thread, job, subscription )
+                        self._names_to_running_subscription_info[ subscription.GetName() ] = ( job, subscription )
                         
                     
                     self._ClearFinishedSubscriptions()
@@ -1908,13 +1913,13 @@ class SubscriptionsManager( object ):
             
             with self._lock:
                 
-                for ( thread, job, subscription ) in self._names_to_running_subscription_info.values():
+                for ( job, subscription ) in self._names_to_running_subscription_info.values():
                     
-                    HydrusThreading.ShutdownThread( thread )
+                    subscription.StopWorkForShutdown()
                     
                 
             
-            while not HG.view_shutdown:
+            while not HG.model_shutdown:
                 
                 with self._lock:
                     
@@ -1924,6 +1929,8 @@ class SubscriptionsManager( object ):
                         
                         break
                         
+                    
+                    time.sleep( 0.1 )
                     
                 
             

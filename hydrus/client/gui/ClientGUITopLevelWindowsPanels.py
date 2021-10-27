@@ -158,7 +158,6 @@ class DialogEdit( DialogApplyCancel ):
         DialogApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
         
     
-    
 class DialogManage( DialogApplyCancel ):
     
     def _DoClose( self, value ):

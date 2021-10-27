@@ -551,7 +551,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         else:
             
-            num_files_string = HydrusData.ToHumanInt( num_files ) + ' ' + num_files_descriptor + 's'
+            suffix = '' if num_files_descriptor.endswith( 's' ) else 's'
+            
+            num_files_string = '{} {}{}'.format( HydrusData.ToHumanInt( num_files ), num_files_descriptor, suffix )
             
         
         s = num_files_string # 23 files
@@ -575,7 +577,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             else:
                 
-                selected_files_string = HydrusData.ToHumanInt( num_selected ) + ' ' + selected_files_descriptor + 's'
+                suffix = '' if selected_files_descriptor.endswith( 's' ) else 's'
+                
+                selected_files_string = '{} {}{}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor, suffix )
                 
             
             if num_selected == 1: # 23 files - 1 video selected, file_info
@@ -732,7 +736,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _GetSortedSelectedMimeDescriptors( self ):
         
-        def GetDescriptor( classes ):
+        def GetDescriptor( classes, num_collections ):
             
             if len( classes ) == 0:
                 
@@ -743,7 +747,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 ( mime, ) = classes
                 
-                return HC.mime_string_lookup[ mime ]
+                if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
+                    
+                    return 'files in {} collections'.format( HydrusData.ToHumanInt( num_collections ) )
+                    
+                else:
+                    
+                    return HC.mime_string_lookup[ mime ]
+                    
                 
             
             if len( classes.difference( HC.IMAGES ) ) == 0:
@@ -776,7 +787,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             sorted_mimes = { media.GetMime() for media in self._sorted_media }
             
-            sorted_mime_descriptor = GetDescriptor( sorted_mimes )
+            if HC.APPLICATION_HYDRUS_CLIENT_COLLECTION in sorted_mimes:
+                
+                num_collections = len( [ media for media in self._sorted_media if isinstance( media, ClientMedia.MediaCollection ) ] )
+                
+            else:
+                
+                num_collections = 0
+                
+            
+            sorted_mime_descriptor = GetDescriptor( sorted_mimes, num_collections )
             
         
         if len( self._selected_media ) > 1000:
@@ -787,7 +807,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             selected_mimes = { media.GetMime() for media in self._selected_media }
             
-            selected_mime_descriptor = GetDescriptor( selected_mimes )
+            if HC.APPLICATION_HYDRUS_CLIENT_COLLECTION in selected_mimes:
+                
+                num_collections = len( [ media for media in self._selected_media if isinstance( media, ClientMedia.MediaCollection ) ] )
+                
+            else:
+                
+                num_collections = 0
+                
+            
+            selected_mime_descriptor = GetDescriptor( selected_mimes, num_collections )
             
         
         return ( sorted_mime_descriptor, selected_mime_descriptor )

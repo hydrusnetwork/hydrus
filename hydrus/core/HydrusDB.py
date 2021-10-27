@@ -48,7 +48,7 @@ def CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_tim
     
     db_dir = os.path.dirname( db_path )
     
-    HydrusPaths.CheckHasSpaceForDBTransaction( db_dir, db_size )
+    HydrusDBBase.CheckHasSpaceForDBTransaction( db_dir, db_size )
     
 def GetApproxVacuumDuration( db_size ):
     

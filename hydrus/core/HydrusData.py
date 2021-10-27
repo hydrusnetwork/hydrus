@@ -1621,16 +1621,16 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
     
     suffix_index = 0
     
-    while size >= 1024:
+    d = decimal.Decimal( size )
+    
+    while d >= 1024:
         
-        size = size / 1024
+        d /= 1024
         
         suffix_index += 1
         
     
     suffix = suffixes[ suffix_index ]
-    
-    d = decimal.Decimal( size )
     
     ctx = decimal.getcontext()
     

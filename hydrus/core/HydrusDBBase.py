@@ -1,9 +1,67 @@
 import collections
+import psutil
 import sqlite3
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTemp
 
+def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
+    
+    if HG.no_db_temp_files:
+        
+        space_needed = int( num_bytes * 1.1 )
+        
+        approx_available_memory = psutil.virtual_memory().available * 4 / 5
+        
+        if approx_available_memory < num_bytes:
+            
+            raise Exception( 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' available memory, since you are running in no_db_temp_files mode, but you only seem to have ' + HydrusData.ToHumanBytes( approx_available_memory ) + '.' )
+            
+        
+        db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
+        
+        if db_disk_free_space < space_needed:
+            
+            raise Exception( 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s disk partition, but you only seem to have ' + HydrusData.ToHumanBytes( db_disk_free_space ) + '.' )
+            
+        
+    else:
+        
+        temp_dir = HydrusTemp.GetCurrentTempDir()
+        
+        temp_disk_free_space = HydrusPaths.GetFreeSpace( temp_dir )
+        
+        temp_and_db_on_same_device = HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir )
+        
+        if temp_and_db_on_same_device:
+            
+            space_needed = int( num_bytes * 2.2 )
+            
+            if temp_disk_free_space < space_needed:
+                
+                raise Exception( 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s disk partition, which I think also holds your temporary path, but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
+                
+            
+        else:
+            
+            space_needed = int( num_bytes * 1.1 )
+            
+            if temp_disk_free_space < space_needed:
+                
+                raise Exception( 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your temporary path\'s disk partition, which I think is ' + temp_dir + ', but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
+                
+            
+            db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
+            
+            if db_disk_free_space < space_needed:
+                
+                raise Exception( 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s disk partition, but you only seem to have ' + HydrusData.ToHumanBytes( db_disk_free_space ) + '.' )
+                
+            
+        
+    
 class TemporaryIntegerTableNameCache( object ):
     
     my_instance = None

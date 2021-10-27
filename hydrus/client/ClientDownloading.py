@@ -4,8 +4,8 @@ import threading
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
@@ -307,7 +307,7 @@ class QuickDownloadManager( object ):
                             
                             if file_repository.IsFunctional():
                                 
-                                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                                 
                                 try:
                                     
@@ -341,7 +341,7 @@ class QuickDownloadManager( object ):
                                     
                                 finally:
                                     
-                                    HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                                    HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                                     
                                 
                             

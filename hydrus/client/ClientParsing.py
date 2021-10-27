@@ -1700,7 +1700,16 @@ class ParseFormulaJSON( ParseFormula ):
             
         except Exception as e:
             
-            message = 'Unable to parse that JSON: {}. JSON sample: {}'.format( str( e ), parsing_text[:1024] )
+            if HydrusText.LooksLikeHTML( parsing_text ):
+                
+                message = 'Unable to parse: Appeared to receive HTML instead of JSON.'
+                
+            else:
+                
+                message = 'Unable to parse that JSON: {}.'.format( str( e ) )
+                
+            
+            message += ' Parsing text sample: {}'.format( parsing_text[:1024] )
             
             raise HydrusExceptions.ParseException( message )
             
@@ -2389,6 +2398,16 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return self._string_converter
         
     
+    def NullifyTestData( self ):
+        
+        self._example_parsing_context = {}
+        
+        for ( formula, page_parser ) in self._sub_page_parsers:
+            
+            page_parser.NullifyTestData()
+            
+        
+    
     def Parse( self, parsing_context, parsing_text ):
         
         try:
@@ -2407,7 +2426,6 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             raise e
             
-        
         
         #
         

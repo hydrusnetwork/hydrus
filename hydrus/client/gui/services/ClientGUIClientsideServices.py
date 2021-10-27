@@ -245,7 +245,10 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         new_service_keys = { service.GetServiceKey() for service in services }
         
-        deletee_service_names = [ service.GetName() for service in self._original_services if service.GetServiceKey() not in new_service_keys ]
+        deletee_services = [ service for service in self._original_services if service.GetServiceKey() not in new_service_keys ]
+        
+        deletee_service_names = [ service.GetName() for service in deletee_services ]
+        tag_service_in_deletes = True in ( service.GetServiceType() in HC.REAL_TAG_SERVICES for service in deletee_services )
         
         if len( deletee_service_names ) > 0:
             
@@ -254,6 +257,12 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             message += os.linesep.join( deletee_service_names )
             message += os.linesep * 2
             message += 'Are you absolutely sure this is correct?'
+            
+            if tag_service_in_deletes:
+                
+                message += os.linesep * 2
+                message += 'If the tag service you are deleting is very large, this operation may take a very very long time. You client will lock up until it is done.'
+                
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             

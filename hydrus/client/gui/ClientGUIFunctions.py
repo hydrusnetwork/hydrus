@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
@@ -313,6 +314,24 @@ def TLWOrChildIsActive( win ):
         
     
     return False
+    
+def UpdateAppDisplayName():
+    
+    app_display_name = HG.client_controller.new_options.GetString( 'app_display_name' )
+    
+    QW.QApplication.instance().setApplicationDisplayName( '{} {}'.format( app_display_name, HC.SOFTWARE_VERSION ) )
+    
+    for tlw in QW.QApplication.topLevelWidgets():
+        
+        window_title = tlw.windowTitle()
+        
+        if window_title != '':
+            
+            tlw.setWindowTitle( '' )
+            
+            tlw.setWindowTitle( window_title )
+            
+        
     
 def WidgetOrAnyTLWChildHasFocus( window ):
     

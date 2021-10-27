@@ -62,11 +62,11 @@ def LooksLikeHTML( file_data ):
     
     if isinstance( file_data, bytes ):
         
-        search_elements = ( b'<html', b'<HTML' )
+        search_elements = ( b'<html', b'<HTML', b'<title', b'<TITLE' )
         
     else:
         
-        search_elements = ( '<html', '<HTML' )
+        search_elements = ( '<html', '<HTML', '<title', '<TITLE' )
         
     
     for s_e in search_elements:

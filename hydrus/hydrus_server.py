@@ -21,12 +21,13 @@ try:
     
     HydrusBoot.AddBaseDirToEnvPath()
     
-    from hydrus.core import HydrusExceptions
     from hydrus.core import HydrusConstants as HC
-    from hydrus.core import HydrusGlobals as HG
+    from hydrus.core import HydrusExceptions
     from hydrus.core import HydrusData
+    from hydrus.core import HydrusGlobals as HG
     from hydrus.core import HydrusLogger
     from hydrus.core import HydrusPaths
+    from hydrus.core import HydrusTemp
     
     from hydrus.server import ServerController
     
@@ -148,7 +149,7 @@ try:
     
     if result.temp_dir is not None:
         
-        HydrusPaths.SetEnvTempDir( result.temp_dir )
+        HydrusTemp.SetEnvTempDir( result.temp_dir )
         
     
 except Exception as e:

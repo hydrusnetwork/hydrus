@@ -12,7 +12,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusSerialisable
 from hydrus.core.networking import HydrusServerRequest
 
@@ -904,7 +904,7 @@ class HydrusResource( Resource ):
             
             ( os_file_handle, temp_path ) = request.temp_file_info
             
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
             del request.temp_file_info
             

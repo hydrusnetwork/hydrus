@@ -723,36 +723,68 @@ class Canvas( QW.QWidget ):
             
             # set up canvas zoom
             
+            previous_current_zoom = self._current_zoom
+            
+            ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( previous_media )
+            
+            ( previous_default_zoom, previous_canvas_zoom ) = CalculateCanvasZooms( self, previous_media, media_show_action )
+            
             ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
             
             ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, media_show_action )
             
-            # previously, we always matched width, but this causes a problem in dupe viewer when the alternate has a little watermark on the bottom of the B file, spilling below bottom of screen
-            # we want to preserve zoom so that if user scrolls on canvas zoom we won't have overlap
+            # previously, we always matched width, but this causes a problem in dupe viewer when B has a little watermark on the bottom, spilling below bottom of screen
+            # I think in future we will have more options regarding all this, and this method will change significantly
+            # however for now we really just want a hardcoded ok solution for all situations, so let's just hook on default canvas zoom situation
             
             ( previous_width, previous_height ) = CalculateMediaSize( previous_media, self._current_zoom )
             
             ( current_media_100_width, current_media_100_height ) = self._current_media.GetResolution()
             
-            potential_zooms = ( previous_width / current_media_100_width, previous_height / current_media_100_height )
+            width_locked_zoom = previous_width / current_media_100_width
+            height_locked_zoom = previous_height / current_media_100_height
             
-            both_smaller = True not in ( self._current_zoom > potential_zoom for potential_zoom in potential_zooms )
-            both_bigger = True not in ( self._current_zoom < potential_zoom for potential_zoom in potential_zooms )
+            width_locked_size = CalculateMediaContainerSize( self._current_media, width_locked_zoom, media_show_action )
+            height_locked_size = CalculateMediaContainerSize( self._current_media, height_locked_zoom, media_show_action )
             
-            if both_smaller:
+            # if we have both landscape, we'll go height, otherwise default width
+            if previous_width > previous_height and current_media_100_width > current_media_100_height:
                 
-                # keep the bigger dimension change in view
-                self._current_zoom = max( potential_zooms )
-                
-            elif both_bigger:
-                
-                # do the reverse of the above
-                self._current_zoom = min( potential_zooms )
+                lock_height = True
                 
             else:
                 
-                # fallback to width in weird situation
-                self._current_zoom = potential_zooms[0]
+                lock_height = False
+                
+            
+            if previous_current_zoom == previous_default_zoom and previous_current_zoom <= previous_canvas_zoom * 1.02:
+                
+                # we were looking at the default zoom, near or at canvas edge(s), probably hadn't zoomed before switching comparison
+                # we want to make sure our comparison does not spill over the canvas edge
+                
+                width_a_concern = self._media_container.width() >= self.width() * 0.95
+                height_a_concern = self._media_container.height() >= self.height() * 0.95
+                
+                # locking by width will spill over bottom of screen
+                if height_a_concern and width_locked_size.height() > self._media_container.height():
+                    
+                    lock_height = True
+                    
+                
+                # locking by height will spill over right of screen
+                if width_a_concern and height_locked_size.width() > self._media_container.width():
+                    
+                    lock_height = False
+                    
+                
+            
+            if lock_height:
+                
+                self._current_zoom = height_locked_zoom
+                
+            else:
+                
+                self._current_zoom = width_locked_zoom
                 
             
             HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
@@ -3221,6 +3253,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
             self._media_list = ClientMedia.ListeningMediaList( file_service_key, media_results_with_better_first )
+            
+            # reset zoom gubbins
+            self.SetMedia( None )
             
             self.SetMedia( self._media_list.GetFirst() )
 

@@ -5,6 +5,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTemp
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
@@ -19,7 +20,7 @@ class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
         
-        test_dir = HydrusPaths.GetTempDir()
+        test_dir = HydrusTemp.GetTempDir()
         
         try:
             

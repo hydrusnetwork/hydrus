@@ -15,6 +15,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTemp
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
@@ -211,7 +212,7 @@ def ParseClientAPIPOSTArgs( request ):
             
             parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
             
-            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
             request.temp_file_info = ( os_file_handle, temp_path )
             
@@ -996,7 +997,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
                 raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
                 
             
-            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
             request.temp_file_info = ( os_file_handle, temp_path )
             
