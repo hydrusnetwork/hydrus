@@ -21,7 +21,7 @@ RUN set -xe \
 RUN mkdir -p /opt/noVNC/utils/websockify \
  && wget $(wget https://api.github.com/repos/novnc/noVNC/releases/latest -qO- | jq  -r '.tarball_url') -qO- | tar xzf - --strip-components=1 -C /opt/noVNC \
  && wget $(wget https://api.github.com/repos/novnc/websockify/releases/latest -qO- | jq  -r '.tarball_url') -qO- | tar xzf - --strip-components=1 -C /opt/noVNC/utils/websockify \
- && sed -i -- "s/ps -p/ps -o pid | grep/g" /opt/noVNC/utils/launch.sh \
+ && sed -i -- "s/ps -p/ps -o pid | grep/g" /opt/noVNC/utils/novnc_proxy \
  && chown hydrus:hydrus -R /opt/noVNC
 
 COPY --chown=hydrus . /opt/hydrus
