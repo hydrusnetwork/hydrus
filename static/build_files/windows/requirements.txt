@@ -1,7 +1,3 @@
-PyWin32
-pypiwin32
-pywin32-ctypes
-pefile
 beautifulsoup4>=4.0.0
 chardet>=3.0.4
 cloudscraper>=1.2.33
@@ -10,7 +6,7 @@ lxml>=4.5.0
 lz4>=3.0.0
 nose>=1.3.0
 numpy>=1.16.0
-opencv-python-headless==4.5.3.56
+opencv-python-headless>=4.0.0, <=4.5.3.56
 Pillow>=6.0.0
 psutil>=5.0.0
 pylzma>=0.5.0
@@ -25,3 +21,7 @@ Send2Trash>=1.5.0
 service-identity>=18.1.0
 six>=1.14.0
 Twisted>=20.3.0
+PyWin32
+pypiwin32
+pywin32-ctypes
+pefile
