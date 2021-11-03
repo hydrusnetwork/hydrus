@@ -2222,11 +2222,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def SelectByTags( self, page_key, and_or_or, tags ):
+    def SelectByTags( self, page_key, tag_service_key, and_or_or, tags ):
         
         if page_key == self._page_key:
             
-            self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_TAGS, ( and_or_or, tags ) ) )
+            self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_TAGS, ( tag_service_key, and_or_or, tags ) ) )
             
             self.setFocus( QC.Qt.OtherFocusReason )
             

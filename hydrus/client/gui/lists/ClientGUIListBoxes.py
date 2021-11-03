@@ -2283,6 +2283,11 @@ class ListBoxTags( ListBox ):
             
         
     
+    def _SelectFilesWithTags( self, select_type ):
+        
+        pass
+        
+    
     def _UpdateBackgroundColour( self ):
         
         new_options = HG.client_controller.new_options
@@ -2809,13 +2814,13 @@ class ListBoxTags( ListBox ):
                         label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
                         
                     
-                    ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_actual_tags ) )
+                    ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', self._SelectFilesWithTags, 'AND' )
                     
                     if len( selected_actual_tags ) > 1:
                         
                         label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_actual_tags ) )
+                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', self._SelectFilesWithTags, 'OR' )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
@@ -3226,6 +3231,16 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
         
         return work_callable
+        
+    
+    def _SelectFilesWithTags( self, and_or_or ):
+        
+        if self._page_key is not None:
+            
+            selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
+            
+            HG.client_controller.pub( 'select_files_with_tags', self._page_key, self._service_key, and_or_or, set( selected_actual_tags ) )
+            
         
     
     def GetSelectedTags( self ):

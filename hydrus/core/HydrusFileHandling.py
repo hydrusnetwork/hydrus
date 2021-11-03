@@ -3,6 +3,7 @@ import os
 import struct
 
 from hydrus.core import HydrusAudioHandling
+from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -60,6 +61,11 @@ headers_and_mime = [
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
+    if target_resolution == ( 0, 0 ):
+        
+        target_resolution = ( 128, 128 )
+        
+    
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
         
         thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime )
@@ -85,54 +91,72 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
+    elif mime == HC.APPLICATION_CLIP:
+        
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusClipHandling.ExtractDBPNGToPath( path, temp_path )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            
+        except:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'clip.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+    elif mime == HC.APPLICATION_FLASH:
+        
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            
+        except:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
     else:
         
-        if mime == HC.APPLICATION_FLASH:
+        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+        
+        renderer.read_frame() # this initialises the renderer and loads the first frame as a fallback
+        
+        desired_thumb_frame = int( ( percentage_in / 100.0 ) * num_frames )
+        
+        renderer.set_position( desired_thumb_frame )
+        
+        numpy_image = renderer.read_frame()
+        
+        if numpy_image is None:
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            raise Exception( 'Could not create a thumbnail from that video!' )
             
-            try:
-                
-                HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
-                
-                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
-                
-            except:
-                
-                thumb_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
-                
-                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
-                
-            finally:
-                
-                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-                
-            
-        else:
-            
-            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
-            
-            renderer.read_frame() # this initialises the renderer and loads the first frame as a fallback
-            
-            desired_thumb_frame = int( ( percentage_in / 100.0 ) * num_frames )
-            
-            renderer.set_position( desired_thumb_frame )
-            
-            numpy_image = renderer.read_frame()
-            
-            if numpy_image is None:
-                
-                raise Exception( 'Could not create a thumbnail from that video!' )
-                
-            
-            numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution ) # just in case ffmpeg doesn't deliver right
-            
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, mime )
-            
-            renderer.Stop()
-            
-            del renderer
-            
+        
+        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution ) # just in case ffmpeg doesn't deliver right
+        
+        thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, mime )
+        
+        renderer.Stop()
+        
+        del renderer
         
     
     return thumbnail_bytes
@@ -208,11 +232,19 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         
+    elif mime == HC.APPLICATION_CLIP:
+        
+        ( width, height ) = HydrusClipHandling.GetResolution( path )
+        
     elif mime == HC.APPLICATION_FLASH:
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime in ( HC.IMAGE_APNG, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_REALMEDIA, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
+    elif mime == HC.IMAGE_APNG:
+        
+        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGAPNGProperties( path )
+        
+    elif mime in ( HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_REALMEDIA, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
@@ -383,14 +415,16 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
 def IsPNGAnimated( file_header_bytes ):
     
-    if file_header_bytes[ 37: ].startswith( b'acTL' ):
+    apng_actl_bytes = HydrusVideoHandling.GetAPNGACTLChunk( file_header_bytes )
+    
+    if apng_actl_bytes is not None:
         
         # this is an animated png
         
         # acTL chunk in an animated png is 4 bytes of num frames, then 4 bytes of num times to loop
         # https://wiki.mozilla.org/APNG_Specification#.60acTL.60:_The_Animation_Control_Chunk
         
-        num_frames = HydrusVideoHandling.GetAPNGNumFrames( file_header_bytes )
+        num_frames = HydrusVideoHandling.GetAPNGNumFrames( apng_actl_bytes )
         
         if num_frames > 1:
             

@@ -92,7 +92,7 @@
 					<h4><a href="#adding_tags">Adding Tags</a></h4>
 					<ul>
 						<li><a href="#add_tags_clean_tags">GET /add_tags/clean_tags</a></li>
-						<li><a href="#add_tags_get_tag_services">GET /add_tags/get_tag_services</a> (legacy)</li>
+						<li><a href="#add_tags_get_tag_services">GET /add_tags/get_tag_services</a> (legacy, do not use)</li>
 						<li><a href="#add_tags_add_tags">POST /add_tags/add_tags</a></li>
 					</ul>
 					<h4><a href="#adding_urls">Adding URLs</a></h4>
@@ -486,7 +486,7 @@
 			</div>
 			<div class="apiborder">
 				<h3 id="add_tags_get_tag_services"><a href="#add_tags_get_tag_services"><b>GET /add_tags/get_tag_services</b></a></h3>
-                                <p class="warning"><b>This is now legacy! Use <a href="#get_services">/get_services</a> instead!</b></p>
+                                <p class="warning"><b>This is becoming obsolete and will be removed! Use <a href="#get_services">/get_services</a> instead!</b></p>
 				<p><i>Ask the client about its tag services.</i></p>
 				<ul>
 					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
@@ -517,14 +517,16 @@
 					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments (in JSON):</p></li>
 					<ul>
-						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
-						<li>hashes : (a list of SHA256 hashes)</li>
-						<li>service_names_to_tags : (an Object of service names to lists of tags to be 'added' to the files)</li>
-						<li>service_names_to_actions_to_tags : (an Object of service names to content update actions to lists of tags)</li>
-						<li>add_siblings_and_parents : <i>obsolete, now does nothing</i></li>
+						<li>hash : (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)</li>
+						<li>hashes : (selective A, a list of SHA256 hashes)</li>
+						<li>service_names_to_tags : (selective B, an Object of service names to lists of tags to be 'added' to the files)</li>
+						<li>service_keys_to_tags : (selective B, an Object of service keys to lists of tags to be 'added' to the files)</li>
+						<li>service_names_to_actions_to_tags : (selective B, an Object of service names to content update actions to lists of tags)</li>
+						<li>service_keys_to_actions_to_tags : (selective B, an Object of service keys to content update actions to lists of tags)</li>
 					</ul>
-					<p>You can use either 'hash' or 'hashes', and you can use either the simple add-only 'service_names_to_tags' or the advanced 'service_names_to_actions_to_tags'.</p>
-					<p>The service names are as in the <i>/add_tags/get_tag_services</i> call.</p>
+					<p>You can use either 'hash' or 'hashes'.</p>
+                                        <p>You can use either 'service_names_to...' or 'service_keys_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the <a href="#get_services">/get_services</a> call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.</p>
+                                        <p>Also, you can use either '...to_tags', which is simple and add-only, or '...to_actions_to_tags', which is more complicated and allows you to remove/petition or rescind pending content.</p>
 					<p>The permitted 'actions' are:</p>
 					<ul>
 						<li>0 - Add to a local tag service.</li>
@@ -554,12 +556,12 @@
 					<p>A complicated transaction with all possible actions:</p>
 <pre>{
 	"hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-	"service_names_to_actions_to_tags" : {
-		"my tags" : {
+	"service_keys_to_actions_to_tags" : {
+		"6c6f63616c2074616773" : {
 			"0" : [ "character:supergirl", "rating:safe" ],
 			"1" : [ "character:superman" ]
 		},
-		"public tag repository" : {
+		"aa0424b501237041dab0308c02c35454d377eebd74cfbc5b9d7b3e16cc2193e9" : {
 			"2" : [ "character:supergirl", "rating:safe" ],
 			"3" : [ "filename:image.jpg" ],
 			"4" : [ [ "creator:danban faga", "typo" ], [ "character:super_girl", "underscore" ] ]
@@ -686,7 +688,8 @@
 							<li>destination_page_key : (optional page identifier for the page to receive the url)</li>
 							<li>destination_page_name : (optional page name to receive the url)</li>
 							<li>show_destination_page : (optional, defaulting to false, controls whether the UI will change pages on add)</li>
-							<li>service_names_to_additional_tags : (optional tags to give to any files imported from this url)</li>
+							<li>service_names_to_additional_tags : (optional, selective, tags to give to any files imported from this url)</li>
+							<li>service_keys_to_additional_tags : (optional, selective, tags to give to any files imported from this url)</li>
 							<li>filterable_tags : (optional tags to be filtered by any tag import options that applies to the URL)</li>
 							<li><i>service_names_to_tags : (obsolete, legacy synonym for service_names_to_additional_tags)</i></li>
 						</ul>
@@ -694,7 +697,7 @@
 					<p>If you specify a destination_page_name and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.</p>
 					<p>Alternately, destination_page_key defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.</p> 
 					<p>show_destination_page defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.</p>
-					<p>service_names_to_additional_tags uses the same data structure as for /add_tags/add_tags. You will need 'add tags' permission, or this will 403. These tags work exactly as 'additional' tags work in a <i>tag import options</i>. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.</p>
+					<p>service_names_to_additional_tags and service_keys_to_additional_tags use the same data structure as in /add_tags/add_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a <i>tag import options</i>. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.</p>
 					<p>filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a <i>tag import options</i>, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.</p>
 					<li>
 						<p>Example request bodies:</p>
@@ -1348,7 +1351,9 @@
 			"is_trashed" : false,
 			"known_urls" : [],
 			"service_names_to_statuses_to_tags" : {}
+			"service_keys_to_statuses_to_tags" : {}
 			"service_names_to_statuses_to_display_tags" : {}
+			"service_keys_to_statuses_to_display_tags" : {}
 		},
 		{
 			"file_id" : 4567,
@@ -1380,12 +1385,32 @@
 					"1" : [ "bodysuit" ]
 				}
 			},
+			"service_keys_to_statuses_to_tags" : {
+				"6c6f63616c2074616773" : {
+					"0" : [ "favourites" ]
+					"2" : [ "process this later" ]
+				},
+				"37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
+					"0" : [ "blonde_hair", "blue_eyes", "looking_at_viewer" ]
+					"1" : [ "bodysuit" ]
+				}
+			},
 			"service_names_to_statuses_to_display_tags" : {
 				"my tags" : {
 					"0" : [ "favourites" ]
 					"2" : [ "process this later", "processing" ]
 				},
 				"my tag repository" : {
+					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
+					"1" : [ "bodysuit", "clothing" ]
+				}
+			},
+			"service_keys_to_statuses_to_display_tags" : {
+				"6c6f63616c2074616773" : {
+					"0" : [ "favourites" ]
+					"2" : [ "process this later", "processing" ]
+				},
+				"37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
 					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
 					"1" : [ "bodysuit", "clothing" ]
 				}
@@ -1414,15 +1439,16 @@
 						</ul>
 					</li>
 					<p>Size is in bytes. Duration is in milliseconds, and may be an int or a float.</p>
-					<p>The service_names_to_statuses_to_tags structures are similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
+					<p>The service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags structures are similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
 					<ul>
 						<li>0 - current</li>
 						<li>1 - pending</li>
 						<li>2 - deleted</li>
 						<li>3 - petitioned</li>
 					</ul>
+                                        <p>The tag structure is duplicated for both 'name' and 'key'. The use of 'name' is an increasingly legacy issue--a hack when the Client API was young--and 'service_names_to...' lookups are likely to be deleted in future in favour of service_key. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the <a href="#get_services">/get_services</a> call (and cache the response--it doesn't change much!).</p>
 					<p>Note that since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
-					<p>While service_names_to_statuses_to_tags represents the actual tags stored on the database for a file, the service_names_to_statuses_to_display_tags structure reflects how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, use service_names_to_statuses_to_tags. If you want to render to the user, use service_names_to_statuses_to_displayed_tags.</p>
+					<p>While service_XXX_to_statuses_to_tags represent the actual tags stored on the database for a file, the service_XXX_to_statuses_to_<i>display</i>_tags structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with service_keys_to_statuses_to_tags. If you want to render to the user, use service_keys_to_statuses_to_displayed_tags.</p>
 					<p>If you add detailed_url_information=true, a new entry, 'detailed_known_urls', will be added for each file, with a list of the same structure as /add_urls/get_url_info. This may be an expensive request if you are querying thousands of files at once.</p>
 					<p>For example:</p>
 						<ul>

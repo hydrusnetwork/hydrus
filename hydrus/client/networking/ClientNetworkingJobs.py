@@ -225,6 +225,7 @@ class NetworkJob( object ):
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
         self._num_bytes_read_is_accurate = True
+        self._number_of_concurrent_empty_chunks = 0
         
         self._file_import_options = None
         
@@ -541,10 +542,21 @@ class NetworkJob( object ):
         
         if download_is_definitely_incomplete and not we_read_some_data:
             
-            raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but this chunk was empty!' )
+            self._number_of_concurrent_empty_chunks += 1
             
-        
-        more_to_download = we_read_some_data and download_is_definitely_incomplete
+            if self._number_of_concurrent_empty_chunks > 2:
+                
+                raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but this chunk was empty!' )
+                
+            
+            more_to_download = True
+            
+        else:
+            
+            self._number_of_concurrent_empty_chunks = 0
+            
+            more_to_download = we_read_some_data and download_is_definitely_incomplete
+            
         
         if not more_to_download:
             
@@ -581,6 +593,7 @@ class NetworkJob( object ):
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
         self._num_bytes_read_is_accurate = True
+        self._number_of_concurrent_empty_chunks = 0
         
     
     def _SendRequestAndGetResponse( self ) -> requests.Response:

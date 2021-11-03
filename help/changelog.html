@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_460"><a href="#version_460">version 460</a></h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>/add_tags/add_tags now supports 'service_keys_to_tags' and 'service_keys_to_actions_to_tags'.</li>
+					<li>/add_urls/add_url now supports 'service_keys_to_additional_tags'</li>
+					<li>/get_files/file_metadata now returns with duplicates of the tag structures using 'service_keys_to_statuses_to_(display_)tags'</li>
+					<li>added unit tests for the above</li>
+					<li>updated the client api help for the above</li>
+					<li>I recommend you move from 'service_names_to...' to 'service_keys_to...' when convenient. 'names' was an ugly old hack, and while I am not in a rush to delete it from the client api, I think I will eventually</li>
+					<li>client api version is now 21</li>
+					<li>.</li>
+					<li>apngs and clips:</li>
+					<li>fixed a problem where the new apng metadata parsing was not completely hooked up, so num_frames was not being parsed correct for the final metadata row even when 'apng' filetype was, leading to some odd '1 frame apng' situations</li>
+					<li>apng parsing now recognises more kinds of apngs--if one has an unusual scaling chunk in the header, this is recognised and the correct animation chunk searched for</li>
+					<li>clip files now get resolution on import and a thumbnail! big thanks to the user who dug up how to extract this--it actually comes from a sqlite file embedded in the clip! (issue #996)</li>
+					<li>on update, all apngs and clips will be scheduled for metadata rescan, and all clips will be scheduled for thumbnail generation</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>right-clicking a selection tag and choosing 'select->files with x tag' now obeys the current tag domain (previously, it forced 'all known tags'). so, if you want to quickly select just the files with 'samus aran' on 'my tags', it should be doable</li>
+					<li>the new 'partial' download resumer system will now tolerate two successive empty chunks before throwing a 'this chunk was empty' error. it seems some servers will randomly give an empty chunk at times during 206 transfers</li>
+					<li>cancelling the slideshow custom time dialog no longer raises an error</li>
+					<li>after the build boot problem last week, updated the opencv version in requirements.txts--we are now officially >=4.0.0, <=4.5.3.56. it looks like pyinstaller needs a patch for 4.5.4.58 to work, so we'll wait for that. I am improving my weekly test routine to try to catch this in future</li>
+					<li>also, the windows build no longer includes two copies of an opencv dll. turns out PyInstaller finds this dll ok now (putting it in another location) and it doesn't need to be explicitly added during build</li>
+					<li>added a new help file to the db dir for users who experience crashes as soon as they load videos in mpv when using WASAPI or ASIO drivers. thanks greatly for the user who figured out the mpv.conf solution here (issue #973)</li>
+				</ul>
 				<li><h3 id="version_459"><a href="#version_459">version 459</a></h3></li>
 				<ul>
 					<li>main highlights:</li>

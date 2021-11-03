@@ -403,6 +403,10 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
         body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
@@ -414,6 +418,55 @@ class TestClientAPI( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
+        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
+        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : { str( HC.CONTENT_UPDATE_ADD ) : [ 'test', 'test2' ] } } }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
+        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        
+        #
         
         return set_up_permissions
         
@@ -1370,6 +1423,34 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
         
+        # add tags with service key and name, and show destination page
+        
+        HG.test_controller.ClearWrites( 'import_url_test' )
+        
+        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'filterable_tags' : [ 'filename:yo' ], 'service_keys_to_additional_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ '/tv/ thread' ] } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/add_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        response_json = json.loads( text )
+        
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        
+        filterable_tags = [ 'filename:yo' ]
+        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
+        
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
+        
         # associate url
         
         HG.test_controller.ClearWrites( 'content_updates' )
@@ -2286,6 +2367,7 @@ class TestClientAPI( unittest.TestCase ):
             tags_manager = media_result.GetTagsManager()
             
             service_names_to_statuses_to_tags = {}
+            api_service_keys_to_statuses_to_tags = {}
             
             service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
             
@@ -2296,14 +2378,22 @@ class TestClientAPI( unittest.TestCase ):
                     service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
                     
                 
-                service_name = service_keys_to_names[ service_key ]
+                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                 
-                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
+                if len( s ) > 0:
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    service_names_to_statuses_to_tags[ service_name ] = s
+                    api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
+                    
                 
             
             metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+            metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
             
-            service_names_to_statuses_to_tags = {}
+            service_names_to_statuses_to_display_tags = {}
+            service_keys_to_statuses_to_display_tags = {}
             
             service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
             
@@ -2314,12 +2404,19 @@ class TestClientAPI( unittest.TestCase ):
                     service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
                     
                 
-                service_name = service_keys_to_names[ service_key ]
+                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                 
-                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
+                if len( s ) > 0:
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    service_names_to_statuses_to_display_tags[ service_name ] = s
+                    service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
+                    
                 
             
-            metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
+            metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_display_tags
+            metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
             
             metadata.append( metadata_row )
             

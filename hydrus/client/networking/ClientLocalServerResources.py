@@ -43,6 +43,7 @@ CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-C
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'file_service_name', 'tag_service_name' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple', 'file_sort_asc' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
+CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
 def CheckHashLength( hashes, hash_type = 'sha256' ):
     
@@ -69,6 +70,26 @@ def CheckHashLength( hashes, hash_type = 'sha256' ):
             )
             
         
+    
+def ConvertServiceNamesDictToKeys( allowed_service_types, service_name_dict ):
+    
+    service_key_dict = {}
+    
+    for ( service_name, value ) in service_name_dict.items():
+        
+        try:
+            
+            service_key = HG.client_controller.services_manager.GetServiceKeyFromName( allowed_service_types, service_name )
+            
+        except:
+            
+            raise HydrusExceptions.BadRequestException( 'Could not find the service "{}", or it was the wrong type!'.format( service_name ) )
+            
+        
+        service_key_dict[ service_key ] = value
+        
+    
+    return service_key_dict
     
 def ParseLocalBooruGETArgs( requests_args ):
     
@@ -157,6 +178,52 @@ def ParseClientAPIPOSTByteArgs( args ):
             except:
                 
                 raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a list of hex strings, but it failed.'.format( var_name ) )
+                
+            
+        
+    
+    for var_name in CLIENT_API_JSON_BYTE_DICT_PARAMS:
+        
+        if var_name in parsed_request_args:
+            
+            try:
+                
+                raw_dict = parsed_request_args[ var_name ]
+                
+                # In JSON, if someone puts 'null' for an optional value, treat that as 'did not enter anything'
+                if raw_dict is None:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                    continue
+                    
+                
+                bytes_dict = {}
+                
+                for ( key, value ) in raw_dict.items():
+                    
+                    if len( key ) == 0:
+                        
+                        continue
+                        
+                    
+                    bytes_key = bytes.fromhex( key )
+                    
+                    bytes_dict[ bytes_key ] = value
+                    
+                
+                if len( bytes_dict ) == 0:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                else:
+                    
+                    parsed_request_args[ var_name ] = bytes_dict
+                    
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a dictionary of hex strings to other data, but it failed.'.format( var_name ) )
                 
             
         
@@ -649,10 +716,6 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
         elif mime == HC.APPLICATION_PSD:
             
             path = os.path.join( HC.STATIC_DIR, 'psd.png' )
-            
-        elif mime == HC.APPLICATION_CLIP:
-            
-            path = os.path.join( HC.STATIC_DIR, 'clip.png' )
             
         else:
             
@@ -1216,30 +1279,34 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         #
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        service_keys_to_tags = None
         
-        if 'service_names_to_tags' in request.parsed_request_args:
+        if 'service_keys_to_tags' in request.parsed_request_args:
+            
+            service_keys_to_tags = request.parsed_request_args.GetValue( 'service_keys_to_tags', dict )
+            
+        elif 'service_names_to_tags' in request.parsed_request_args:
             
             service_names_to_tags = request.parsed_request_args.GetValue( 'service_names_to_tags', dict )
             
-            for ( service_name, tags ) in service_names_to_tags.items():
+            service_keys_to_tags = ConvertServiceNamesDictToKeys( HC.REAL_TAG_SERVICES, service_names_to_tags )
+            
+        
+        service_keys_to_actions_to_tags = None
+        
+        if service_keys_to_tags is not None:
+            
+            service_keys_to_actions_to_tags = {}
+            
+            for ( service_key, tags ) in service_keys_to_tags.items():
                 
                 try:
                     
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
+                    service = HG.client_controller.services_manager.GetService( service_key )
                     
                 except:
                     
-                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
-                    
-                
-                service = HG.client_controller.services_manager.GetService( service_key )
-                
-                tags = HydrusTags.CleanTags( tags )
-                
-                if len( tags ) == 0:
-                    
-                    continue
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service with key {}! Maybe it was recently deleted?'.format( service_key.hex() ) )
                     
                 
                 if service.GetServiceType() == HC.LOCAL_TAG:
@@ -1251,105 +1318,121 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     content_action = HC.CONTENT_UPDATE_PEND
                     
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
+                service_keys_to_actions_to_tags[ service_key ] = collections.defaultdict( set )
                 
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                service_keys_to_actions_to_tags[ service_key ][ content_action ].update( tags )
                 
             
         
-        if 'service_names_to_actions_to_tags' in request.parsed_request_args:
+        if 'service_keys_to_actions_to_tags' in request.parsed_request_args:
+            
+            service_keys_to_actions_to_tags = request.parsed_request_args.GetValue( 'service_keys_to_actions_to_tags', dict )
+            
+        elif 'service_names_to_actions_to_tags' in request.parsed_request_args:
             
             service_names_to_actions_to_tags = request.parsed_request_args.GetValue( 'service_names_to_actions_to_tags', dict )
             
-            for ( service_name, actions_to_tags ) in service_names_to_actions_to_tags.items():
-                
-                try:
-                    
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
-                    
-                except:
-                    
-                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
-                    
+            service_keys_to_actions_to_tags = ConvertServiceNamesDictToKeys( HC.REAL_TAG_SERVICES, service_names_to_actions_to_tags )
+            
+        
+        if service_keys_to_actions_to_tags is None:
+            
+            raise HydrusExceptions.BadRequestException( 'Need a service-names-to-tags parameter!' )
+            
+        
+        service_keys_to_content_updates = collections.defaultdict( list )
+        
+        for ( service_key, actions_to_tags ) in service_keys_to_actions_to_tags.items():
+            
+            try:
                 
                 service = HG.client_controller.services_manager.GetService( service_key )
                 
-                for ( content_action, tags ) in actions_to_tags.items():
+            except HydrusExceptions.DataMissing:
+                
+                raise HydrusExceptions.BadRequestException( 'Could not find the service with key {}! Maybe it was recently deleted?'.format( service_key.hex() ) )
+                
+            
+            if service.GetServiceType() not in HC.REAL_TAG_SERVICES:
+                
+                raise HydrusExceptions.BadRequestException( 'Was given a service that is not a tag service!' )
+                
+            
+            for ( content_action, tags ) in actions_to_tags.items():
+                
+                tags = list( tags )
+                
+                if len( tags ) == 0:
                     
-                    tags = list( tags )
+                    continue
                     
-                    if len( tags ) == 0:
+                
+                content_action = int( content_action )
+                
+                actual_tags = []
+                
+                tags_to_reasons = {}
+                
+                for tag_item in tags:
+                    
+                    reason = 'Petitioned from API'
+                    
+                    if isinstance( tag_item, str ):
                         
-                        continue
+                        tag = tag_item
                         
-                    
-                    content_action = int( content_action )
-                    
-                    actual_tags = []
-                    
-                    tags_to_reasons = {}
-                    
-                    for tag_item in tags:
+                    elif isinstance( tag_item, collections.abc.Collection ) and len( tag_item ) == 2:
                         
-                        reason = 'Petitioned from API'
+                        ( tag, reason ) = tag_item
                         
-                        if isinstance( tag_item, str ):
-                            
-                            tag = tag_item
-                            
-                        elif isinstance( tag_item, collections.abc.Collection ) and len( tag_item ) == 2:
-                            
-                            ( tag, reason ) = tag_item
-                            
-                            if not ( isinstance( tag, str ) and isinstance( reason, str ) ):
-                                
-                                continue
-                                
-                            
-                        else:
-                            
-                            continue
-                            
-                        
-                        actual_tags.append( tag )
-                        tags_to_reasons[ tag ] = reason
-                        
-                    
-                    actual_tags = HydrusTags.CleanTags( actual_tags )
-                    
-                    if len( actual_tags ) == 0:
-                        
-                        continue
-                        
-                    
-                    tags = actual_tags
-                    
-                    if service.GetServiceType() == HC.LOCAL_TAG:
-                        
-                        if content_action not in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                        if not ( isinstance( tag, str ) and isinstance( reason, str ) ):
                             
                             continue
                             
                         
                     else:
                         
-                        if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
-                            
-                            continue
-                            
+                        continue
                         
                     
-                    if content_action == HC.CONTENT_UPDATE_PETITION:
+                    actual_tags.append( tag )
+                    tags_to_reasons[ tag ] = reason
+                    
+                
+                actual_tags = HydrusTags.CleanTags( actual_tags )
+                
+                if len( actual_tags ) == 0:
+                    
+                    continue
+                    
+                
+                tags = actual_tags
+                
+                if service.GetServiceType() == HC.LOCAL_TAG:
+                    
+                    if content_action not in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = tags_to_reasons[ tag ] ) for tag in tags ]
-                        
-                    else:
-                        
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
+                        continue
                         
                     
-                    service_keys_to_content_updates[ service_key ].extend( content_updates )
+                else:
                     
+                    if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                        
+                        continue
+                        
+                    
+                
+                if content_action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = tags_to_reasons[ tag ] ) for tag in tags ]
+                    
+                else:
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
+                    
+                
+                service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
             
         
@@ -1630,9 +1713,9 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
+        service_keys_to_additional_tags = None
+        
         if 'service_names_to_tags' in request.parsed_request_args or 'service_names_to_additional_tags' in request.parsed_request_args:
-            
-            request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
             
             if 'service_names_to_tags' in request.parsed_request_args:
                 
@@ -1643,15 +1726,24 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                 service_names_to_additional_tags = request.parsed_request_args.GetValue( 'service_names_to_additional_tags', dict )
                 
             
-            for ( service_name, tags ) in service_names_to_additional_tags.items():
+            service_keys_to_additional_tags = ConvertServiceNamesDictToKeys( HC.REAL_TAG_SERVICES, service_names_to_additional_tags )
+            
+        elif 'service_keys_to_additional_tags' in request.parsed_request_args:
+            
+            service_keys_to_additional_tags = request.parsed_request_args.GetValue( 'service_keys_to_additional_tags', dict )
+            
+        
+        if service_keys_to_additional_tags is not None:
+            
+            request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
+            
+            for ( service_key, tags ) in service_keys_to_additional_tags.items():
                 
-                try:
+                service = HG.client_controller.services_manager.GetService( service_key )
+                
+                if service.GetServiceType() not in HC.REAL_TAG_SERVICES:
                     
-                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_TAG_SERVICES, service_name )
-                    
-                except:
-                    
-                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
+                    raise HydrusExceptions.BadRequestException( 'Was given a service that is not a tag service!' )
                     
                 
                 tags = HydrusTags.CleanTags( tags )
@@ -2034,6 +2126,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 tags_manager = media_result.GetTagsManager()
                 
                 service_names_to_statuses_to_tags = {}
+                api_service_keys_to_statuses_to_tags = {}
                 
                 service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
                 
@@ -2052,13 +2145,17 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                         service_names_to_statuses_to_tags[ service_name ] = statuses_to_tags_json_serialisable
                         
+                        api_service_keys_to_statuses_to_tags[ service_key.hex() ] = statuses_to_tags_json_serialisable
+                        
                     
                 
                 metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+                metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
                 
                 #
                 
                 service_names_to_statuses_to_tags = {}
+                api_service_keys_to_statuses_to_tags = {}
                 
                 service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
                 
@@ -2069,12 +2166,20 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
                         
                     
-                    service_name = service_keys_to_names[ service_key ]
+                    statuses_to_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                     
-                    service_names_to_statuses_to_tags[ service_name ] = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() }
+                    if len( statuses_to_tags_json_serialisable ) > 0:
+                        
+                        service_name = service_keys_to_names[ service_key ]
+                        
+                        service_names_to_statuses_to_tags[ service_name ] = statuses_to_tags_json_serialisable
+                        
+                        api_service_keys_to_statuses_to_tags[ service_key.hex() ] = statuses_to_tags_json_serialisable
+                        
                     
                 
                 metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
+                metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = api_service_keys_to_statuses_to_tags
                 
                 #
                 

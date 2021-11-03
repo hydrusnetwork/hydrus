@@ -4248,6 +4248,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                         return
                         
                     
+                else:
+                    
+                    return
+                    
                 
             
         

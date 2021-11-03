@@ -43,9 +43,35 @@ def CheckFFMPEGError( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'FFMPEG could not parse.' )
         
     
-def GetAPNGNumFrames( file_header_bytes ):
+def GetAPNGACTLChunk( file_header_bytes: bytes ):
     
-    ( num_frames, ) = struct.unpack( '>I', file_header_bytes[ 41 : 45 ] )
+    apng_actl_chunk_header = b'acTL'
+    apng_phys_chunk_header = b'pHYs'
+    
+    first_guess_header = file_header_bytes[ 37:128 ]
+    
+    if first_guess_header.startswith( apng_actl_chunk_header ):
+        
+        return first_guess_header
+        
+    elif first_guess_header.startswith( apng_phys_chunk_header ):
+        
+        # aha, some weird other png chunk
+        # https://wiki.mozilla.org/APNG_Specification
+        
+        if apng_actl_chunk_header in first_guess_header:
+            
+            i = first_guess_header.index( apng_actl_chunk_header )
+            
+            return first_guess_header[i:]
+            
+        
+    
+    return None
+    
+def GetAPNGNumFrames( apng_actl_bytes ):
+    
+    ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ 4 : 8 ] )
     
     return num_frames
     
@@ -231,13 +257,20 @@ def GetFFMPEGAPNGProperties( path ):
         file_header_bytes = f.read( 256 )
         
     
-    num_frames = GetAPNGNumFrames( file_header_bytes )
+    apng_actl_bytes = GetAPNGACTLChunk( file_header_bytes )
+    
+    if apng_actl_bytes is None:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'This APNG had an unusual file header!' )
+        
+    
+    num_frames = GetAPNGNumFrames( apng_actl_bytes )
     
     lines = GetFFMPEGInfoLines( path )
     
-    resolution = ParseFFMPEGVideoResolution( lines )
+    resolution = ParseFFMPEGVideoResolution( lines, png_ok = True )
     
-    ( fps, confident_fps ) = ParseFFMPEGFPS( lines )
+    ( fps, confident_fps ) = ParseFFMPEGFPS( lines, png_ok = True )
     
     if not confident_fps:
         
@@ -554,49 +587,40 @@ def ParseFFMPEGDuration( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading duration!' )
         
     
-def ParseFFMPEGFPS( lines_for_first_second ):
+def ParseFFMPEGFPS( lines, png_ok = False ):
+    
+    try:
+        
+        line = ParseFFMPEGVideoLine( lines, png_ok = png_ok )
+        
+        ( possible_results, confident ) = ParseFFMPEGFPSPossibleResults( line )
+        
+        if len( possible_results ) == 0:
+            
+            fps = 1
+            confident = False
+            
+        else:
+            
+            fps = min( possible_results )
+            
+        
+        return ( fps, confident )
+        
+    except:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error estimating framerate!' )
+        
+    
+def ParseFFMPEGFPSFromFirstSecond( lines_for_first_second ):
     
     try:
         
         line = ParseFFMPEGVideoLine( lines_for_first_second )
         
-        # get the frame rate
-        
-        possible_results = set()
-        
-        match = re.search("( [0-9]*.| )[0-9]* tbr", line)
-        
-        if match is not None:
-            
-            tbr = line[match.start():match.end()].split(' ')[1]
-            
-            tbr_fps_is_likely_garbage = match is None or tbr.endswith( 'k' ) or float( tbr ) > 144
-            
-            if not tbr_fps_is_likely_garbage:
-                
-                possible_results.add( float( tbr ) )
-                
-            
-        
-        #
-        
-        match = re.search("( [0-9]*.| )[0-9]* fps", line)
-        
-        if match is not None:
-            
-            fps = line[match.start():match.end()].split(' ')[1]
-            
-            fps_is_likely_garbage = match is None or fps.endswith( 'k' ) or float( fps ) > 144
-            
-            if not fps_is_likely_garbage:
-                
-                possible_results.add( float( fps ) )
-                
-            
+        ( possible_results, confident ) = ParseFFMPEGFPSPossibleResults( line )
         
         num_frames_in_first_second = ParseFFMPEGNumFramesManually( lines_for_first_second )
-        
-        confident = len( possible_results ) <= 1
         
         if len( possible_results ) == 0:
             
@@ -640,6 +664,48 @@ def ParseFFMPEGFPS( lines_for_first_second ):
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error estimating framerate!' )
         
+    
+def ParseFFMPEGFPSPossibleResults( video_line ):
+    
+    # get the frame rate
+    
+    possible_results = set()
+    
+    match = re.search("( [0-9]*.| )[0-9]* tbr", video_line)
+    
+    if match is not None:
+        
+        tbr = video_line[match.start():match.end()].split(' ')[1]
+        
+        tbr_fps_is_likely_garbage = match is None or tbr.endswith( 'k' ) or float( tbr ) > 144
+        
+        if not tbr_fps_is_likely_garbage:
+            
+            possible_results.add( float( tbr ) )
+            
+        
+    
+    #
+    
+    match = re.search("( [0-9]*.| )[0-9]* fps", video_line)
+    
+    if match is not None:
+        
+        fps = video_line[match.start():match.end()].split(' ')[1]
+        
+        fps_is_likely_garbage = match is None or fps.endswith( 'k' ) or float( fps ) > 144
+        
+        if not fps_is_likely_garbage:
+            
+            possible_results.add( float( fps ) )
+            
+        
+    
+    possible_results.discard( 0 )
+    
+    confident = len( possible_results ) <= 1
+    
+    return ( possible_results, confident )
     
 def ParseFFMPEGHasVideo( lines ):
     
@@ -730,11 +796,20 @@ def ParseFFMPEGVideoFormat( lines ):
     
     return ( True, video_format )
     
-def ParseFFMPEGVideoLine( lines ):
+def ParseFFMPEGVideoLine( lines, png_ok = False ):
+    
+    if png_ok:
+        
+        bad_video_formats = [ 'jpg' ]
+        
+    else:
+        
+        bad_video_formats = [ 'png', 'jpg' ]
+        
     
     # get the output line that speaks about video
     # the ^\sStream is to exclude the 'title' line, when it exists, includes the string 'Video: ', ha ha
-    lines_video = [ l for l in lines if re.search( r'^\s*Stream', l ) is not None and 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
+    lines_video = [ l for l in lines if re.search( r'^\s*Stream', l ) is not None and 'Video: ' in l and True not in ( 'Video: {}'.format( bad_video_format ) in l for bad_video_format in bad_video_formats ) ] # mp3 says it has a 'png' video stream
     
     if len( lines_video ) == 0:
         
@@ -745,11 +820,11 @@ def ParseFFMPEGVideoLine( lines ):
     
     return line
     
-def ParseFFMPEGVideoResolution( lines ):
+def ParseFFMPEGVideoResolution( lines, png_ok = False ):
     
     try:
         
-        line = ParseFFMPEGVideoLine( lines )
+        line = ParseFFMPEGVideoLine( lines, png_ok = png_ok )
         
         # get the size, of the form 460x320 (w x h)
         match = re.search(" [0-9]*x[0-9]*(,| )", line)
@@ -929,23 +1004,33 @@ class VideoRendererFFMPEG( object ):
             skip_frames = 0
             
         
+        do_fast_seek = True
+        
         ( w, h ) = self._target_resolution
         
         cmd = [ FFMPEG_PATH ]
         
-        if do_ss:
+        if do_ss and do_fast_seek: # fast seek
             
             cmd.extend( [ '-ss', "%.03f" % ss ] )
             
         
-        cmd.extend( [ '-i', self._path,
+        cmd.extend( [ '-i', self._path ] )
+        
+        if do_ss and not do_fast_seek: # slow seek
+            
+            cmd.extend( [ '-ss', "%.03f" % ss ] )
+            
+        
+        cmd.extend( [
             '-loglevel', 'quiet',
             '-f', 'image2pipe',
             "-pix_fmt", self.pix_fmt,
             "-s", str( w ) + 'x' + str( h ),
             '-vsync', '0',
             '-vcodec', 'rawvideo',
-            '-' ] )
+            '-'
+        ] )
             
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs()

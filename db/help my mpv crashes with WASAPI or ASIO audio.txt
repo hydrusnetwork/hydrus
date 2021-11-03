@@ -1,0 +1,4 @@
+If your hydrus crashes as soon as you load a video in mpv, and your audio drver is ASIO or WASAPI, please add these lines to your mpv.conf:
+
+ao=wasapi
+audio-fallback-to-null=yes
