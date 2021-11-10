@@ -747,11 +747,16 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
         self._tag_autocomplete = tag_autocomplete
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
         if len( predicates ) > 0:
+            
+            if ctrl_down:
+                
+                predicates = [ predicate.GetInverseCopy() for predicate in predicates ]
+                
             
             if shift_down and len( predicates ) > 1:
                 
@@ -790,7 +795,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def _ProcessMenuPredicateEvent( self, command ):
         
-        ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+        ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
         
         p = None
         permit_remove = True
@@ -820,6 +825,16 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
             p = predicates
             permit_add = False
+            
+        elif command == 'add_namespace_predicate':
+            
+            p = ( namespace_predicate, )
+            permit_remove = False
+            
+        elif command == 'add_inverse_namespace_predicate':
+            
+            p = ( inverse_namespace_predicate, )
+            permit_remove = False
             
         
         if p is not None:
@@ -2724,7 +2739,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl.UpdateDatas()
         
     
-    def _ConvertDataToListCtrlTuples( self, watcher ):
+    def _ConvertDataToListCtrlTuples( self, watcher: ClientImportWatchers.WatcherImport ):
         
         subject = watcher.GetSubject()
         
@@ -2782,14 +2797,25 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
-        next_check_time = watcher.GetNextCheckTime()
+        checking_status = watcher.GetCheckingStatus()
         
-        if next_check_time is None:
+        if checking_status == ClientImporting.CHECKER_STATUS_OK:
             
-            next_check_time = 0
+            next_check_time = watcher.GetNextCheckTime()
             
-        
-        sort_watcher_status = ( ClientImporting.downloader_enum_sort_lookup[ status_enum ], next_check_time )
+            if next_check_time is None:
+                
+                next_check_time = 0
+                
+            
+            sort_watcher_status = ( ClientImporting.downloader_enum_sort_lookup[ status_enum ], next_check_time )
+            
+        else:
+            
+            # this lets 404 and DEAD sort different
+            
+            sort_watcher_status = ( ClientImporting.downloader_enum_sort_lookup[ status_enum ], checking_status )
+            
         
         display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
         sort_tuple = ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )

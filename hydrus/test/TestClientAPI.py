@@ -2282,156 +2282,166 @@ class TestClientAPI( unittest.TestCase ):
         
         # test file metadata
         
-        api_permissions = set_up_permissions[ 'search_green_files' ]
-        
-        access_key_hex = api_permissions.GetAccessKey().hex()
-        
-        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
-        
-        file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
-        
-        metadata = []
-        
-        for ( file_id, hash ) in file_ids_to_hashes.items():
+        for hide_service_names_tags in ( False, True ):
             
-            metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
+            api_permissions = set_up_permissions[ 'search_green_files' ]
             
-            metadata.append( metadata_row )
+            access_key_hex = api_permissions.GetAccessKey().hex()
             
-        
-        expected_identifier_result = { 'metadata' : metadata }
-        
-        media_results = []
-        
-        urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
-        
-        sorted_urls = sorted( urls )
-        
-        for ( file_id, hash ) in file_ids_to_hashes.items():
+            headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
             
-            size = random.randint( 8192, 20 * 1048576 )
-            mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
-            width = random.randint( 200, 4096 )
-            height = random.randint( 200, 4096 )
-            duration = random.choice( [ 220, 16.66667, None ] )
-            has_audio = random.choice( [ True, False ] )
+            file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
             
-            file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+            metadata = []
             
-            service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
-            service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
-            
-            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
-            
-            locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set(), inbox = False, urls = urls )
-            ratings_manager = ClientMediaManagers.RatingsManager( {} )
-            notes_manager = ClientMediaManagers.NotesManager( {} )
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
-            
-            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
-            
-            media_results.append( media_result )
-            
-        
-        metadata = []
-        detailed_known_urls_metadata = []
-        
-        services_manager = HG.client_controller.services_manager
-        
-        service_keys_to_names = {}
-        
-        for media_result in media_results:
-            
-            metadata_row = {}
-            
-            file_info_manager = media_result.GetFileInfoManager()
-            
-            metadata_row[ 'file_id' ] = file_info_manager.hash_id
-            metadata_row[ 'hash' ] = file_info_manager.hash.hex()
-            metadata_row[ 'size' ] = file_info_manager.size
-            metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
-            metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
-            metadata_row[ 'width' ] = file_info_manager.width
-            metadata_row[ 'height' ] = file_info_manager.height
-            metadata_row[ 'duration' ] = file_info_manager.duration
-            metadata_row[ 'has_audio' ] = file_info_manager.has_audio
-            metadata_row[ 'num_frames' ] = file_info_manager.num_frames
-            metadata_row[ 'num_words' ] = file_info_manager.num_words
-            
-            metadata_row[ 'is_inbox' ] = False
-            metadata_row[ 'is_local' ] = False
-            metadata_row[ 'is_trashed' ] = False
-            
-            metadata_row[ 'known_urls' ] = list( sorted_urls )
-            
-            tags_manager = media_result.GetTagsManager()
-            
-            service_names_to_statuses_to_tags = {}
-            api_service_keys_to_statuses_to_tags = {}
-            
-            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-            
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+            for ( file_id, hash ) in file_ids_to_hashes.items():
                 
-                if service_key not in service_keys_to_names:
-                    
-                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                    
+                metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
                 
-                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
-                
-                if len( s ) > 0:
-                    
-                    service_name = service_keys_to_names[ service_key ]
-                    
-                    service_names_to_statuses_to_tags[ service_name ] = s
-                    api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
-                    
+                metadata.append( metadata_row )
                 
             
-            metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
-            metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
+            expected_identifier_result = { 'metadata' : metadata }
             
-            service_names_to_statuses_to_display_tags = {}
-            service_keys_to_statuses_to_display_tags = {}
+            media_results = []
             
-            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
+            urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
             
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+            sorted_urls = sorted( urls )
+            
+            for ( file_id, hash ) in file_ids_to_hashes.items():
                 
-                if service_key not in service_keys_to_names:
+                size = random.randint( 8192, 20 * 1048576 )
+                mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+                width = random.randint( 200, 4096 )
+                height = random.randint( 200, 4096 )
+                duration = random.choice( [ 220, 16.66667, None ] )
+                has_audio = random.choice( [ True, False ] )
+                
+                file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+                
+                service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+                service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
+                
+                tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
+                
+                locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set(), inbox = False, urls = urls )
+                ratings_manager = ClientMediaManagers.RatingsManager( {} )
+                notes_manager = ClientMediaManagers.NotesManager( {} )
+                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+                
+                media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+                
+                media_results.append( media_result )
+                
+            
+            hide_service_names_tags_metadata = []
+            metadata = []
+            detailed_known_urls_metadata = []
+            
+            services_manager = HG.client_controller.services_manager
+            
+            service_keys_to_names = {}
+            
+            for media_result in media_results:
+                
+                metadata_row = {}
+                
+                file_info_manager = media_result.GetFileInfoManager()
+                
+                metadata_row[ 'file_id' ] = file_info_manager.hash_id
+                metadata_row[ 'hash' ] = file_info_manager.hash.hex()
+                metadata_row[ 'size' ] = file_info_manager.size
+                metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
+                metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
+                metadata_row[ 'width' ] = file_info_manager.width
+                metadata_row[ 'height' ] = file_info_manager.height
+                metadata_row[ 'duration' ] = file_info_manager.duration
+                metadata_row[ 'has_audio' ] = file_info_manager.has_audio
+                metadata_row[ 'num_frames' ] = file_info_manager.num_frames
+                metadata_row[ 'num_words' ] = file_info_manager.num_words
+                
+                metadata_row[ 'is_inbox' ] = False
+                metadata_row[ 'is_local' ] = False
+                metadata_row[ 'is_trashed' ] = False
+                
+                metadata_row[ 'known_urls' ] = list( sorted_urls )
+                
+                tags_manager = media_result.GetTagsManager()
+                
+                service_names_to_statuses_to_tags = {}
+                api_service_keys_to_statuses_to_tags = {}
+                
+                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
                     
-                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                    if service_key not in service_keys_to_names:
+                        
+                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                        
+                    
+                    s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                    
+                    if len( s ) > 0:
+                        
+                        service_name = service_keys_to_names[ service_key ]
+                        
+                        service_names_to_statuses_to_tags[ service_name ] = s
+                        api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
+                        
                     
                 
-                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
                 
-                if len( s ) > 0:
+                service_names_to_statuses_to_display_tags = {}
+                service_keys_to_statuses_to_display_tags = {}
+                
+                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
                     
-                    service_name = service_keys_to_names[ service_key ]
+                    if service_key not in service_keys_to_names:
+                        
+                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                        
                     
-                    service_names_to_statuses_to_display_tags[ service_name ] = s
-                    service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
+                    s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                    
+                    if len( s ) > 0:
+                        
+                        service_name = service_keys_to_names[ service_key ]
+                        
+                        service_names_to_statuses_to_display_tags[ service_name ] = s
+                        service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
+                        
                     
                 
+                metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
+                
+                hide_service_names_tags_metadata.append( metadata_row )
+                
+                metadata_row = dict( metadata_row )
+                
+                metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+                metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_display_tags
+                
+                metadata.append( metadata_row )
+                
+                detailed_known_urls_metadata_row = dict( metadata_row )
+                
+                detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
+                    {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
+                    {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
+                ]
+                
+                detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
+                
             
-            metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_display_tags
-            metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
+            expected_hide_service_names_tags_metadata_result = { 'metadata' : hide_service_names_tags_metadata }
+            expected_metadata_result = { 'metadata' : metadata }
+            expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
             
-            metadata.append( metadata_row )
-            
-            detailed_known_urls_metadata_row = dict( metadata_row )
-            
-            detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
-                {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
-                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
-            ]
-            
-            detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
-            
-        
-        expected_metadata_result = { 'metadata' : metadata }
-        expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
@@ -2554,6 +2564,24 @@ class TestClientAPI( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( response.status, 400 )
+        
+        # hide service names to tags
+        
+        path = '/get_files/file_metadata?hashes={}&hide_service_names_tags=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_hide_service_names_tags_metadata_result )
         
         # metadata from hashes with detailed url info
         

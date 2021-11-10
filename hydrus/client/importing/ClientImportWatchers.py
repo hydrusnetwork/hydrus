@@ -1194,6 +1194,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetCheckingStatus( self ):
+        
+        with self._lock:
+            
+            return self._checking_status
+            
+        
+    
     def GetCreationTime( self ):
         
         with self._lock:

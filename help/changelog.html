@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_461"><a href="#version_461">version 461</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>the text on the animation scanbar is now center-vertically aligned and should look better on taller and thinner scanbars (issue #998)</li>
+					<li>the scanbar now reports better frame number and current time for the mpv player when the current video is very short or has very few frames. screamer gifs should now report 2/2 frames if you scan to the right, not like 97/2</li>
+					<li>fixed using the mpv player with an embed button (it previously was staying hidden even after embed was clicked) (issue #999)</li>
+					<li>the 'search' submenu when you right-click on tags in certain locations now shows add/exclude namespace:anything if all the selected tags share the same namespace</li>
+					<li>as an experiment that I think will be bulked out into proper shortcuts later, and maybe actual +/- buttons like you'll see on a booru, if you activate the 'selection tags' listbox (double-click or enter key) while ctrl is down, it now excludes the selected tags from the current query</li>
+					<li>when you paste query texts into the edit subscription dialog, those queries already in the sub _and_ DEAD will now be revived (it does a 'check now' on them). the dialog reports this</li>
+					<li>when editing subscriptions, the way it waits for the current subs to stop running is improved. it is now separate from the global 'pause subs' variable, so big delays here (e.g. waiting a long time to open the dialog, then hitting 'pause' on the network menu, which was secretly a logically messy unpause) should be less able to run into trouble</li>
+					<li>watchers now sort DEAD and 404 separately when sorting the status column (previously they were sorted by their now-defunct 'next check time')</li>
+					<li>I think I improved the speed of the new subscriptions guaranteed shutdown. I think I also fixed a shutdown hang on some lagging async jobs. there are a couple of reports of hanging shutdown, so let me know if this changes</li>
+					<li>I moved the autocomplete options from 'gui pages' to 'search', and I brushed up the layout and tooltips there generally</li>
+					<li>.</li>
+					<li>file parsing:</li>
+					<li>clip files with canvas size units in mm, cm, inches, or points are now parsed correctly! thanks to the user who helped here! turns out a point is 1/72 (two grossths :^)) of an inch</li>
+					<li>clip animations now get the number of frames and duration of the first timeline!</li>
+					<li>all clip files will reparse for fixed resolution and duration and make new thumbs as needed on update</li>
+					<li>hydrus file parsing should now detect the duration of video and audio with 10 or more hours duration</li>
+					<li>hydrus now gets a more accurate duration estimate for files with bonkers duration/start_offset pairs, for instance "Duration: 127:57:31.25, start: 460633.291000". if you ever saw a 7MB webm with 5 hour duration (and actually 18 seconds), it could have been this. hydrus now counts frames manually when you get this sort of thing</li>
+					<li>any file with resolution > 360p, a duration over an hour, and size less than 64MB will be scheduled for a file metadata reparse on update</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>/get_files/file_metadata now has an optional boolean parameter, 'hide_service_names_tags', default False, which will hide the old 'service_names_to...' tag Objects</li>
+					<li>a unit test tests hide_service_names_tags</li>
+					<li>client api help documentation now talks about hide_service_names_tags</li>
+					<li>client api version is now 22</li>
+					<li>.</li>
+					<li>boring code refactoring and cleanup:</li>
+					<li>tl;dr: about 60KB total code moved out of client database!</li>
+					<li>moved most combined sibling+parent database code to a new 'tag display' module</li>
+					<li>moved autocomplete counts cache database code to a new 'mappings counts' module, and refactored a whole lot of of misc old a/c table creation and reference code into that module, cleaning things up</li>
+					<li>the 'mappings counts' module is plugged into new repair code and on error repopulates itself as efficiently as regen code currently allows</li>
+					<li>moved tag cache code to a new 'tag search' module, and similar related decoupling refactoring</li>
+					<li>the 'tag search' module is plugged into new repair code and on error repopulates itself very efficiently</li>
+					<li>the 'local tags cache' module can now regenerate itself on boot</li>
+					<li>regenerating the local tags cache now works a little faster and takes less memory</li>
+					<li>I _believe_ client.caches.db can now regenerate all of itself automatically, with no subsequent user actions needed</li>
+					<li>the boot database repair notifications have some quality of life improvements. modules now say whether they think they can recover everything, and there is more guidance on what to do in the different situations </li>
+					<li>during various heavy database work, a common analysis tool now saves a lot of time on regeneration vs generation</li>
+					<li>pubsubs now go through the transaction wrapper, meaning modules can pubsub</li>
+					<li>emergency boot messages (like database trouble) are now printed to the log</li>
+				</ul>
 				<li><h3 id="version_460"><a href="#version_460">version 460</a></h3></li>
 				<ul>
 					<li>client api:</li>

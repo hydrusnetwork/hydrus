@@ -293,3 +293,10 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
         
+    
+    def TouchAnalyzeNewTables( self ):
+        
+        # just a little thing to run after creating and populating tables that will scan any actual new stuff
+        
+        self.GetTableNamesDueAnalysis()
+        

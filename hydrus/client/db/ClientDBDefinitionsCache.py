@@ -1,18 +1,24 @@
 import sqlite3
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
 from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
+from hydrus.client.metadata import ClientTags
 
 class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
+    
+    CAN_REPOPULATE_ALL_MISSING_DATA = True
     
     def __init__( self, cursor: sqlite3.Cursor, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_services: ClientDBServices.ClientDBMasterServices, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
         
@@ -80,6 +86,8 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
         self.Repopulate()
+        
+        cursor_transaction_wrapper.CommitAndBegin()
         
     
     def AddHashIdsToCache( self, hash_ids ):
@@ -214,9 +222,13 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     
 class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_tags: ClientDBMaster.ClientDBMasterTags ):
+    CAN_REPOPULATE_ALL_MISSING_DATA = True
+    
+    def __init__( self, cursor: sqlite3.Cursor, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_services: ClientDBServices.ClientDBMasterServices, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts ):
         
         self.modules_tags = modules_tags
+        self.modules_services = modules_services
+        self.modules_mappings_counts = modules_mappings_counts
         
         self._tag_ids_to_tags_cache = {}
         
@@ -277,11 +289,9 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        message = 'Unfortunately, the local tag cache cannot repopulate itself yet during repair. Once you boot, please run _database->regenerate->local tag cache_. This message has been printed to the log.'
+        self.Repopulate()
         
-        HydrusData.DebugPrint( message )
-        
-        ClientDBModule.BlockingSafeShowMessage( message )
+        cursor_transaction_wrapper.CommitAndBegin()
         
     
     def AddTagIdsToCache( self, tag_ids ):
@@ -365,6 +375,22 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         if tag_id in self._tag_ids_to_tags_cache:
             
             del self._tag_ids_to_tags_cache[ tag_id ]
+            
+        
+    
+    def Repopulate( self ):
+        
+        self.ClearCache()
+        
+        tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+        queries = [ self.modules_mappings_counts.GetQueryPhraseForCurrentTagIds( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_local_file_service_id, tag_service_id ) for tag_service_id in tag_service_ids ]
+        
+        full_query = '{};'.format( ' UNION '.join( queries ) )
+        
+        for ( block_of_tag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, full_query, 1024 ):
+            
+            self.AddTagIdsToCache( block_of_tag_ids )
             
         
     

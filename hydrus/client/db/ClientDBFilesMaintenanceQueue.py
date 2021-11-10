@@ -21,7 +21,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files maintenance', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client files maintenance queue', cursor )
         
         self.modules_hashes_local_cache = modules_hashes_local_cache
         

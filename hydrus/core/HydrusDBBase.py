@@ -213,7 +213,7 @@ class DBBase( object ):
             
             HG.query_planner_query_count += 1
             
-            HG.client_controller.PrintQueryPlan( query, plan_lines )
+            HG.controller.PrintQueryPlan( query, plan_lines )
             
         
         return self._c.execute( query, *args )
@@ -231,7 +231,7 @@ class DBBase( object ):
                 
                 HG.query_planner_query_count += 1
                 
-                HG.client_controller.PrintQueryPlan( query, plan_lines )
+                HG.controller.PrintQueryPlan( query, plan_lines )
                 
             
         
@@ -388,6 +388,8 @@ class DBCursorTransactionWrapper( DBBase ):
         self._last_mem_refresh_time = HydrusData.GetNow()
         self._last_wal_checkpoint_time = HydrusData.GetNow()
         
+        self._pubsubs = []
+        
     
     def BeginImmediate( self ):
         
@@ -402,9 +404,18 @@ class DBCursorTransactionWrapper( DBBase ):
             
         
     
+    def CleanPubSubs( self ):
+        
+        self._pubsubs = []
+        
+    
     def Commit( self ):
         
         if self._in_transaction:
+            
+            self.DoPubSubs()
+            
+            self.CleanPubSubs()
             
             self._Execute( 'COMMIT;' )
             
@@ -444,6 +455,14 @@ class DBCursorTransactionWrapper( DBBase ):
             
         
     
+    def DoPubSubs( self ):
+        
+        for ( topic, args, kwargs ) in self._pubsubs:
+            
+            HG.controller.pub( topic, *args, **kwargs )
+            
+        
+    
     def InTransaction( self ):
         
         return self._in_transaction
@@ -452,6 +471,19 @@ class DBCursorTransactionWrapper( DBBase ):
     def NotifyWriteOccuring( self ):
         
         self._transaction_contains_writes = True
+        
+    
+    def pub_after_job( self, topic, *args, **kwargs ):
+        
+        if len( args ) == 0 and len( kwargs ) == 0:
+            
+            if ( topic, args, kwargs ) in self._pubsubs:
+                
+                return
+                
+            
+        
+        self._pubsubs.append( ( topic, args, kwargs ) )
         
     
     def Rollback( self ):

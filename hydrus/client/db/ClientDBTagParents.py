@@ -36,6 +36,8 @@ def GenerateTagParentsLookupCacheTableNames( service_id ):
     
 class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
+    CAN_REPOPULATE_ALL_MISSING_DATA = True
+    
     def __init__(
         self,
         cursor: sqlite3.Cursor,

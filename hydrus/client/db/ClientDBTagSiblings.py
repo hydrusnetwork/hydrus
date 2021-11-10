@@ -37,6 +37,8 @@ def GenerateTagSiblingsLookupCacheTableNames( service_id ):
     
 class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
+    CAN_REPOPULATE_ALL_MISSING_DATA = True
+    
     def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags ):
         
         self.modules_services = modules_services

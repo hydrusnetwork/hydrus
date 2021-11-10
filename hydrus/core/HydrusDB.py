@@ -210,7 +210,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
         self._could_not_initialise = False
         
         self._jobs = queue.Queue()
-        self._pubsubs = []
         
         self._currently_doing_job = False
         self._current_status = ''
@@ -336,7 +335,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _CleanAfterJobWork( self ):
         
-        self._pubsubs = []
+        self._cursor_transaction_wrapper.CleanPubSubs()
         
     
     def _CloseDBConnection( self ):
@@ -382,10 +381,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _DoAfterJobWork( self ):
         
-        for ( topic, args, kwargs ) in self._pubsubs:
-            
-            self._controller.pub( topic, *args, **kwargs )
-            
+        self._cursor_transaction_wrapper.DoPubSubs()
         
     
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
@@ -671,19 +667,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
     def _Write( self, action, *args, **kwargs ):
         
         raise NotImplementedError()
-        
-    
-    def pub_after_job( self, topic, *args, **kwargs ):
-        
-        if len( args ) == 0 and len( kwargs ) == 0:
-            
-            if ( topic, args, kwargs ) in self._pubsubs:
-                
-                return
-                
-            
-        
-        self._pubsubs.append( ( topic, args, kwargs ) )
         
     
     def publish_status_update( self ):

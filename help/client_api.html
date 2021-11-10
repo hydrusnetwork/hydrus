@@ -1305,6 +1305,7 @@
 							<li>hashes : (selective, a list of hexadecimal SHA256 hashes)</li>
 							<li>only_return_identifiers : true or false (optional, defaulting to false)</li>
 							<li>detailed_url_information : true or false (optional, defaulting to false)</li>
+                                                        <li>hide_service_names_tags : true or false (optional, defaulting to false)</li>
 						</ul>
 					</li>
 					<p>You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and <b>the file_ids you search for must have been in the most recent search result</b>.</p>
@@ -1449,8 +1450,9 @@
                                         <p>The tag structure is duplicated for both 'name' and 'key'. The use of 'name' is an increasingly legacy issue--a hack when the Client API was young--and 'service_names_to...' lookups are likely to be deleted in future in favour of service_key. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the <a href="#get_services">/get_services</a> call (and cache the response--it doesn't change much!).</p>
 					<p>Note that since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
 					<p>While service_XXX_to_statuses_to_tags represent the actual tags stored on the database for a file, the service_XXX_to_statuses_to_<i>display</i>_tags structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with service_keys_to_statuses_to_tags. If you want to render to the user, use service_keys_to_statuses_to_displayed_tags.</p>
+					<p>If you add hide_service_names_tags=true, the 'service_names_to_statuses_to_tags' and 'service_names_to_statuses_to_display_tags' Objects will not be included. Use this to save data/CPU on large queries.</p>
 					<p>If you add detailed_url_information=true, a new entry, 'detailed_known_urls', will be added for each file, with a list of the same structure as /add_urls/get_url_info. This may be an expensive request if you are querying thousands of files at once.</p>
-					<p>For example:</p>
+                                        <p>For example:</p>
 						<ul>
 							<li>
 <pre>"detailed_known_urls" : [

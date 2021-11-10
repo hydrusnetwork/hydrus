@@ -983,12 +983,12 @@ class ListBox( QW.QScrollArea ):
         return QP.isValid( self )
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         return False
         
     
-    def _ActivateFromKeyboard( self, shift_down ):
+    def _ActivateFromKeyboard( self, ctrl_down, shift_down ):
         
         selected_indices = []
         
@@ -1006,7 +1006,7 @@ class ListBox( QW.QScrollArea ):
                 
             
         
-        action_occurred = self._Activate( shift_down )
+        action_occurred = self._Activate( ctrl_down, shift_down )
         
         if action_occurred and len( self._selected_terms ) == 0 and len( selected_indices ) > 0:
             
@@ -1210,7 +1210,23 @@ class ListBox( QW.QScrollArea ):
             or_predicate = None
             
         
-        return ( predicates, or_predicate, inverse_predicates )
+        namespace_predicate = None
+        inverse_namespace_predicate = None
+        
+        if False not in [ predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG for predicate in predicates ]:
+            
+            namespaces = { HydrusTags.SplitTag( predicate.GetValue() )[0] for predicate in predicates }
+            
+            if len( namespaces ) == 1:
+                
+                ( namespace, ) = namespaces
+                
+                namespace_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, value = namespace )
+                inverse_namespace_predicate = namespace_predicate.GetInverseCopy()
+                
+            
+        
+        return ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate )
         
     
     def _GetSafeHitIndex( self, logical_index, direction = None ):
@@ -1750,7 +1766,7 @@ class ListBox( QW.QScrollArea ):
             
         elif key_code in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
-            self._ActivateFromKeyboard( shift )
+            self._ActivateFromKeyboard( ctrl, shift )
             
         else:
             
@@ -1824,9 +1840,10 @@ class ListBox( QW.QScrollArea ):
         
         if event.button() == QC.Qt.LeftButton:
             
+            ctrl_down = event.modifiers() & QC.Qt.ControlModifier
             shift_down = event.modifiers() & QC.Qt.ShiftModifier
             
-            action_occurred = self._Activate( shift_down )
+            action_occurred = self._Activate( ctrl_down, shift_down )
             
             if action_occurred:
                 
@@ -2303,7 +2320,7 @@ class ListBoxTags( ListBox ):
         
         if self.can_spawn_new_windows:
             
-            ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+            ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
             
             if len( predicates ) > 0:
                 
@@ -2698,7 +2715,7 @@ class ListBoxTags( ListBox ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+                ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
                 
                 if len( predicates ) > 0:
                     
@@ -2776,7 +2793,17 @@ class ListBoxTags( ListBox ):
                         
                         if some_selected_are_not_excluded_explicitly:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'exclude {} from current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                            ClientGUIMenus.AppendMenuItem( search_menu, 'exclude {} from the current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                            
+                        
+                        if namespace_predicate is not None and namespace_predicate not in current_predicates:
+                            
+                            ClientGUIMenus.AppendMenuItem( search_menu, 'add {} to current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Add the namespace predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_namespace_predicate' )
+                            
+                        
+                        if inverse_namespace_predicate is not None and inverse_namespace_predicate not in current_predicates:
+                            
+                            ClientGUIMenus.AppendMenuItem( search_menu, 'exclude {} from the current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Disallow the namespace predicate from the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_namespace_predicate' )
                             
                         
                     
@@ -2973,7 +3000,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._DataHasChanged()
         
     
-    def _Activate( self, shift_down ):
+    def _Activate( self, ctrl_down, shift_down ):
         
         deletable_terms = [ term for term in self._selected_terms if term.GetNamespace() not in self.PROTECTED_TERMS ]
         
@@ -2998,9 +3025,10 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def _DeleteActivate( self ):
         
+        ctrl_down = False
         shift_down = False
         
-        self._Activate( shift_down )
+        self._Activate( ctrl_down, shift_down )
         
     
     def _GenerateTermFromNamespaceAndColour( self, namespace, colour ) -> ClientGUIListBoxesData.ListBoxItemNamespaceColour:
@@ -3057,7 +3085,7 @@ class ListBoxTagsFilter( ListBoxTags ):
         ListBoxTags.__init__( self, parent )
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -3314,7 +3342,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     tagsAdded = QC.Signal()
     tagsRemoved = QC.Signal()
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             
@@ -3415,9 +3443,10 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
         if key in ClientGUIShortcuts.DELETE_KEYS_QT:
             
+            ctrl_down = modifier == ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL
             shift_down = modifier == ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT
             
-            action_occurred = self._Activate( shift_down )
+            action_occurred = self._Activate( ctrl_down, shift_down )
             
         else:
             
@@ -3816,7 +3845,7 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
         self._canvas_key = canvas_key
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         
@@ -3833,7 +3862,7 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
         self._delete_func = delete_func
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         if len( self._selected_terms ) > 0:
             

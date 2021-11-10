@@ -298,6 +298,9 @@ class mpvWidget( QW.QWidget ):
                     current_frame_index = int( round( ( current_timestamp_ms / self._media.GetDuration() ) * num_frames ) )
                     
                 
+                current_frame_index = min( current_frame_index, num_frames - 1 )
+                current_timestamp_ms = min( current_timestamp_ms, self._media.GetDuration() )
+                
             
             paused = self._player.pause
             

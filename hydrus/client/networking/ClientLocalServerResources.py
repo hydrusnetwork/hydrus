@@ -41,7 +41,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'file_service_name', 'tag_service_name' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'simple', 'file_sort_asc' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -1997,6 +1997,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
+        hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         
         try:
@@ -2149,7 +2150,11 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                     
                 
-                metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+                if not hide_service_names_tags:
+                    
+                    metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+                    
+                
                 metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
                 
                 #
@@ -2178,7 +2183,11 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                     
                 
-                metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
+                if not hide_service_names_tags:
+                    
+                    metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
+                    
+                
                 metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = api_service_keys_to_statuses_to_tags
                 
                 #

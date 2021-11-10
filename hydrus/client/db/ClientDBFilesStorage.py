@@ -92,7 +92,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         self.modules_texts = modules_texts
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files storage', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client file locations', cursor )
         
         self.temp_file_storage_table_name = None
         

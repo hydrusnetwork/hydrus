@@ -518,7 +518,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         self._predicates = {}
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
@@ -645,7 +645,7 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         self._float_mode = float_mode
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
@@ -2286,7 +2286,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         HG.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
         
     
-    def _Activate( self, shift_down ) -> bool:
+    def _Activate( self, ctrl_down, shift_down ) -> bool:
         
         predicates = self._GetPredicatesFromTerms( self._selected_terms )
         
@@ -2295,6 +2295,12 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             if shift_down:
                 
                 self._EditPredicates( set( predicates ) )
+                
+            elif ctrl_down:
+                
+                ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
+                
+                self._EnterPredicates( inverse_predicates )
                 
             else:
                 
@@ -2337,9 +2343,10 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _DeleteActivate( self ):
         
+        ctrl_down = False
         shift_down = False
         
-        self._Activate( shift_down )
+        self._Activate( ctrl_down, shift_down )
         
     
     def _EditPredicates( self, predicates ):
@@ -2442,7 +2449,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _ProcessMenuPredicateEvent( self, command ):
         
-        ( predicates, or_predicate, inverse_predicates ) = self._GetSelectedPredicatesAndInverseCopies()
+        ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
         
         if command == 'add_predicates':
             
@@ -2466,6 +2473,14 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         elif command == 'remove_inverse_predicates':
             
             self._EnterPredicates( inverse_predicates, permit_add = False )
+            
+        elif command == 'add_namespace_predicate':
+            
+            self._EnterPredicates( ( namespace_predicate, ), permit_remove = False )
+            
+        elif command == 'add_inverse_namespace_predicate':
+            
+            self._EnterPredicates( ( inverse_namespace_predicate, ), permit_remove = False )
             
         
     

@@ -1476,7 +1476,7 @@ class DB( HydrusDB.HydrusDB ):
         # now we are done, no rollback, so let's update the cache
         self._RefreshAccountInfoCache()
         
-        self.pub_after_job( 'update_all_session_accounts', service_key )
+        self._cursor_transaction_wrapper.pub_after_job( 'update_all_session_accounts', service_key )
         
     
     def _ModifyServices( self, account, services ):

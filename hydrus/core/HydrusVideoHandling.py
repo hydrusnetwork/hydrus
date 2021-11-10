@@ -546,18 +546,13 @@ def ParseFFMPEGDuration( lines ):
             
             start_offset = float( line[ m.start() + 7 : m.end() ] )
             
-            if abs( start_offset ) > 1.0: # once had a file with start offset of 957499 seconds jej
-                
-                start_offset = 0
-                
-            
         else:
             
             start_offset = 0
             
         
-        match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
-        hms = [ float( float_string ) for float_string in line[match.start()+1:match.end()].split(':') ]
+        match = re.search("[0-9]+:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
+        hms = [ float( float_string ) for float_string in line[match.start():match.end()].split(':') ]
         
         if len( hms ) == 1:
             
@@ -575,6 +570,19 @@ def ParseFFMPEGDuration( lines ):
         if duration == 0:
             
             return ( None, None )
+            
+        
+        if start_offset > 0.85 * duration:
+            
+            # as an example, Duration: 127:57:31.25, start: 460633.291000 lmao
+            
+            return ( None, None )
+            
+        
+        # we'll keep this for now I think
+        if start_offset > 1:
+            
+            start_offset = 0
             
         
         file_duration = duration + start_offset

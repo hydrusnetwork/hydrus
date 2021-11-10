@@ -937,7 +937,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _CheckDBIntegrity( self ):
         
-        message = 'This will check the database for missing and invalid entries. It may take several minutes to complete.'
+        message = 'This will check the SQLite database files for missing and invalid data. It may take several minutes to complete.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Run integrity check?', yes_label = 'do it', no_label = 'forget it' )
         
@@ -4299,7 +4299,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageSubscriptions( self ):
         
-        def qt_do_it( subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status ):
+        def qt_do_it( subscriptions, missing_query_log_container_names, surplus_query_log_container_names ):
             
             if len( missing_query_log_container_names ) > 0:
                 
@@ -4382,7 +4382,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUISubscriptions.EditSubscriptionsPanel( dlg, subscriptions, original_pause_status )
+                panel = ClientGUISubscriptions.EditSubscriptionsPanel( dlg, subscriptions )
                 
                 dlg.SetPanel( panel )
                 
@@ -4413,20 +4413,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     try:
                         
-                        original_pause_status = controller.options[ 'pause_subs_sync' ]
+                        HG.client_controller.subscriptions_manager.PauseSubscriptionsForEditing()
                         
-                        controller.options[ 'pause_subs_sync' ] = True
-                        
-                        if HG.client_controller.subscriptions_manager.SubscriptionsRunning():
+                        while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                             
-                            while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
+                            time.sleep( 0.1 )
+                            
+                            if HG.view_shutdown:
                                 
-                                time.sleep( 0.1 )
-                                
-                                if HG.view_shutdown:
-                                    
-                                    return
-                                    
+                                return
                                 
                             
                         
@@ -4454,7 +4449,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                         
                         done_job_key = ClientThreading.JobKey()
                         
-                        ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names, original_pause_status )
+                        ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names )
                         
                         done_job_key.SetVariable( 'popup_text_1', 'Saving subscription changes.' )
                         
@@ -4484,7 +4479,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 finally:
                     
-                    controller.options[ 'pause_subs_sync' ] = original_pause_status
+                    HG.client_controller.subscriptions_manager.ResumeSubscriptionsAfterEditing()
                     
                 
             

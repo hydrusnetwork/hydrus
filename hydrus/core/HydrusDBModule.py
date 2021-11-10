@@ -6,6 +6,8 @@ from hydrus.core import HydrusExceptions
 
 class HydrusDBModule( HydrusDBBase.DBBase ):
     
+    CAN_REPOPULATE_ALL_MISSING_DATA = False
+    
     def __init__( self, name, cursor: sqlite3.Cursor ):
         
         HydrusDBBase.DBBase.__init__( self )

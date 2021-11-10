@@ -632,6 +632,7 @@ class AnimationBar( QW.QWidget ):
         ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
         
         my_width = self.size().width()
+        my_height = self.size().height()
         
         painter.setPen( QC.Qt.NoPen )
         
@@ -744,7 +745,10 @@ class AnimationBar( QW.QWidget ):
             
             ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
             
-            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, 3, s )
+            x = my_width - text_size.width() - 3
+            y = ( my_height - text_size.height() ) / 2
+            
+            ClientGUIFunctions.DrawText( painter, x, y, s )
             
         
     
@@ -1204,6 +1208,11 @@ class MediaContainer( QW.QWidget ):
         self._MakeMediaWindow()
         
         self._SizeAndPositionChildren()
+        
+        if self._media_window is not None:
+            
+            self._media_window.show()
+            
         
     
     def resizeEvent( self, event ):

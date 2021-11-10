@@ -234,7 +234,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime == HC.APPLICATION_CLIP:
         
-        ( width, height ) = HydrusClipHandling.GetResolution( path )
+        ( ( width, height ), duration, num_frames ) = HydrusClipHandling.GetClipProperties( path )
         
     elif mime == HC.APPLICATION_FLASH:
         

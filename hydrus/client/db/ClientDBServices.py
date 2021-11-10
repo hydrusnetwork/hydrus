@@ -122,6 +122,13 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
     
+    def FileServiceIsCoveredByAllLocalFiles( self, service_id ) -> bool:
+        
+        service_type = self.GetService( service_id ).GetServiceType()
+        
+        return service_type in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN )
+        
+    
     def GetNonDupeName( self, name ) -> str:
         
         existing_names = { service.GetName() for service in self._service_ids_to_services.values() }

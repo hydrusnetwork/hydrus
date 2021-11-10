@@ -424,9 +424,22 @@ class Controller( HydrusController.HydrusController ):
         
         QP.CallAfter( qt_code, win, job_key )
         
+        i = 0
+        
+        while not job_key.IsDone() and i < 8:
+            
+            time.sleep( 0.02 )
+            
+            i += 1
+            
+        
+        # I think in some cases with the splash screen we may actually be pushing stuff here after model shutdown
+        # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
+        # so, we'll give it 16ms to work, then we'll start testing for shutdown hang
+        
         while not job_key.IsDone():
             
-            if not self._qt_app_running:
+            if HG.model_shutdown or not self._qt_app_running:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
