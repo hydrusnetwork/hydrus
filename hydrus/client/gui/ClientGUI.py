@@ -1035,7 +1035,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ClearOrphanFileRecords( self ):
         
-        text = 'This will instruct the database to review its file records and delete any orphans. You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text += os.linesep * 2
+        text += 'This will instruct the database to review its file records and delete any orphans. You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
         text += os.linesep * 2
         text += 'It will create a popup message while it works and inform you of the number of orphan records found.'
         
@@ -1049,7 +1051,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ClearOrphanHashedSerialisables( self ):
         
-        text = 'This force-runs a routine that regularly removes some spare data from the database. You most likely do not need to run it.'
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text += os.linesep * 2
+        text += 'This force-runs a routine that regularly removes some spare data from the database. You most likely do not need to run it.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
         
@@ -1079,7 +1083,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ClearOrphanTables( self ):
         
-        text = 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a semi-recent backup before you run this.'
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text += os.linesep * 2
+        text += 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a recent backup before you run this--if it deletes something important by accident, you will want to roll back!'
         text += os.linesep * 2
         text += 'It will create popups if it finds anything to delete.'
         

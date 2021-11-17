@@ -322,6 +322,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             gallery_url = self.url
             
+            url_for_child_referral = gallery_url
+            
             ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
@@ -380,6 +382,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         gallery_url = actual_fetched_url
                         
+                        url_for_child_referral = gallery_url
+                        
                         ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
                         
                     else:
@@ -399,7 +403,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, actual_fetched_url )
                     
-                    file_seed.SetReferralURL( gallery_url )
+                    file_seed.SetReferralURL( url_for_child_referral )
                     
                     file_seeds = [ file_seed ]
                     
@@ -426,7 +430,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
                     
                 
-                file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, gallery_url, file_import_options )
+                file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, url_for_child_referral, file_import_options )
                 
                 title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
                 
@@ -560,6 +564,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                             for next_gallery_seed in next_gallery_seeds:
                                 
                                 next_gallery_seed.SetRunToken( self._run_token )
+                                next_gallery_seed.SetReferralURL( url_for_child_referral )
                                 next_gallery_seed.SetExternalFilterableTags( self._external_filterable_tags )
                                 next_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                                 

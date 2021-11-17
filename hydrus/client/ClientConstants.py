@@ -538,6 +538,8 @@ global_pixmaps = GlobalPixmaps.instance
 
 DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'
 
+DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY = b'downloader tags'
+
 LOCAL_FILE_SERVICE_KEY = b'local files'
 
 LOCAL_UPDATE_SERVICE_KEY = b'repository updates'
@@ -545,6 +547,8 @@ LOCAL_UPDATE_SERVICE_KEY = b'repository updates'
 LOCAL_BOORU_SERVICE_KEY = b'local booru'
 
 LOCAL_NOTES_SERVICE_KEY = b'local notes'
+
+DEFAULT_FAVOURITES_RATING_SERVICE_KEY = b'favourites'
 
 CLIENT_API_SERVICE_KEY = b'client api'
 

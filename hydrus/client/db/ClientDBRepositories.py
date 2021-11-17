@@ -18,12 +18,19 @@ from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
+REPOSITORY_HASH_ID_MAP_PREFIX = 'repository_hash_id_map_'
+REPOSITORY_TAG_ID_MAP_PREFIX = 'repository_tag_id_map_'
+
+REPOSITORY_UPDATES_PREFIX = 'repository_updates_'
+REPOSITORY_UNREGISTERED_UPDATES_PREFIX = 'repository_unregistered_updates_'
+REPOSITORY_UPDATES_PROCESSED_PREFIX = 'repository_updates_processed_'
+
 def GenerateRepositoryDefinitionTableNames( service_id: int ):
     
     suffix = str( service_id )
     
-    hash_id_map_table_name = 'external_master.repository_hash_id_map_{}'.format( suffix )
-    tag_id_map_table_name = 'external_master.repository_tag_id_map_{}'.format( suffix )
+    hash_id_map_table_name = 'external_master.{}{}'.format( REPOSITORY_HASH_ID_MAP_PREFIX, suffix )
+    tag_id_map_table_name = 'external_master.{}{}'.format( REPOSITORY_TAG_ID_MAP_PREFIX, suffix )
     
     return ( hash_id_map_table_name, tag_id_map_table_name )
     
@@ -41,9 +48,9 @@ def GenerateRepositoryTagDefinitionTableName( service_id: int ):
     
 def GenerateRepositoryUpdatesTableNames( service_id: int ):
     
-    repository_updates_table_name = 'repository_updates_{}'.format( service_id )
-    repository_unregistered_updates_table_name = 'repository_unregistered_updates_{}'.format( service_id )
-    repository_updates_processed_table_name = 'repository_updates_processed_{}'.format( service_id )
+    repository_updates_table_name = '{}{}'.format( REPOSITORY_UPDATES_PREFIX, service_id )
+    repository_unregistered_updates_table_name = '{}{}'.format( REPOSITORY_UNREGISTERED_UPDATES_PREFIX, service_id )
+    repository_updates_processed_table_name = '{}{}'.format( REPOSITORY_UPDATES_PROCESSED_PREFIX, service_id )
     
     return ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name )
     
@@ -127,6 +134,17 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         }
         
     
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            REPOSITORY_HASH_ID_MAP_PREFIX,
+            REPOSITORY_TAG_ID_MAP_PREFIX,
+            REPOSITORY_UPDATES_PREFIX,
+            REPOSITORY_UNREGISTERED_UPDATES_PREFIX,
+            REPOSITORY_UPDATES_PROCESSED_PREFIX
+        }
+        
+    
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REPOSITORIES )
@@ -150,6 +168,8 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def _RegisterUpdates( self, service_id, hash_ids = None ):
         
+        # it is ok if this guy gets hash ids that are already in the 'processed' table--it'll now resync them and correct if needed
+        
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
         if hash_ids is None:
@@ -166,36 +186,61 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         if len( hash_ids ) > 0:
             
-            self._ClearOutstandingWorkCache( service_id )
-            
             service_type = self.modules_services.GetService( service_id ).GetServiceType()
             
             with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                 
                 hash_ids_to_mimes = { hash_id : mime for ( hash_id, mime ) in self._Execute( 'SELECT hash_id, mime FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) }
                 
+                current_rows = set( self._Execute( 'SELECT hash_id, content_type FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_updates_processed_table_name ) ) )
+                
+            
+            correct_rows = set()
+            
+            for ( hash_id, mime ) in hash_ids_to_mimes.items():
+                
+                if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                    
+                    content_types = ( HC.CONTENT_TYPE_DEFINITIONS, )
+                    
+                else:
+                    
+                    content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
+                    
+                
+                correct_rows.update( ( ( hash_id, content_type ) for content_type in content_types ) )
+                
+            
+            deletee_rows = current_rows.difference( correct_rows )
+            
+            if len( deletee_rows ) > 0:
+                
+                # these were registered wrong at some point
+                self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ? AND content_type = ?;'.format( repository_updates_processed_table_name ), deletee_rows )
+                
+            
+            insert_rows = correct_rows.difference( current_rows )
+            
+            if len( insert_rows ) > 0:
+                
+                processed = False
+            
+                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), ( ( hash_id, content_type, processed ) for ( hash_id, content_type ) in insert_rows ) )
+                
             
             if len( hash_ids_to_mimes ) > 0:
                 
-                inserts = []
-                processed = False
-                
-                for ( hash_id, mime ) in hash_ids_to_mimes.items():
-                    
-                    if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
-                        
-                        content_types = ( HC.CONTENT_TYPE_DEFINITIONS, )
-                        
-                    else:
-                        
-                        content_types = tuple( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
-                        
-                    
-                    inserts.extend( ( ( hash_id, content_type, processed ) for content_type in content_types ) )
-                    
-                
-                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), inserts )
                 self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids_to_mimes.keys() ) )
+                
+            
+            if len( deletee_rows ) + len( insert_rows ) > 0:
+                
+                content_types_that_changed = { content_type for ( hash_id, content_type ) in deletee_rows.union( insert_rows ) }
+                
+                for content_type in content_types_that_changed:
+                    
+                    self._ClearOutstandingWorkCache( service_id, content_type = content_type )
+                    
                 
             
         
@@ -218,31 +263,6 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
         
         self.modules_files_maintenance_queue.AddJobs( update_hash_ids, job_type )
-        
-    
-    def _UnregisterUpdates( self, service_id, hash_ids = None ):
-        
-        ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
-        
-        if hash_ids is None:
-            
-            hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_processed_table_name ) ) )
-            
-        else:
-            
-            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-                
-                hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, repository_updates_processed_table_name ) ) )
-                
-            
-        
-        if len( hash_ids ) > 0:
-            
-            self._ClearOutstandingWorkCache( service_id )
-            
-            self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
-            
         
     
     def AssociateRepositoryUpdateHashes( self, service_key: bytes, metadata_slice: HydrusNetwork.Metadata ):
@@ -576,7 +596,10 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
             
-            self._UnregisterUpdates( service_id, hash_ids )
+            ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+            
             self._RegisterUpdates( service_id, hash_ids )
             
         
@@ -687,19 +710,37 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def SetRepositoryUpdateHashes( self, service_key: bytes, metadata: HydrusNetwork.Metadata ):
         
+        # this is a full metadata resync
+        
         service_id = self.modules_services.GetServiceId( service_key )
+        
+        all_future_update_hash_ids = self.modules_hashes_local_cache.GetHashIds( metadata.GetUpdateHashes() )
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        current_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        #
         
-        all_future_update_hash_ids = self.modules_hashes_local_cache.GetHashIds( metadata.GetUpdateHashes() )
+        current_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
         
         deletee_hash_ids = current_update_hash_ids.difference( all_future_update_hash_ids )
         
         self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
-        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
-        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        
+        #
+        
+        self._Execute( 'DELETE FROM {};'.format( repository_unregistered_updates_table_name ) )
+        
+        #
+        
+        good_current_hash_ids = current_update_hash_ids.intersection( all_future_update_hash_ids )
+        
+        current_processed_table_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_processed_table_name ) ) )
+        
+        deletee_processed_table_update_hash_ids = current_processed_table_update_hash_ids.difference( good_current_hash_ids )
+        
+        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_processed_table_name ), ( ( hash_id, ) for hash_id in deletee_processed_table_update_hash_ids ) )
+        
+        #
         
         inserts = []
         
@@ -721,11 +762,9 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
-        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in all_future_update_hash_ids ) )
         
         self._RegisterUpdates( service_id )
-        
-        self._ClearOutstandingWorkCache( service_id )
         
     
     def SetUpdateProcessed( self, service_id: int, update_hash: bytes, content_types: typing.Collection[ int ] ):

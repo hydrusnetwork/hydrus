@@ -2567,34 +2567,35 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ClearOrphanTables( self ):
         
-        service_ids = self._STL( self._Execute( 'SELECT service_id FROM services;' ) )
+        all_table_names = set()
         
-        table_prefixes = []
+        db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
-        table_prefixes.append( 'repository_hash_id_map_' )
-        table_prefixes.append( 'repository_tag_id_map_' )
-        table_prefixes.append( 'repository_updates_' )
-        
-        good_table_names = set()
-        
-        for service_id in service_ids:
+        for db_name in db_names:
             
-            suffix = str( service_id )
+            table_names = self._STS( self._Execute( 'SELECT name FROM {}.sqlite_master WHERE type = ?;'.format( db_name ), ( 'table', ) ) )
             
-            for table_prefix in table_prefixes:
+            if db_name != 'main':
                 
-                good_table_names.add( table_prefix + suffix )
+                table_names = { '{}.{}'.format( db_name, table_name ) for table_name in table_names }
                 
             
+            all_table_names.update( table_names )
+            
         
-        existing_table_names = set()
+        all_surplus_table_names = set()
         
-        existing_table_names.update( self._STS( self._Execute( 'SELECT name FROM sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
-        existing_table_names.update( self._STS( self._Execute( 'SELECT name FROM external_master.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
+        for module in self._modules:
+            
+            surplus_table_names = module.GetSurplusServiceTableNames( all_table_names )
+            
+            all_surplus_table_names.update( surplus_table_names )
+            
         
-        existing_table_names = { name for name in existing_table_names if True in ( name.startswith( table_prefix ) for table_prefix in table_prefixes ) }
-        
-        surplus_table_names = sorted( existing_table_names.difference( good_table_names ) )
+        if len( surplus_table_names ) == 0:
+            
+            HydrusData.ShowText( 'No orphan tables!' )
+            
         
         for table_name in surplus_table_names:
             
@@ -2703,13 +2704,31 @@ class DB( HydrusDB.HydrusDB ):
         init_service_info.append( ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
         init_service_info.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'repository updates' ) )
         init_service_info.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'my tags' ) )
+        init_service_info.append( ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'downloader tags' ) )
         init_service_info.append( ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ) )
         init_service_info.append( ( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, 'local notes' ) )
+        init_service_info.append( ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'favourites' ) )
         init_service_info.append( ( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' ) )
         
         for ( service_key, service_type, name ) in init_service_info:
             
             dictionary = ClientServices.GenerateDefaultServiceDictionary( service_type )
+            
+            if service_key == CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY:
+                
+                from hydrus.client.metadata import ClientRatings
+                
+                dictionary[ 'shape' ] = ClientRatings.STAR
+                
+                like_colours = {}
+                
+                like_colours[ ClientRatings.LIKE ] = ( ( 0, 0, 0 ), ( 240, 240, 65 ) )
+                like_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 200, 80, 120 ) )
+                like_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
+                like_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
+                
+                dictionary[ 'colours' ] = list( like_colours.items() )
+                
             
             self._AddService( service_key, service_type, name, dictionary )
             
@@ -7572,7 +7591,10 @@ class DB( HydrusDB.HydrusDB ):
                 if do_hash_table_join:
                     
                     # temp hashes to mappings to temp tags
-                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, temp_tag_ids_table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                    # old method, does not do EXISTS efficiently, it makes a list instead and checks that
+                    # queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, temp_tag_ids_table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                    # new method, this seems to actually do the correlated scalar subquery, although it does seem to be sqlite voodoo
+                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id AND EXISTS ( SELECT 1 FROM {} WHERE {}.tag_id = {}.tag_id ) );'.format( hash_ids_table_name, table_name, table_name, hash_ids_table_name, temp_tag_ids_table_name, table_name, temp_tag_ids_table_name ) for table_name in table_names ]
                     
                 else:
                     
@@ -7798,7 +7820,9 @@ class DB( HydrusDB.HydrusDB ):
                 else:
                     
                     # temp hashes to mappings to tags to temp namespaces
-                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, mappings_table_name, tags_table_name, temp_namespace_ids_table_name, mappings_table_name, hash_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
+                    # this was originally a 'WHERE EXISTS' thing, but doing that on a three way cross join is too complex for that to work well
+                    # let's hope DISTINCT can save time too
+                    queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id );'.format( hash_ids_table_name, mappings_table_name, tags_table_name, temp_namespace_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                     
                 
             
@@ -14952,6 +14976,85 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to schedule clip files for maintenance failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 461:
+            
+            try:
+                
+                num_rating_services = len( self.modules_services.GetServiceIds( HC.RATINGS_SERVICES ) )
+                
+                if num_rating_services == 0:
+                    
+                    def ask_what_to_do_ratings_service():
+                        
+                        message = 'New clients now start with a simple like/dislike rating service. You are not new, but you have no rating services--would you like to get this default now and try ratings out?'
+                        
+                        from hydrus.client.gui import ClientGUIDialogsQuick
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Get rating service?' )
+                        
+                        return result == QW.QDialog.Accepted
+                        
+                    
+                    add_favourites = self._controller.CallBlockingToQt( None, ask_what_to_do_ratings_service )
+                    
+                    if add_favourites:
+                        
+                        ( service_key, service_type, name ) = ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'favourites' )
+                        
+                        dictionary = ClientServices.GenerateDefaultServiceDictionary( service_type )
+                        
+                        from hydrus.client.metadata import ClientRatings
+                        
+                        dictionary[ 'shape' ] = ClientRatings.STAR
+                        
+                        like_colours = {}
+                        
+                        like_colours[ ClientRatings.LIKE ] = ( ( 0, 0, 0 ), ( 240, 240, 65 ) )
+                        like_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 200, 80, 120 ) )
+                        like_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
+                        like_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
+                        
+                        dictionary[ 'colours' ] = list( like_colours.items() )
+                        
+                        self._AddService( service_key, service_type, name, dictionary )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to add a default favourites service failed. Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'pixiv artist gallery page api parser new urls' ) )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

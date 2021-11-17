@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_462"><a href="#version_462">version 462</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed a recent serious regression that could cause a crash when playing audio in mpv (issue #1007)</li>
+					<li>the main importer file log now does 'get next/all/count imports with status y' calls significantly faster, particularly on very large lists. these calls happen all the time for different status text changes and general 'which import to try next?' work. all busy downloader situations should see CPU gains to regular and background work</li>
+					<li>fixed a problem where importing with the min/max file resolution options set would give a typo error when the size was violated rather than 'ignored'</li>
+					<li>I think I have fixed an issue with subscriptions not wanting to run a query if by random accident that query has an invalid URL selected as the query's 'example url' for various pre-work login and bandwidth tests</li>
+					<li>hydrus can now capture duration/fps of videos that specify two very close fps, e.g. 60 and 59.99. previously, these would default to the 24 fallback and could cause some weirdness in mpv</li>
+					<li>replaced the default pixiv artist page api parser with one that fetches the newer url format, matching the tag search. existing users will see no automatic change but will receive the new parser, so if you are a big pixiv user, you might like to switch 'pixiv artist gallery page api' to the 'new urls' parser variant under _network->downloader components->manage url class links_. note that if you do this, your pixiv artist subscriptions will do a mini-resync (which involves some wasted time/bandwidth) as their urls change!</li>
+					<li>.</li>
+					<li>network redirect improvements:</li>
+					<li>gallery page jobs now give their child 'next gallery page' jobs themselves as a referrer</li>
+					<li>when the gallery downloader gets a 3XX redirect, the file import objects and next gallery pages it makes now get the redirected URL as referral url (previously, it used the original gallery url)</li>
+					<li>when the post downloader gets a 3XX redirect, the redirected url is now added as a primary source url</li>
+					<li>when the post downloader gets a 3XX redirect, child import objects and direct file downloads now get the redirect URL as referral url (previously, it used the original post url)</li>
+					<li>when the raw file downloader gets a 3XX redirect, the redirected url is now added as a primary source url</li>
+					<li>when the raw file downloader gets a 3XX redirect to a Post URL, it now tries to queue that URL back up in the file log, just like when a gallery fetch comes back with a Post URL. some safety code stops potential loops here as well</li>
+					<li>.</li>
+					<li>new services:</li>
+					<li>a new client now starts with a second local tag service called 'downloader tags'. default tag import options are now initialised in a fresh client to pull all file post tags to this service. this should relieve new users' confusion about setting up default tag import options</li>
+					<li>similarly, a new client now starts with a like/dislike rating service called 'favourites'. existing users who have no rating services will be asked if they want to get it on update. many users are unaware of the rating system, so this is a chance to play with it</li>
+					<li>the 'getting started with downloading' 'and '...with ratings' help has some updated screenshots and talk about the new default services and parsing</li>
+					<li>.</li>
+					<li>database fixes:</li>
+					<li>fixed a very slow database query that was involved with file search using unnamespaced tags when other search predicates had already limited the scope of search</li>
+					<li>fixed a similar slow query when the 'bad' search predicate was 'namespace:anything', particularly when the namespace is a wildcard</li>
+					<li>fixed the 'clear orphan tables' database maintenance routine. it had decayed due to bit rot and was deleting new repository processing tracking tables. the routine is now plugged directly into the new database modules system, and any module now can be upgraded to discover surplus service tables. the system has been updated to permit the detection and removal of duplicate tables in the wrong database file, and it also makes a statement if no orphan tables were found</li>
+					<li>the 'metadata resync' repository maintenance task now removes surplus file rows from the processing tracking tables</li>
+					<li>the 'metadata resync' repository maintenance task now corrects content type rows in the main processing tracking table</li>
+					<li>the process of registering updates to a repository is now a little faster, more reliable, repairs basic damage, and keeps more good work when damage needs to be repaired</li>
+					<li>I _think_ the users who were still getting PTR processing errors related to a database confusion about content/definitions update files should now be fixed after another full metadata resync! please let me know if there are still problems</li>
+				</ul>
 				<li><h3 id="version_461"><a href="#version_461">version 461</a></h3></li>
 				<ul>
 					<li>misc:</li>

@@ -711,7 +711,24 @@ def ParseFFMPEGFPSPossibleResults( video_line ):
     
     possible_results.discard( 0 )
     
-    confident = len( possible_results ) <= 1
+    if len( possible_results ) == 0:
+        
+        confident = False
+        
+    else:
+        
+        # if we have 60 and 59.99, that's fine mate
+        max_fps = max( possible_results )
+        
+        if False not in ( possible_fps >= max_fps * 0.95 for possible_fps in possible_results ):
+            
+            confident = True
+            
+        else:
+            
+            confident = len( possible_results ) <= 1
+            
+        
     
     return ( possible_results, confident )
     

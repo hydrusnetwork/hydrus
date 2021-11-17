@@ -268,8 +268,6 @@ def GetDefaultParsers():
     
 def GetDefaultScriptRows():
     
-    from hydrus.core import HydrusData
-    
     script_info = []
     
     script_info.append( ( 32, 'iqdb danbooru', 2, HydrusData.GetNow(), '''["https://danbooru.iqdb.org/", 1, 0, [55, 1, [[], "some hash bytes"]], "file", {}, [[29, 1, ["link to danbooru", [27, 6, [[26, 1, [[62, 2, [0, "td", {"class": "image"}, 1, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "a", {}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 0, "href", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], [[30, 4, ["", 0, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "tag-list"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {"class": "tag-type-1"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "a", {"class": "search-tag"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, "creator"]], [30, 4, ["", 0, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "tag-list"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {"class": "tag-type-3"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "a", {"class": "search-tag"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, "series"]], [30, 4, ["", 0, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "tag-list"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {"class": "tag-type-4"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "a", {"class": "search-tag"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, "character"]], [30, 4, ["", 0, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "tag-list"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {"class": "tag-type-0"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "a", {"class": "search-tag"}, 0, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, ""]], [30, 4, ["", 0, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "post-information"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [2, "Rating:*", null, null, "Rating: Safe"]], [55, 1, [[[0, 8]], "Rating: Safe"]]]], 0, false, "rating"]], [30, 4, ["", 7, [27, 6, [[26, 1, [[62, 2, [0, "section", {"id": "post-information"}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]], [62, 2, [0, "li", {}, null, null, true, [51, 1, [2, "Source:*", null, null, "Source:"]]]], [62, 2, [0, "a", {}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 0, "href", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, [8, 0]]]]]], [30, 4, ["no iqdb match found", 8, [27, 6, [[26, 1, [[62, 2, [0, "th", {}, null, null, false, [51, 1, [3, "", null, null, "example string"]]]]]], 1, "", [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0, false, [false, [51, 1, [2, "Best match", null, null, "Best match"]]]]]]]''' ) )
@@ -650,6 +648,18 @@ def SetDefaultDomainManagerData( domain_manager ):
     #
     
     domain_manager.TryToLinkURLClassesAndParsers()
+    
+    #
+    
+    from hydrus.client.importing.options import TagImportOptions
+    
+    service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True )
+    
+    service_keys_to_service_tag_import_options = { CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY : service_tag_import_options }
+    
+    tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+    
+    domain_manager.SetDefaultFilePostTagImportOptions( tag_import_options )
     
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     

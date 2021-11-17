@@ -2066,6 +2066,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDefaultFilePostTagImportOptions( self, tag_import_options ):
+        
+        with self._lock:
+            
+            self._file_post_default_tag_import_options = tag_import_options
+            
+        
+    
     def SetDefaultGUGKeyAndName( self, gug_key_and_name ):
         
         with self._lock:
