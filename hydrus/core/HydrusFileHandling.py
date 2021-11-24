@@ -244,10 +244,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGAPNGProperties( path )
         
-    elif mime in ( HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_REALMEDIA, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
-        
-        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
-        
     elif mime == HC.APPLICATION_PDF:
         
         num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
@@ -255,6 +251,10 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime == HC.APPLICATION_PSD:
         
         ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
+        
+    elif mime in HC.VIDEO:
+        
+        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
     elif mime in HC.AUDIO:
         

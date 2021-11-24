@@ -259,7 +259,7 @@ def ConvertResolutionToPrettyString( resolution ):
             
         except:
             
-            'broken resolution'
+            return 'broken resolution'
             
         
     

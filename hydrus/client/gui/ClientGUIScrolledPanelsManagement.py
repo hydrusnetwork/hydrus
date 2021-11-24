@@ -1394,7 +1394,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._notebook_tab_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
                 
             
-            self._total_pages_warning = QP.MakeQSpinBox( self._pages_panel, min=5, max=500 )
+            self._total_pages_warning = QP.MakeQSpinBox( self._pages_panel, min=5, max=65565 )
+            
+            tt = 'If you have a gigantic session, or you have very page-spammy subscriptions, you can try boosting this, but be warned it may lead to resource limit crashes. The best solution to a large session is to make it smaller!'
+            
+            self._total_pages_warning.setToolTip( tt )
             
             self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self._pages_panel )
             self._reverse_page_shift_drag_behaviour.setToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )

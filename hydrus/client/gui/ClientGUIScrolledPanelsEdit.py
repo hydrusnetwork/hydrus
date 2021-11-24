@@ -34,6 +34,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -1229,10 +1230,18 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._exclude_deleted = QW.QCheckBox( pre_import_panel )
         
+        tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
+        tt += os.linesep * 2
+        tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
+        
+        self._exclude_deleted.setToolTip( tt )
+        
         self._do_not_check_known_urls_before_importing = QW.QCheckBox( pre_import_panel )
         self._do_not_check_hashes_before_importing = QW.QCheckBox( pre_import_panel )
         
-        tt = 'If hydrus recognises a file\'s URL or hash, it can decide to skip downloading it if it believes it already has it or previously deleted it. The logic behind this gets quite complicated, and it is usually best to let it work normally. It saves a huge amount of bandwidth.'
+        tt = 'DO NOT SET THESE EXPENSIVE OPTIONS UNLESS YOU KNOW YOU NEED THEM FOR THIS ONE JOB'
+        tt += os.linesep * 2
+        tt += 'If hydrus recognises a file\'s URL or hash, if it is confident it already has it or previously deleted it, it will normally skip the download, saving a huge amount of time and bandwidth. The logic behind this gets quite complicated, and it is usually best to let it work normally.'
         tt += os.linesep * 2
         tt += 'However, if you believe the clientside url mappings or serverside hashes are inaccurate and the file is being wrongly skipped, turn these on to force a download. Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to turn these on for a file maintenance job that is filling in missing files, as missing files are automatically detected and essentially turn these on for you on a per-file basis.'
         
@@ -1240,6 +1249,10 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         self._do_not_check_hashes_before_importing.setToolTip( tt )
         
         self._allow_decompression_bombs = QW.QCheckBox( pre_import_panel )
+        
+        tt = 'This is an old setting, it basically just rejects all jpegs and pngs with more than a 1GB bitmap, or about 250-350 Megapixels. In can be useful if you have an older computer that will die at a 16,000x22,000 png.'
+        
+        self._allow_decompression_bombs.setToolTip( tt )
         
         self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )
@@ -1250,11 +1263,20 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         self._max_gif_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
         self._max_gif_size.SetValue( 32 * 1024 * 1024 )
         
+        tt = 'This catches most of those gif conversions of webms. These files are low quality but huge and mostly a waste of storage and bandwidth.'
+        
+        self._max_gif_size.setToolTip( tt )
+        
         self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
         self._min_resolution.SetValue( ( 50, 50 ) )
         
         self._max_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
         self._max_resolution.SetValue( ( 8192, 8192 ) )
+        
+        tt = 'If either width or height is violated, the file will fail this test and be ignored. It does not have to be both.'
+        
+        self._min_resolution.setToolTip( tt )
+        self._max_resolution.setToolTip( tt )
         
         #
         
@@ -1278,11 +1300,11 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        presentation_panel = ClientGUICommon.StaticBox( self, 'presentation options' )
+        presentation_static_box = ClientGUICommon.StaticBox( self, 'presentation options' )
         
-        self._present_new_files = QW.QCheckBox( presentation_panel )
-        self._present_already_in_inbox_files = QW.QCheckBox( presentation_panel )
-        self._present_already_in_archive_files = QW.QCheckBox( presentation_panel )
+        presentation_import_options = file_import_options.GetPresentationImportOptions()
+        
+        self._presentation_import_options_edit_panel = EditPresentationImportOptions( presentation_static_box, presentation_import_options )
         
         #
         
@@ -1307,14 +1329,6 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         self._auto_archive.setChecked( automatic_archive )
         self._associate_primary_urls.setChecked( associate_primary_urls )
         self._associate_source_urls.setChecked( associate_source_urls )
-        
-        #
-        
-        ( present_new_files, present_already_in_inbox_files, present_already_in_archive_files ) = file_import_options.GetPresentationOptions()
-        
-        self._present_new_files.setChecked( present_new_files )
-        self._present_already_in_inbox_files.setChecked( present_already_in_inbox_files )
-        self._present_already_in_archive_files.setChecked( present_already_in_archive_files )
         
         #
         
@@ -1367,15 +1381,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        rows = []
-        
-        rows.append( ( 'present new files', self._present_new_files ) )
-        rows.append( ( 'present \'already in db\' files in inbox', self._present_already_in_inbox_files ) )
-        rows.append( ( 'present \'already in db\' files in archive', self._present_already_in_archive_files ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( presentation_panel, rows )
-        
-        presentation_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        presentation_static_box.Add( self._presentation_import_options_edit_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1384,7 +1390,9 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         
@@ -1432,15 +1440,13 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         associate_primary_urls = self._associate_primary_urls.isChecked()
         associate_source_urls = self._associate_source_urls.isChecked()
         
-        present_new_files = self._present_new_files.isChecked()
-        present_already_in_inbox_files = self._present_already_in_inbox_files.isChecked()
-        present_already_in_archive_files = self._present_already_in_archive_files.isChecked()
+        presentation_import_options = self._presentation_import_options_edit_panel.GetValue()
         
         file_import_options = FileImportOptions.FileImportOptions()
         
         file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        file_import_options.SetPresentationImportOptions( presentation_import_options )
         
         return file_import_options
         
@@ -2044,6 +2050,152 @@ class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ) -> HC.noneable_int:
         
         return self._value.GetValue()
+        
+    
+class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        #
+        
+        self._presentation_status = ClientGUICommon.BetterChoice( self )
+        
+        for value in ( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD, PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY, PresentationImportOptions.PRESENTATION_STATUS_NONE ):
+            
+            self._presentation_status.addItem( PresentationImportOptions.presentation_status_enum_str_lookup[ value ], value )
+            
+        
+        tt = 'All files means \'successful\' and \'already in db\'.'
+        tt += os.linesep * 2
+        tt += 'New means only \'successful\'.'
+        tt += os.linesep * 2
+        tt += 'None means this is a silent importer. This is rarely useful.'
+        
+        self._presentation_status.setToolTip( tt )
+        
+        self._presentation_inbox = ClientGUICommon.BetterChoice( self )
+        
+        tt = 'Inbox or archive means all files.'
+        tt += os.linesep * 2
+        tt += 'Must be in inbox means only inbox files _at the time of the presentation_. This can be neat as you process and revisit currently watched threads.'
+        tt += os.linesep * 2
+        tt += 'Or in inbox (which only shows if you are set to only see new files) allows already in db results if they are currently in the inbox. Essentially you are just excluding already-in-archive files.'
+        
+        self._presentation_inbox.setToolTip( tt )
+        
+        self._presentation_location = ClientGUICommon.BetterChoice( self )
+        
+        tt = 'This is mostly for technical purposes on hydev\'s end, but if you want you can show what is currently in the trash as well.'
+        
+        self._presentation_location.setToolTip( tt )
+        
+        for value in ( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES, PresentationImportOptions.PRESENTATION_LOCATION_IN_TRASH_TOO ):
+            
+            self._presentation_location.addItem( PresentationImportOptions.presentation_location_enum_str_lookup[ value ], value )
+            
+        
+        #
+        
+        self._presentation_status.SetValue( presentation_import_options.GetPresentationStatus() )
+        
+        self._UpdateInboxChoices()
+        
+        self._presentation_inbox.SetValue( presentation_import_options.GetPresentationInbox() )
+        self._presentation_location.SetValue( presentation_import_options.GetPresentationLocation() )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'An importer will try to import everything in its queue, but it does not have to _show_ all the successful results in the import page or subscription button/page. Many advanced users will set this to only show _new_ results to skip seeing \'already in db\' files.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._presentation_status, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._presentation_inbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._presentation_location, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._presentation_status.currentIndexChanged.connect( self._UpdateInboxChoices )
+        self._presentation_status.currentIndexChanged.connect( self._UpdateEnabled )
+        
+    
+    def _UpdateEnabled( self ):
+        
+        enabled = self._presentation_status.GetValue() != PresentationImportOptions.PRESENTATION_STATUS_NONE
+        
+        self._presentation_inbox.setEnabled( enabled )
+        self._presentation_location.setEnabled( enabled )
+        
+    
+    def _UpdateInboxChoices( self ):
+        
+        do_it = False
+        
+        previous_presentation_inbox = self._presentation_inbox.GetValue()
+        
+        presentation_status = self._presentation_status.GetValue()
+        
+        if presentation_status == PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY:
+            
+            if self._presentation_inbox.count() != 3:
+                
+                do_it = True
+                
+                allowed_values = ( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC, PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX, PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+                
+            
+        else:
+            
+            if self._presentation_inbox.count() != 2:
+                
+                do_it = True
+                
+                allowed_values = ( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC, PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX )
+                
+                if previous_presentation_inbox == PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX:
+                    
+                    previous_presentation_inbox = PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC
+                    
+                
+            
+        
+        if do_it:
+            
+            self._presentation_inbox.clear()
+            
+            for value in allowed_values:
+                
+                self._presentation_inbox.addItem( PresentationImportOptions.presentation_inbox_enum_str_lookup[ value ], value )
+                
+            
+            self._presentation_inbox.SetValue( previous_presentation_inbox )
+            
+        
+    
+    def GetValue( self ) -> PresentationImportOptions.PresentationImportOptions:
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( self._presentation_status.GetValue() )
+        presentation_import_options.SetPresentationInbox( self._presentation_inbox.GetValue() )
+        presentation_import_options.SetPresentationLocation( self._presentation_location.GetValue() )
+        
+        return presentation_import_options
         
     
 class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):

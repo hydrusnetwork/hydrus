@@ -208,7 +208,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
-        self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'presentation' )
+        self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'file publication' )
         
         self._show_a_popup_while_working = QW.QCheckBox( self._file_presentation_panel )
         self._show_a_popup_while_working.setToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
@@ -282,11 +282,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        label = 'If you like, the subscription can send its files to popup buttons or pages directly. The files it sends are shaped by the \'presentation\' options in _file import options_.'
+        
+        st = ClientGUICommon.BetterStaticText( self._file_presentation_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        self._file_presentation_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         rows = []
         
         rows.append( ( 'show a popup while working: ', self._show_a_popup_while_working ) )
-        rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
-        rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish presented files to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'publish presented files to a page: ', self._publish_files_to_page ) )
         rows.append( ( 'publish to a specific label: ', self._publish_label_override ) )
         rows.append( ( 'publish all queries to the same page/popup button: ', self._merge_query_publish_events ) )
         
@@ -1209,7 +1217,17 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        label = 'The tag import options here is only for setting \'additional tags\' for this single query! If you want to change the parsed tags or do subscription-wide \'additional tags\', jump up a level to the edit subscriptions dialog.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         

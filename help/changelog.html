@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_463"><a href="#version_463">version 463</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>ogv files (ogg with a video stream) are now recognised by the client! they will get resolution, duration, num frames and now show in the media viewer correctly as resizeable videos. all your existing ogg files will be scheduled for a rescan on update</li>
+					<li>wrote new downloader objects to fix deviant art tag search. all clients will automatically update and should with luck just be working again with the same old 'deviant art tag search' downloader</li>
+					<li>added prototype copy/paste buttons to the manage ratings dialog. the copy button also grabs 'null' ratings, let me know how you get on here and we'll tweak as needed</li>
+					<li>file searches with namespaced and unnamespaced tags should now run just a little faster</li>
+					<li>most file searches with multiple search predicates that include normal tags should now run just a little faster</li>
+					<li>the file log right-click menu now shows 'delete x yyy files from the queue' for deleted, ignored, failed, and skipped states separately</li>
+					<li>the tag siblings + parents display sync manager now forces more wait time before it does work. it now waits for the database and gui to be free of pending or current background work. this _should_ stop slower clients getting into hangs when the afterwork updates pile up and overwhelm the main work</li>
+					<li>the option 'warn at this many pages' under _options->gui pages_ now has a max value of 65535, up from 500. if you are a madman or you have very page-spammy subscriptions, feel free to try boosting this super high. be warned this may lead to resource limit crashes</li>
+					<li>the 'max pages' value that triggers a full yes/no dialog on page open is now set as the maximum value of 500 and 2 x the 'warn at this many pages' value</li>
+					<li>the 'max pages' dialog trigger now only fires if there are no dialogs currently open (this should fix a nested dialog crash when page-publishing subscriptions goes bananas)</li>
+					<li>improved error reporting for unsolveable cloudflare captcha errors</li>
+					<li>added clarification text to the edit subscription query dialog regarding the tag import options there</li>
+					<li>added/updated a bunch of file import options tooltips</li>
+					<li>.</li>
+					<li>new presentation import options:</li>
+					<li>the 'presentation' section of 'file import options' has been completely overhauled. it can do more, and is more human-friendly</li>
+					<li>rather than the old three checkboxes of new/already-in-inbox/already-in-archive, you now choose from three dropdowns--do you want all/new/none, do you want all/only-inbox/inbox-too, and do you want to my-files/and-trash-too. it is now possible to show 'in inbox' exclusively, at the time of publish (e.g. when you highlight)</li>
+					<li>added a little help UI text around the places presentation is used</li>
+					<li>the downloader and watcher page's list right-click menu entries for 'show xxx files' is now a submenu, uses the new presentation import options, shows 'show inbox files', and if you click on one row it says what the default is and excludes other entries if they are duplicates</li>
+					<li>.</li>
+					<li>boring presentation import options stuff:</li>
+					<li>presentation options are now in their own object and will be easier to update in future</li>
+					<li>the 'should I present' code is radically cleaned up and refactored to a single central object</li>
+					<li>presentation filtering in general has more sophisticated logic and is faster when used on a list (e.g. when you highlight a decent sized downloader and it has to figure out which thumbs to show). it is now careful about only checking for inbox status on outstanding files</li>
+					<li>presentation now always checks file domain, whereas before this was ad-hoc and scattered around (and in some buggy cases lead to long-deleted files appearing in import views)</li>
+					<li>added a full suite of unit tests to ensure the presentation import options object is making the right decisions and filtering efficiently at each stage</li>
+					<li>.</li>
+					<li>boring multiple local file services work:</li>
+					<li>I basically moved a bunch of file search code from 1 file services to n file services:</li>
+					<li>the file storage module can now filter file ids to a complex location search context</li>
+					<li>namespace:anything searches of various sorts now use complex location search contexts</li>
+					<li>wildcard tag searches now use complex location search contexts</li>
+					<li>counted tag searches now use complex location search contexts</li>
+					<li>search code that uses complex location search contexts now cross-references its file results in all cases</li>
+					<li>I now have a great plan to add deleted files search and keep it working quick. this will be the next step, and then I can do efficient complex-location regular tag search and hopefully just switch over the autocomplete control to allow deleted files search</li>
+				</ul>
 				<li><h3 id="version_462"><a href="#version_462">version 462</a></h3></li>
 				<ul>
 					<li>misc:</li>

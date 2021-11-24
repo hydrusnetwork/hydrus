@@ -461,6 +461,8 @@ class TagDisplayMaintenanceManager( object ):
             
             while not ( HG.view_shutdown or self._shutdown ):
                 
+                self._controller.WaitUntilViewFree()
+                
                 if self._WorkPermitted() and self._WorkToDo():
                     
                     try:

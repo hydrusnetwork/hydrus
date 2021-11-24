@@ -2906,7 +2906,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
-        MAX_TOTAL_PAGES = 500
+        MAX_TOTAL_PAGES = max( 500, WARNING_TOTAL_PAGES * 2 )
         
         (
             total_active_page_count,
@@ -2924,7 +2924,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if not HG.no_page_limit_mode:
             
-            if total_active_page_count >= MAX_TOTAL_PAGES:
+            if total_active_page_count >= MAX_TOTAL_PAGES and not ClientGUIFunctions.DialogIsOpen():
                 
                 message = 'The client should not have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open, as it leads to program instability! Are you sure you want to open more pages?'
                 

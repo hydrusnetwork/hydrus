@@ -448,8 +448,14 @@ def GetMime( path ):
         
     elif mime_text == 'ogg':
         
-        return HC.AUDIO_OGG
-        
+        if has_video:
+            
+            return HC.VIDEO_OGV
+            
+        else:
+            
+            return HC.AUDIO_OGG
+            
         
     elif 'rm' in mime_text:
         

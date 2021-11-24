@@ -3,7 +3,7 @@ import os
 import random
 import unittest
 
-from mock import patch
+from unittest.mock import patch
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -16,6 +16,7 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
@@ -228,12 +229,6 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         
-        present_new_files = True
-        present_already_in_inbox_files = True
-        present_already_in_archive_files = True
-        
-        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
-        
         #
         
         self.assertFalse( file_import_options.ExcludesDeleted() )
@@ -244,13 +239,6 @@ class TestFileImportOptions( unittest.TestCase ):
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
-        
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
-        
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_DELETED, False ) )
         
         #
         
@@ -371,41 +359,6 @@ class TestFileImportOptions( unittest.TestCase ):
             
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 2800, 3800 )
-        
-        #
-        
-        present_new_files = False
-        
-        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
-        
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
-        
-        #
-        
-        present_new_files = True
-        present_already_in_inbox_files = False
-        
-        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
-        
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
-        
-        #
-        
-        present_already_in_inbox_files = True
-        present_already_in_archive_files = False
-        
-        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
-        
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
     
 def GetNotesMediaResult( hash, names_to_notes ):
@@ -570,6 +523,337 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
+    
+class TestPresentationImportOptions( unittest.TestCase ):
+    
+    def test_presentation_import_options( self ):
+        
+        new_and_inboxed_hash = HydrusData.GenerateKey()
+        new_and_archived_hash = HydrusData.GenerateKey()
+        already_in_and_inboxed_hash = HydrusData.GenerateKey()
+        already_in_and_archived_hash = HydrusData.GenerateKey()
+        new_and_inboxed_but_trashed_hash = HydrusData.GenerateKey()
+        skipped_hash = HydrusData.GenerateKey()
+        deleted_hash = HydrusData.GenerateKey()
+        failed_hash = HydrusData.GenerateKey()
+        
+        hashes_and_statuses = [
+            ( new_and_inboxed_hash, CC.STATUS_SUCCESSFUL_AND_NEW ),
+            ( new_and_archived_hash, CC.STATUS_SUCCESSFUL_AND_NEW ),
+            ( already_in_and_inboxed_hash, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ),
+            ( already_in_and_archived_hash, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ),
+            ( new_and_inboxed_but_trashed_hash, CC.STATUS_SUCCESSFUL_AND_NEW ),
+            ( skipped_hash, CC.STATUS_SKIPPED ),
+            ( deleted_hash, CC.STATUS_DELETED ),
+            ( failed_hash, CC.STATUS_ERROR )
+        ]
+        
+        # all good
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', 'not used' )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # all good and trash too
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_TRASH_TOO )
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', 'not used' )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # silent
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NONE )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        expected_result = []
+        
+        HG.test_controller.SetRead( 'inbox_hashes', 'not used' )
+        HG.test_controller.SetRead( 'filter_hashes', 'not used' )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        self.assertEqual( result, expected_result )
+        
+        # new files only
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', 'not used' )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # inbox only
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_inbox_filter_expected_result = {
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        }
+        
+        inbox_filter_answer = {
+            new_and_inboxed_hash,
+            already_in_and_inboxed_hash,
+            new_and_inboxed_but_trashed_hash
+        }
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            already_in_and_inboxed_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            already_in_and_inboxed_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', inbox_filter_answer )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'inbox_hashes' )
+        
+        self.assertEqual( args, ( pre_inbox_filter_expected_result, ) )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # new only
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', 'not used' )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # new and inbox only
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_inbox_filter_expected_result = {
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            new_and_inboxed_but_trashed_hash
+        }
+        
+        inbox_filter_answer = {
+            new_and_inboxed_hash,
+            new_and_inboxed_but_trashed_hash
+        }
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', inbox_filter_answer )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'inbox_hashes' )
+        
+        self.assertEqual( args, ( pre_inbox_filter_expected_result, ) )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
+        # new or inbox only
+        
+        HG.test_controller.ClearReads( 'inbox_hashes' )
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+        presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES )
+        
+        pre_inbox_filter_expected_result = {
+            already_in_and_inboxed_hash,
+            already_in_and_archived_hash
+        }
+        
+        inbox_filter_answer = {
+            already_in_and_inboxed_hash
+        }
+        
+        pre_filter_expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+            new_and_inboxed_but_trashed_hash
+        ]
+        
+        expected_result = [
+            new_and_inboxed_hash,
+            new_and_archived_hash,
+            already_in_and_inboxed_hash,
+        ]
+        
+        HG.test_controller.SetRead( 'inbox_hashes', inbox_filter_answer )
+        HG.test_controller.SetRead( 'filter_hashes', expected_result )
+        
+        result = presentation_import_options.GetPresentedHashes( hashes_and_statuses )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'inbox_hashes' )
+        
+        self.assertEqual( args, ( pre_inbox_filter_expected_result, ) )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
+        
+        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        
+        self.assertEqual( result, expected_result )
+        
     
 class TestTagImportOptions( unittest.TestCase ):
     

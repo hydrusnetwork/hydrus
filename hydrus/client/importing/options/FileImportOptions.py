@@ -6,12 +6,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 
 class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self ):
         
@@ -29,27 +30,25 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._automatic_archive = False
         self._associate_primary_urls = True
         self._associate_source_urls = True
-        self._present_new_files = True
-        self._present_already_in_inbox_files = True
-        self._present_already_in_archive_files = True
+        self._presentation_import_options = PresentationImportOptions.PresentationImportOptions()
         
     
     def _GetSerialisableInfo( self ):
         
         pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
         post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls )
-        presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
+        serialisable_presentation_import_options = self._presentation_import_options.GetSerialisableTuple()
         
-        return ( pre_import_options, post_import_options, presentation_options )
+        return ( pre_import_options, post_import_options, serialisable_presentation_import_options )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( pre_import_options, post_import_options, presentation_options ) = serialisable_info
+        ( pre_import_options, post_import_options, serialisable_presentation_import_options ) = serialisable_info
         
         ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
         ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls ) = post_import_options
-        ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files ) = presentation_options 
+        self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -120,6 +119,42 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( pre_import_options, post_import_options, presentation_options )
             
             return ( 5, new_serialisable_info )
+            
+        
+        if version == 5:
+            
+            ( pre_import_options, post_import_options, presentation_options ) = old_serialisable_info
+            
+            ( present_new_files, present_already_in_inbox_files, present_already_in_archive_files ) = presentation_options
+            
+            presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+            
+            if not present_new_files:
+                
+                presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NONE )
+                
+            else:
+                
+                if present_already_in_archive_files and present_already_in_inbox_files:
+                    
+                    presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD )
+                    
+                else:
+                    
+                    presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+                    
+                    if present_already_in_inbox_files:
+                        
+                        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+                        
+                    
+                
+            
+            serialisable_presentation_import_options = presentation_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options )
+            
+            return ( 6, new_serialisable_info )
             
         
     
@@ -215,11 +250,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._exclude_deleted
         
     
-    def GetPresentationOptions( self ):
+    def GetPresentationImportOptions( self ):
         
-        presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
-        
-        return presentation_options
+        return self._presentation_import_options
         
     
     def GetPreImportOptions( self ):
@@ -281,35 +314,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        presentation_statements = []
+        statements.append( self._presentation_import_options.GetSummary() )
         
-        if self._present_new_files:
-            
-            presentation_statements.append( 'new' )
-            
-        
-        if self._present_already_in_inbox_files:
-            
-            presentation_statements.append( 'already in inbox' )
-            
-        
-        if self._present_already_in_archive_files:
-            
-            presentation_statements.append( 'already in archive' )
-            
-        
-        if len( presentation_statements ) == 0:
-            
-            statements.append( 'not presenting any files' )
-            
-        elif len( presentation_statements ) == 3:
-            
-            statements.append( 'presenting all files' )
-            
-        else:
-            
-            statements.append( 'presenting ' + ', '.join( presentation_statements ) + ' files' )
-            
+        #
         
         summary = os.linesep.join( statements )
         
@@ -323,11 +330,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._associate_source_urls = associate_source_urls
         
     
-    def SetPresentationOptions( self, present_new_files, present_already_in_inbox_files, present_already_in_archive_files ):
+    def SetPresentationImportOptions( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
-        self._present_new_files = present_new_files
-        self._present_already_in_inbox_files = present_already_in_inbox_files
-        self._present_already_in_archive_files = present_already_in_archive_files
+        self._presentation_import_options = presentation_import_options
         
     
     def SetPreImportOptions( self, exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
@@ -361,21 +366,6 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def DoNotCheckKnownURLsBeforeImporting( self ):
         
         return self._do_not_check_known_urls_before_importing
-        
-    
-    def ShouldNotPresentIgnorantOfInbox( self, status ):
-        
-        return ClientImportOptions.NewInboxArchiveNonMatchIgnorantOfInbox( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files, status )
-        
-    
-    def ShouldPresent( self, status, inbox ):
-        
-        return ClientImportOptions.NewInboxArchiveMatch( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files, status, inbox )
-        
-    
-    def ShouldPresentIgnorantOfInbox( self, status ):
-        
-        return ClientImportOptions.NewInboxArchiveMatchIgnorantOfInbox( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files, status )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS ] = FileImportOptions

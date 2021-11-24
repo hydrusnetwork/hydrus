@@ -6045,9 +6045,9 @@ class DB( HydrusDB.HydrusDB ):
         return ( storage_tag_data, display_tag_data )
         
     
-    def _GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, hash_ids, namespace_wildcard = None, job_key = None ):
+    def _GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, hash_ids, namespace_wildcard = None, job_key = None ):
         
-        if namespace_wildcard == '*':
+        if namespace_wildcard in ( '*', '' ):
             
             namespace_wildcard = None
             
@@ -6063,18 +6063,25 @@ class DB( HydrusDB.HydrusDB ):
         
         with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
             
-            # reason why I JOIN each table rather than join just the UNION is based on previous hell with having query planner figure out a "( UNION ) NATURAL JOIN stuff" situation
+            # reason why I JOIN each table rather than join just the UNION is based on previous hell with having query planner figure out a "( a UNION b UNION c ) NATURAL JOIN stuff" situation
             # although this sometimes makes certifiable 2KB ( 6 UNION * 4-table ) queries, it actually works fast
             
             # OK, a new problem is mass UNION leads to terrible cancelability because the first row cannot be fetched until the first n - 1 union queries are done
             # I tried some gubbins to try to do a pseudo table-union rather than query union and do 'get files->distinct tag count for this union of tables, and fetch hash_ids first on the union', but did not have luck
             # so we are just going to do it in bits mate. this also reduces memory use from the distinct-making UNION with large numbers of hash_ids
             
-            mapping_and_tag_table_names = self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
+            ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self.modules_tag_search.ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
+            
+            mapping_and_tag_table_names = set()
+            
+            for ( file_service_key, tag_search_context ) in file_and_tag_domain_pairs:
+                
+                mapping_and_tag_table_names.update( self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context ) )
+                
             
             results = []
             
-            BLOCK_SIZE = int( len( hash_ids ) ** 0.5 ) # go for square root for now
+            BLOCK_SIZE = max( 64, int( len( hash_ids ) ** 0.5 ) ) # go for square root for now
             
             for group_of_hash_ids in HydrusData.SplitIteratorIntoChunks( hash_ids, BLOCK_SIZE ):
                 
@@ -6826,7 +6833,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def sort_longest_first_key( s ):
                 
-                return -len( s )
+                return ( 1 if HydrusTags.IsUnnamespaced( s ) else 0, -len( s ) )
                 
             
             tags_to_include = list( tags_to_include )
@@ -6837,19 +6844,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, tag, job_key = job_key )
+                    tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, tag, job_key = job_key )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self.modules_files_metadata_basic.inbox_hash_ids ):
                     
-                    tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, tag, hash_ids = self.modules_files_metadata_basic.inbox_hash_ids, hash_ids_table_name = 'file_inbox', job_key = job_key )
+                    tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, tag, hash_ids = self.modules_files_metadata_basic.inbox_hash_ids, hash_ids_table_name = 'file_inbox', job_key = job_key )
                     
                 else:
                     
                     with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
                         
-                        self._AnalyzeTempTable( temp_table_name )
-                        
-                        tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        tag_query_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -6867,7 +6872,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None or ( is_inbox and len( query_hash_ids ) == len( self.modules_files_metadata_basic.inbox_hash_ids ) ):
                     
-                    namespace_query_hash_ids = self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, namespace_wildcard = namespace, job_key = job_key )
+                    namespace_query_hash_ids = self._GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace_wildcard = namespace, job_key = job_key )
                     
                 else:
                     
@@ -6875,7 +6880,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        namespace_query_hash_ids = self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        namespace_query_hash_ids = self._GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -6893,7 +6898,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if query_hash_ids is None:
                     
-                    wildcard_query_hash_ids = self._GetHashIdsFromWildcard( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, wildcard, job_key = job_key )
+                    wildcard_query_hash_ids = self._GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, wildcard, job_key = job_key )
                     
                 else:
                     
@@ -6901,7 +6906,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        wildcard_query_hash_ids = self._GetHashIdsFromWildcard( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        wildcard_query_hash_ids = self._GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -6939,7 +6944,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if location_search_context.IsAllKnownFiles():
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, job_key = job_key ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self._GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, job_key = job_key ) )
                 
             else:
                 
@@ -7040,7 +7045,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                unwanted_hash_ids = self._GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -7057,7 +7062,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
+                unwanted_hash_ids = self._GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -7074,7 +7079,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                unwanted_hash_ids = self._GetHashIdsFromWildcard( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                unwanted_hash_ids = self._GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
                 query_hash_ids.difference_update( unwanted_hash_ids )
                 
@@ -7363,7 +7368,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if is_zero or is_anything_but_zero:
                     
-                    nonzero_tag_query_hash_ids = self._GetHashIdsThatHaveTags( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, hash_ids_table_name = temp_table_name, namespace_wildcard = namespace, job_key = job_key )
+                    nonzero_tag_query_hash_ids = self._GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, hash_ids_table_name = temp_table_name, namespace_wildcard = namespace, job_key = job_key )
                     nonzero_tag_query_hash_ids_populated = True
                     
                     if is_zero:
@@ -7380,7 +7385,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( specific_number_tests ) > 0:
                 
-                hash_id_tag_counts = self._GetHashIdsAndNonZeroTagCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_key, tag_search_context, query_hash_ids, namespace_wildcard = namespace, job_key = job_key )
+                hash_id_tag_counts = self._GetHashIdsAndNonZeroTagCounts( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, query_hash_ids, namespace_wildcard = namespace, job_key = job_key )
                 
                 good_tag_count_hash_ids = { hash_id for ( hash_id, count ) in hash_id_tag_counts if megalambda( count ) }
                 
@@ -7416,7 +7421,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                ( good_hash_ids, was_file_location_cross_referenced ) = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -7430,7 +7435,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                ( good_hash_ids, was_file_location_cross_referenced ) = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                good_hash_ids = self._GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_search_context, tag_search_context, namespace, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -7500,7 +7505,10 @@ class DB( HydrusDB.HydrusDB ):
         return self._GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
     
-    def _GetHashIdsFromTag( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, tag, hash_ids = None, hash_ids_table_name = None, allow_unnamespaced_to_fetch_namespaced = True, job_key = None ):
+    def _GetHashIdsFromTag( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, tag, hash_ids = None, hash_ids_table_name = None, allow_unnamespaced_to_fetch_namespaced = True, job_key = None ):
+        
+        # we'll replace this with file_service_ids from the ConvertLocationAndTagContextToCoveringCachePairs replacement and then filter later
+        file_service_key = location_search_context.GetFileServiceKey()
         
         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
@@ -7733,159 +7741,217 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHashIdsFromWildcard( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def _GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
-        if namespace_wildcard == '*':
+        if namespace_wildcard in ( '*', '' ):
             
-            namespace_wildcard = ''
+            namespace_wildcard = None
             
         
         if subtag_wildcard == '*':
             
-            if namespace_wildcard == '':
-                
-                namespace_wildcard = None
-                
-            
-            return self._GetHashIdsThatHaveTags( tag_display_type, file_service_key, tag_search_context, namespace_wildcard = namespace_wildcard, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            return self._GetHashIdsThatHaveTagsComplexLocation( tag_display_type, location_search_context, tag_search_context, namespace_wildcard = namespace_wildcard, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
         
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        results = set()
         
-        with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
+        ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self.modules_tag_search.ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
+        
+        if namespace_wildcard is None:
             
-            self.modules_tag_search.GetSubtagIdsFromWildcardIntoTable( file_service_id, tag_service_id, subtag_wildcard, temp_subtag_ids_table_name, job_key = job_key )
+            possible_namespace_ids = []
             
-            if namespace_wildcard != '':
+        else:
+            
+            possible_namespace_ids = self.modules_tag_search.GetNamespaceIdsFromWildcard( namespace_wildcard )
+            
+            if len( possible_namespace_ids ) == 0:
                 
-                possible_namespace_ids = self.modules_tag_search.GetNamespaceIdsFromWildcard( namespace_wildcard )
+                return set()
                 
-                with self._MakeTemporaryIntegerTable( possible_namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
-                    
-                    return self._GetHashIdsFromNamespaceIdsSubtagIdsTables( tag_display_type, file_service_key, tag_search_context, temp_namespace_ids_table_name, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
-                    
+            
+        
+        with self._MakeTemporaryIntegerTable( possible_namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+            
+            if namespace_wildcard is None:
+                
+                namespace_ids_table_name = None
                 
             else:
                 
+                namespace_ids_table_name = temp_namespace_ids_table_name
+                
+            
+            for ( file_service_key, tag_search_context ) in file_and_tag_domain_pairs:
+                
+                some_results = self._GetHashIdsFromWildcardSimpleLocation( tag_display_type, file_service_key, tag_search_context, subtag_wildcard, namespace_ids_table_name = namespace_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                
+                if len( results ) == 0:
+                    
+                    results = some_results
+                    
+                else:
+                    
+                    results.update( some_results )
+                    
+                
+            
+        
+        if not file_location_is_cross_referenced:
+            
+            results = self.modules_files_storage.FilterHashIds( location_search_context, results )
+            
+        
+        return results
+        
+    
+    def _GetHashIdsFromWildcardSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, subtag_wildcard, namespace_ids_table_name = None, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+        
+        with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
+            
+            file_service_id = self.modules_services.GetServiceId( file_service_key )
+            tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+            
+            # when ConvertLocationAndTagContextToCoveringCachePairs no longer needs tag search context, convert this to location search context and bump it up to the complexlocation method!
+            
+            self.modules_tag_search.GetSubtagIdsFromWildcardIntoTable( file_service_id, tag_service_id, subtag_wildcard, temp_subtag_ids_table_name, job_key = job_key )
+            
+            if namespace_ids_table_name is None:
+                
                 return self._GetHashIdsFromSubtagIdsTable( tag_display_type, file_service_key, tag_search_context, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                
+            else:
+                
+                return self._GetHashIdsFromNamespaceIdsSubtagIdsTables( tag_display_type, file_service_key, tag_search_context, namespace_ids_table_name, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
             
         
     
-    def _GetHashIdsThatHaveTags( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace_wildcard = None, hash_ids_table_name = None, job_key = None ):
+    def _GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, namespace_wildcard = None, hash_ids_table_name = None, job_key = None ):
         
-        if namespace_wildcard == '*':
+        if not location_search_context.SearchesAnything():
+            
+            return set()
+            
+        
+        if namespace_wildcard in ( '*', '' ):
             
             namespace_wildcard = None
             
         
         if namespace_wildcard is None:
             
-            namespace_ids = []
+            possible_namespace_ids = []
             
         else:
             
-            namespace_ids = self.modules_tag_search.GetNamespaceIdsFromWildcard( namespace_wildcard )
+            possible_namespace_ids = self.modules_tag_search.GetNamespaceIdsFromWildcard( namespace_wildcard )
             
-        
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
-        
-        with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
-            
-            mapping_and_tag_table_names = self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
-            
-            if hash_ids_table_name is None:
+            if len( possible_namespace_ids ) == 0:
                 
-                if namespace_wildcard is None:
-                    
-                    # hellmode
-                    queries = [ 'SELECT DISTINCT hash_id FROM {};'.format( mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
-                    
-                else:
-                    
-                    # temp namespaces to tags to mappings
-                    queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( namespace_id ) CROSS JOIN {} USING ( tag_id );'.format( temp_namespace_ids_table_name, tags_table_name, mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
-                    
+                return set()
+                
+            
+        
+        results = set()
+        
+        with self._MakeTemporaryIntegerTable( possible_namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+            
+            if namespace_wildcard is None:
+                
+                namespace_ids_table_name = None
                 
             else:
                 
-                if namespace_wildcard is None:
+                namespace_ids_table_name = temp_namespace_ids_table_name
+                
+            
+            ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self.modules_tag_search.ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
+            
+            if not file_location_is_cross_referenced and hash_ids_table_name is not None:
+                
+                file_location_is_cross_referenced = True
+                
+            
+            for ( file_service_key, tag_search_context ) in file_and_tag_domain_pairs:
+                
+                some_results = self._GetHashIdsThatHaveTagsSimpleLocation( tag_display_type, file_service_key, tag_search_context, namespace_ids_table_name = namespace_ids_table_name, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                
+                if len( results ) == 0:
                     
-                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, mappings_table_name, mappings_table_name, hash_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
+                    results = some_results
                     
                 else:
                     
-                    # temp hashes to mappings to tags to temp namespaces
-                    # this was originally a 'WHERE EXISTS' thing, but doing that on a three way cross join is too complex for that to work well
-                    # let's hope DISTINCT can save time too
-                    queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id );'.format( hash_ids_table_name, mappings_table_name, tags_table_name, temp_namespace_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
+                    results.update( some_results )
                     
                 
             
-            cancelled_hook = None
+        
+        if not file_location_is_cross_referenced:
             
-            if job_key is not None:
+            results = self.modules_files_storage.FilterHashIds( location_search_context, results )
+            
+        
+        return results
+        
+    
+    def _GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_key = None ):
+        
+        mapping_and_tag_table_names = self._GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
+        
+        if hash_ids_table_name is None:
+            
+            if namespace_ids_table_name is None:
                 
-                cancelled_hook = job_key.IsCancelled
+                # hellmode
+                queries = [ 'SELECT DISTINCT hash_id FROM {};'.format( mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
+                
+            else:
+                
+                # temp namespaces to tags to mappings
+                queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( namespace_id ) CROSS JOIN {} USING ( tag_id );'.format( namespace_ids_table_name, tags_table_name, mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                 
             
-            nonzero_tag_hash_ids = set()
+        else:
             
-            for query in queries:
+            if namespace_ids_table_name is None:
                 
-                cursor = self._Execute( query )
+                queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, mappings_table_name, mappings_table_name, hash_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
                 
-                nonzero_tag_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 10240, cancelled_hook ) ) )
+            else:
                 
-                if job_key is not None and job_key.IsCancelled():
-                    
-                    return set()
-                    
+                # temp hashes to mappings to tags to temp namespaces
+                # this was originally a 'WHERE EXISTS' thing, but doing that on a three way cross join is too complex for that to work well
+                # let's hope DISTINCT can save time too
+                queries = [ 'SELECT DISTINCT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) CROSS JOIN {} USING ( tag_id ) CROSS JOIN {} USING ( namespace_id );'.format( hash_ids_table_name, mappings_table_name, tags_table_name, namespace_ids_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
+                
+            
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
+        nonzero_tag_hash_ids = set()
+        
+        for query in queries:
+            
+            cursor = self._Execute( query )
+            
+            nonzero_tag_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 10240, cancelled_hook ) ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return set()
                 
             
         
         return nonzero_tag_hash_ids
-        
-    
-    def _ConvertLocationAndTagContextToCoveringCachePairs( self, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext ):
-        
-        # a way to support deleted efficiently is to have deleted file tag caches
-        # but that is so silly, given how rare deleted file tag searches will be, that we should just swallow 'all known files' searches
-        
-        tag_search_contexts = [ tag_search_context ]
-        
-        if location_search_context.SearchesCurrent() and not location_search_context.SearchesDeleted():
-            
-            file_location_needs_cross_referencing = not location_search_context.IsAllKnownFiles()
-            
-            file_service_keys = list( location_search_context.current_service_keys )
-            
-        else:
-            
-            file_location_needs_cross_referencing = False
-            
-            file_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ]
-            
-            if tag_search_context.IsAllKnownTags() == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                tag_search_contexts = []
-                
-                for tag_service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ):
-                    
-                    tsc = tag_search_context.Duplicate()
-                    
-                    tsc.service_key = tag_service.GetServiceKey()
-                    
-                    tag_search_contexts.append( tsc )
-                    
-                
-            
-        
-        return ( list( itertools.product( file_service_keys, tag_search_contexts ) ), file_location_needs_cross_referencing )
         
     
     def _GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
@@ -7895,7 +7961,7 @@ class DB( HydrusDB.HydrusDB ):
             return set()
             
         
-        ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self._ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
+        ( file_and_tag_domain_pairs, file_location_is_cross_referenced ) = self.modules_tag_search.ConvertLocationAndTagContextToCoveringCachePairs( location_search_context, tag_search_context )
         
         if not file_location_is_cross_referenced and hash_ids_table_name is not None:
             
@@ -7918,7 +7984,12 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return ( results, file_location_is_cross_referenced )
+        if not file_location_is_cross_referenced:
+            
+            results = self.modules_files_storage.FilterHashIds( location_search_context, results )
+            
+        
+        return results
         
     
     def _GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
@@ -8179,6 +8250,8 @@ class DB( HydrusDB.HydrusDB ):
             tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
             
             if file_service_id == self.modules_services.combined_file_service_id:
+                
+                # yo this does not support tag_display_actual--big tricky problem
                 
                 ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
                 
@@ -15055,6 +15128,62 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 462:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( ( 'deviant art tag search', ) )
+                
+                domain_manager.OverwriteDefaultParsers( ( 'deviant gallery page api parser (new cursor)', ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'deviant art tag gallery page api (cursor navigation)', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( 'scheduling ogg files for regen' )
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                
+                from hydrus.client import ClientFiles
+                
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.AUDIO_OGG, ) ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to schedule ogg files for maintenance failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

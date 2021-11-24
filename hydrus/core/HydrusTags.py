@@ -291,6 +291,10 @@ def ConvertTagSliceToString( tag_slice ):
         return tag_slice
         
     
+def IsUnnamespaced( tag ):
+    
+    return SplitTag( tag )[0] == ''
+    
 def SplitTag( tag ):
     
     if ':' in tag:

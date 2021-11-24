@@ -18,52 +18,6 @@ def FilterDeletedTags( service_key: bytes, media_result: ClientMediaResult.Media
     
     return tags
 
-def NewInboxArchiveMatch( new_files, inbox_files, archive_files, status, inbox ):
-    
-    if status == CC.STATUS_SUCCESSFUL_AND_NEW and new_files:
-        
-        return True
-        
-    elif status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
-        
-        if inbox and inbox_files:
-            
-            return True
-            
-        elif not inbox and archive_files:
-            
-            return True
-            
-        
-    
-    return False
-    
-def NewInboxArchiveMatchIgnorantOfInbox( new_files, inbox_files, archive_files, status ):
-    
-    if status == CC.STATUS_SUCCESSFUL_AND_NEW and new_files:
-        
-        return True
-        
-    elif status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT and archive_files and inbox_files:
-        
-        return True
-        
-    
-    return False
-    
-def NewInboxArchiveNonMatchIgnorantOfInbox( new_files, inbox_files, archive_files, status ):
-    
-    if status == CC.STATUS_SUCCESSFUL_AND_NEW and not new_files:
-        
-        return True
-        
-    elif status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT and not ( archive_files or inbox_files ):
-        
-        return True
-        
-    
-    return False
-    
 class CheckerOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS

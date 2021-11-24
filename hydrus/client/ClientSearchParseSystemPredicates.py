@@ -38,8 +38,6 @@ def filetype_pred_generator( v ):
     
     # v is a list of non-hydrus-standard filetype strings
     
-    HC.ALLOWED_MIMES
-    
     mimes = ( 1, )
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes )

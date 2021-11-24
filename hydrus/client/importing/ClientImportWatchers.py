@@ -13,6 +13,7 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingJobs
@@ -1070,7 +1071,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            should_present = self._publish_to_page and file_seed.ShouldPresent( self._file_import_options )
+            should_present = self._publish_to_page and file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() )
             
             page_key = self._page_key
             
@@ -1252,20 +1253,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNewHashes( self ):
-        
-        with self._lock:
-            
-            fsc = self._file_seed_cache
-            
-        
-        file_import_options = FileImportOptions.FileImportOptions()
-        
-        file_import_options.SetPresentationOptions( True, False, False )
-        
-        return fsc.GetPresentedHashes( file_import_options )
-        
-    
     def GetNextCheckTime( self ):
         
         with self._lock:
@@ -1290,15 +1277,19 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetPresentedHashes( self ):
+    def GetPresentedHashes( self, presentation_import_options = None ):
         
         with self._lock:
             
             fsc = self._file_seed_cache
-            fio = self._file_import_options
+            
+            if presentation_import_options is None:
+                
+                presentation_import_options = self._file_import_options.GetPresentationImportOptions()
+                
             
         
-        return fsc.GetPresentedHashes( fio )
+        return fsc.GetPresentedHashes( presentation_import_options )
         
     
     def GetSimpleStatus( self ):

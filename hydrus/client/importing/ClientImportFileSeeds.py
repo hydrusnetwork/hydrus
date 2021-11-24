@@ -26,6 +26,7 @@ from hydrus.client import ClientParsing
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingDomain
@@ -1027,34 +1028,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def ShouldPresent( self, file_import_options: FileImportOptions.FileImportOptions, in_inbox = None ):
+    def ShouldPresent( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
-        hash = self.GetHash()
-        
-        if hash is not None and self.status in CC.SUCCESSFUL_IMPORT_STATES:
+        if not self.HasHash():
             
-            if in_inbox is None:
-                
-                if file_import_options.ShouldPresentIgnorantOfInbox( self.status ):
-                    
-                    return True
-                    
-                
-                if file_import_options.ShouldNotPresentIgnorantOfInbox( self.status ):
-                    
-                    return False
-                    
-                
-                in_inbox = hash in HG.client_controller.Read( 'inbox_hashes', ( hash, ) )
-                
-            
-            if file_import_options.ShouldPresent( self.status, in_inbox ):
-                
-                return True
-                
+            return False
             
         
-        return False
+        was_just_imported = not HydrusData.TimeHasPassed( self.modified + 5 )
+        
+        should_check_location = not was_just_imported
+        
+        return presentation_import_options.ShouldPresentHashAndStatus( self.GetHash(), self.status, should_check_location = should_check_location )
         
     
     def WorksInNewSystem( self ):
@@ -2489,7 +2474,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return latest_timestamp
         
     
-    def GetNextFileSeed( self, status: int ):
+    def GetNextFileSeed( self, status: int ) -> typing.Optional[ FileSeed ]:
         
         with self._lock:
             
@@ -2517,46 +2502,14 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return num_files
         
     
-    def GetPresentedHashes( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def GetPresentedHashes( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
         with self._lock:
             
-            eligible_file_seeds = [ file_seed for file_seed in self._file_seeds if file_seed.HasHash() ]
+            hashes_and_statuses = [ ( file_seed.GetHash(), file_seed.status ) for file_seed in self._file_seeds if file_seed.HasHash() ]
             
         
-        file_seed_hashes = [ file_seed.GetHash() for file_seed in eligible_file_seeds ]
-        
-        if len( file_seed_hashes ) > 0:
-            
-            inbox_hashes = HG.client_controller.Read( 'inbox_hashes', file_seed_hashes )
-            
-        else:
-            
-            inbox_hashes = set()
-            
-        
-        hashes = []
-        hashes_seen = set()
-        
-        for file_seed in eligible_file_seeds:
-            
-            hash = file_seed.GetHash()
-            
-            if hash in hashes_seen:
-                
-                continue
-                
-            
-            in_inbox = hash in inbox_hashes
-            
-            if file_seed.ShouldPresent( file_import_options, in_inbox = in_inbox ):
-                
-                hashes.append( hash )
-                hashes_seen.add( hash )
-                
-            
-        
-        return hashes
+        return presentation_import_options.GetPresentedHashes( hashes_and_statuses )
         
     
     def GetStatus( self ):

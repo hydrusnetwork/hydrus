@@ -1086,8 +1086,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'check period: ', self._period ) )
         rows.append( ( 'check on manage dialog ok: ', self._check_now ) )
         rows.append( ( 'show a popup while working: ', self._show_working_popup ) )
-        rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
-        rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish presented files to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'publish presented files to a page: ', self._publish_files_to_page ) )
         rows.append( ( 'review currently cached import paths: ', self._file_seed_cache_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )

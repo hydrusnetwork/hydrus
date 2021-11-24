@@ -573,9 +573,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         associate_primary_urls = True
         associate_source_urls = True
         
-        present_new_files = True
-        present_already_in_inbox_files = False
-        present_already_in_archive_files = False
+        from hydrus.client.importing.options import PresentationImportOptions
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
         
         from hydrus.client.importing.options import FileImportOptions
         
@@ -583,19 +585,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         quiet_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        quiet_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        quiet_file_import_options.SetPresentationImportOptions( presentation_import_options )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
-        
-        present_new_files = True
-        present_already_in_inbox_files = True
-        present_already_in_archive_files = True
         
         loud_file_import_options = FileImportOptions.FileImportOptions()
         
         loud_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        loud_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
         

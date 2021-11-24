@@ -169,7 +169,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
-            if file_seed.ShouldPresent( self._file_import_options ):
+            if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
                 
                 file_seed.PresentToPage( page_key )
                 
@@ -606,7 +606,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = list(self._actions.items())
         action_location_pairs = list(self._action_locations.items())
         
-        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
+        return ( self._path, list( self._mimes ), serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
     def _ImportFiles( self, job_key ):
@@ -714,7 +714,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if hash not in presentation_hashes_fast:
                     
-                    if file_seed.ShouldPresent( self._file_import_options ):
+                    if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
                         
                         presentation_hashes.append( hash )
                         
@@ -752,7 +752,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
+        ( self._path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
+        
+        self._mimes = set( mimes )
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
@@ -965,7 +967,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
             
         
-        if set( mimes ) != set( self._mimes ):
+        mimes = set( mimes )
+        
+        if mimes != self._mimes:
             
             self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_VETOED, ) )
             

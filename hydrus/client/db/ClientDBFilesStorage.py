@@ -324,6 +324,43 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return current_hash_ids
         
     
+    def FilterHashIds( self, location_search_context: ClientSearch.LocationSearchContext, hash_ids ) -> set:
+        
+        if not location_search_context.SearchesAnything():
+            
+            return set()
+            
+        
+        filtered_hash_ids = set()
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            for file_service_key in location_search_context.current_service_keys:
+                
+                service_id = self.modules_services.GetServiceId( file_service_key )
+                
+                current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
+                
+                hash_id_iterator = self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+                
+                filtered_hash_ids.update( hash_id_iterator )
+                
+            
+            for file_service_key in location_search_context.deleted_service_keys:
+                
+                service_id = self.modules_services.GetServiceId( file_service_key )
+                
+                deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
+                
+                hash_id_iterator = self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ) )
+                
+                filtered_hash_ids.update( hash_id_iterator )
+                
+            
+        
+        return filtered_hash_ids
+        
+    
     def FilterPendingHashIds( self, service_id, hash_ids ):
         
         if service_id == self.modules_services.combined_file_service_id:

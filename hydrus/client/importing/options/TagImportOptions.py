@@ -10,6 +10,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
@@ -697,6 +698,26 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions
 
+def NewInboxArchiveMatch( new_files, inbox_files, archive_files, status, inbox ):
+    
+    if status == CC.STATUS_SUCCESSFUL_AND_NEW and new_files:
+        
+        return True
+        
+    elif status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+        
+        if inbox and inbox_files:
+            
+            return True
+            
+        elif not inbox and archive_files:
+            
+            return True
+            
+        
+    
+    return False
+    
 class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_TAG_IMPORT_OPTIONS
@@ -845,7 +866,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         in_inbox = media_result.GetInbox()
         
-        if ClientImportOptions.NewInboxArchiveMatch( self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, status, in_inbox ):
+        if NewInboxArchiveMatch( self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, status, in_inbox ):
             
             if self._get_tags:
                 

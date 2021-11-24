@@ -1018,7 +1018,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                             
                         
-                        if file_seed.ShouldPresent( self._file_import_options ):
+                        if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
                             
                             hash = file_seed.GetHash()
                             

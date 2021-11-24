@@ -1,3 +1,4 @@
+import itertools
 import sqlite3
 import typing
 
@@ -7,6 +8,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -313,6 +315,50 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                 
             
+        
+    
+    def ConvertLocationAndTagContextToCoveringCachePairs( self, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        # a GREAT way to support fast deleted file search is to have a domain that covers all files ever deleted in all domains mate
+        # adding on trash or full delete and only removing files from it on clear delete record for all services
+        # then it just needs the cross-reference after search
+        # if I do this, then I think we'll be covering all specific file services again, even if not perfectly
+        # which means I can ditch the COMBINED_TAG_SERVICE_KEY gubbins here
+        # and therefore ditch this being 'TagContext'-CoveringPairs. tag context will always be the same!
+        
+        # furthermore, if we are moving to imperfect file caches, potentially we could go to just 'all local files' cache for current files, too
+        # the only real drawback would be when searching a tiny local file service, like trash
+        
+        tag_search_contexts = [ tag_search_context ]
+        
+        if location_search_context.SearchesCurrent() and not location_search_context.SearchesDeleted():
+            
+            file_location_is_cross_referenced = not location_search_context.IsAllKnownFiles()
+            
+            file_service_keys = list( location_search_context.current_service_keys )
+            
+        else:
+            
+            file_location_is_cross_referenced = False
+            
+            file_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ]
+            
+            if tag_search_context.IsAllKnownTags() == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                tag_search_contexts = []
+                
+                for tag_service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ):
+                    
+                    tsc = tag_search_context.Duplicate()
+                    
+                    tsc.service_key = tag_service.GetServiceKey()
+                    
+                    tag_search_contexts.append( tsc )
+                    
+                
+            
+        
+        return ( list( itertools.product( file_service_keys, tag_search_contexts ) ), file_location_is_cross_referenced )
         
     
     def DeleteTags( self, file_service_id, tag_service_id, tag_ids ):

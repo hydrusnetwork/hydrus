@@ -1,10 +1,12 @@
 import itertools
+import json
 import os
 
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.networking import HydrusNATPunch
 
@@ -53,6 +55,12 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
             
         
+        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button.setToolTip( 'Copy ratings to the clipboard.' )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste ratings from the clipboard.' )
+        
         self._apply = QW.QPushButton( 'apply', self )
         self._apply.clicked.connect( self.EventOK )
         self._apply.setObjectName( 'HydrusAccept' )
@@ -63,17 +71,24 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        buttonbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
-        
         vbox = QP.VBoxLayout()
         
         for panel in self._panels:
             
             QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+        
+        buttonbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( buttonbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttonbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, buttonbox, CC.FLAGS_ON_RIGHT )
+        
+        buttonbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, buttonbox, CC.FLAGS_ON_RIGHT )
         
@@ -86,6 +101,52 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         #
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        
+    
+    def _Copy( self ):
+        
+        rating_clipboard_pairs = []
+        
+        for panel in self._panels:
+            
+            rating_clipboard_pairs.extend( panel.GetRatingClipboardPairs() )
+            
+        
+        text = json.dumps( [ ( service_key.hex(), rating ) for ( service_key, rating ) in rating_clipboard_pairs ] )
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            QW.QMessageBox.critical( self, 'Error', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            rating_clipboard_pairs_encoded = json.loads( raw_text )
+            
+            rating_clipboard_pairs = [ ( bytes.fromhex( service_key_encoded ), rating ) for ( service_key_encoded, rating ) in rating_clipboard_pairs_encoded ]
+            
+        except:
+            
+            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            
+            return
+            
+        
+        for panel in self._panels:
+            
+            panel.SetRatingClipboardPairs( rating_clipboard_pairs )
+            
         
     
     def EventOK( self ):
@@ -202,6 +263,67 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             return service_keys_to_content_updates
             
         
+        def GetRatingClipboardPairs( self ):
+            
+            rating_clipboard_pairs = []
+            
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                rating_state = control.GetRatingState()
+                
+                if rating_state == ClientRatings.LIKE:
+                    
+                    rating = 1
+                    
+                elif rating_state == ClientRatings.DISLIKE:
+                    
+                    rating = 0
+                    
+                elif rating_state == ClientRatings.NULL:
+                    
+                    rating = None
+                    
+                else:
+                    
+                    continue
+                    
+                
+                rating_clipboard_pairs.append( ( service_key, rating ) )
+                
+            
+            return rating_clipboard_pairs
+            
+        
+        def SetRatingClipboardPairs( self, rating_clipboard_pairs ):
+            
+            for ( service_key, rating ) in rating_clipboard_pairs:
+                
+                if rating == 1:
+                    
+                    rating_state = ClientRatings.LIKE
+                    
+                elif rating == 0:
+                    
+                    rating_state = ClientRatings.DISLIKE
+                    
+                elif rating is None:
+                    
+                    rating_state = ClientRatings.NULL
+                    
+                else:
+                    
+                    continue
+                    
+                
+                if service_key in self._service_keys_to_controls:
+                    
+                    control = self._service_keys_to_controls[ service_key ]
+                    
+                    control.SetRatingState( rating_state )
+                    
+                
+            
+        
     
     class _NumericalPanel( QW.QWidget ):
         
@@ -278,6 +400,53 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
             
             return service_keys_to_content_updates
+            
+        
+        def GetRatingClipboardPairs( self ):
+            
+            rating_clipboard_pairs = []
+            
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                rating_state = control.GetRatingState()
+                
+                if rating_state == ClientRatings.NULL:
+                    
+                    rating = None
+                    
+                elif rating_state == ClientRatings.SET:
+                    
+                    rating = control.GetRating()
+                    
+                else:
+                    
+                    continue
+                    
+                
+                rating_clipboard_pairs.append( ( service_key, rating ) )
+                
+            
+            return rating_clipboard_pairs
+            
+        
+        def SetRatingClipboardPairs( self, rating_clipboard_pairs ):
+            
+            for ( service_key, rating ) in rating_clipboard_pairs:
+                
+                if service_key in self._service_keys_to_controls:
+                    
+                    control = self._service_keys_to_controls[ service_key ]
+                    
+                    if rating is None:
+                        
+                        control.SetRatingState( ClientRatings.NULL )
+                        
+                    elif isinstance( rating, ( int, float ) ) and 0 <= rating <= 1:
+                        
+                        control.SetRating( rating )
+                        
+                    
+                
             
         
     

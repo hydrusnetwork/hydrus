@@ -26,7 +26,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.metadata import ClientTagSorting
 
 def GetRetryIgnoredParam( window ):
@@ -712,11 +712,11 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
             
         elif show == 'new':
             
-            file_import_options = FileImportOptions.FileImportOptions()
+            presentation_import_options = PresentationImportOptions.PresentationImportOptions()
             
-            file_import_options.SetPresentationOptions( True, False, False )
+            presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
             
-            hashes = file_seed_cache.GetPresentedHashes( file_import_options )
+            hashes = file_seed_cache.GetPresentedHashes( presentation_import_options )
             
         
         if len( hashes ) > 0:
@@ -751,16 +751,15 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        num_file_seeds = len( file_seed_cache )
         num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
         num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
-        num_deleted_and_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED ) + num_vetoed
+        num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
         num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
         num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
         
         if num_vetoed > 0:
@@ -772,23 +771,27 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
         
         if num_successful > 0:
             
-            num_deletees = num_successful
-
-            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
             
         
-        if num_deleted_and_vetoed > 0:
+        if num_deleted > 0:
             
-            num_deletees = num_deleted_and_vetoed
-
-            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out deleted and ignored files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_DELETED, CC.STATUS_VETOED) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this cache to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
             
         
-        if num_errors + num_skipped > 0:
+        if num_errors > 0:
             
-            num_deletees = num_errors + num_skipped
-
-            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_ERROR, CC.STATUS_SKIPPED) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
+            
+        
+        if num_vetoed > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this cache to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
+            
+        
+        if num_skipped > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
