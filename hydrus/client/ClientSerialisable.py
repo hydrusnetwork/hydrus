@@ -248,6 +248,7 @@ def LoadFromPNG( path ):
         
         try:
             
+            # unchanged because we want exact byte data, no conversions or other gubbins
             numpy_image = cv2.imread( temp_path, flags = IMREAD_UNCHANGED )
             
             if numpy_image is None:
@@ -259,9 +260,11 @@ def LoadFromPNG( path ):
             
             try:
                 
-                pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
+                # dequantize = False because we don't want to convert to RGB
                 
-                numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image, dequantize = False )
+                pil_image = HydrusImageHandling.GeneratePILImage( temp_path, dequantize = False )
+                
+                numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
                 
             except Exception as e:
                 

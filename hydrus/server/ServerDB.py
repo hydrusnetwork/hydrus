@@ -87,12 +87,37 @@ class DB( HydrusDB.HydrusDB ):
         
         self._files_dir = os.path.join( db_dir, 'server_files' )
         
+        self._read_commands_to_methods = {
+            'access_key' : self._GetAccessKey,
+            'account' : self._GetAccountFromAccountKey,
+            'account_from_content' : self._GetAccountFromContent,
+            'account_info' : self._GetAccountInfo,
+            'account_key_from_access_key' : self._GetAccountKeyFromAccessKey,
+            'account_types' : self._GetAccountTypes,
+            'auto_create_account_types' : self._GetAutoCreateAccountTypes,
+            'auto_create_registration_key' : self._GetAutoCreateRegistrationKey,
+            'all_accounts' : self._GetAllAccounts,
+            'deferred_physical_delete' : self._GetDeferredPhysicalDelete,
+            'immediate_update' : self._RepositoryGenerateImmediateUpdate,
+            'ip' : self._RepositoryGetIPTimestamp,
+            'is_an_orphan' : self._IsAnOrphan,
+            'num_petitions' : self._RepositoryGetNumPetitions,
+            'petition' : self._RepositoryGetPetition,
+            'registration_keys' : self._GenerateRegistrationKeysFromAccount,
+            'service_has_file' : self._RepositoryHasFile,
+            'service_keys' : self._GetServiceKeys,
+            'services' : self._GetServices,
+            'services_from_account' : self._GetServicesFromAccount,
+            'sessions' : self._GetSessions,
+            'verify_access_key' : self._VerifyAccessKey
+        }
+        
         self._write_commands_to_methods = {
             'account_types' : self._ModifyAccountTypes,
             'analyze' : self._Analyze,
             'backup' : self._Backup,
+            'clear_deferred_physical_delete' : self._ClearDeferredPhysicalDelete,
             'create_update' : self._RepositoryCreateUpdate,
-            'delete_orphans' : self._DeleteOrphans,
             'dirty_accounts' : self._SaveDirtyAccounts,
             'dirty_services' : self._SaveDirtyServices,
             'file' : self._RepositoryProcessAddFile,
@@ -157,15 +182,23 @@ class DB( HydrusDB.HydrusDB ):
             if 'num_words' in file_dict: num_words = file_dict[ 'num_words' ]
             else: num_words = None
             
-            source_path = file_dict[ 'path' ]
+            self._Execute( 'INSERT OR IGNORE INTO files_info ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) )
             
-            dest_path = ServerFiles.GetExpectedFilePath( hash )
+        
+        dest_path = ServerFiles.GetExpectedFilePath( hash )
+        
+        if not os.path.exists( dest_path ):
+            
+            source_path = file_dict[ 'path' ]
             
             HydrusPaths.MirrorFile( source_path, dest_path )
             
-            if 'thumbnail' in file_dict:
-                
-                thumbnail_dest_path = ServerFiles.GetExpectedThumbnailPath( hash )
+        
+        if 'thumbnail' in file_dict:
+            
+            thumbnail_dest_path = ServerFiles.GetExpectedThumbnailPath( hash )
+            
+            if not os.path.exists( thumbnail_dest_path ):
                 
                 thumbnail_bytes = file_dict[ 'thumbnail' ]
                 
@@ -174,8 +207,6 @@ class DB( HydrusDB.HydrusDB ):
                     f.write( thumbnail_bytes )
                     
                 
-            
-            self._Execute( 'INSERT OR IGNORE INTO files_info ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) )
             
         
         return master_hash_id
@@ -365,6 +396,27 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _ClearDeferredPhysicalDelete( self, file_hash = None, thumbnail_hash = None ):
+        
+        file_master_hash_id = None if file_hash is None else self._GetMasterHashId( file_hash )
+        thumbnail_master_hash_id = None if thumbnail_hash is None else self._GetMasterHashId( thumbnail_hash )
+        
+        self._ClearDeferredPhysicalDeleteIds( file_master_hash_id = file_master_hash_id, thumbnail_master_hash_id = thumbnail_master_hash_id )
+        
+    
+    def _ClearDeferredPhysicalDeleteIds( self, file_master_hash_id = None, thumbnail_master_hash_id = None ):
+        
+        if file_master_hash_id is not None:
+            
+            self._Execute( 'DELETE FROM deferred_physical_file_deletes WHERE master_hash_id = ?;', ( file_master_hash_id, ) )
+            
+        
+        if thumbnail_master_hash_id is not None:
+            
+            self._Execute( 'DELETE FROM deferred_physical_thumbnail_deletes WHERE master_hash_id = ?;', ( thumbnail_master_hash_id, ) )
+            
+        
+    
     def _CreateDB( self ):
         
         HydrusPaths.MakeSureDirectoryExists( self._files_dir )
@@ -387,6 +439,9 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER, dump TEXT );' )
         
         self._Execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+        
+        self._Execute( 'CREATE TABLE deferred_physical_file_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
+        self._Execute( 'CREATE TABLE deferred_physical_thumbnail_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
         
         self._Execute( 'CREATE TABLE files_info ( master_hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
         
@@ -420,25 +475,21 @@ class DB( HydrusDB.HydrusDB ):
         self._AddService( admin_service ) # this sets up the admin account and a registration token by itself
         
     
-    def _DeleteOrphans( self ):
+    def _DeferFilesDeleteIfNowOrphan( self, master_hash_ids, definitely_no_thumbnails = False, ignore_service_id = None ):
         
-        # make a table for files
-        # make a table for thumbnails
+        orphan_master_hash_ids = self._FilterOrphanMasterHashIds( master_hash_ids, ignore_service_id = ignore_service_id )
         
-        # populate both tables with what you have in your hdd
-        # if the filename isn't even a hash, schedule it for immediate deletion instead
-        
-        # delete from the tables based on what is in current and pending repo file tables
-        # delete from the file tables based on what is in update tables
-        
-        # delete whatever is left
-        
-        # might want to split this up into 256 jobs--depends on how fast its bits run
-        # might also want to set server_busy, if it isn't already
-        
-        # also think about how often it runs--maybe only once a month is appropriate
-        
-        return # return to this to fix it for new system
+        if len( orphan_master_hash_ids ) > 0:
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO deferred_physical_file_deletes ( master_hash_id ) VALUES ( ? );', ( ( master_hash_id, ) for master_hash_id in orphan_master_hash_ids ) )
+            
+            if not definitely_no_thumbnails:
+                
+                self._ExecuteMany( 'INSERT OR IGNORE INTO deferred_physical_thumbnail_deletes ( master_hash_id ) VALUES ( ? );', ( ( master_hash_id, ) for master_hash_id in orphan_master_hash_ids ) )
+                
+            
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_physical_file_deletes' )
+            
         
     
     def _DeleteRepositoryPetitions( self, service_id, subject_account_ids ):
@@ -483,6 +534,61 @@ class DB( HydrusDB.HydrusDB ):
             
             self._RepositoryDrop( service_id )
             
+        
+    
+    def _FilterOrphanMasterHashIds( self, master_hash_ids, ignore_service_id = None ):
+        
+        orphan_master_hash_ids = set( master_hash_ids )
+        
+        with self._MakeTemporaryIntegerTable( master_hash_ids, 'master_hash_id' ) as temp_hash_ids_table_name:
+            
+            queries = []
+            
+            for service_id in self._GetServiceIds( ( HC.FILE_REPOSITORY, ) ):
+                
+                if ignore_service_id is not None and service_id == ignore_service_id:
+                    
+                    continue
+                    
+                
+                ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+                ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+                
+                # temp master files to service to current
+                queries.append( 'SELECT master_hash_id FROM {} CROSS JOIN {} USING ( master_hash_id ) CROSS JOIN {} USING ( service_hash_id );'.format( temp_hash_ids_table_name, hash_id_map_table_name, current_files_table_name ) )
+                
+            
+            for service_id in self._GetServiceIds( HC.REPOSITORIES ):
+                
+                if ignore_service_id is not None and service_id == ignore_service_id:
+                    
+                    continue
+                    
+                
+                update_table_name = GenerateRepositoryUpdateTableName( service_id )
+                
+                queries.append( 'SELECT master_hash_id FROM {} CROSS JOIN {} USING ( master_hash_id );'.format( temp_hash_ids_table_name, update_table_name ) )
+                
+            
+            for query in queries:
+                
+                useful_master_hash_ids = self._STS( self._Execute( query ) )
+                
+                if len( useful_master_hash_ids ) > 0:
+                    
+                    orphan_master_hash_ids.difference_update( useful_master_hash_ids )
+                    
+                    if len( orphan_master_hash_ids ) == 0:
+                        
+                        return orphan_master_hash_ids
+                        
+                    
+                    self._ExecuteMany( 'DELETE FROM {} WHERE master_hash_id = ?;'.format( temp_hash_ids_table_name ), ( ( master_hash_id, ) for master_hash_id in useful_master_hash_ids ) )
+                    
+                
+            
+        
+        return orphan_master_hash_ids
         
     
     def _GenerateRegistrationKeysFromAccount( self, service_key, account: HydrusNetwork.Account, num, account_type_key, expires ):
@@ -852,6 +958,29 @@ class DB( HydrusDB.HydrusDB ):
         return list( self._GenerateRegistrationKeys( service_id, num, account_type_id, expires ) )[0]
         
     
+    def _GetDeferredPhysicalDelete( self ):
+        
+        file_result = self._Execute( 'SELECT master_hash_id FROM deferred_physical_file_deletes LIMIT 1;' ).fetchone()
+        
+        if file_result is not None:
+            
+            ( master_hash_id, ) = file_result
+            
+            file_result = self._GetHash( master_hash_id )
+            
+        
+        thumbnail_result = self._Execute( 'SELECT master_hash_id FROM deferred_physical_thumbnail_deletes LIMIT 1;' ).fetchone()
+        
+        if thumbnail_result is not None:
+            
+            ( master_hash_id, ) = thumbnail_result
+            
+            thumbnail_result = self._GetHash( master_hash_id )
+            
+        
+        return ( file_result, thumbnail_result )
+        
+    
     def _GetHash( self, master_hash_id ):
         
         result = self._Execute( 'SELECT hash FROM hashes WHERE master_hash_id = ?;', ( master_hash_id, ) ).fetchone()
@@ -1135,6 +1264,20 @@ class DB( HydrusDB.HydrusDB ):
         return tag
         
     
+    def _HashExists( self, hash ):
+        
+        result = self._Execute( 'SELECT 1 FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        
+        if result is None:
+            
+            return False
+            
+        else:
+            
+            return True
+            
+        
+    
     def _InitCaches( self ):
         
         self._over_monthly_data = False
@@ -1147,6 +1290,24 @@ class DB( HydrusDB.HydrusDB ):
         
         self._db_filenames[ 'external_mappings' ] = 'server.mappings.db'
         self._db_filenames[ 'external_master' ] = 'server.master.db'
+        
+    
+    def _IsAnOrphan( self, possible_hash ):
+        
+        if self._HashExists( possible_hash ):
+            
+            hash = possible_hash
+            
+            master_hash_id = self._GetMasterHashId( hash )
+            
+            orphan_master_hash_ids = self._FilterOrphanMasterHashIds( ( master_hash_id, ) )
+            
+            return len( orphan_master_hash_ids ) == 1
+            
+        else:
+            
+            return True
+            
         
     
     def _IsNullAccount( self, service_id, account_id ):
@@ -1522,29 +1683,12 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Read( self, action, *args, **kwargs ):
         
-        if action == 'access_key': result = self._GetAccessKey( *args, **kwargs )
-        elif action == 'account': result = self._GetAccountFromAccountKey( *args, **kwargs )
-        elif action == 'account_from_content': result = self._GetAccountFromContent( *args, **kwargs )
-        elif action == 'account_info': result = self._GetAccountInfo( *args, **kwargs )
-        elif action == 'account_key_from_access_key': result = self._GetAccountKeyFromAccessKey( *args, **kwargs )
-        elif action == 'account_types': result = self._GetAccountTypes( *args, **kwargs )
-        elif action == 'auto_create_account_types': result = self._GetAutoCreateAccountTypes( *args, **kwargs )
-        elif action == 'auto_create_registration_key': result = self._GetAutoCreateRegistrationKey( *args, **kwargs )
-        elif action == 'all_accounts': result = self._GetAllAccounts( *args, **kwargs )
-        elif action == 'immediate_update': result = self._RepositoryGenerateImmediateUpdate( *args, **kwargs )
-        elif action == 'ip': result = self._RepositoryGetIPTimestamp( *args, **kwargs )
-        elif action == 'num_petitions': result = self._RepositoryGetNumPetitions( *args, **kwargs )
-        elif action == 'petition': result = self._RepositoryGetPetition( *args, **kwargs )
-        elif action == 'registration_keys': result = self._GenerateRegistrationKeysFromAccount( *args, **kwargs )
-        elif action == 'service_has_file': result = self._RepositoryHasFile( *args, **kwargs )
-        elif action == 'service_keys': result = self._GetServiceKeys( *args, **kwargs )
-        elif action == 'services': result = self._GetServices( *args, **kwargs )
-        elif action == 'services_from_account': result = self._GetServicesFromAccount( *args, **kwargs )
-        elif action == 'sessions': result = self._GetSessions( *args, **kwargs )
-        elif action == 'verify_access_key': result = self._VerifyAccessKey( *args, **kwargs )
-        else: raise Exception( 'db received an unknown read command: ' + action )
+        if action not in self._read_commands_to_methods:
+            
+            raise Exception( 'db received an unknown read command: ' + action )
+            
         
-        return result
+        return self._read_commands_to_methods[ action ]( *args, **kwargs )
         
     
     def _RefreshAccountInfoCache( self ):
@@ -1619,6 +1763,10 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self._Execute( 'INSERT INTO ' + current_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( service_hash_id, account_id, timestamp ) )
+        
+        hash = file_dict[ 'hash' ]
+        
+        self._ClearDeferredPhysicalDeleteIds( file_master_hash_id = master_hash_id, thumbnail_master_hash_id = master_hash_id )
         
     
     def _RepositoryAddMappings( self, service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted, timestamp ):
@@ -1838,11 +1986,16 @@ class DB( HydrusDB.HydrusDB ):
                 update_hashes.append( update_hash )
                 
             
-            ( update_table_name ) = GenerateRepositoryUpdateTableName( service_id )
+            update_table_name = GenerateRepositoryUpdateTableName( service_id )
             
             master_hash_ids = self._GetMasterHashIds( update_hashes )
             
             self._ExecuteMany( 'INSERT OR IGNORE INTO ' + update_table_name + ' ( master_hash_id ) VALUES ( ? );', ( ( master_hash_id, ) for master_hash_id in master_hash_ids ) )
+            
+            for master_hash_id in master_hash_ids:
+                
+                self._ClearDeferredPhysicalDeleteIds( file_master_hash_id = master_hash_id )
+                
             
         
         HydrusData.Print( 'Update OK. ' + HydrusData.ToHumanInt( total_definition_rows ) + ' definition rows and ' + HydrusData.ToHumanInt( total_content_rows ) + ' content rows in ' + HydrusData.ToHumanInt( len( updates ) ) + ' update files.' )
@@ -1864,6 +2017,10 @@ class DB( HydrusDB.HydrusDB ):
         self._ExecuteMany( 'DELETE FROM ' + petitioned_files_table_name + ' WHERE service_hash_id = ?', ( ( service_hash_id, ) for service_hash_id in valid_service_hash_ids ) )
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO ' + deleted_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, timestamp ) for service_hash_id in valid_service_hash_ids ) )
+        
+        master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
+        
+        self._DeferFilesDeleteIfNowOrphan( master_hash_ids )
         
     
     def _RepositoryDeleteMappings( self, service_id, account_id, service_tag_id, service_hash_ids, timestamp ):
@@ -1961,6 +2118,23 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _RepositoryDrop( self, service_id ):
+        
+        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        
+        for ( block_of_master_hash_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT master_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( current_files_table_name, hash_id_map_table_name ), 1024 ):
+            
+            self._DeferFilesDeleteIfNowOrphan( block_of_master_hash_ids, ignore_service_id = service_id )
+            
+        
+        update_table_name = GenerateRepositoryUpdateTableName( service_id )
+        
+        for ( block_of_master_hash_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT master_hash_id FROM {};'.format( update_table_name ), 1024 ):
+            
+            self._DeferFilesDeleteIfNowOrphan( block_of_master_hash_ids, definitely_no_thumbnails = True, ignore_service_id = service_id )
+            
+        
+        #
         
         table_names = []
         
@@ -2364,7 +2538,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return HydrusNetwork.Petition( action, petitioner_account, reason, contents )
-        
         
     
     def _RepositoryGetMasterHashIds( self, service_id, service_hash_ids ):
@@ -3560,6 +3733,30 @@ class DB( HydrusDB.HydrusDB ):
                 null_account = self._GetAccountKeyFromAccessKey( service_key, null_access_key )
                 
                 self._RefreshAccountInfoCache()
+                
+            
+        
+        if version == 463:
+            
+            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'deferred_physical_file_deletes', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE deferred_physical_file_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
+                self._Execute( 'CREATE TABLE deferred_physical_thumbnail_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
+                
+                HydrusData.Print( 'Populating deferred physical file delete tables\u2026' )
+                
+                for service_id in self._GetServiceIds( ( HC.FILE_REPOSITORY, ) ):
+                    
+                    ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+                    ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+                    
+                    for ( block_of_master_hash_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT master_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( deleted_files_table_name, hash_id_map_table_name ), 1024 ):
+                        
+                        self._DeferFilesDeleteIfNowOrphan( block_of_master_hash_ids )
+                        
+                    
                 
             
         

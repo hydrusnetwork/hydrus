@@ -1123,7 +1123,7 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def IsAllKnownFiles( self ):
         
-        return self.IsOneDomain() and CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
+        return CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
         
     
     def IsAllLocalFiles( self ):

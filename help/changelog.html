@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_464"><a href="#version_464">version 464</a></h3></li>
+				<ul>
+					<li>image icc:</li>
+					<li>images with embedded icc colour metadata are now normalised (to sRGB) like the rest of media rendering in hydrus. ICC can often mean photos, where a nice camera will apply ICC data to compensate for camera defects or general lighting information, or it can mean normal digital images where the software attached extra colour data when it was saved</li>
+					<li>the image will now be rendered with 'fixed' colours in the media viewer, and new thumbnails should be good too. it applies early in image load and should work in all cases hereon, on both client and server</li>
+					<li>images with an ICC will take a little longer to initially load. I'd estimate 10-50ms extra for most. one user with many ICC images discovered 10% of their collection had an ICC. I don't think the delay will be terrible IRL, but see how you get on and let me know! maybe giganto patreon pngs will have a fresh surprise for us</li>
+					<li>future expansions here will be a database cache of ICC images and system:has icc, perhaps a button to click the ICC application on and off live in the media viewer, and then maybe options to load up and switch an ICC for your display</li>
+					<li>.</li>
+					<li>better physical file delete:</li>
+					<li>both client and server now physically delete files from storage more smoothly and reliably. the 'deferred file delete' list is now saved in the database itself and will survive reboots (and undo itself if a file is re-added before it can be deleted), and the physical delete daemons are able to work at a less spiky pace as a result. physical delete summaries are now logged as well</li>
+					<li>the server now physically deletes surplus files from its file storage! this never actually came up before jej--servers were just keeping all files forever</li>
+					<li>on update, all servers will scan to see which files it only has deletion records for and will queue them for a deferred delete</li>
+					<li>when deleting a service from the server, all its file repository files and/or general repository update files are now queued for deferred deletion if they are now orphaned</li>
+					<li>some advanced 'pending upload file delete' logical situations are now tidied up better, for instance if you have a file set to upload to a file repository or IPFS and then delete the file from the trash, the file will hang around until the upload is done and then it will be correctly scheduled for physically deletion. same for if you delete the file repository or clear all its pending. previously, this file would never delete and become an orphan</li>
+					<li>thumbnails for non-downloaded file repository files are now removed promptly from a client if a file repository deletes a file</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>fixed a typo error in last week's file filtering changes when doing wildcard tag searches in 'all known files' domain</li>
+					<li>fixed some bad namespace search optimisation also caused by last week's search updates that was making 'system:has x unnamespaced tags' search instead count all tags, not just unnamespaced (issue #1017)</li>
+					<li>fixed incorrect file type handling in thumbnail loading that was triggering a safe mode for gif file thumbs (which are actually jpeg/png), it should roughly double thumb load speed for gifs (and .ico too lol)</li>
+					<li>.</li>
+					<li>boring image stuff:</li>
+					<li>wrote some methods to check for and pull ICC profile bytes from an image with PIL</li>
+					<li>wrote ICC application in PIL on image load. we had figured out a way to do it with Qt, but this can happen right at the start of the rendering pipeline and will work for the server too</li>
+					<li>cleaned up some PIL/OpenCV image load and normalisation code</li>
+					<li>the decompression bomb check is now quicker for images with rotation</li>
+					<li>dequantization is now applied to PIL on all image load by default, it doesn't have to be invoked separately</li>
+					<li>some metadata parsing like 'get duration of gif frames' is now faster for images not in RGB or RGBA color</li>
+					<li>.</li>
+					<li>boring delete code cleanup:</li>
+					<li>wrote a heap of new 'is an orphan' filtering logic for client and server</li>
+					<li>wrote a daemon job for physical file deletion and plugged it into a new database queue for pending deferred file deletes</li>
+					<li>client physical file delete now works off the normal lightweight job scheduler, previously it had its own mainloop thread</li>
+					<li>optimised complex file domain file filtering a little</li>
+					<li>the 'clear orphan files' job in the client now uses the same updated orphan logic as the new physical delete code. it now won't clear out files in upload limbo</li>
+					<li>fixed an issue with re-storing a file in a server after one of its file repositories had previously deleted it. this never mattered previously, when files were never physically deleted, but now the code is brushed up to work properly</li>
+					<li>cleaned up some server db code, including the read command method lookup</li>
+					<li>moved client 'hash exists?' test down to the master definitions module</li>
+				</ul>
 				<li><h3 id="version_463"><a href="#version_463">version 463</a></h3></li>
 				<ul>
 					<li>misc:</li>

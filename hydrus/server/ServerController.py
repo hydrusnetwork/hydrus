@@ -11,12 +11,14 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.server import ServerDB
+from hydrus.server import ServerFiles
 from hydrus.server.networking import ServerServer
 
 def ProcessStartingAction( db_dir, action ):
@@ -198,9 +200,52 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def DeleteOrphans( self ):
+    def DoDeferredPhysicalDeletes( self ):
         
-        self.WriteSynchronous( 'delete_orphans' )
+        num_files_deleted = 0
+        num_thumbnails_deleted = 0
+        
+        pauser = HydrusData.BigJobPauser()
+        
+        ( file_hash, thumbnail_hash ) = self.Read( 'deferred_physical_delete' )
+        
+        while ( file_hash is not None or thumbnail_hash is not None ) and not HG.view_shutdown:
+            
+            if file_hash is not None:
+                
+                path = ServerFiles.GetExpectedFilePath( file_hash )
+                
+                if os.path.exists( path ):
+                    
+                    HydrusPaths.RecyclePath( path )
+                    
+                    num_files_deleted += 1
+                    
+                
+            
+            if thumbnail_hash is not None:
+                
+                path = ServerFiles.GetExpectedThumbnailPath( thumbnail_hash )
+                
+                if os.path.exists( path ):
+                    
+                    HydrusPaths.RecyclePath( path )
+                    
+                    num_thumbnails_deleted += 1
+                    
+                
+            
+            self.WriteSynchronous( 'clear_deferred_physical_delete', file_hash = file_hash, thumbnail_hash = thumbnail_hash )
+            
+            ( file_hash, thumbnail_hash ) = self.Read( 'deferred_physical_delete' )
+            
+            pauser.Pause()
+            
+        
+        if num_files_deleted > 0 or num_thumbnails_deleted > 0:
+            
+            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusData.ToHumanInt( num_files_deleted ), HydrusData.ToHumanInt( num_files_deleted ) ) )
+            
         
     
     def Exit( self ):
@@ -267,9 +312,10 @@ class Controller( HydrusController.HydrusController ):
         
         self._daemon_jobs[ 'save_dirty_objects' ] = job
         
-        job = self.CallRepeating( 0.0, 86400.0, self.DeleteOrphans )
+        job = self.CallRepeating( 30.0, 86400.0, self.DoDeferredPhysicalDeletes )
+        job.WakeOnPubSub( 'notify_new_physical_file_deletes' )
         
-        self._daemon_jobs[ 'delete_orphans' ] = job
+        self._daemon_jobs[ 'deferred_physical_deletes' ] = job
         
         job = self.CallRepeating( 120.0, 3600.0 * 4, self.NullifyHistory )
         job.WakeOnPubSub( 'notify_new_nullification' )

@@ -3001,7 +3001,14 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_id == self.modules_services.combined_local_file_service_id:
                 
-                self._DeletePhysicalFiles( existing_hash_ids )
+                self._ArchiveFiles( hash_ids )
+                
+                for hash_id in hash_ids:
+                    
+                    self.modules_similar_files.StopSearchingFile( hash_id )
+                    
+                
+                self.modules_files_maintenance_queue.CancelFiles( hash_ids )
                 
                 self.modules_hashes_local_cache.DropHashIdsFromCache( existing_hash_ids )
                 
@@ -3041,44 +3048,6 @@ class DB( HydrusDB.HydrusDB ):
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
         
         self.pub_service_updates_after_commit( { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
-        
-    
-    def _DeletePhysicalFiles( self, hash_ids ):
-        
-        hash_ids = set( hash_ids )
-        
-        self._ArchiveFiles( hash_ids )
-        
-        for hash_id in hash_ids:
-            
-            self.modules_similar_files.StopSearchingFile( hash_id )
-            
-        
-        self.modules_files_maintenance_queue.CancelFiles( hash_ids )
-        
-        pending_upload_hash_ids = self.modules_files_storage.FilterAllPendingHashIds( hash_ids )
-        
-        deletable_file_hash_ids = hash_ids.difference( pending_upload_hash_ids )
-        
-        client_files_manager = self._controller.client_files_manager
-        
-        if len( deletable_file_hash_ids ) > 0:
-            
-            file_hashes = self.modules_hashes_local_cache.GetHashes( deletable_file_hash_ids )
-            
-            self._controller.CallToThreadLongRunning( client_files_manager.DelayedDeleteFiles, file_hashes )
-            
-        
-        still_useful_thumbnail_hash_ids = self.modules_files_storage.FilterAllCurrentHashIds( hash_ids )
-        
-        deletable_thumbnail_hash_ids = hash_ids.difference( still_useful_thumbnail_hash_ids )
-        
-        if len( deletable_thumbnail_hash_ids ) > 0:
-            
-            thumbnail_hashes = self.modules_hashes_local_cache.GetHashes( deletable_thumbnail_hash_ids )
-            
-            self._controller.CallToThreadLongRunning( client_files_manager.DelayedDeleteThumbnails, thumbnail_hashes )
-            
         
     
     def _DeleteService( self, service_id ):
@@ -5055,7 +5024,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self.modules_services.GetServiceId( file_service_key )
         
-        hashes_to_hash_ids = { hash : self.modules_hashes_local_cache.GetHashId( hash ) for hash in hashes if self._HashExists( hash ) }
+        hashes_to_hash_ids = { hash : self.modules_hashes_local_cache.GetHashId( hash ) for hash in hashes if self.modules_hashes.HasHash( hash ) }
         
         valid_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, set( hashes_to_hash_ids.values() ) )
         
@@ -6047,7 +6016,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext, hash_ids, namespace_wildcard = None, job_key = None ):
         
-        if namespace_wildcard in ( '*', '' ):
+        if namespace_wildcard == '*':
             
             namespace_wildcard = None
             
@@ -6635,7 +6604,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if search_hash_type == 'sha256':
                 
-                matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self._HashExists( search_hash ) ]
+                matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self.modules_hashes.HasHash( search_hash ) ]
                 
             else:
                 
@@ -7745,7 +7714,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
-        if namespace_wildcard in ( '*', '' ):
+        if namespace_wildcard == '*':
             
             namespace_wildcard = None
             
@@ -7836,7 +7805,7 @@ class DB( HydrusDB.HydrusDB ):
             return set()
             
         
-        if namespace_wildcard in ( '*', '' ):
+        if namespace_wildcard == '*':
             
             namespace_wildcard = None
             
@@ -8090,7 +8059,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if hash_type == 'sha256':
             
-            if not self._HashExists( hash ):
+            if not self.modules_hashes.HasHash( hash ):
                 
                 f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
                 
@@ -9869,20 +9838,6 @@ class DB( HydrusDB.HydrusDB ):
         return file_service_ids_to_hash_ids
         
     
-    def _HashExists( self, hash ):
-        
-        result = self._Execute( 'SELECT 1 FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
-        
-        if result is None:
-            
-            return False
-            
-        else:
-            
-            return True
-            
-        
-    
     def _ImportFile( self, file_import_job: ClientImportFiles.FileImportJob ):
         
         if HG.file_import_report_mode:
@@ -10086,39 +10041,23 @@ class DB( HydrusDB.HydrusDB ):
     
     def _IsAnOrphan( self, test_type, possible_hash ):
         
-        if self._HashExists( possible_hash ):
+        if self.modules_hashes.HasHash( possible_hash ):
             
             hash = possible_hash
             
+            hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+            
             if test_type == 'file':
                 
-                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                orphan_hash_ids = self.modules_files_storage.FilterOrphanFileHashIds( ( hash_id, ) )
                 
-                hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.combined_local_file_service_id, ( hash_id, ) )
-                
-                if len( hash_ids ) == 0:
-                    
-                    return True
-                    
-                else:
-                    
-                    return False
-                    
+                return len( orphan_hash_ids ) == 1
                 
             elif test_type == 'thumbnail':
                 
-                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                orphan_hash_ids = self.modules_files_storage.FilterOrphanThumbnailHashIds( ( hash_id, ) )
                 
-                hash_ids = self.modules_files_storage.FilterAllCurrentHashIds( ( hash_id, ) )
-                
-                if len( hash_ids ) == 0:
-                    
-                    return True
-                    
-                else:
-                    
-                    return False
-                    
+                return len( orphan_hash_ids ) == 1
                 
             
         else:
@@ -10165,7 +10104,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self.modules_services, self.modules_texts )
+        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_hashes, self.modules_texts )
         
         self._modules.append( self.modules_files_storage )
         
@@ -11631,6 +11570,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
+        elif action == 'deferred_physical_delete': result = self.modules_files_storage.GetDeferredPhysicalDelete( *args, **kwargs )
         elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetPotentialDuplicatePairsForFiltering( *args, **kwargs )
         elif action == 'file_duplicate_hashes': result = self._DuplicatesGetFileHashesByDuplicateType( *args, **kwargs )
         elif action == 'file_duplicate_info': result = self._DuplicatesGetFileDuplicateInfo( *args, **kwargs )
@@ -15189,6 +15129,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 463:
+            
+            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'deferred_physical_file_deletes', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE deferred_physical_file_deletes ( hash_id INTEGER PRIMARY KEY );' )
+                self._Execute( 'CREATE TABLE deferred_physical_thumbnail_deletes ( hash_id INTEGER PRIMARY KEY );' )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -15664,6 +15615,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'analyze': self.modules_db_maintenance.AnalyzeDueTables( *args, **kwargs )
         elif action == 'associate_repository_update_hashes': self.modules_repositories.AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': self._Backup( *args, **kwargs )
+        elif action == 'clear_deferred_physical_delete': self.modules_files_storage.ClearDeferredPhysicalDelete( *args, **kwargs )
         elif action == 'clear_false_positive_relations': self._DuplicatesClearAllFalsePositiveRelationsFromHashes( *args, **kwargs )
         elif action == 'clear_false_positive_relations_between_groups': self._DuplicatesClearFalsePositiveRelationsBetweenGroupsFromHashes( *args, **kwargs )
         elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )

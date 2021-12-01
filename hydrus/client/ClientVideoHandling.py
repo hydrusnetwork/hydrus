@@ -91,7 +91,7 @@ class GIFRenderer( object ):
             
         else:
             
-            current_frame = HydrusImageHandling.Dequantize( self._pil_image )
+            current_frame = HydrusImageHandling.DequantizePILImage( self._pil_image )
             
             if current_frame.mode == 'RGBA':
                 
@@ -162,7 +162,9 @@ class GIFRenderer( object ):
         
         self._cv_mode = False
         
-        self._pil_image = HydrusImageHandling.GeneratePILImage( self._path )
+        # dequantize = False since we'll be doing that later for each frame in turn
+        # if we do it now, it collapses down to a one frame object
+        self._pil_image = HydrusImageHandling.GeneratePILImage( self._path, dequantize = False )
         
         self._pil_canvas = None
         

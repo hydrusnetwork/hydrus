@@ -169,9 +169,7 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = {}
         
-        self._physical_delete_file_hashes_queue = queue.Queue()
-        self._physical_delete_thumbnail_hashes_queue = queue.Queue()
-        self._new_physical_deletes = threading.Event()
+        self._new_physical_file_deletes = threading.Event()
         
         self._bad_error_occurred = False
         self._missing_locations = set()
@@ -969,30 +967,6 @@ class ClientFilesManager( object ):
             
         
     
-    def DelayedDeleteFiles( self, hashes ):
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Delayed delete files call: ' + str( len( hashes ) ) )
-            
-        
-        self._physical_delete_file_hashes_queue.put( hashes )
-        
-        self._new_physical_deletes.set()
-        
-    
-    def DelayedDeleteThumbnails( self, hashes ):
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Delayed delete thumbs call: ' + str( len( hashes ) ) )
-            
-        
-        self._physical_delete_thumbnail_hashes_queue.put( hashes )
-        
-        self._new_physical_deletes.set()
-        
-    
     def DeleteNeighbourDupes( self, hash, true_mime ):
         
         with self._rwlock.write:
@@ -1025,6 +999,64 @@ class ClientFilesManager( object ):
                     HydrusPaths.DeletePath( incorrect_path )
                     
                 
+            
+        
+    
+    def DoDeferredPhysicalDeletes( self ):
+        
+        num_files_deleted = 0
+        num_thumbnails_deleted = 0
+        
+        pauser = HydrusData.BigJobPauser()
+        
+        while not HG.view_shutdown:
+            
+            with self._rwlock.write:
+                
+                ( file_hash, thumbnail_hash ) = self._controller.Read( 'deferred_physical_delete' )
+                
+                if file_hash is None and thumbnail_hash is None:
+                    
+                    break
+                    
+                
+                if file_hash is not None:
+                    
+                    try:
+                        
+                        ( path, mime ) = self._LookForFilePath( file_hash )
+                        
+                        ClientPaths.DeletePath( path )
+                        
+                        num_files_deleted += 1
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        pass
+                        
+                    
+                
+                if thumbnail_hash is not None:
+                    
+                    path = self._GenerateExpectedThumbnailPath( thumbnail_hash )
+                    
+                    if os.path.exists( path ):
+                        
+                        ClientPaths.DeletePath( path, always_delete_fully = True )
+                        
+                        num_thumbnails_deleted += 1
+                        
+                    
+                
+                self._controller.WriteSynchronous( 'clear_deferred_physical_delete', file_hash = file_hash, thumbnail_hash = thumbnail_hash )
+                
+            
+            pauser.Pause()
+            
+        
+        if num_files_deleted > 0 or num_thumbnails_deleted > 0:
+            
+            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusData.ToHumanInt( num_files_deleted ), HydrusData.ToHumanInt( num_files_deleted ) ) )
             
         
     
@@ -1128,83 +1160,9 @@ class ClientFilesManager( object ):
         return os.path.exists( path )
         
     
-    def MainLoop( self ):
+    def NotifyNewPhysicalFileDeletes( self ):
         
-        big_pauser = HydrusData.BigJobPauser( period = 1 )
-        
-        while not HydrusThreading.IsThreadShuttingDown():
-            
-            time.sleep( 0.00001 )
-            
-            if not self._physical_delete_file_hashes_queue.empty():
-                
-                try:
-                    
-                    hashes = self._physical_delete_file_hashes_queue.get( timeout = 1 )
-                    
-                except queue.Empty:
-                    
-                    continue
-                    
-                
-                time.sleep( 2 )
-                
-                for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 5 ):
-                    
-                    with self._rwlock.write:
-                        
-                        for hash in hashes_chunk:
-                            
-                            try:
-                                
-                                ( path, mime ) = self._LookForFilePath( hash )
-                                
-                            except HydrusExceptions.FileMissingException:
-                                
-                                continue
-                                
-                            
-                            ClientPaths.DeletePath( path )
-                            
-                        
-                    
-                    big_pauser.Pause()
-                    
-                
-            
-            if not self._physical_delete_thumbnail_hashes_queue.empty():
-                
-                try:
-                    
-                    hashes = self._physical_delete_thumbnail_hashes_queue.get( timeout = 1 )
-                    
-                except queue.Empty:
-                    
-                    continue
-                    
-                
-                time.sleep( 2 )
-                
-                for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 10 ):
-                    
-                    with self._rwlock.write:
-                        
-                        for hash in hashes_chunk:
-                            
-                            path = self._GenerateExpectedThumbnailPath( hash )
-                            
-                            ClientPaths.DeletePath( path, always_delete_fully = True )
-                            
-                        
-                    
-                    big_pauser.Pause()
-                    
-                
-            
-            self._new_physical_deletes.wait( 5 )
-            
-            self._new_physical_deletes.clear()
-            
+        self._new_physical_file_deletes.set()
         
     
     def Rebalance( self, job_key ):
@@ -1367,14 +1325,9 @@ class ClientFilesManager( object ):
     
     def shutdown( self ):
         
-        self._new_physical_deletes.set()
+        self._new_physical_file_deletes.set()
         
     
-    def Start( self ):
-        
-        self._controller.CallToThreadLongRunning( self.MainLoop )
-        
-
 class FilesMaintenanceManager( object ):
     
     def __init__( self, controller ):
@@ -1593,7 +1546,7 @@ class FilesMaintenanceManager( object ):
                     
                     message = 'During file maintenance, a file was found to be missing or invalid. Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported). Any known URLs for the file have been written to "{}".'.format( error_dir )
                     message += os.linesep * 2
-                    message += 'More file records may have been removed, but this message will not appear again during this boot.'
+                    message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
                     
                     HydrusData.ShowText( message )
                     

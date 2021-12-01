@@ -653,6 +653,15 @@ class ThumbnailCache( object ):
         hash = display_media.GetHash()
         mime = display_media.GetMime()
         
+        thumbnail_mime = HC.IMAGE_JPEG
+        
+        # we don't actually know this, it comes down to detailed stuff, but since this is png vs jpeg it isn't a huge deal down in the guts of image loading
+        # ain't like I am encoding EXIF rotation in my jpeg thumbs
+        if mime in ( HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_ICON ):
+            
+            thumbnail_mime = HC.IMAGE_PNG
+            
+        
         locations_manager = display_media.GetLocationsManager()
         
         try:
@@ -673,7 +682,7 @@ class ThumbnailCache( object ):
         
         try:
             
-            numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
+            numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
             
         except Exception as e:
             
@@ -693,7 +702,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
+                numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
                 
             except Exception as e:
                 
@@ -747,11 +756,11 @@ class ThumbnailCache( object ):
                         
                         try:
                             
-                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, mime )
+                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, thumbnail_mime )
                             
                         except HydrusExceptions.CantRenderWithCVException:
                             
-                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, ( expected_width, expected_height ), mime )
+                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, ( expected_width, expected_height ), thumbnail_mime )
                             
                         
                     except:

@@ -14,7 +14,7 @@ def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
     
     tlw = win.window()
     
-    if ( win.isVisible() and tlw.isVisible() ) or True:
+    if ( win.isVisible() and tlw.isVisible() ):
         
         return win.mapToGlobal( pos )
         

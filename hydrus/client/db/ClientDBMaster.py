@@ -300,6 +300,13 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
+    def HasHash( self, hash ):
+        
+        result = self._Execute( 'SELECT 1 FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        
+        return result is not None
+        
+    
     def HasHashId( self, hash_id: int ):
         
         result = self._Execute( 'SELECT 1 FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()

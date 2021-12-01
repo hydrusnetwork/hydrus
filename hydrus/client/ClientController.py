@@ -1150,8 +1150,6 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self.client_files_manager.Start()
-        
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
         self.frame_splash_status.SetSubtext( 'image caches' )
@@ -1266,6 +1264,10 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.files_maintenance_manager.Start()
+        
+        job = self.CallRepeating( 30.0, 86400.0, self.client_files_manager.DoDeferredPhysicalDeletes )
+        job.WakeOnPubSub( 'notify_new_physical_file_deletes' )
+        self._daemon_jobs[ 'deferred_physical_deletes' ] = job
         
         job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjectsImportant )
         job.WakeOnPubSub( 'important_dirt_to_clean' )

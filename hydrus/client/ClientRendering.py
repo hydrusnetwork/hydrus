@@ -66,8 +66,6 @@ def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
 def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
-    pil_image = HydrusImageHandling.Dequantize( pil_image )
-    
     if pil_image.mode == 'RGBA':
         
         depth = 4
@@ -90,6 +88,9 @@ class ImageRenderer( object ):
         
         self._num_frames = media.GetNumFrames()
         self._resolution = media.GetResolution()
+        
+        self._icc_profile_bytes = None
+        self._qt_colourspace = None
         
         self._path = None
         
@@ -287,11 +288,48 @@ class ImageRenderer( object ):
         
         data = numpy_image.data
         
-        return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
+        qt_image = HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
+        
+        # ok this stuff was originally for image ICC, as loaded using PIL's image.info dict
+        # ultimately I figured out how to do the conversion with PIL itself, which was more universal
+        # however if we end up pulling display ICC or taking user-set ICC, we may want this qt code somewhere
+        
+        if self._icc_profile_bytes is not None:
+            
+            try:
+                
+                if self._qt_colourspace is None:
+                    
+                    self._qt_colourspace = QG.QColorSpace.fromIccProfile( self._icc_profile_bytes )
+                    
+                
+                # originally this was converting image ICC to sRGB, but I think in the 'display' sense, we'd be setting sRGB and then converting to the user-set ICC
+                # 'hey, Qt, this QImage is in sRGB (I already normalised it), now convert it to xxx, thanks!'
+                
+                qt_image.setColorSpace( self._qt_colourspace )
+                qt_image.convertToColorSpace( QG.QColorSpace.SRgb )
+                
+            except:
+                
+                HydrusData.Print( 'Failed to load the ICC Profile for {} into a Qt Colourspace!'.format( self._path ) )
+                
+                self._icc_profile_bytes = None
+                
+            
+        
+        return qt_image
         
     
     def GetQtPixmap( self, clip_rect = None, target_resolution = None ):
-    
+        
+        # colourspace conversions seem to be exclusively QImage territory
+        if self._icc_profile_bytes is not None:
+            
+            qt_image = self.GetQtImage( clip_rect = clip_rect, target_resolution = target_resolution )
+            
+            return QG.QPixmap.fromImage( qt_image )
+            
+        
         ( my_width, my_height ) = self._resolution
         
         if clip_rect is None:
