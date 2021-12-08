@@ -764,10 +764,15 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ):
         
         pil_image = PILImageCms.profileToProfile( pil_image, src_profile, PIL_SRGB_PROFILE, outputMode = outputMode )
         
-    except PILImageCms.PyCMSError:
+    except ( PILImageCms.PyCMSError, OSError ):
         
         # 'cannot build transform' and presumably some other fun errors
-        # way more advanced that we can deal with, so we'll just no-op
+        # way more advanced than we can deal with, so we'll just no-op
+        
+        # OSError is due to a "OSError: cannot open profile from string" a user got
+        # no idea, but that seems to be an ImageCms issue doing byte handling and ending up with an odd OSError?
+        # or maybe somehow my PIL reader or bytesIO sending string for some reason?
+        # in any case, nuke it for now
         
         pass
         

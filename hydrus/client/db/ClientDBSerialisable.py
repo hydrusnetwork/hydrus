@@ -165,11 +165,11 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.json_dict' : ( 'CREATE TABLE {} ( name TEXT PRIMARY KEY, dump BLOB_BYTES );', 400 ),
-            'main.json_dumps' : ( 'CREATE TABLE {} ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );', 400 ),
-            'main.json_dumps_named' : ( 'CREATE TABLE {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );', 400 ),
-            'main.json_dumps_hashed' : ( 'CREATE TABLE {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 ),
-            'main.yaml_dumps' : ( 'CREATE TABLE {} ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );', 400 )
+            'main.json_dict' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT PRIMARY KEY, dump BLOB_BYTES );', 400 ),
+            'main.json_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );', 400 ),
+            'main.json_dumps_named' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );', 400 ),
+            'main.json_dumps_hashed' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 ),
+            'main.yaml_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );', 400 )
         }
         
     

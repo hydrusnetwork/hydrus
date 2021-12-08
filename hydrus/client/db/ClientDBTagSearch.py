@@ -13,6 +13,8 @@ from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
+from hydrus.client.db import ClientDBTagDisplay
+from hydrus.client.metadata import ClientTags
 
 # Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1
 MIN_CACHED_INTEGER = - ( 2 ** 63 )
@@ -126,10 +128,11 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay ):
         
         self.modules_services = modules_services
         self.modules_tags = modules_tags
+        self.modules_tag_display = modules_tag_display
         
         ClientDBModule.ClientDBModule.__init__( self, 'client tag search', cursor )
         
@@ -146,16 +149,16 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         index_generation_dict = {}
         
         index_generation_dict[ tags_table_name ] = [
-            ( [ 'namespace_id', 'subtag_id' ], True, 424 ),
-            ( [ 'subtag_id' ], False, 424 )
+            ( [ 'namespace_id', 'subtag_id' ], True, 465 ),
+            ( [ 'subtag_id' ], False, 465 )
         ]
         
         index_generation_dict[ subtags_searchable_map_table_name ] = [
-            ( [ 'searchable_subtag_id' ], False, 430 )
+            ( [ 'searchable_subtag_id' ], False, 465 )
         ]
         
         index_generation_dict[ integer_subtags_table_name ] = [
-            ( [ 'integer_subtag' ], False, 424 )
+            ( [ 'integer_subtag' ], False, 465 )
         ]
         
         return index_generation_dict
@@ -167,7 +170,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         index_generation_dict = {}
         
-        file_service_ids = list( self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
         file_service_ids.append( self.modules_services.combined_file_service_id )
         
         for file_service_id in file_service_ids:
@@ -188,10 +191,10 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         integer_subtags_table_name = self.GetIntegerSubtagsTableName( file_service_id, tag_service_id )
         
         table_dict = {
-            tags_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );', 424 ),
-            subtags_fts4_table_name : ( 'CREATE VIRTUAL TABLE IF NOT EXISTS {} USING fts4( subtag );', 424 ),
-            subtags_searchable_map_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );', 430 ),
-            integer_subtags_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );', 424 )
+            tags_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );', 465 ),
+            subtags_fts4_table_name : ( 'CREATE VIRTUAL TABLE IF NOT EXISTS {} USING fts4( subtag );', 465 ),
+            subtags_searchable_map_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );', 465 ),
+            integer_subtags_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );', 465 )
         }
         
         return table_dict
@@ -203,7 +206,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         table_dict = {}
         
-        file_service_ids = list( self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
         file_service_ids.append( self.modules_services.combined_file_service_id )
         
         for file_service_id in file_service_ids:
@@ -223,7 +226,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        file_service_ids = list( self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES ) )
         file_service_ids.append( self.modules_services.combined_file_service_id )
         
         tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
@@ -317,56 +320,26 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         
     
-    def ConvertLocationAndTagContextToCoveringCachePairs( self, location_search_context: ClientSearch.LocationSearchContext, tag_search_context: ClientSearch.TagSearchContext ):
-        
-        # a GREAT way to support fast deleted file search is to have a domain that covers all files ever deleted in all domains mate
-        # adding on trash or full delete and only removing files from it on clear delete record for all services
-        # then it just needs the cross-reference after search
-        # if I do this, then I think we'll be covering all specific file services again, even if not perfectly
-        # which means I can ditch the COMBINED_TAG_SERVICE_KEY gubbins here
-        # and therefore ditch this being 'TagContext'-CoveringPairs. tag context will always be the same!
-        
-        # furthermore, if we are moving to imperfect file caches, potentially we could go to just 'all local files' cache for current files, too
-        # the only real drawback would be when searching a tiny local file service, like trash
-        
-        tag_search_contexts = [ tag_search_context ]
-        
-        if location_search_context.SearchesCurrent() and not location_search_context.SearchesDeleted():
-            
-            file_location_is_cross_referenced = not location_search_context.IsAllKnownFiles()
-            
-            file_service_keys = list( location_search_context.current_service_keys )
-            
-        else:
-            
-            file_location_is_cross_referenced = False
-            
-            file_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ]
-            
-            if tag_search_context.IsAllKnownTags() == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                tag_search_contexts = []
-                
-                for tag_service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ):
-                    
-                    tsc = tag_search_context.Duplicate()
-                    
-                    tsc.service_key = tag_service.GetServiceKey()
-                    
-                    tag_search_contexts.append( tsc )
-                    
-                
-            
-        
-        return ( list( itertools.product( file_service_keys, tag_search_contexts ) ), file_location_is_cross_referenced )
-        
-    
     def DeleteTags( self, file_service_id, tag_service_id, tag_ids ):
         
         if len( tag_ids ) == 0:
             
             return
             
+        
+        if not isinstance( tag_ids, set ):
+            
+            tag_ids = set( tag_ids )
+            
+        
+        #
+        
+        # we always include all chained guys regardless of count
+        chained_tag_ids = self.modules_tag_display.GetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids )
+        
+        tag_ids = tag_ids.difference( chained_tag_ids )
+        
+        #
         
         tags_table_name = self.GetTagsTableName( file_service_id, tag_service_id )
         subtags_fts4_table_name = self.GetSubtagsFTS4TableName( file_service_id, tag_service_id )
@@ -788,7 +761,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 table_dict = {}
                 
-                file_service_ids = list( self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES ) )
+                file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
                 file_service_ids.append( self.modules_services.combined_file_service_id )
                 
                 for file_service_id in file_service_ids:

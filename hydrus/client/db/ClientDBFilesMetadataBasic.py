@@ -32,14 +32,20 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
+        index_generation_dict[ 'main.pixel_hash_map' ] = [
+            ( [ 'pixel_hash_id' ], False, 465 )
+        ]
+        
         return index_generation_dict
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.file_inbox' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
-            'main.files_info' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 )
+            'main.file_inbox' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
+            'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
+            'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
+            'main.pixel_hash_map' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, pixel_hash_id INTEGER, PRIMARY KEY ( hash_id, pixel_hash_id ) );', 465 )
         }
         
     
@@ -83,6 +89,11 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             
         
         return archiveable_hash_ids
+        
+    
+    def ClearPixelHash( self, hash_id: int ):
+        
+        self._Execute( 'DELETE FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) )
         
     
     def GetMime( self, hash_id: int ) -> int:
@@ -134,7 +145,13 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         if HC.CONTENT_TYPE_HASH:
             
-            return [ ( 'files_info', 'hash_id' ) ]
+            return [
+                ( 'file_inbox', 'hash_id' ),
+                ( 'files_info', 'hash_id' ),
+                ( 'has_icc_profile', 'hash_id' ),
+                ( 'pixel_hash_map', 'hash_id' ),
+                ( 'pixel_hash_map', 'pixel_hash_id' )
+            ]
             
         
         return []
@@ -166,6 +183,23 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return total_size
         
     
+    def GetHasICCProfile( self, hash_id: int ):
+        
+        result = self._Execute( 'SELECT hash_id FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def GetHasICCProfileHashIds( self, hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( temp_hash_ids_table_name ) ) )
+            
+        
+        return has_icc_profile_hash_ids
+        
+    
     def InboxFiles( self, hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
         
         if not isinstance( hash_ids, set ):
@@ -183,5 +217,24 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             
         
         return inboxable_hash_ids
+        
+    
+    def SetHasICCProfile( self, hash_id: int, has_icc_profile: bool ):
+        
+        if has_icc_profile:
+            
+            self._Execute( 'INSERT OR IGNORE INTO has_icc_profile ( hash_id ) VALUES ( ? );', ( hash_id, ) )
+            
+        else:
+            
+            self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
+            
+        
+    
+    def SetPixelHash( self, hash_id: int, pixel_hash_id: int ):
+        
+        self.ClearPixelHash( hash_id )
+        
+        self._Execute( 'INSERT INTO pixel_hash_map ( hash_id, pixel_hash_id ) VALUES ( ?, ? );', ( hash_id, pixel_hash_id ) )
         
     

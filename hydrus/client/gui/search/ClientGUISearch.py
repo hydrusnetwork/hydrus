@@ -60,6 +60,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
     ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
@@ -136,7 +137,7 @@ def FilterAndConvertLabelPredicates( predicates: typing.Collection[ ClientSearch
     
 def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
-    window = widget.window()
+    window = None
     
     predicates = FilterAndConvertLabelPredicates( predicates )
     
@@ -148,6 +149,14 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ Clien
         predicate_type = predicate.GetType()
         
         if value is None and predicate_type in FLESH_OUT_SYSTEM_PRED_TYPES:
+            
+            if window is None:
+                
+                if QP.isValid( widget ):
+                    
+                    window = widget.window()
+                    
+                
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             
@@ -491,6 +500,13 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ) ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ) ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
+            
+            recent_predicate_types = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ) ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
             

@@ -61,6 +61,7 @@ PREDICATE_TYPE_SYSTEM_NUM_FRAMES = 37
 PREDICATE_TYPE_SYSTEM_NUM_NOTES = 38
 PREDICATE_TYPE_SYSTEM_NOTES = 39
 PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME = 40
+PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE = 41
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -80,6 +81,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FRAMERATE,
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
@@ -340,6 +342,13 @@ class FileSystemPredicates( object ):
                 has_audio = value
                 
                 self._common_info[ 'has_audio' ] = has_audio
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
+                
+                has_icc_profile = value
+                
+                self._common_info[ 'has_icc_profile' ] = has_icc_profile
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_HASH:
@@ -1788,7 +1797,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, self._value, not self._inclusive )
             
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
             
             return Predicate( self._predicate_type, not self._value )
             
@@ -2320,6 +2329,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if not has_audio:
                         
                         base = 'no audio'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
+                
+                base = 'has icc profile'
+                
+                if self._value is not None:
+                    
+                    has_icc_profile = self._value
+                    
+                    if not has_icc_profile:
+                        
+                        base = 'no icc profile'
                         
                     
                 

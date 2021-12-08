@@ -4633,11 +4633,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _MigrateTags( self ):
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        default_tag_service_key = self._controller.new_options.GetKey( 'default_tag_service_tab' )
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'migrate tags' )
         
-        panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, default_tag_repository_key )
+        panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, default_tag_service_key )
         
         frame.SetPanel( panel )
         

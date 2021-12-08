@@ -2126,6 +2126,8 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        vbox.addStretch( 1 )
+        
         self.widget().setLayout( vbox )
         
         #

@@ -115,9 +115,7 @@ def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
         
         i += len( chunk )
         
-        num_done = i + 1
-        
-        yield ( chunk, num_done, num_to_do )
+        yield ( chunk, i, num_to_do )
         
     
     cursor.execute( 'DROP TABLE ' + table_name + ';' )

@@ -63,6 +63,8 @@ class Predicate(Enum):
     NOT_BEST_QUALITY_OF_GROUP = auto()
     HAS_AUDIO = auto()
     NO_AUDIO = auto()
+    HAS_ICC_PROFILE = auto()
+    NO_ICC_PROFILE = auto()
     HAS_TAGS = auto()
     UNTAGGED = auto()
     NUM_OF_TAGS = auto()
@@ -146,6 +148,8 @@ SYSTEM_PREDICATES = {
     '(((is )?not)|(isn\'t))( the)? best quality( file)? of( its)?( duplicate)? group': (Predicate.NOT_BEST_QUALITY_OF_GROUP, None, None, None),
     'has audio': (Predicate.HAS_AUDIO, None, None, None),
     'no audio': (Predicate.NO_AUDIO, None, None, None),
+    'has icc profile': (Predicate.HAS_ICC_PROFILE, None, None, None),
+    'no icc profile': (Predicate.NO_ICC_PROFILE, None, None, None),
     'has tags': (Predicate.HAS_TAGS, None, None, None),
     'untagged|no tags': (Predicate.UNTAGGED, None, None, None),
     'number of tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),
@@ -401,6 +405,8 @@ examples = [
     "system:isn't the best quality file of its duplicate group",
     "system:has_audio",
     "system:no audio",
+    "system:has icc profile",
+    "system:no icc profile",
     "system:has tags",
     "system:no tags",
     "system:untagged",

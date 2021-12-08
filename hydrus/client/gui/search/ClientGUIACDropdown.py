@@ -526,6 +526,13 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             widget = self.window().parentWidget()
             
+            if not QP.isValid( widget ):
+                
+                # seems to be a dialog posting late or similar
+                
+                return False
+                
+            
         else:
             
             widget = self
@@ -1515,6 +1522,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
         service_types_in_order.append( HC.FILE_REPOSITORY )
+        service_types_in_order.append( HC.IPFS )
         
         self._AddAllKnownFilesServiceTypeIfAllowed( service_types_in_order )
         

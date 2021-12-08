@@ -81,15 +81,26 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         # all parent definitions are sibling collapsed, so are terminus of their sibling chains
         # so get all of the parent chain, then get all chains that point to those
         
+        ideal_tag_ids = self.modules_tag_siblings.GetIdeals( display_type, tag_service_id, tag_ids )
+        
+        parent_chain_members = self.modules_tag_parents.GetChainsMembers( display_type, tag_service_id, ideal_tag_ids )
+        
+        sibling_chain_members = self.modules_tag_siblings.GetChainsMembersFromIdeals( display_type, tag_service_id, parent_chain_members )
+        
+        return sibling_chain_members.union( parent_chain_members )
+        
+        # ok revisit this sometime I guess but it needs work
+        '''
         with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
             
             with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
                 
                 self.modules_tag_siblings.GetIdealsIntoTable( display_type, tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
                 
-                with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_parent_chain_members_table_name:
+                with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_parent_chain_members_table_name:
                     
-                    self.modules_tag_parents.GetChainsMembersTables( display_type, tag_service_id, temp_ideal_tag_ids_table_name, temp_parent_chain_members_table_name )
+                    # this is actually not implemented LMAO
+                    self.modules_tag_parents.GetChainsMembersTables( display_type, tag_service_id, temp_ideal_tag_ids_table_name, temp_parent_chain_members_table_name, 'ideal_tag_id' )
                     
                     with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_chain_members_table_name:
                         
@@ -100,7 +111,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
                     
                 
             
-        
+        '''
     
     def GetImpliedBy( self, display_type, tag_service_id, tag_id ) -> typing.Set[ int ]:
         

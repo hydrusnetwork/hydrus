@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_465"><a href="#version_465">version 465</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed a recent bug in wildcard search where 't\*g' unnamespaced wildcards were not returning namespace results</li>
+					<li>sped up multi-predicate wildcard searches in some unusual file domains</li>
+					<li>the file maintenance manager is now more polite about how it works. no matter its speed settings, it now pauses regularly to check on and wait until the main UI is feeling good to start new work. this should relieve heavier clients on older machines who will get a bunch of new work to do this week</li>
+					<li>'all local files' in _review services_ now states how many files are awaiting physical deletion in the new deferred delete queue. this live updates when the values change but should be 0 pretty much all the time</li>
+					<li>'all known files' in _review services_ also gets a second safety yes/no dialog on its clear deleted files record button</li>
+					<li>updated the gelbooru 0.2.x gallery page parser, which at some point had been pulling 'delete from favourites' links when running the login-required 'gelbooru favorites by user id' downloader!!! it was deleting favourites, which I presume and hope was a recent change in gelbooru's html. in any case, the parser now skips over any deletion url (issue #1023)</li>
+					<li>fixed a bad index to label conversion in a common database progress method. it was commonly saying 22/21 progress instead of 21/21</li>
+					<li>fixed an error when manage tags dialog posts tags from the autocomplete during dialog shutdown</li>
+					<li>fixed a layout issue with the new presentation import options where the dropdowns could grow a little tall and make a sub-panel scrollbar</li>
+					<li>added handling for an error raised on loading an image with what seems to be a borked ICC profile</li>
+					<li>increased the default per-db-file cache size from 200MB up to 256MB</li>
+					<li>.</li>
+					<li>some new options:</li>
+					<li>the default tag service in the manage tags dialog (and some similar 'tag services in a row of tabs' dialogs) is reset this week. from now on, the last used service is remembered for the next time the dialog is opened. let's see how that works out. if you don't like it, you can go back to the old fixed default setting under the 'tags' options panel</li>
+					<li>added a checkbox to the 'search' options panel that controls whether new search pages are in 'searching immediately' or 'searching paused' state (issue #761)</li>
+					<li>moved default tag sort from 'tags' options panel to 'sort/collect'</li>
+					<li>.</li>
+					<li>deleted files and ipfs searchability:</li>
+					<li>wrote a new virtual file service to hold all previously deleted files of all real file services. this provides a mapping cache and tag lookup cache allowing for fast search of any deleted file domain in the future</li>
+					<li>ipfs services also now have mapping caches and tag search caches</li>
+					<li>ipfs services are now searchable in the main file search view! just select them from the autocomplete dropdown file domain button. they have tag counts and everything</li>
+					<li>it will take some time to populate the new ipfs and deleted files caches. if you don't have much deleted files history and no ipfs, it will be a few seconds. if you have a massive client with many deleted/ipfs files and many tags, it could be twenty minutes or more</li>
+					<li>.</li>
+					<li>'has icc profile' now cached in database:</li>
+					<li>the client database now keeps track of which image files have an icc profile. this data is added on file import</li>
+					<li>a new file maintenance task can generate it retroactively, and if a file is discovered to have an icc profile, it will be scheduled for a thumbnail regeneration too</li>
+					<li>a new system predicate, 'system:has icc profile', can now search this data. this system pred is weird, so I expect in future it will get tucked into an umbrella system pred for advanced/rare stuff</li>
+					<li>on update, all your existing image files are scheduled for the maintenance task. your 'has icc profile' will populate over time, and thumbnails will correct themselves</li>
+					<li>.</li>
+					<li>pixel hash now cached in database:</li>
+					<li>the client database now keeps track of image 'pixel hashes', which are fast unique identifiers that aggregate all that image's pixels. if two images have the same pixel hash, they are pixel duplicates. this data is added on file import</li>
+					<li>a new file maintenance task can generate it retroactively</li>
+					<li>on update, all your existing image files are scheduled for the maintenance task. it'll work lightly in the background in prep for future duplicate file system improvements</li>
+					<li>.</li>
+					<li>boring search code cleanup:</li>
+					<li>fixed a bug where the tag search cache could lose sibling/parent-chained values when their count was zeroed, even though they should always exist in a domain's lookup</li>
+					<li>fixed up some repository reset code that was regenerating surplus tag search data</li>
+					<li>with the new deleted files domain, simplified the new complex domain search pattern</li>
+					<li>converted basic tag search code to support multiple location domains</li>
+					<li>cleaned up some search cache and general table creation code to handle legacy orphan tables without error</li>
+					<li>misc tag and mapping cache code and combined local files code refactoring and cleanup</li>
+				</ul>
 				<li><h3 id="version_464"><a href="#version_464">version 464</a></h3></li>
 				<ul>
 					<li>image icc:</li>

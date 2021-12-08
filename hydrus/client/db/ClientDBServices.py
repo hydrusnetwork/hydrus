@@ -24,6 +24,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self.trash_service_id = None
         self.combined_local_file_service_id = None
         self.combined_file_service_id = None
+        self.combined_deleted_file_service_id = None
         self.combined_tag_service_id = None
         
         self._InitCaches()
@@ -39,7 +40,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.services' : ( 'CREATE TABLE {} ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );', 400 )
+            'main.services' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER PRIMARY KEY AUTOINCREMENT, service_key BLOB_BYTES UNIQUE, service_type INTEGER, name TEXT, dictionary_string TEXT );', 400 )
         }
         
     
@@ -64,6 +65,18 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             self.trash_service_id = self.GetServiceId( CC.TRASH_SERVICE_KEY )
             self.combined_local_file_service_id = self.GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             self.combined_file_service_id = self.GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
+            
+            try:
+                
+                self.combined_deleted_file_service_id = self.GetServiceId( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
+                
+            except HydrusExceptions.DataMissing:
+                
+                # version 465 it might not be in yet
+                
+                pass
+                
+            
             self.combined_tag_service_id = self.GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
             
         
@@ -97,6 +110,10 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             self.combined_file_service_id = service_id
             
+        elif service_key == CC.COMBINED_DELETED_FILE_SERVICE_KEY:
+            
+            self.combined_deleted_file_service_id = service_id
+            
         elif service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
             self.combined_tag_service_id = service_id
@@ -126,7 +143,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         
         service_type = self.GetService( service_id ).GetServiceType()
         
-        return service_type in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN )
+        return service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE
         
     
     def GetNonDupeName( self, name ) -> str:
@@ -188,18 +205,17 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             return False
             
         
-        file_location_is_all_local = False
-        
         service_ids = { self.GetServiceId( service_key ) for service_key in location_search_context.current_service_keys }
         
-        service_types = { self.GetService( service_id ).GetServiceType() for service_id in service_ids }
-        
-        if False not in ( service_type in HC.LOCAL_FILE_SERVICES for service_type in service_types ):
+        for service_id in service_ids:
             
-            file_location_is_all_local = True
+            if not self.FileServiceIsCoveredByAllLocalFiles( service_id ):
+                
+                return False
+                
             
         
-        return file_location_is_all_local
+        return True
         
     
     def UpdateService( self, service: ClientServices.Service ):

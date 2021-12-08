@@ -1430,7 +1430,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
@@ -1439,7 +1439,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             page = self._Panel( self._tag_repositories, service_key, paths )
             
-            select = service_key == default_tag_repository_key
+            select = service_key == default_tag_service_key
             
             tab_index = self._tag_repositories.addTab( page, name )
             if select: self._tag_repositories.setCurrentIndex( tab_index )
@@ -1452,6 +1452,23 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        self._tag_repositories.currentChanged.connect( self._SaveDefaultTagServiceKey )
+        
+    
+    def _SaveDefaultTagServiceKey( self ):
+        
+        if self.sender() != self._tag_repositories:
+            
+            return
+            
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_repositories.currentWidget()
+            
+            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            
         
     
     def GetValue( self ):
@@ -1547,13 +1564,18 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             paths = [ path for ( index, path ) in self._paths_list.GetData( only_selected = True ) ]
             
             self._filename_tagging_panel.SetSelectedPaths( paths )
-                        
+            
         
         def GetInfo( self ):
             
             paths_to_tags = { path : self._GetTags( index, path ) for ( index, path ) in self._paths_list.GetData() }
             
             return ( self._service_key, paths_to_tags )
+            
+        
+        def GetServiceKey( self ):
+            
+            return self._service_key
             
         
         def RefreshFileList( self ):

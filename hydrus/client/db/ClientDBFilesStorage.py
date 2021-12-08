@@ -104,8 +104,8 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         return {
             'main.local_file_deletion_reasons' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );', 400 ),
-            'deferred_physical_file_deletes' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY );', 464 ),
-            'deferred_physical_thumbnail_deletes' : ( 'CREATE TABLE {} ( hash_id INTEGER PRIMARY KEY );', 464 )
+            'deferred_physical_file_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 ),
+            'deferred_physical_thumbnail_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 )
             
         }
         
@@ -146,7 +146,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
-        return self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES )
+        return self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
         
     
     def AddFiles( self, service_id, insert_rows ):
@@ -273,6 +273,20 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return service_ids_to_nums_cleared
         
     
+    def ConvertLocationToCoveringFileServiceKeys( self, location_search_context: ClientSearch.LocationSearchContext ):
+        
+        file_location_is_cross_referenced = not ( location_search_context.IsAllKnownFiles() or location_search_context.SearchesDeleted() )
+        
+        file_service_keys = list( location_search_context.current_service_keys )
+        
+        if location_search_context.SearchesDeleted():
+            
+            file_service_keys.append( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
+            
+        
+        return ( file_service_keys, file_location_is_cross_referenced )
+        
+    
     def DeferFilesDeleteIfNowOrphan( self, hash_ids, definitely_no_thumbnails = False, ignore_service_id = None ):
         
         orphan_hash_ids = self.FilterOrphanFileHashIds( hash_ids, ignore_service_id = ignore_service_id )
@@ -282,6 +296,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             self._ExecuteMany( 'INSERT OR IGNORE INTO deferred_physical_file_deletes ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in orphan_hash_ids ) )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_physical_file_deletes' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_physical_file_delete_numbers' )
             
         
         if not definitely_no_thumbnails:
@@ -293,6 +308,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                 self._ExecuteMany( 'INSERT OR IGNORE INTO deferred_physical_thumbnail_deletes ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in orphan_hash_ids ) )
                 
                 self._cursor_transaction_wrapper.pub_after_job( 'notify_new_physical_file_deletes' )
+                self._cursor_transaction_wrapper.pub_after_job( 'notify_new_physical_file_delete_numbers' )
                 
             
         
@@ -335,7 +351,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if just_these_service_ids is None:
             
-            service_ids = self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES )
+            service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
             
         else:
             
@@ -363,7 +379,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if just_these_service_ids is None:
             
-            service_ids = self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES )
+            service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
             
         else:
             
@@ -710,6 +726,14 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return ( file_result, thumbnail_result )
         
     
+    def GetDeferredPhysicalDeleteCounts( self ):
+        
+        ( num_files, ) = self._Execute( 'SELECT COUNT( * ) FROM deferred_physical_file_deletes;' ).fetchone()
+        ( num_thumbnails, ) = self._Execute( 'SELECT COUNT( * ) FROM deferred_physical_thumbnail_deletes;' ).fetchone()
+        
+        return ( num_files, num_thumbnails )
+        
+    
     def GetDeletedFilesCount( self, service_id: int ) -> int:
         
         deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
@@ -825,7 +849,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         hash_ids_to_current_file_service_ids = collections.defaultdict( list )
         
-        for service_id in self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES ):
+        for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
             
             current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
             
@@ -845,7 +869,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         hash_ids_to_pending_file_service_ids = collections.defaultdict( list )
         hash_ids_to_petitioned_file_service_ids = collections.defaultdict( list )
         
-        for service_id in self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES ):
+        for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
             
             ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
             
@@ -876,6 +900,15 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             hash_ids_to_pending_file_service_ids,
             hash_ids_to_petitioned_file_service_ids
         )
+        
+    
+    def GetLocationSearchContextForAllServicesDeletedFiles( self ) -> ClientSearch.LocationSearchContext:
+        
+        deleted_service_keys = { service.GetServiceKey() for service in self.modules_services.GetServices( limited_types = HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE ) }
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [], deleted_service_keys = deleted_service_keys )
+        
+        return location_search_context
         
     
     def GetNumLocal( self, service_id: int ) -> int:
@@ -916,7 +949,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             service_ids_to_counts = {}
             
-            for service_id in self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES ):
+            for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
                 
                 current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
                 
@@ -962,7 +995,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if HC.CONTENT_TYPE_HASH:
             
-            for service_id in self.modules_services.GetServiceIds( HC.SPECIFIC_FILE_SERVICES ):
+            for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
                 
                 ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
                 

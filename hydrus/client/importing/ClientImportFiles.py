@@ -117,6 +117,8 @@ class FileImportJob( object ):
         self._thumbnail_bytes = None
         self._phashes = None
         self._extra_hashes = None
+        self._has_icc_profile = None
+        self._pixel_hash = None
         self._file_modified_timestamp = None
         
     
@@ -351,6 +353,36 @@ class FileImportJob( object ):
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
+        has_icc_profile = False
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_ICC_PROFILE:
+            
+            try:
+                
+                pil_image = HydrusImageHandling.RawOpenPILImage( self._temp_path )
+                
+                has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+                
+            except:
+                
+                pass
+                
+            
+        
+        self._has_icc_profile = has_icc_profile
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and duration is None:
+            
+            try:
+                
+                self._pixel_hash = HydrusImageHandling.GetImagePixelHash( self._temp_path, mime )
+                
+            except:
+                
+                pass
+                
+            
+        
         self._file_modified_timestamp = HydrusFileHandling.GetFileModifiedTimestamp( self._temp_path )
         
     
@@ -387,6 +419,16 @@ class FileImportJob( object ):
     def GetPHashes( self ):
         
         return self._phashes
+        
+    
+    def GetPixelHash( self ):
+        
+        return self._pixel_hash
+        
+    
+    def HasICCProfile( self ) -> bool:
+        
+        return self._has_icc_profile
         
     
     def PubsubContentUpdates( self ):

@@ -211,6 +211,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'watch_clipboard_for_watcher_urls' ] = False
         self._dictionary[ 'booleans' ][ 'watch_clipboard_for_other_recognised_urls' ] = False
         
+        self._dictionary[ 'booleans' ][ 'default_search_synchronised' ] = True
         self._dictionary[ 'booleans' ][ 'autocomplete_float_main_gui' ] = True
         self._dictionary[ 'booleans' ][ 'autocomplete_float_frames' ] = False
         
@@ -242,6 +243,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_special_action' ] = False
         
         self._dictionary[ 'booleans' ][ 'do_macos_debug_dialog_menus' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'save_default_tag_service_tab_on_change' ] = True
         
         #
         
@@ -405,6 +408,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'keys' ] = {}
         
+        self._dictionary[ 'keys' ][ 'default_tag_service_tab' ] = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex()
         self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.hex()
         self._dictionary[ 'keys' ][ 'default_gug_key' ] = HydrusData.GenerateKey().hex()
         

@@ -64,9 +64,10 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
         
-        version = 400 if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE else 408
+        # the version was earlier here but we updated when adding combined delete files and ipfs to these tables
+        version = 465
         
-        table_dict[ table_name ] = ( 'CREATE TABLE {} ( tag_id INTEGER PRIMARY KEY, current_count INTEGER, pending_count INTEGER );', version )
+        table_dict[ table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, current_count INTEGER, pending_count INTEGER );', version )
         
         return table_dict
         
@@ -77,7 +78,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         table_dict = {}
         
-        file_service_ids = list( self.modules_services.GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
         file_service_ids.append( self.modules_services.combined_file_service_id )
         
         for file_service_id in file_service_ids:
@@ -100,7 +101,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        file_service_ids = list( self.modules_services.GetServiceIds( HC.TAG_CACHE_SPECIFIC_FILE_SERVICES ) )
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES ) )
         file_service_ids.append( self.modules_services.combined_file_service_id )
         
         tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
@@ -448,7 +449,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         counts_cache_table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
         
         return 'SELECT tag_id FROM {} WHERE current_count > 0'.format( counts_cache_table_name )
-        
+    
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         

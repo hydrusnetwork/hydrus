@@ -96,6 +96,30 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     self.modules_hashes.SetExtraHashes( hash_id, md5, sha1, sha512 )
                     
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE:
+                    
+                    previous_has_icc_profile = self.modules_files_metadata_basic.GetHasICCProfile( hash_id )
+                    
+                    has_icc_profile = additional_data
+                    
+                    if previous_has_icc_profile != has_icc_profile:
+                        
+                        self.modules_files_metadata_basic.SetHasICCProfile( hash_id, has_icc_profile )
+                        
+                        if has_icc_profile: # we have switched from off to on
+                            
+                            self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                            
+                        
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH:
+                    
+                    pixel_hash = additional_data
+                    
+                    pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
+                    
+                    self.modules_files_metadata_basic.SetPixelHash( hash_id, pixel_hash_id )
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
                     
                     file_modified_timestamp = additional_data

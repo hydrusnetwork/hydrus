@@ -90,9 +90,9 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.tag_siblings' : ( 'CREATE TABLE {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
-            'main.tag_sibling_petitions' : ( 'CREATE TABLE {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
-            'main.tag_sibling_application' : ( 'CREATE TABLE {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
+            'main.tag_siblings' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
+            'main.tag_sibling_petitions' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
+            'main.tag_sibling_application' : ( 'CREATE TABLE IF NOT EXISTS {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
         }
         
     

@@ -39,6 +39,8 @@ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL = 12
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE = 13
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_URL_THEN_RECORD = 14
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL_THEN_RECORD = 15
+REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE = 16
+REGENERATE_FILE_DATA_JOB_PIXEL_HASH = 17
 
 regen_file_enum_to_str_lookup = {}
 
@@ -58,6 +60,8 @@ regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'fix
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'check for membership in the similar files search system'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'regenerate file modified date'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 'determine if the file has an icc profile'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'calculate file pixel hash'
 
 regen_file_enum_to_description_lookup = {}
 
@@ -77,6 +81,8 @@ regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS 
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.'
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.'
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'This rechecks the file\'s modified timestamp and saves it to the database.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 'This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.'
 
 NORMALISED_BIG_JOB_WEIGHT = 100
 
@@ -98,6 +104,8 @@ regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ]
 regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 50
 regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
 regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 10
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 100
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 100
 
 regen_file_enum_to_overruled_jobs = {}
 
@@ -117,8 +125,10 @@ regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ]
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = []
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = []
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = []
 
-ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_URL_THEN_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL_THEN_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
+ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_URL_THEN_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL_THEN_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE, REGENERATE_FILE_DATA_JOB_PIXEL_HASH, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
 def GetAllFilePaths( raw_paths, do_human_sort = True ):
     
@@ -1050,11 +1060,18 @@ class ClientFilesManager( object ):
                 
                 self._controller.WriteSynchronous( 'clear_deferred_physical_delete', file_hash = file_hash, thumbnail_hash = thumbnail_hash )
                 
+                if num_files_deleted % 10 == 0 or num_thumbnails_deleted % 10 == 0:
+                    
+                    self._controller.pub( 'notify_new_physical_file_delete_numbers' )
+                    
+                
             
             pauser.Pause()
             
         
         if num_files_deleted > 0 or num_thumbnails_deleted > 0:
+            
+            self._controller.pub( 'notify_new_physical_file_delete_numbers' )
             
             HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusData.ToHumanInt( num_files_deleted ), HydrusData.ToHumanInt( num_files_deleted ) ) )
             
@@ -1357,6 +1374,8 @@ class FilesMaintenanceManager( object ):
     
     def _AbleToDoBackgroundMaintenance( self ):
         
+        HG.client_controller.WaitUntilViewFree()
+        
         if HG.client_controller.CurrentlyIdle():
             
             if not self._controller.new_options.GetBoolean( 'file_maintenance_during_idle' ):
@@ -1598,6 +1617,41 @@ class FilesMaintenanceManager( object ):
             
         
     
+    def _HasICCProfile( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.FILES_THAT_CAN_HAVE_ICC_PROFILE:
+            
+            return False
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            try:
+                
+                pil_image = HydrusImageHandling.RawOpenPILImage( path )
+                
+            except:
+                
+                return None
+                
+            
+            has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+            
+            additional_data = has_icc_profile
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
     def _RegenFileMetadata( self, media_result ):
         
         hash = media_result.GetHash()
@@ -1687,32 +1741,6 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def _RegenSimilarFilesMetadata( self, media_result ):
-        
-        hash = media_result.GetHash()
-        mime = media_result.GetMime()
-        
-        if mime not in HC.MIMES_WE_CAN_PHASH:
-            
-            self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
-            
-            return None
-            
-        
-        try:
-            
-            path = self._controller.client_files_manager.GetFilePath( hash, mime )
-            
-        except HydrusExceptions.FileMissingException:
-            
-            return None
-            
-        
-        phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
-        
-        return phashes
-        
-    
     def _RegenFileThumbnailForce( self, media_result ):
         
         mime = media_result.GetMime()
@@ -1751,6 +1779,72 @@ class FilesMaintenanceManager( object ):
             
             pass
             
+        
+    
+    def _RegenPixelHash( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+            
+            return None
+            
+        
+        duration = media_result.GetDuration()
+        
+        if duration is not None:
+            
+            return None
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            try:
+                
+                pixel_hash = HydrusImageHandling.GetImagePixelHash( path, mime )
+                
+            except:
+                
+                return None
+                
+            
+            additional_data = pixel_hash
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
+    def _RegenSimilarFilesMetadata( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.MIMES_WE_CAN_PHASH:
+            
+            self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
+            
+            return None
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+        phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+        
+        return phashes
         
     
     def _ReInitialiseWorkRules( self ):
@@ -1818,6 +1912,14 @@ class FilesMaintenanceManager( object ):
                     elif job_type == REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
                         
                         additional_data = self._RegenFileOtherHashes( media_result )
+                        
+                    elif job_type == REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE:
+                        
+                        additional_data = self._HasICCProfile( media_result )
+                        
+                    elif job_type == REGENERATE_FILE_DATA_JOB_PIXEL_HASH:
+                        
+                        additional_data = self._RegenPixelHash( media_result )
                         
                     elif job_type == REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                         

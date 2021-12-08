@@ -1824,37 +1824,37 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hashes.update( m.GetHashes() )
             
         
-        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
         
         #
         
         services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
+            page = self._Panel( self._tag_services, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             page._add_tag_box.selectUp.connect( self.EventSelectUp )
             page._add_tag_box.selectDown.connect( self.EventSelectDown )
             page._add_tag_box.showPrevious.connect( self.EventShowPrevious )
             page._add_tag_box.showNext.connect( self.EventShowNext )
             page.okSignal.connect( self.okSignal )
             
-            select = service_key == default_tag_repository_key
+            select = service_key == default_tag_service_key
             
-            self._tag_repositories.addTab( page, name )
-            if select: self._tag_repositories.setCurrentIndex( self._tag_repositories.count() - 1 )
+            self._tag_services.addTab( page, name )
+            if select: self._tag_services.setCurrentIndex( self._tag_services.count() - 1 )
             
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -1865,7 +1865,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
         
-        self._tag_repositories.currentChanged.connect( self.EventServiceChanged )
+        self._tag_services.currentChanged.connect( self.EventServiceChanged )
         
         self._SetSearchFocus()
         
@@ -1874,7 +1874,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         groups_of_service_keys_to_content_updates = []
         
-        for page in self._tag_repositories.GetPages():
+        for page in self._tag_services.GetPages():
             
             ( service_key, groups_of_content_updates ) = page.GetGroupsOfContentUpdates()
             
@@ -1894,7 +1894,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.currentWidget()
+        page = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -1910,7 +1910,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._current_media = ( new_media_singleton.Duplicate(), )
                 
-                for page in self._tag_repositories.GetPages():
+                for page in self._tag_services.GetPages():
                     
                     page.SetMedia( self._current_media )
                     
@@ -1922,7 +1922,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.CleanBeforeDestroy( self )
         
-        for page in self._tag_repositories.GetPages():
+        for page in self._tag_services.GetPages():
             
             page.CleanBeforeDestroy()
             
@@ -1940,14 +1940,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventSelectDown( self ):
         
-        self._tag_repositories.SelectRight()
+        self._tag_services.SelectRight()
         
         self._SetSearchFocus()
         
     
     def EventSelectUp( self ):
         
-        self._tag_repositories.SelectLeft()
+        self._tag_services.SelectLeft()
         
         self._SetSearchFocus()
         
@@ -1975,16 +1975,23 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return
             
         
-        if self.sender() != self._tag_repositories:
+        if self.sender() != self._tag_services:
             
             return
             
         
-        page = self._tag_repositories.currentWidget()
+        page = self._tag_services.currentWidget()
         
         if page is not None:
             
             HG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
+            
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_services.currentWidget()
+            
+            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
         
     
@@ -2676,6 +2683,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return ( self._tag_service_key, self._groups_of_content_updates )
             
         
+        def GetServiceKey( self ):
+            
+            return self._tag_service_key
+            
+        
         def HasChanges( self ):
             
             return len( self._groups_of_content_updates ) > 0
@@ -2795,11 +2807,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
         
         #
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
@@ -2810,26 +2822,38 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             name = service.GetName()
             service_key = service.GetServiceKey()
             
-            page = self._Panel( self._tag_repositories, service_key, tags )
+            page = self._Panel( self._tag_services, service_key, tags )
             
-            select = service_key == default_tag_repository_key
+            select = service_key == default_tag_service_key
             
-            self._tag_repositories.addTab( page, name )
-            if select: self._tag_repositories.setCurrentWidget( page )
+            self._tag_services.addTab( page, name )
+            if select: self._tag_services.setCurrentWidget( page )
             
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        self._tag_services.currentChanged.connect( self._SaveDefaultTagServiceKey )
+        
+    
+    def _SaveDefaultTagServiceKey( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_services.currentWidget()
+            
+            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            
         
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.currentWidget()
+        page = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -2841,7 +2865,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         service_keys_to_content_updates = {}
         
-        for page in self._tag_repositories.GetPages():
+        for page in self._tag_services.GetPages():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
@@ -2859,7 +2883,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        if self._tag_repositories.currentWidget().HasUncommittedPair():
+        if self._tag_services.currentWidget().HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
@@ -3586,6 +3610,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return ( self._service_key, content_updates )
             
         
+        def GetServiceKey( self ):
+            
+            return self._service_key
+            
+        
         def HasUncommittedPair( self ):
             
             return len( self._children.GetTags() ) > 0 and len( self._parents.GetTags() ) > 0
@@ -3764,11 +3793,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
         
         #
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
@@ -3779,26 +3808,38 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             name = service.GetName()
             service_key = service.GetServiceKey()
             
-            page = self._Panel( self._tag_repositories, service_key, tags )
+            page = self._Panel( self._tag_services, service_key, tags )
             
-            select = service_key == default_tag_repository_key
+            select = service_key == default_tag_service_key
             
-            self._tag_repositories.addTab( page, name )
-            if select: self._tag_repositories.setCurrentIndex( self._tag_repositories.indexOf( page ) )
+            self._tag_services.addTab( page, name )
+            if select: self._tag_services.setCurrentIndex( self._tag_services.indexOf( page ) )
             
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        self._tag_services.currentChanged.connect( self._SaveDefaultTagServiceKey )
+        
+    
+    def _SaveDefaultTagServiceKey( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_services.currentWidget()
+            
+            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            
         
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.currentWidget()
+        page = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -3810,7 +3851,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         service_keys_to_content_updates = {}
         
-        for page in self._tag_repositories.GetPages():
+        for page in self._tag_services.GetPages():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
@@ -3828,7 +3869,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        if self._tag_repositories.currentWidget().HasUncommittedPair():
+        if self._tag_services.currentWidget().HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
@@ -3845,7 +3886,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventServiceChanged( self, event ):
         
-        page = self._tag_repositories.currentWidget()
+        page = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -4600,6 +4641,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             return ( self._service_key, content_updates )
+            
+        
+        def GetServiceKey( self ):
+            
+            return self._service_key
             
         
         def HasUncommittedPair( self ):

@@ -558,6 +558,8 @@ COMBINED_LOCAL_FILE_SERVICE_KEY = b'all local files'
 
 COMBINED_FILE_SERVICE_KEY = b'all known files'
 
+COMBINED_DELETED_FILE_SERVICE_KEY = b'all deleted files'
+
 COMBINED_TAG_SERVICE_KEY = b'all known tags'
 
 TEST_SERVICE_KEY = b'test service'

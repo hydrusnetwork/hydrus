@@ -76,9 +76,9 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.tag_parents' : ( 'CREATE TABLE {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
-            'main.tag_parent_petitions' : ( 'CREATE TABLE {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
-            'main.tag_parent_application' : ( 'CREATE TABLE {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
+            'main.tag_parents' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
+            'main.tag_parent_petitions' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
+            'main.tag_parent_application' : ( 'CREATE TABLE IF NOT EXISTS {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
         }
         
     
@@ -382,6 +382,8 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
     
     def GetChainsMembersTables( self, display_type: int, tag_service_id: int, ideal_tag_ids_table_name: str, results_table_name: str ):
+        
+        raise NotImplementedError()
         
         # if it isn't crazy, I should write this whole lad to be one or two recursive queries
         

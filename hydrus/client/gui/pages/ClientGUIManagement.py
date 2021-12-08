@@ -262,9 +262,11 @@ def CreateManagementControllerQuery( page_name, file_search_context: ClientSearc
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY, file_service_key = file_service_key )
     
+    synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
+    
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'search_enabled', search_enabled )
-    management_controller.SetVariable( 'synchronised', True )
+    management_controller.SetVariable( 'synchronised', synchronised )
     
     return management_controller
     

@@ -2058,31 +2058,96 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
         
         self._service = service
         
+        self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
+        
+        self._deferred_delete_status = ClientGUICommon.BetterStaticText( self, label = 'loading\u2026' )
+        
         self._clear_deleted_files_record = ClientGUICommon.BetterButton( self, 'clear deleted files record', self._ClearDeletedFilesRecord )
         
         #
         
+        self._Refresh()
+        
+        #
+        
+        self.Add( self._deferred_delete_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._clear_deleted_files_record, CC.FLAGS_ON_RIGHT )
+        
+        HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+        HG.client_controller.sub( self, '_Refresh', 'notify_new_physical_file_delete_numbers' )
         
     
     def _ClearDeletedFilesRecord( self ):
         
-        message = 'This will instruct your database to forget its entire record of locally deleted files, meaning that if it ever encounters any of those files again, it will assume they are new and reimport them. This operation cannot be undone.'
+        message = 'This will instruct your database to forget its _entire_ record of locally deleted files, meaning that if it ever encounters any of those files again, it will assume they are new and reimport them. This operation cannot be undone.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         
         if result == QW.QDialog.Accepted:
             
-            hashes = None
+            message = 'Hey, I am just going to ask again--are you _absolutely_ sure? This is an advanced action that may mess up your downloads/imports in future.'
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', hashes ) )
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'yes, I am', no_label = 'no, I am not sure' )
             
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+            if result == QW.QDialog.Accepted:
+                
+                hashes = None
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', hashes ) )
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
+                HG.client_controller.pub( 'service_updated', self._service )
+                
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+        
+    
+    def _Refresh( self ):
+        
+        if not self or not QP.isValid( self ):
             
-            HG.client_controller.pub( 'service_updated', self._service )
+            return
             
+        
+        HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
+        
+    
+    def ServiceUpdated( self, service ):
+        
+        if service.GetServiceKey() == self._service.GetServiceKey():
+            
+            self._service = service
+            
+            self._my_updater.Update()
+            
+        
+    
+    def THREADFetchInfo( self, service ):
+        
+        def qt_code( text ):
+            
+            if not self or not QP.isValid( self ):
+                
+                return
+                
+            
+            self._deferred_delete_status.setText( text )
+            
+        
+        ( num_files, num_thumbnails ) = HG.client_controller.Read( 'num_deferred_file_deletes' )
+        
+        if num_files == 0 and num_thumbnails == 0:
+            
+            text = 'No files are awaiting physical deletion from file storage.'
+            
+        else:
+            
+            text = '{} files and {} thumbnails are awaiting physical deletion from file storage.'.format( HydrusData.ToHumanInt( num_files ), HydrusData.ToHumanInt( num_thumbnails ) )
+            
+        
+        QP.CallAfter( qt_code, text )
         
     
 class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
@@ -2157,7 +2222,6 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         QP.CallAfter( qt_code, text )
         
     
-
 class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
