@@ -159,6 +159,8 @@ def CreateManagementControllerDuplicateFilter():
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'both_files_match', False )
+    management_controller.SetVariable( 'pixel_dupes_preference', CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+    management_controller.SetVariable( 'max_hamming_distance', 4 )
     
     return management_controller
     
@@ -989,11 +991,11 @@ class ManagementPanel( QW.QScrollArea ):
         return self._media_sort.GetSort()
         
     
-    def _MakeCurrentSelectionTagsBox( self, sizer ):
+    def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST ):
         
         self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key )
+        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key, tag_display_type = tag_display_type )
         
         self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
         
@@ -1135,14 +1137,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'normal', 'exact match', 'Search for exact matches.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_EXACT_MATCH ) ) )
-        menu_items.append( ( 'normal', 'very similar', 'Search for very similar files.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_VERY_SIMILAR ) ) )
-        menu_items.append( ( 'normal', 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SIMILAR ) ) )
-        menu_items.append( ( 'normal', 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SPECULATIVE ) ) )
+        menu_items.append( ( 'normal', 'exact match', 'Search for exact matches.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_EXACT_MATCH ) ) )
+        menu_items.append( ( 'normal', 'very similar', 'Search for very similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_VERY_SIMILAR ) ) )
+        menu_items.append( ( 'normal', 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SIMILAR ) ) )
+        menu_items.append( ( 'normal', 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SPECULATIVE ) ) )
         
         self._search_distance_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_items )
         
         self._search_distance_spinctrl = QP.MakeQSpinBox( self._searching_panel, min=0, max=64, width = 50 )
+        self._search_distance_spinctrl.setSingleStep( 2 )
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
         
@@ -1174,6 +1177,16 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
+        self._pixel_dupes_preference = ClientGUICommon.BetterChoice( self._filtering_panel )
+        
+        for p in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
+            
+            self._pixel_dupes_preference.addItem( CC.similar_files_pixel_dupes_string_lookup[ p ], p )
+            
+        
+        self._max_hamming_distance = QP.MakeQSpinBox( self._filtering_panel, min = 0, max = 64 )
+        self._max_hamming_distance.setSingleStep( 2 )
+        
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
         self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
         
@@ -1201,9 +1214,27 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._both_files_match.setChecked( management_controller.GetVariable( 'both_files_match' ) )
         
-        self._both_files_match.clicked.connect( self.EventBothFilesHitChanged )
+        self._both_files_match.clicked.connect( self.EventSearchDomainChanged )
         
         self._UpdateBothFilesMatchButton()
+        
+        if not management_controller.HasVariable( 'pixel_dupes_preference' ):
+            
+            management_controller.SetVariable( 'pixel_dupes_preference', CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+            
+        
+        self._pixel_dupes_preference.SetValue( management_controller.GetVariable( 'pixel_dupes_preference' ) )
+        
+        self._pixel_dupes_preference.currentIndexChanged.connect( self.EventSearchDomainChanged )
+        
+        if not management_controller.HasVariable( 'max_hamming_distance' ):
+            
+            management_controller.SetVariable( 'max_hamming_distance', 4 )
+            
+        
+        self._max_hamming_distance.setValue( management_controller.GetVariable( 'max_hamming_distance' ) )
+        
+        self._max_hamming_distance.valueChanged.connect( self.EventSearchDomainChanged )
         
         #
         
@@ -1253,11 +1284,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         rows = []
         
         rows.append( ( 'both files of pair match in search: ', self._both_files_match ) )
+        rows.append( ( 'maximum search distance of pair: ', self._max_hamming_distance ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._filtering_panel, rows )
         
         self._filtering_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._filtering_panel.Add( self._pixel_dupes_preference, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1311,22 +1344,26 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _GetFileSearchContextAndBothFilesMatch( self ) -> typing.Tuple[ ClientSearch.FileSearchContext, bool ]:
+    def _GetDuplicateFileSearchData( self ) -> typing.Tuple[ ClientSearch.FileSearchContext, bool ]:
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         both_files_match = self._both_files_match.isChecked()
         
-        return ( file_search_context, both_files_match )
+        pixel_dupes_preference = self._pixel_dupes_preference.GetValue()
+        
+        max_hamming_distance = self._max_hamming_distance.value()
+        
+        return ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
     
     def _LaunchFilter( self ):
         
-        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match )
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         canvas_frame.SetCanvas( canvas_window )
         
@@ -1349,9 +1386,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._UpdatePotentialDuplicatesCount( potential_duplicates_count )
             
         
-        def thread_do_it( file_search_context, both_files_match ):
+        def thread_do_it( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ):
             
-            potential_duplicates_count = HG.client_controller.Read( 'potential_duplicates_count', file_search_context, both_files_match )
+            potential_duplicates_count = HG.client_controller.Read( 'potential_duplicates_count', file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
             
             QP.CallAfter( qt_code, potential_duplicates_count )
             
@@ -1364,9 +1401,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._num_potential_duplicates.setText( 'updating\u2026' )
             
-            ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+            ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
             
-            HG.client_controller.CallToThread( thread_do_it, file_search_context, both_files_match )
+            HG.client_controller.CallToThread( thread_do_it, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
             
         
     
@@ -1388,10 +1425,12 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _SearchDomainUpdated( self ):
         
-        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
         self._management_controller.SetVariable( 'file_search_context', file_search_context )
         self._management_controller.SetVariable( 'both_files_match', both_files_match )
+        self._management_controller.SetVariable( 'pixel_dupes_preference', pixel_dupes_preference )
+        self._management_controller.SetVariable( 'max_hamming_distance', max_hamming_distance )
         
         self._SetFileServiceKey( file_search_context.GetFileServiceKey() )
         
@@ -1433,7 +1472,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ShowPotentialDupes( self, hashes ):
         
-        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
         file_service_key = file_search_context.GetFileServiceKey()
         
@@ -1455,9 +1494,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ShowRandomPotentialDupes( self ):
         
-        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
-        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context, both_files_match )
+        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         if len( hashes ) == 0:
             
@@ -1498,9 +1537,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         search_distance = self._search_distance_spinctrl.value()
         
-        if search_distance in HC.hamming_string_lookup:
+        if search_distance in CC.hamming_string_lookup:
             
-            button_label = HC.hamming_string_lookup[ search_distance ]
+            button_label = CC.hamming_string_lookup[ search_distance ]
             
         else:
             
@@ -1549,7 +1588,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _UpdateBothFilesMatchButton( self ):
         
-        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
         if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
             
@@ -1579,7 +1618,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def EventBothFilesHitChanged( self ):
+    def EventSearchDomainChanged( self ):
         
         self._SearchDomainUpdated()
         
@@ -4196,7 +4235,16 @@ class ManagementPanelPetitions( ManagementPanel ):
         QP.AddToLayout( vbox, self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._MakeCurrentSelectionTagsBox( vbox )
+        if service_type == HC.TAG_REPOSITORY:
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
+            
+        else:
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST
+            
+        
+        self._MakeCurrentSelectionTagsBox( vbox, tag_display_type = tag_display_type )
         
         self.widget().setLayout( vbox )
         

@@ -21,7 +21,7 @@ from hydrus.client.metadata import ClientTagSorting
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
-def GenerateExportFilename( destination_directory, media, terms, append_number = None ):
+def GenerateExportFilename( destination_directory, media, terms, do_not_use_filenames = None ):
     
     def clean_tag_text( t ):
         
@@ -144,12 +144,25 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
         filename = filename[ : - excess_chars ]
         
     
-    if append_number is not None:
+    if do_not_use_filenames is not None:
         
-        filename += ' ({})'.format( append_number )
+        i = 1
         
-    
-    filename += ext
+        possible_filename = '{}{}'.format( filename, ext )
+        
+        while possible_filename in do_not_use_filenames:
+            
+            possible_filename = '{} ({}){}'.format( filename, i, ext )
+            
+            i += 1
+            
+        
+        filename = possible_filename
+        
+    else:
+        
+        filename += ext
+        
     
     return filename
     

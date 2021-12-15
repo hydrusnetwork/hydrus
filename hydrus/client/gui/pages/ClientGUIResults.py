@@ -720,7 +720,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         for m in media:
             
-            if m.GetMime() in HC.MIMES_WE_CAN_PHASH:
+            if m.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
                 
                 hashes.add( m.GetHash() )
                 
@@ -2114,19 +2114,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             elif action == CAC.SIMPLE_GET_SIMILAR_TO_EXACT:
                 
-                self._GetSimilarTo( HC.HAMMING_EXACT_MATCH )
+                self._GetSimilarTo( CC.HAMMING_EXACT_MATCH )
                 
             elif action == CAC.SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR:
                 
-                self._GetSimilarTo( HC.HAMMING_VERY_SIMILAR )
+                self._GetSimilarTo( CC.HAMMING_VERY_SIMILAR )
                 
             elif action == CAC.SIMPLE_GET_SIMILAR_TO_SIMILAR:
                 
-                self._GetSimilarTo( HC.HAMMING_SIMILAR )
+                self._GetSimilarTo( CC.HAMMING_SIMILAR )
                 
             elif action == CAC.SIMPLE_GET_SIMILAR_TO_SPECULATIVE:
                 
-                self._GetSimilarTo( HC.HAMMING_SPECULATIVE )
+                self._GetSimilarTo( CC.HAMMING_SPECULATIVE )
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
@@ -3745,7 +3745,7 @@ class MediaPanelThumbnails( MediaPanel ):
             focus_is_in_alternate_group = False
             focus_has_fps = False
             focus_has_potentials = False
-            focus_can_be_searched = focus_singleton.GetMime() in HC.MIMES_WE_CAN_PHASH
+            focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
             
             if file_duplicate_info is None:
                 
@@ -4086,10 +4086,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 similar_menu = QW.QMenu( open_menu )
                 
-                ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
-                ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
-                ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
-                ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
+                ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', self._GetSimilarTo, CC.HAMMING_EXACT_MATCH )
+                ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', self._GetSimilarTo, CC.HAMMING_VERY_SIMILAR )
+                ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', self._GetSimilarTo, CC.HAMMING_SIMILAR )
+                ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, CC.HAMMING_SPECULATIVE )
                 
                 ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar-looking files' )
                 

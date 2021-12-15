@@ -138,6 +138,10 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
                 
                 HG.client_controller.FlipProfileMode()
                 
+            elif action == CAC.SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW:
+                
+                HG.client_controller.new_options.FlipBoolean( 'force_animation_scanbar_show' )
+                
             else:
                 
                 command_processed = False

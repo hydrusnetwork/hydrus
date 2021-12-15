@@ -4173,6 +4173,45 @@ class DB( HydrusDB.HydrusDB ):
         return media_id
         
     
+    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, pixel_dupes_preference: int, max_hamming_distance: int ):
+        
+        tables = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger'
+        join_predicate = 'smaller_media_id = duplicate_file_members_smaller.media_id AND larger_media_id = duplicate_file_members_larger.media_id AND distance <= {}'.format( max_hamming_distance )
+        
+        if not db_location_search_context.location_search_context.IsAllKnownFiles():
+            
+            files_table_name = db_location_search_context.files_table_name
+            
+            tables = '{}, {} AS current_files_smaller, {} AS current_files_larger'.format( tables, files_table_name, files_table_name )
+            
+            join_predicate = '{} AND duplicate_file_members_smaller.hash_id = current_files_smaller.hash_id AND duplicate_file_members_larger.hash_id = current_files_larger.hash_id'.format( join_predicate )
+            
+        
+        if pixel_dupes_preference in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
+            
+            join_predicate_pixel_dupes = 'duplicate_file_members_smaller.hash_id = pixel_hash_map_smaller.hash_id AND duplicate_file_members_larger.hash_id = pixel_hash_map_larger.hash_id AND pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id'
+            
+            if pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+                
+                tables = '{}, pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map AS pixel_hash_map_larger'.format( tables )
+                
+                join_predicate = '{} AND {}'.format( join_predicate, join_predicate_pixel_dupes )
+                
+            elif pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
+                
+                # can't do "AND NOT {}", or the join will just give you the million rows where it isn't true. we want 'AND NEVER {}', and quick
+                
+                select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger ON ( {} )'.format( join_predicate_pixel_dupes )
+                
+                join_predicate = '{} AND NOT EXISTS ( {} )'.format( join_predicate, select_statement )
+                
+            
+        
+        table_join = '{} ON ( {} )'.format( tables, join_predicate )
+        
+        return table_join
+        
+    
     def _DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext ):
         
         if db_location_search_context.location_search_context.IsAllKnownFiles():
@@ -4189,30 +4228,117 @@ class DB( HydrusDB.HydrusDB ):
         return table_join
         
     
-    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, results_table_name, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_search_context: ClientDBFilesStorage.DBLocationSearchContext, results_table_name: str, both_files_match: bool, pixel_dupes_preference: int, max_hamming_distance: int ):
+        
+        # why yes this is a seven table join that involves a mix of duplicated tables, temporary tables, and duplicated temporary tables
+        #
+        # main thing is, give this guy a search in duplicate filter UI, it'll give you a fast table join that returns potential dupes that match that
+        #
+        # ████████████████████████████████████████████████████████████████████████
+        # ████████████████████████████████████████████████████████████████████████
+        # ██████████████████████████████████▓█████████████████████████████████████
+        # ██████████████████████████████████▒▓████████████████████████████████████
+        # █████████████████████████████▓▒▓▓▒░░▒░██████████████████████████████████
+        # ███████████████████████████▓▒▒░░░░    ▒▓███████▓▓▓██████████████████████
+        # █████████████████████▓▒▓▓▓█       ▒     ▓████▓▓▓▓▓██████████████████████
+        # █████████████████▓▓▓▓▓░   ░      ░░     ░▓█▓▓▓██▓▓██████████████████████
+        # █████████████████▓▓▓▒░▒▒▒        █▒  ░▓▓▓█████▓▓▓▓██████████████████████
+        # █████████████████▓▓▒░░ ░▒      ░▒█▓░▒▓▓▓█████▒▒▒▒▒▓█████████████████████
+        # ████████████████████▓▒░   ░   ░▒▒▓▓▓██▓▓█▓░ ░░▓▓▒▓▓▒▓▓██████████████████
+        # ██████████████████████▒░░░░  ▒▓▓▓▓▒▓▓▓▓██▓▓░▓█▓▓▓▓▓▓▓▓▓▓████████████████
+        # ████████████▓▒█▓███▓▓▒▓░▒░░▒▓▓▓▓▓▒▒░░ ░▒▓▓████▓ ▓▓░░▒▓▓  ░▒▒████████████
+        # ████████████▒▒████▓░ ░▒▒▒▓██▓▓▒▒▒▒░░        ▒▓▓▒ ░▒░░▓▒    ▒████████████
+        # ████████████▒▓▓▓█▓░▒▒░▒▓███▓▓▒░░░░ ░░   ░░░▒  ▒▓▒▒▒░▒▒      ▓███████████
+        # █████████████▒▓▓▓▒▒▓▓▒▓███▓▓▓▒▒░░░░░     ░░▒▓▓  ▒▒░░░       ▓███████████
+        # ██████████████▓▓▓▓███▓██▓▓▓▓▓▒▒░░░░ ░       ░▓░ ░░       ░▓█████████████
+        # ███████████████▓▓██▒▓█▓▓▓▓▓▓▒▒░░░░ ░░        ▒▓░         ▓██████████████
+        # █████████████████▓▒▓█▓▓▓▓▓▓▓▓▒▒▒▒░░▒▒▒      ░▒█▒       ▓████████████████
+        # ████████████████▓░▒██▓▓▓▓▓▓▓▓▓▒▒▒░░▒▒▒▓▒▒  ░▒▓▓▒▒░░▒░▓██████████████████
+        # ██████████████▓░▓████▓▓▓▓▓▓▓▓▒▒░░░▒░░░▒▒   ▒▓▓▓ ░▒▓▓▓ ▒█████████████████
+        # ██████████████▓▓▓██████▓▓▓▓▓▓▒   ░▒▓▒░▓▓   ░ ░▒ ▒░▒▒▒▒▓▒ ▓██████████████
+        # ██████████████▓▒░▒▒ ▓█▓▓▓▓▓▓▓▓▓▓▒░▒▒▒░▒▒░░░░    ▓▒░░   ░████▓███████████
+        # █████████████████░  ▓█▓██████████▓░░ ░▒▓█████▓   ▒░░ ░▓▓▒▓██░░▓█████████
+        # █████████████████▒  ▒█▓▓▓██████████▓▓█▓████████▓ ▒░▒▒░▒ ░███   ▓████████
+        # ██████████████████▒ ▒█▓▓▓██████████▒ ███████████  ░▓▒ ▒████▒    ████████
+        # █████████████████████▓▓▒▓██▓███████░ ▒▒████████▒░███▒ ░▓▓▓▓▒▒███████████
+        # ███████████████████████▒▒███████▓▓▓▓▒  ░▓██████ ▒████▒▓▓▓▓▒▓████████████
+        # █████████████████████▓▓▓▓▓▓▓▓▓▓▓▓█████    ▒▒▓▒▒  ▓██▓      ▒████████████
+        # ██████████████████████▓▓▓▓▓▓▓█▓▓▓██████ ▒██▓░░░    ▒ ░▓█▓▒▒█████████████
+        # ███████████████████████▓▓▓▓▓▓█▓▓▓██▓██▓ ░▓███▓▓▓░   ▓███████████████████
+        # ████████████████████████▓███▓▓▓▓▓▓█▓█▓ ░ ░▓█  ▒░░▒  ▓███████████████████
+        # █████████████████████████▓▓████▓▓▓▓▓     ▒█░    ▓█▓▓████████████████████
+        # ████████████████████████▓█▓██▓▓▓▓▓▒▓     ▓▒   ▒█████████████████████████
+        # ████████████████████████▓▓███▓▓▓▒▓▒▓░▒░  ▓░░  ██████████████████████████
+        # ████████████████████████▓▓▓▓▓█▓▓▓▒░░░░░  ▒   ▒██████████████████████████
+        # █████████████████████████▓▓▓▓▓▓▓█▓▓▓▓▒░  ░░ ▒███████████████████████████
+        # ███████████████████████████▓▓▓▓▓▓▓▓▓▓▒     ▓████████████████████████████
+        # ████████████████████████████▓▓▓▓▓▒▒  ▒░   ██████████████████████████████
+        # ██████████████████████████████▓▓▓▒      ▒███████████████████████████████
+        # ███████████████████████████████▓▓▒░    ▓████████████████████████████████
+        # ████████████████████████████████████████████████████████████████████████
+        # ████████████████████████████████████████████████████████████████████████
+        #
+        
+        base_tables = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger'
+        
+        join_predicate_media_to_hashes = 'smaller_media_id = duplicate_file_members_smaller.media_id AND larger_media_id = duplicate_file_members_larger.media_id AND distance <= {}'.format( max_hamming_distance )
         
         if both_files_match:
             
-            table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, {} AS results_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_larger ON ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_smaller.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_larger.hash_id )'.format( results_table_name, results_table_name )
+            tables = '{}, {} AS results_smaller, {} AS results_larger'.format( base_tables, results_table_name, results_table_name )
+            
+            join_predicate_hashes_to_allowed_results = 'duplicate_file_members_smaller.hash_id = results_smaller.hash_id AND duplicate_file_members_larger.hash_id = results_larger.hash_id'
             
         else:
             
             if db_location_search_context.location_search_context.IsAllKnownFiles():
                 
-                table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_table_for_this_query ON ( ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id ) OR ( smaller_media_id = duplicate_file_members_smaller.media_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id ) )'.format( results_table_name )
+                tables = '{}, {} AS results_table_for_this_query'.format( base_tables, results_table_name )
+                
+                join_predicate_hashes_to_allowed_results = '( duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id OR duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id )'
                 
             else:
                 
                 files_table_name = db_location_search_context.files_table_name
                 
-                table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS results_table_for_this_query, {} AS current_files_for_this_query ON ( ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_for_this_query.hash_id ) OR ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_for_this_query.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id ) )'.format( results_table_name, files_table_name )
+                tables = '{}, {} AS results_table_for_this_query, {} AS current_files_for_this_query'.format( base_tables, results_table_name, files_table_name )
+                
+                join_predicate_smaller_matches = '( duplicate_file_members_smaller.hash_id = results_table_for_this_query.hash_id AND duplicate_file_members_larger.hash_id = current_files_for_this_query.hash_id )'
+                
+                join_predicate_larger_matches = '( duplicate_file_members_smaller.hash_id = current_files_for_this_query.hash_id AND duplicate_file_members_larger.hash_id = results_table_for_this_query.hash_id )'
+                
+                join_predicate_hashes_to_allowed_results = '( {} OR {} )'.format( join_predicate_smaller_matches, join_predicate_larger_matches )
                 
             
+        
+        if pixel_dupes_preference in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
+            
+            join_predicate_pixel_dupes = 'duplicate_file_members_smaller.hash_id = pixel_hash_map_smaller.hash_id AND duplicate_file_members_larger.hash_id = pixel_hash_map_larger.hash_id AND pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id'
+            
+            if pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+                
+                tables = '{}, pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map AS pixel_hash_map_larger'.format( tables )
+                
+                join_predicate_hashes_to_allowed_results = '{} AND {}'.format( join_predicate_hashes_to_allowed_results, join_predicate_pixel_dupes )
+                
+            elif pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
+                
+                # can't do "AND NOT {}", or the join will just give you the million rows where it isn't true. we want 'AND NEVER {}', and quick
+                
+                select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger ON ( {} )'.format( join_predicate_pixel_dupes )
+                
+                join_predicate_hashes_to_allowed_results = '{} AND NOT EXISTS ( {} )'.format( join_predicate_hashes_to_allowed_results, select_statement )
+                
+            
+        
+        join_predicate = '{} AND {}'.format( join_predicate_media_to_hashes, join_predicate_hashes_to_allowed_results )
+        
+        table_join = '{} ON ( {} )'.format( tables, join_predicate )
         
         return table_join
         
     
-    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context: ClientSearch.FileSearchContext, both_files_match ):
+    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         file_service_key = file_search_context.GetFileServiceKey()
         
@@ -4229,7 +4355,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_search_context, pixel_dupes_preference, max_hamming_distance )
                 
             else:
                 
@@ -4250,7 +4376,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
                 
             
             potential_media_ids = set()
@@ -4307,7 +4433,7 @@ class DB( HydrusDB.HydrusDB ):
         return self._DuplicatesGetFileHashesByDuplicateType( file_service_key, hash, HC.DUPLICATE_POTENTIAL, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
         
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context: ClientSearch.FileSearchContext, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to maximise per-decision value
@@ -4323,7 +4449,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_search_context, pixel_dupes_preference, max_hamming_distance )
                 
             else:
                 
@@ -4342,7 +4468,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
                 
             
             # distinct important here for the search results table join
@@ -4455,7 +4581,7 @@ class DB( HydrusDB.HydrusDB ):
         return batch_of_pairs_of_hashes
         
     
-    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         db_location_search_context = self.modules_files_storage.GetDBLocationSearchContext( file_search_context.GetLocationSearchContext() )
         
@@ -4463,7 +4589,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_search_context )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_search_context, pixel_dupes_preference, max_hamming_distance )
                 
             else:
                 
@@ -4473,7 +4599,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match )
+                table_join = self._DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_search_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
                 
             
             # distinct important here for the search results table join
@@ -10002,16 +10128,16 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            phashes = file_import_job.GetPHashes()
+            perceptual_hashes = file_import_job.GetPerceptualHashes()
             
-            if phashes is not None:
+            if perceptual_hashes is not None:
                 
                 if HG.file_import_report_mode:
                     
-                    HydrusData.ShowText( 'File import job associating phashes' )
+                    HydrusData.ShowText( 'File import job associating perceptual_hashes' )
                     
                 
-                self.modules_similar_files.AssociatePHashes( hash_id, phashes )
+                self.modules_similar_files.AssociatePerceptualHashes( hash_id, perceptual_hashes )
                 
             
             if HG.file_import_report_mode:
@@ -10035,13 +10161,13 @@ class DB( HydrusDB.HydrusDB ):
             
             if pixel_hash is None:
                 
-                self.modules_files_metadata_basic.ClearPixelHash( hash_id )
+                self.modules_similar_files.ClearPixelHash( hash_id )
                 
             else:
                 
                 pixel_hash_id = self.modules_hashes.GetHashId( hash )
                 
-                self.modules_files_metadata_basic.SetPixelHash( hash_id, pixel_hash_id )
+                self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
                 
             
             #
@@ -10612,14 +10738,14 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _PHashesResetSearchFromHashes( self, hashes ):
+    def _PerceptualHashesResetSearchFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def _PHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None, work_time_float = None ):
+    def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None, work_time_float = None ):
         
         time_started_float = HydrusData.GetNowFloat()
         
@@ -15986,7 +16112,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
         elif action == 'local_booru_share': self.modules_serialisable.SetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_hashed_serialisables': result = self.modules_serialisable.MaintainHashedStorage( *args, **kwargs )
-        elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
+        elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PerceptualHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self.modules_similar_files.MaintainTree( *args, **kwargs )
         elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )
         elif action == 'migration_start_mappings_job': self._MigrationStartMappingsJob( *args, **kwargs )
@@ -16017,7 +16143,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'reprocess_repository': self.modules_repositories.ReprocessRepository( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_repository_processing': self._ResetRepositoryProcessing( *args, **kwargs )
-        elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
+        elif action == 'reset_potential_search_status': self._PerceptualHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable': self.modules_serialisable.SetJSONDump( *args, **kwargs )
         elif action == 'serialisable_atomic': self.modules_serialisable.SetJSONComplex( *args, **kwargs )

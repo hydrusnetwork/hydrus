@@ -130,6 +130,11 @@ class VolumeControl( QW.QWidget ):
         event.ignore()
         
     
+    def PopupIsVisible( self ):
+        
+        return self._popup_window.isVisible()
+        
+    
     class _PopupWindow( QW.QFrame ):
         
         def __init__( self, parent, canvas_type, direction = 'down' ):

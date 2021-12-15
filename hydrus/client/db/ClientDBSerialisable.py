@@ -43,7 +43,9 @@ def ExportBrokenHashedJSONDump( db_dir, dump, dump_descriptor ):
         f.write( dump )
         
     
-def DealWithBrokenJSONDump( db_dir, dump, dump_descriptor ):
+def DealWithBrokenJSONDump( db_dir, dump, dump_object_descriptor, dump_descriptor ):
+    
+    HydrusData.Print( 'I am exporting a broken dump. The full object descriptor is: {}'.format( dump_object_descriptor ) )
     
     timestamp_string = time.strftime( '%Y-%m-%d %H-%M-%S' )
     hex_chars = os.urandom( 4 ).hex()
@@ -357,7 +359,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()
                 
-                DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {}'.format( dump_type ) )
+                DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, version ), 'dump_type {} version {}'.format( dump_type, version ) )
                 
             
             obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
@@ -406,7 +408,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                     
                     self._cursor_transaction_wrapper.CommitAndBegin()
                     
-                    DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {} dump_name {} timestamp {}'.format( dump_type, dump_name[:10], timestamp ) )
+                    DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp ), 'dump_type {} dump_name {} version {} timestamp {}'.format( dump_type, dump_name[:10], version, object_timestamp ) )
                     
                 
             
@@ -445,7 +447,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()
                 
-                DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {} dump_name {} timestamp {}'.format( dump_type, dump_name[:10], object_timestamp ) )
+                DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp ), 'dump_type {} dump_name {} version {} timestamp {}'.format( dump_type, dump_name[:10], version, object_timestamp ) )
                 
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )

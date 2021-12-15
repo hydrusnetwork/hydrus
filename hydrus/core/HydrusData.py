@@ -622,7 +622,7 @@ def GenerateKey():
     
     return os.urandom( HC.HYDRUS_KEY_LENGTH )
     
-def Get64BitHammingDistance( phash1, phash2 ):
+def Get64BitHammingDistance( perceptual_hash1, perceptual_hash2 ):
     
     # old way of doing this was:
     #while xor > 0:
@@ -635,7 +635,7 @@ def Get64BitHammingDistance( phash1, phash2 ):
     # then through the power of stackexchange magic, we get number of bits in record time
     # Here it is: https://stackoverflow.com/questions/9829578/fast-way-of-counting-non-zero-bits-in-positive-integer/9830282#9830282
     
-    n = struct.unpack( '!Q', phash1 )[0] ^ struct.unpack( '!Q', phash2 )[0]
+    n = struct.unpack( '!Q', perceptual_hash1 )[0] ^ struct.unpack( '!Q', perceptual_hash2 )[0]
     
     n = ( n & 0x5555555555555555 ) + ( ( n & 0xAAAAAAAAAAAAAAAA ) >> 1 ) # 10101010, 01010101
     n = ( n & 0x3333333333333333 ) + ( ( n & 0xCCCCCCCCCCCCCCCC ) >> 2 ) # 11001100, 00110011

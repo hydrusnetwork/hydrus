@@ -945,16 +945,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         terms = ClientExporting.ParseExportPhrase( pattern )
         
-        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
-        
-        i = 1
-        
-        while filename in self._existing_filenames:
-            
-            filename = ClientExporting.GenerateExportFilename( directory, media, terms, append_number = i )
-            
-            i += 1
-            
+        filename = ClientExporting.GenerateExportFilename( directory, media, terms, do_not_use_filenames = self._existing_filenames )
         
         path = os.path.join( directory, filename )
         

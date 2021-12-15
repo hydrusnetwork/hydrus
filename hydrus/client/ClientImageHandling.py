@@ -18,11 +18,11 @@ cv_interpolation_enum_lookup[ CC.ZOOM_AREA ] = cv2.INTER_AREA
 cv_interpolation_enum_lookup[ CC.ZOOM_CUBIC ] = cv2.INTER_CUBIC
 cv_interpolation_enum_lookup[ CC.ZOOM_LANCZOS4 ] = cv2.INTER_LANCZOS4
 
-def DiscardBlankPerceptualHashes( phashes ):
+def DiscardBlankPerceptualHashes( perceptual_hashes ):
     
-    phashes = { phash for phash in phashes if HydrusData.Get64BitHammingDistance( phash, CC.BLANK_PHASH ) > 4 }
+    perceptual_hashes = { perceptual_hash for perceptual_hash in perceptual_hashes if HydrusData.Get64BitHammingDistance( perceptual_hash, CC.BLANK_PERCEPTUAL_HASH ) > 4 }
     
-    return phashes
+    return perceptual_hashes
     
 def GenerateNumPyImage( path, mime ):
     
@@ -178,29 +178,29 @@ def GenerateShapePerceptualHashes( path, mime ):
         list_of_bytes.append( byte )
         
     
-    phash = bytes( list_of_bytes ) # this works!
+    perceptual_hash = bytes( list_of_bytes ) # this works!
     
     if HG.phash_generation_report_mode:
         
-        HydrusData.ShowText( 'phash generation: phash: {}'.format( phash.hex() ) )
+        HydrusData.ShowText( 'phash generation: perceptual_hash: {}'.format( perceptual_hash.hex() ) )
         
     
     # now discard the blank hash, which is 1000000... and not useful
     
-    phashes = set()
+    perceptual_hashes = set()
     
-    phashes.add( phash )
+    perceptual_hashes.add( perceptual_hash )
     
-    phashes = DiscardBlankPerceptualHashes( phashes )
+    perceptual_hashes = DiscardBlankPerceptualHashes( perceptual_hashes )
     
     if HG.phash_generation_report_mode:
         
-        HydrusData.ShowText( 'phash generation: final phashes: {}'.format( len( phashes ) ) )
+        HydrusData.ShowText( 'phash generation: final perceptual_hashes: {}'.format( len( perceptual_hashes ) ) )
         
     
     # we good
     
-    return phashes
+    return perceptual_hashes
     
 def ResizeNumPyImageForMediaViewer( mime, numpy_image, target_resolution ):
     

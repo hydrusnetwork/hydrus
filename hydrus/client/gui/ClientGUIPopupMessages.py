@@ -5,6 +5,7 @@ import traceback
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
@@ -248,7 +249,12 @@ class PopupMessage( PopupWindow ):
     
     def CopyTB( self ):
         
-        HG.client_controller.pub( 'clipboard', 'text', self._job_key.ToString() )
+        info = 'v{}, {}, {}'.format( HC.SOFTWARE_VERSION, sys.platform.lower(), 'frozen' if HC.RUNNING_FROM_FROZEN_BUILD else 'source' )
+        trace = self._job_key.ToString()
+        
+        full_text = info + os.linesep + trace
+        
+        HG.client_controller.pub( 'clipboard', 'text', full_text )
         
     
     def CopyToClipboard( self ):

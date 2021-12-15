@@ -2398,7 +2398,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     suggestions.append( 'mangled parse/typo' )
                     suggestions.append( 'not applicable' )
-                    suggestions.append( 'should be namespaced' )
                     suggestions.append( 'splitting filename/title/etc... into individual tags' )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:

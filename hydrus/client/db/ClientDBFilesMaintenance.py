@@ -118,7 +118,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
                     
-                    self.modules_files_metadata_basic.SetPixelHash( hash_id, pixel_hash_id )
+                    self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
                     
@@ -130,9 +130,9 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
                     
-                    phashes = additional_data
+                    perceptual_hashes = additional_data
                     
-                    self.modules_similar_files.SetPHashes( hash_id, phashes )
+                    self.modules_similar_files.SetPerceptualHashes( hash_id, perceptual_hashes )
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP:
                     

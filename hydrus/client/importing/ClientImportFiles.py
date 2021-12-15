@@ -115,7 +115,7 @@ class FileImportJob( object ):
         
         self._file_info = None
         self._thumbnail_bytes = None
-        self._phashes = None
+        self._perceptual_hashes = None
         self._extra_hashes = None
         self._has_icc_profile = None
         self._pixel_hash = None
@@ -321,7 +321,7 @@ class FileImportJob( object ):
                 
             
         
-        if mime in HC.MIMES_WE_CAN_PHASH:
+        if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
             
             if status_hook is not None:
                 
@@ -330,14 +330,14 @@ class FileImportJob( object ):
             
             if HG.file_import_report_mode:
                 
-                HydrusData.ShowText( 'File import job generating phashes' )
+                HydrusData.ShowText( 'File import job generating perceptual_hashes' )
                 
             
-            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
+            self._perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
             
             if HG.file_import_report_mode:
                 
-                HydrusData.ShowText( 'File import job generated {} phashes: {}'.format( len( self._phashes ), [ phash.hex() for phash in self._phashes ] ) )
+                HydrusData.ShowText( 'File import job generated {} perceptual_hashes: {}'.format( len( self._perceptual_hashes ), [ perceptual_hash.hex() for perceptual_hash in self._perceptual_hashes ] ) )
                 
             
         
@@ -416,9 +416,9 @@ class FileImportJob( object ):
         return self._pre_import_file_status.mime
         
     
-    def GetPHashes( self ):
+    def GetPerceptualHashes( self ):
         
-        return self._phashes
+        return self._perceptual_hashes
         
     
     def GetPixelHash( self ):

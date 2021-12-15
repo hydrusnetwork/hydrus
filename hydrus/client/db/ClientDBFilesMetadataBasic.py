@@ -32,10 +32,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
-        index_generation_dict[ 'main.pixel_hash_map' ] = [
-            ( [ 'pixel_hash_id' ], False, 465 )
-        ]
-        
         return index_generation_dict
         
     
@@ -44,8 +40,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return {
             'main.file_inbox' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
-            'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
-            'main.pixel_hash_map' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, pixel_hash_id INTEGER, PRIMARY KEY ( hash_id, pixel_hash_id ) );', 465 )
+            'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 )
         }
         
     
@@ -89,11 +84,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             
         
         return archiveable_hash_ids
-        
-    
-    def ClearPixelHash( self, hash_id: int ):
-        
-        self._Execute( 'DELETE FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) )
         
     
     def GetMime( self, hash_id: int ) -> int:
@@ -148,9 +138,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             return [
                 ( 'file_inbox', 'hash_id' ),
                 ( 'files_info', 'hash_id' ),
-                ( 'has_icc_profile', 'hash_id' ),
-                ( 'pixel_hash_map', 'hash_id' ),
-                ( 'pixel_hash_map', 'pixel_hash_id' )
+                ( 'has_icc_profile', 'hash_id' )
             ]
             
         
@@ -229,12 +217,5 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
             
-        
-    
-    def SetPixelHash( self, hash_id: int, pixel_hash_id: int ):
-        
-        self.ClearPixelHash( hash_id )
-        
-        self._Execute( 'INSERT INTO pixel_hash_map ( hash_id, pixel_hash_id ) VALUES ( ?, ? );', ( hash_id, pixel_hash_id ) )
         
     

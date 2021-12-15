@@ -2446,9 +2446,9 @@ class DB( HydrusDB.HydrusDB ):
         min_weight_permitted = None
         max_weight_permitted = None
         
-        petition_namespace = None
-        
         max_total_weight = None
+        
+        petition_namespace = None
         
         petition_pairs = list( tag_ids_to_hash_ids.items() )
         
@@ -2467,14 +2467,14 @@ class DB( HydrusDB.HydrusDB ):
                     min_weight_permitted = 1
                     max_weight_permitted = 1
                     
-                    max_total_weight = 20000
+                    max_total_weight = 2000
                     
                 elif content_weight < 10:
                     
                     min_weight_permitted = 2
                     max_weight_permitted = 9
                     
-                    max_total_weight = 5000
+                    max_total_weight = 2000
                     
                 elif content_weight < 50:
                     
@@ -2483,12 +2483,19 @@ class DB( HydrusDB.HydrusDB ):
                     
                     max_total_weight = 2000
                     
-                else:
+                elif content_weight < 100:
                     
                     min_weight_permitted = 50
+                    max_weight_permitted = 99
+                    
+                    max_total_weight = 20000
+                    
+                else:
+                    
+                    min_weight_permitted = 100
                     max_weight_permitted = None
                     
-                    max_total_weight = 500
+                    max_total_weight = 100000
                     
                 
             else:
@@ -2528,10 +2535,9 @@ class DB( HydrusDB.HydrusDB ):
             
             contents.append( content )
             
-            total_num_petitions += 1
             total_weight += content_weight
             
-            if total_num_petitions > 500 or total_weight > 50000:
+            if total_weight >= max_total_weight:
                 
                 break
                 
@@ -2542,15 +2548,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGetMasterHashIds( self, service_id, service_hash_ids ):
         
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
-        
-        select_statement = 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' WHERE service_hash_id = ?;'
-        
-        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
-        
-        if len( service_hash_ids ) != len( master_hash_ids ):
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_service_hash_ids_table_name:
             
-            raise HydrusExceptions.DataMissing( 'Missing master_hash_id map error!' )
+            ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+            
+            master_hash_ids = self._STL( self._Execute( 'SELECT master_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_service_hash_ids_table_name, hash_id_map_table_name ) ) )
+            
+            if len( service_hash_ids ) != len( master_hash_ids ):
+                
+                raise HydrusExceptions.DataMissing( 'Missing master_hash_id map error!' )
+                
             
         
         return master_hash_ids

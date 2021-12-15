@@ -2314,6 +2314,11 @@ class ListBoxTags( ListBox ):
         self.widget().update()
         
     
+    def AddAdditionalMenuItems( self, menu: QW.QMenu ):
+        
+        pass
+        
+    
     def EventMouseMiddleClick( self, event ):
         
         self._HandleClick( event )
@@ -2909,6 +2914,8 @@ class ListBoxTags( ListBox ):
                 
                 m = ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
                 
+            
+            self.AddAdditionalMenuItems( menu )
             
             CGC.core().PopupMenu( self, menu )
             
@@ -3595,6 +3602,39 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._RegenTermsToIndices()
         
     
+    def AddAdditionalMenuItems( self, menu: QW.QMenu ):
+        
+        ListBoxTagsDisplayCapable.AddAdditionalMenuItems( self, menu )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            submenu = QW.QMenu( menu )
+            
+            for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
+                
+                if tag_display_type == self._tag_display_type:
+                    
+                    checked = True
+                    
+                    callable = lambda: 1
+                    
+                else:
+                    
+                    checked = False
+                    
+                    callable = HydrusData.Call( self.SetTagDisplayType, tag_display_type )
+                    
+                
+                label = 'switch to "{}" tag display'.format( ClientTags.tag_display_str_lookup[ tag_display_type ] )
+                description = 'Switch which tags this list shows, this may not work!'
+                
+                ClientGUIMenus.AppendMenuCheckItem( submenu, label, description, checked, callable )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'experimental' )
+            
+        
+    
     def IncrementTagsByMedia( self, media ):
         
         flat_media = ClientMedia.FlattenMedia( media )
@@ -3737,6 +3777,13 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._last_media_results = media_results
         
         self._DataHasChanged()
+        
+    
+    def SetTagDisplayType( self, tag_display_type: int ):
+        
+        self._tag_display_type = tag_display_type
+        
+        self.ForceTagRecalc()
         
     
     def SetTagServiceKey( self, service_key ):

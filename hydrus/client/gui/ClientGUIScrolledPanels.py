@@ -92,11 +92,11 @@ class ResizingScrolledPanel( QW.QScrollArea ):
             
             if size_hint.width() > screen_fill_factor * available_screen_size.width():
                 
-                size_hint.setWidth( screen_fill_factor * available_screen_size.width() )
+                size_hint.setWidth( int( screen_fill_factor * available_screen_size.width() ) )
                 
             if size_hint.height() > screen_fill_factor * available_screen_size.height():
                 
-                size_hint.setHeight( screen_fill_factor * available_screen_size.height() )
+                size_hint.setHeight( int( screen_fill_factor * available_screen_size.height() ) )
                 
             
             return size_hint

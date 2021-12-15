@@ -1459,7 +1459,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return subscriptions
         
     
-    def SetCheckerOptions( self, checker_options: ClientImportOptions.CheckerOptions ):
+    def SetCheckerOptions( self, checker_options: ClientImportOptions.CheckerOptions, names_to_query_log_containers = None ):
         
         changes_made = self._checker_options.GetSerialisableTuple() != checker_options.GetSerialisableTuple()
         
@@ -1469,7 +1469,21 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             for query_header in self._query_headers:
                 
-                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED )
+                if names_to_query_log_containers is not None:
+                    
+                    name = query_header.GetQueryLogContainerName()
+                    
+                    if name in names_to_query_log_containers:
+                        
+                        query_log_container = names_to_query_log_containers[ name ]
+                        
+                        query_header.SyncToQueryLogContainer( checker_options, query_log_container )
+                        
+                        continue
+                        
+                    
+                
+                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate on next run' )
                 
             
         

@@ -159,7 +159,7 @@ def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
     if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
         
         animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-        
+        animated_scanbar_height = 0
         canvas_height -= animated_scanbar_height
         
     
@@ -313,7 +313,7 @@ def CalculateMediaContainerSize( media, zoom, show_action ):
         if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
             
             animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-            
+            animated_scanbar_height = 0
             media_height += animated_scanbar_height
             
         
@@ -2646,7 +2646,7 @@ class CanvasWithHovers( CanvasWithDetails ):
     
 class CanvasFilterDuplicates( CanvasWithHovers ):
     
-    def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match ):
+    def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         file_service_key = file_search_context.GetFileServiceKey()
         
@@ -2658,6 +2658,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._file_search_context = file_search_context
         self._both_files_match = both_files_match
+        self._pixel_dupes_preference = pixel_dupes_preference
+        self._max_hamming_distance = max_hamming_distance
         
         self._maintain_pan_and_zoom = True
         
@@ -3157,7 +3159,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._currently_fetching_pairs = True
             
-            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match )
+            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match, self._pixel_dupes_preference, self._max_hamming_distance )
             
             self.update()
             
@@ -3484,7 +3486,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self, file_search_context, both_files_match ):
+    def THREADFetchPairs( self, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         def qt_close():
             
@@ -3512,7 +3514,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._ShowNewPair()
             
         
-        result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match )
+        result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         if len( result ) == 0:
             

@@ -25,6 +25,11 @@ from hydrus.client.media import ClientMedia
 
 def ShouldHaveAnimationBar( media, show_action ):
     
+    if media is None:
+        
+        return False
+        
+    
     if show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ):
         
         return False
@@ -566,10 +571,14 @@ class AnimationBar( QW.QWidget ):
         
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
+        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
+        
         self._media_window = None
         self._duration_ms = 1000
         self._num_frames = 1
         self._last_drawn_info = None
+        
+        self._hide_nub_then_hide = False
         
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
@@ -646,6 +655,15 @@ class AnimationBar( QW.QWidget ):
         painter.setBackground( QG.QBrush( background_colour ) )
         
         painter.eraseRect( painter.viewport() )
+        
+        if self._hide_nub_then_hide:
+            
+            self._hide_nub_then_hide = False
+            
+            QP.CallAfter( self.hide )
+            
+            return
+            
         
         #
         
@@ -792,6 +810,22 @@ class AnimationBar( QW.QWidget ):
         self.update()
         
     
+    def DoingADrag( self ):
+        
+        return self._currently_in_a_drag
+        
+    
+    def HideNubThenHide( self ):
+        
+        # I had trouble getting the animationbar to do a paint event as it show()'d. instead we got an old frame that flickered to the new one
+        # I am not sure if this is real Qt behaviour, or instead something crazy from the weird layout and paint stuff I have going on
+        # in any case, this is a hack to get the animation bar to nullify itself for one frame and then hide, which reduces flicker when it re-shows
+        
+        # you can't paint on a hidden window, nor it seems a lower()'d one
+        
+        self._hide_nub_then_hide = True
+        
+    
     def mouseMoveEvent( self, event ):
         
         if self._CurrentMediaWindowIsBad():
@@ -895,19 +929,21 @@ class AnimationBar( QW.QWidget ):
     
     def TIMERAnimationUpdate( self ):
         
-        if self.isVisible():
+        if self._CurrentMediaWindowIsBad():
             
-            if not self._media_window or not QP.isValid( self._media_window ):
-                
-                self.ClearMedia()
-                
-                return
-                
+            self.ClearMedia()
             
-            if self._last_drawn_info != self._GetAnimationBarStatus():
-                
-                self.update()
-                
+            return
+            
+        
+        if not self.isVisible():
+            
+            return
+            
+        
+        if self._last_drawn_info != self._GetAnimationBarStatus() or self._hide_nub_then_hide:
+            
+            self.update()
             
         
     
@@ -966,6 +1002,13 @@ class MediaContainer( QW.QWidget ):
         HG.client_controller.sub( self, 'Pause', 'pause_all_media' )
         
     
+    def _ClearAndHideAnimationBar( self ):
+        
+        self._animation_bar.ClearMedia()
+        
+        self._animation_bar.hide()
+        
+    
     def _DestroyOrHideThisMediaWindow( self, media_window ):
         
         if media_window is not None:
@@ -1002,13 +1045,6 @@ class MediaContainer( QW.QWidget ):
                 media_window.deleteLater()
                 
             
-        
-    
-    def _HideAnimationBar( self ):
-        
-        self._animation_bar.ClearMedia()
-        
-        self._animation_bar.hide()
         
     
     def _MakeMediaWindow( self ):
@@ -1081,27 +1117,16 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.SetMedia( self._media, start_paused = self._start_paused )
             
+            self._media_window.lower()
+            
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
             self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
             
-            if isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio():
-                
-                self._volume_control.show()
-                
-            else:
-                
-                self._volume_control.hide()
-                
-            
-            self._animation_bar.show()
-            
         else:
             
-            self._HideAnimationBar()
-            
-            self._volume_control.hide()
+            self._ClearAndHideAnimationBar()
             
         
         media_window_changed = old_media_window != self._media_window
@@ -1150,33 +1175,22 @@ class MediaContainer( QW.QWidget ):
                 
                 ( media_width, media_height ) = ( my_width, my_height )
                 
-                if ShouldHaveAnimationBar( self._media, self._show_action ) and not is_open_externally:
-                    
-                    animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-                    
-                    media_height -= animated_scanbar_height
-                    
-                    if self._volume_control.isVisibleTo( self ):
-                        
-                        volume_width = self._volume_control.width()
-                        
-                    else:
-                        
-                        volume_width = 0
-                        
-                    
-                    self._animation_bar.setFixedSize( QC.QSize( my_width - volume_width, animated_scanbar_height ) )
-                    self._animation_bar.move( QC.QPoint( 0, my_height - animated_scanbar_height ) )
-                    
-                    if self._volume_control.isVisibleTo( self ):
-                        
-                        self._volume_control.setFixedSize( QC.QSize( volume_width, animated_scanbar_height ) )
-                        self._volume_control.move( QC.QPoint( self._animation_bar.width(), my_height - animated_scanbar_height ) )
-                        
-                    
-                
                 self._media_window.setFixedSize( QC.QSize( media_width, media_height ) )
                 self._media_window.move( QC.QPoint( 0, 0 ) )
+                
+                if ShouldHaveAnimationBar( self._media, self._show_action ) and not is_open_externally:
+                    
+                    ( animated_scanbar_rect, volume_control_rect ) = self.GetAnimatedScanbarAndVolumeRects()
+                    
+                    self._animation_bar.setFixedSize( animated_scanbar_rect.size() )
+                    self._animation_bar.move( animated_scanbar_rect.topLeft() )
+                    
+                    if self.ShouldHaveVolumeControl():
+                        
+                        self._volume_control.setFixedSize( volume_control_rect.size() )
+                        self._volume_control.move( volume_control_rect.topLeft() )
+                        
+                    
                 
             
         
@@ -1190,13 +1204,15 @@ class MediaContainer( QW.QWidget ):
         
         self._media = None
         
-        self._HideAnimationBar()
+        self._ClearAndHideAnimationBar()
         
         self._volume_control.hide()
         
         self._DestroyOrHideThisMediaWindow( self._media_window )
         
         self._media_window = None
+        
+        HG.client_controller.gui.UnregisterUIUpdateWindow( self )
         
         self.hide()
         
@@ -1221,6 +1237,37 @@ class MediaContainer( QW.QWidget ):
             
             self._SizeAndPositionChildren()
             
+        
+    
+    def GetAnimatedScanbarAndVolumeRects( self ):
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        animated_scanbar_width = my_width
+        
+        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        
+        volume_width = self._volume_control.width()
+        
+        if self.ShouldHaveVolumeControl():
+            
+            animated_scanbar_width -= volume_width
+            
+        
+        animated_scanbar_rect = QC.QRect(
+            QC.QPoint( 0, my_height - animated_scanbar_height ),
+            QC.QSize( animated_scanbar_width, animated_scanbar_height )
+        )
+        
+        volume_control_rect = QC.QRect(
+            QC.QPoint( animated_scanbar_width, my_height - animated_scanbar_height ),
+            QC.QSize( volume_width, animated_scanbar_height )
+        )
+        
+        return ( animated_scanbar_rect, volume_control_rect )
         
     
     def GotoPreviousOrNextFrame( self, direction ):
@@ -1278,15 +1325,17 @@ class MediaContainer( QW.QWidget ):
             
             if ShouldHaveAnimationBar( self._media, self._show_action ):
                 
-                animation_bar_mouse_pos = self._animation_bar.mapFromGlobal( QG.QCursor.pos() )
+                # there's some minor update stuff here now the scanbar can be hidden. its geometry may not update until later, so we need to use coordinates from widgets we know are in view instead!
                 
-                animation_bar_rect = self._animation_bar.rect()
+                container_mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+                
+                ( animated_scanbar_rect, volume_control_rect ) = self.GetAnimatedScanbarAndVolumeRects()
                 
                 buffer = 100
                 
-                test_rect = animation_bar_rect.adjusted( -buffer, -buffer, buffer, buffer )
+                test_rect = animated_scanbar_rect.adjusted( -buffer / 2, -buffer, buffer / 2, buffer / 5 )
                 
-                return test_rect.contains( animation_bar_mouse_pos )
+                return test_rect.contains( container_mouse_pos )
                 
             
             return False
@@ -1395,7 +1444,7 @@ class MediaContainer( QW.QWidget ):
     
     def SetEmbedButton( self ):
         
-        self._HideAnimationBar()
+        self._ClearAndHideAnimationBar()
         
         self._volume_control.hide()
         
@@ -1437,7 +1486,19 @@ class MediaContainer( QW.QWidget ):
             self._media_window.show()
             
         
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
         self.show()
+        
+    
+    def ShouldHaveVolumeControl( self ):
+        
+        if self._media is None:
+            
+            return False
+            
+        
+        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio()
         
     
     def StopForSlideshow( self, value ):
@@ -1445,6 +1506,59 @@ class MediaContainer( QW.QWidget ):
         if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
             
             self._media_window.StopForSlideshow( value )
+            
+        
+    
+    def TIMERUIUpdate( self ):
+        
+        current_focus_tlw = QW.QApplication.activeWindow()
+        
+        mouse_is_over_self_or_child = False
+        
+        my_window = self.window()
+        
+        for tlw in QW.QApplication.topLevelWidgets():
+            
+            if tlw == my_window or ClientGUIFunctions.IsQtAncestor( tlw, my_window, through_tlws = True ):
+                
+                if tlw.underMouse():
+                    
+                    mouse_is_over_self_or_child = True
+                    
+                    break
+                    
+                
+            
+        
+        should_show = ( self.MouseIsNearAnimationBar() and mouse_is_over_self_or_child ) or self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or ( ShouldHaveAnimationBar( self._media, self._show_action ) and HG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' ) )
+        
+        if should_show:
+            
+            if not self._animation_bar.isVisible():
+                
+                self._animation_bar.show()
+                
+                self._animation_bar.raise_()
+                
+            
+            if not self._volume_control.isVisible() and self.ShouldHaveVolumeControl():
+                
+                self._volume_control.show()
+                
+                self._volume_control.raise_()
+                
+            
+        else:
+            
+            if self._animation_bar.isVisible():
+                
+                self._animation_bar.HideNubThenHide()
+                
+            
+            if self._volume_control.isVisible():
+                
+                QP.CallAfter( self._volume_control.hide )
+                
             
         
     

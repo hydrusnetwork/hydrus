@@ -136,7 +136,7 @@ class HydrusLogger( object ):
                 
             else:
                 
-                prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
+                prefix = 'v{}, {}: '.format( HC.SOFTWARE_VERSION, time.strftime( '%Y/%m/%d %H:%M:%S' ) )
                 
             
             message = prefix + value

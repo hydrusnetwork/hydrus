@@ -3130,7 +3130,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'mpv report mode', 'Have the client report significant mpv debug information.', HG.mpv_report_mode, self._SwitchBoolean, 'mpv_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
-        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the perceptual_hash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subprocess report mode', 'Report whenever an external process is called.', HG.subprocess_report_mode, self._SwitchBoolean, 'subprocess_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
@@ -7201,6 +7201,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
                 
                 HG.client_controller.FlipProfileMode()
+                
+            elif action == CAC.SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW:
+                
+                HG.client_controller.new_options.FlipBoolean( 'force_animation_scanbar_show' )
                 
             elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 

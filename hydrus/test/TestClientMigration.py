@@ -197,7 +197,7 @@ class TestMigration( unittest.TestCase ):
                 fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
                 fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
                 fake_file_import_job._extra_hashes = ( md5, sha1, sha512 )
-                fake_file_import_job._phashes = [ os.urandom( 8 ) ]
+                fake_file_import_job._perceptual_hashes = [ os.urandom( 8 ) ]
                 fake_file_import_job._file_import_options = FileImportOptions.FileImportOptions()
                 
                 self.WriteSynchronous( 'import_file', fake_file_import_job )

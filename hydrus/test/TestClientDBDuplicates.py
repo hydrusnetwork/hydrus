@@ -89,9 +89,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _import_and_find_dupes( self ):
         
-        phash = os.urandom( 8 )
+        perceptual_hash = os.urandom( 8 )
         
-        # fake-import the files with the phash
+        # fake-import the files with the perceptual_hash
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
@@ -104,7 +104,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
             fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
             fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
-            fake_file_import_job._phashes = [ phash ]
+            fake_file_import_job._perceptual_hashes = [ perceptual_hash ]
             fake_file_import_job._file_import_options = FileImportOptions.FileImportOptions()
             
             self._write( 'import_file', fake_file_import_job )
@@ -119,19 +119,21 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _test_initial_state( self ):
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
-        result = self._read( 'random_potential_duplicate_hashes', self._file_search_context, both_files_match )
+        result = self._read( 'random_potential_duplicate_hashes', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertEqual( len( result ), len( self._all_hashes ) )
         
         self.assertEqual( set( result ), self._all_hashes )
         
-        filtering_pairs = self._read( 'duplicate_pairs_for_filtering', self._file_search_context, both_files_match )
+        filtering_pairs = self._read( 'duplicate_pairs_for_filtering', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         for ( a, b ) in filtering_pairs:
             
@@ -170,9 +172,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[2] )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self._num_free_agents -= 1
         
@@ -256,9 +260,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._king_hash )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self._num_free_agents -= 1
         
@@ -321,9 +327,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[5] )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self._num_free_agents -= 1
         
@@ -489,9 +497,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -563,9 +573,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -603,9 +615,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -621,9 +635,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -671,9 +687,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -689,9 +707,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -745,9 +765,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -802,9 +824,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
+        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
         both_files_match = True
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match )
+        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         

@@ -8,17 +8,17 @@ from hydrus.client import ClientImageHandling
 
 class TestImageHandling( unittest.TestCase ):
     
-    def test_phash( self ):
+    def test_perceptual_hash( self ):
         
-        phashes = ClientImageHandling.GenerateShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
+        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
         
-        self.assertEqual( phashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
+        self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         
-        phashes = ClientImageHandling.DiscardBlankPerceptualHashes( { CC.BLANK_PHASH } )
+        perceptual_hashes = ClientImageHandling.DiscardBlankPerceptualHashes( { CC.BLANK_PERCEPTUAL_HASH } )
         
-        self.assertEqual( phashes, set() )
+        self.assertEqual( perceptual_hashes, set() )
         
-        phashes = ClientImageHandling.DiscardBlankPerceptualHashes( { b'\xb4M\xc7\xb2M\xcb8\x1c', CC.BLANK_PHASH } )
+        perceptual_hashes = ClientImageHandling.DiscardBlankPerceptualHashes( { b'\xb4M\xc7\xb2M\xcb8\x1c', CC.BLANK_PERCEPTUAL_HASH } )
         
-        self.assertEqual( phashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
+        self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         

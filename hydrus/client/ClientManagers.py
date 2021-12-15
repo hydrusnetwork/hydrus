@@ -177,7 +177,7 @@ class BitmapManager( object ):
         
         qt_image_format = self._GetQtImageFormat( depth )
         
-        bytes_per_line = ( depth / 8 ) * width
+        bytes_per_line = ( depth // 8 ) * width
         
         # no copy here
         qt_image = QG.QImage( data, width, height, bytes_per_line, qt_image_format )

@@ -140,6 +140,7 @@ SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS = 132
 SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT = 133
 SIMPLE_MEDIA_SEEK_DELTA = 134
 SIMPLE_GLOBAL_PROFILE_MODE_FLIP = 135
+SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW = 136
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -277,7 +278,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
     SIMPLE_MEDIA_SEEK_DELTA : 'seek media',
-    SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'flip profile mode on/off'
+    SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'flip profile mode on/off',
+    SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show (flip on/off)'
     }
 
 legacy_simple_str_to_enum_lookup = {

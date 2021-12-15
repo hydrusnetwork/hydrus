@@ -258,8 +258,23 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._file_seed_cache_status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache_status )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
-        self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed )
-        self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed )
+        try:
+            
+            self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed )
+            
+        except:
+            
+            self._example_file_seed = None
+            
+        
+        try:
+            
+            self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed )
+            
+        except:
+            
+            self._example_gallery_seed = None
+            
         
     
     def CanCheckNow( self ):
@@ -706,14 +721,24 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self.SetQueryLogContainerStatus( LOG_CONTAINER_UNSYNCED )
         
     
-    def SetQueryLogContainerStatus( self, log_container_status: int ):
+    def SetQueryLogContainerStatus( self, log_container_status: int, pretty_velocity_override = None ):
         
         self._query_log_container_status = log_container_status
         
         if self._query_log_container_status == LOG_CONTAINER_UNSYNCED:
             
             self._raw_file_velocity = ( 0, 1 )
-            self._pretty_file_velocity = 'unknown'
+            
+            if pretty_velocity_override is None:
+                
+                pfv = 'unknown'
+                
+            else:
+                
+                pfv = pretty_velocity_override
+                
+            
+            self._pretty_file_velocity = pfv
             
         
     

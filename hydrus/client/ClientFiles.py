@@ -1579,7 +1579,7 @@ class FilesMaintenanceManager( object ):
         
         mime = media_result.GetMime()
         
-        return mime in HC.MIMES_WE_CAN_PHASH
+        return mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
         
     
     def _ClearJobs( self, hashes, job_type ):
@@ -1826,7 +1826,7 @@ class FilesMaintenanceManager( object ):
         hash = media_result.GetHash()
         mime = media_result.GetMime()
         
-        if mime not in HC.MIMES_WE_CAN_PHASH:
+        if mime not in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
             
             self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
             
@@ -1842,9 +1842,9 @@ class FilesMaintenanceManager( object ):
             return None
             
         
-        phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
         
-        return phashes
+        return perceptual_hashes
         
     
     def _ReInitialiseWorkRules( self ):
@@ -1982,11 +1982,17 @@ class FilesMaintenanceManager( object ):
                         job_key.SetVariable( 'popup_text_2', 'missing or invalid files: {}'.format( HydrusData.ToHumanInt( num_bad_files ) ) )
                         
                     
+                except HydrusExceptions.ShutdownException:
+                    
+                    # no worries
+                    
+                    pass
+                    
                 except Exception as e:
                     
                     HydrusData.PrintException( e )
                     
-                    message = 'There was a problem performing maintenance task {} on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
+                    message = 'There was a problem performing maintenance task "{}" on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
                     message += os.linesep * 2
                     message += str( e )
                     

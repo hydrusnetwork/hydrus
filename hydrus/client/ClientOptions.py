@@ -246,6 +246,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'save_default_tag_service_tab_on_change' ] = True
         
+        self._dictionary[ 'booleans' ][ 'force_animation_scanbar_show' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
