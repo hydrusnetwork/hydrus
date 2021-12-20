@@ -1,0 +1,86 @@
+site_name: hydrus network
+repo_url: https://github.com/hydrusnetwork/hydrus
+repo_name: hydrusnetwork/hydrus
+use_directory_urls: false
+nav:
+  - index.md
+  - Getting Started:
+    - introduction.md
+    - getting_started_installing.md
+    - getting_started_files.md
+    - getting_started_tags.md
+    - getting_started_downloading.md
+    - getting_started_ratings.md
+    - PTR: 
+      - access_keys.md
+      - PTR.md
+  - API: client_api.md
+
+theme:
+  name: material
+  palette:
+    primary: blue grey
+  logo: assets/hydrus-white.svg
+  favicon: assets/hydrus-black.svg
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.tabs
+    - content.tabs.link
+    - navigation.top
+    #- navigation.indexes
+
+  icon:
+    repo: fontawesome/brands/git-alt
+    
+extra:
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/hydrusnetwork
+    - icon: fontawesome/brands/tumblr
+      link: https://hydrus.tumblr.com/
+    - icon: fontawesome/solid/envelope
+      link: mailto:hydrus.admin@gmail.com
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/wPHPCUZ
+    - icon: fontawesome/brands/patreon
+      link: https://www.patreon.com/hydrus_dev
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+markdown_extensions:
+
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+      separator: "_"
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets
+  

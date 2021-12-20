@@ -1,0 +1,7 @@
+.spoiler:not(:hover) {
+  color: #000;
+  background-color: #000;
+}
+.hydrus-warning {
+  color: #d00;
+}
