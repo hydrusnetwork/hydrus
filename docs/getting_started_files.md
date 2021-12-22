@@ -141,7 +141,3 @@ In general, hydrus is good for individual files like you commonly find on imageb
 If you are looking for a comic manager to supplement hydrus, check out this user-made guide to other archiving software [here](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)!
 
 And although the client can hold millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui window. As you learn to use it, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total _items_, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy. One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million files queued up! Just try and take things slow until you figure out what your computer's limits are.
-
-[I want to learn more about files! ---->](getting_started_more_files.md)
-
-[No, let's learn about tags! ---->](getting_started_tags.md)

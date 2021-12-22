@@ -45,5 +45,3 @@ These programs are free software. Everything I, hydrus dev, have made is under t
 ```
 
 Do what the fuck you want to with my software, and if shit breaks, DEAL WITH IT.
-
-[Happy? Go on to the getting started guide ---->](getting_started_installing.html)

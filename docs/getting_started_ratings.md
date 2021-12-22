@@ -3,15 +3,13 @@ title: ratings
 ---
 # getting started with ratings  
 
-[<\-\-\- Back to downloading](getting_started_downloading.html)
-
 The hydrus client supports two kinds of ratings: _like/dislike_ and _numerical_. Let's start with the simpler one:
 
 ## like/dislike
 
 A new client starts with one of these, called 'favourites'. It can set one of two values to a file. It does not have to represent like or dislike--it can be anything you want, like 'send to export folder' or 'explicit/safe' or 'cool babes'. Go to _services->manage services->local->like/dislike ratings_:
 
-![](ratings_like.png)
+![](images/ratings_like.png)
 
 You can set a variety of colours and shapes.
 
@@ -38,5 +36,3 @@ Once you have some ratings set, you can search for them using system:rating, whi
 ![](images/ratings_system_pred.png)
 
 On my own client, I find it useful to have several like/dislike ratings set up as one-click pseudo-tags, like the 'OP images' above.
-
-[Go back to the index --->](index.html)

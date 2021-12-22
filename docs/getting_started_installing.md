@@ -139,5 +139,3 @@ By default, hydrus stores all your user data in one location, so backing up is s
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
 
 I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.html), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
-
-[Let's import some files! ---->](getting_started_files.html)
