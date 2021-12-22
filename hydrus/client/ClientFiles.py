@@ -1401,6 +1401,28 @@ class FilesMaintenanceManager( object ):
             
         
     
+    def _CanRegenThumbForMediaResult( self, media_result ):
+        
+        mime = media_result.GetMime()
+        
+        if mime not in HC.MIMES_WITH_THUMBNAILS:
+            
+            return False
+            
+        
+        ( width, height ) = media_result.GetResolution()
+        
+        if width is None or height is None:
+            
+            # this guy is probably pending a metadata regen but the user forced thumbnail regen now
+            # we'll wait for metadata regen to notice the new dimensions and schedule this job again
+            
+            return False
+            
+        
+        return True
+        
+    
     def _CheckFileIntegrity( self, media_result, job_type ):
         
         hash = media_result.GetHash()
@@ -1743,9 +1765,9 @@ class FilesMaintenanceManager( object ):
     
     def _RegenFileThumbnailForce( self, media_result ):
         
-        mime = media_result.GetMime()
+        good_to_go = self._CanRegenThumbForMediaResult( media_result )
         
-        if mime not in HC.MIMES_WITH_THUMBNAILS:
+        if not good_to_go:
             
             return
             
@@ -1762,9 +1784,9 @@ class FilesMaintenanceManager( object ):
     
     def _RegenFileThumbnailRefit( self, media_result ):
         
-        mime = media_result.GetMime()
+        good_to_go = self._CanRegenThumbForMediaResult( media_result )
         
-        if mime not in HC.MIMES_WITH_THUMBNAILS:
+        if not good_to_go:
             
             return
             

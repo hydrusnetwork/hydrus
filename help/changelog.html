@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_467"><a href="#version_467">version 467</a></h3></li>
+				<ul>
+					<li>new scanbar cleanup:</li>
+					<li>the media container's scanbar and volume control are now combined on the same widget, meaning they now show/hide in sync and faster. their layout calculation is also more sensible. the new controls bar also has a thin border to make it pop better against a background video</li>
+					<li>improved the way some auto-hide anti-flicker tech on the scanbar now works. it all hides a frame faster sometimes</li>
+					<li>figured out some new anti-flicker tech to reduce/eliminate a frame of stretch when flicking from a static image to an mpv video, particularly for the first or second time in a session</li>
+					<li>fixed a bug where clicking the global mute/unmute on an mpv player meant that certain shortcut keys (usually those with arrow keys) would not work on that player again. (it was a focus issue on the button, which then captured some form navigation keys but they had nowhere to go)</li>
+					<li>brushed up some mouse coordinate testing logic across the program. some linux clients had trouble with the new animation scanbar popping up over mpv, I think I improved it!</li>
+					<li>fixed another type problem with newer python/PyQt5 on Arch, also in scanbar coordinate testing</li>
+					<li>fixed some dodgy colours in the scanbar initialisation and volume control border</li>
+					<li>macOS users: I undid a long-time paint hack on the media container and the static image canvas. Qt is responsible for clearing the background again, which allows me to remove some jank anti-flicker tech. HOWEVER, the original reason for this hack was because without it, old macOS went to 100% CPU whenever the media viewer was showing something. therefore, to be safe, this option is still on for macOS users for now. you'll get a little flicker when browsing. please try hitting _help->debug->gui actions->macOS anti-flicker test_ and do some mixed video/image browsing. does your whole damn client lock up?</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the 'file log' and 'search log' buttons are now a new widget class that puts an arrow on the side that opens a menu. the secret right-click menus of these buttons is now exposed for all</li>
+					<li>fixed a bug affecting some greyscale pngs with ICC profiles--they were coming out pure white due to a colourspace conversion problem</li>
+					<li>fixed an import problem when PIL could not load a file (due to file malformation) but OpenCV could. this was causing a failed import from the new ICC profile detection code</li>
+					<li>when the downloader hits a broken image file that cannot be imported due to malformation, the status is now 'error' instead of the incorrect 'ignored'</li>
+					<li>fixed the duplicate file filesize comparison statement sometimes showing > in one direction and ≈ in the other. it happened when the larger file was between 20/19 and 21/20 times the size of the smaller, just a logic typo (issue #1028)</li>
+					<li>the trash maintenance daemon is moved from the old threaded daemon system to the new repeating job worker pool. this is the last daemon cleaned up, so I am retiring the old and mostly defunct 'no_daemons' launch argument. a variety of other daemon infrastructure for things like shutdown checks is similarly removed. the program also now waits for the newer daemon jobs to finish working on shutdown</li>
+					<li>moved most client daemon jobs like repository sync and dirty object save down so they start after the first session is loaded rather than right after boot</li>
+					<li>if a file is called to regen its thumbnail but currently has no dimension, this is now a no-op rather than an error. in the situation where users force thumb regen before metadata regen and encounter this, it is sorted out later when the metadata regen recognises new dimensions and reschedules the thumb regen</li>
+					<li>added an extensive user-written guide to the --db_synchronous_override launch argument to the launch arguments help page. it is possible and safe to run the program with synchronous=0 as long as certain caveats are obeyed. thanks to the user who figured this out and wrote it up</li>
+					<li>the downloader engine now discards source urls in an import job if they have the same domain as any existing primary url. this will ensure that if a booru has a link back to itself as a source url, when the 'source' is really an alternate rather than a dupe, it won't be added in hydrus as a known url for that imported file</li>
+					<li>misc cleanup in downloader system and file/search log UI</li>
+					<li>fixed a type bug in the file and search log 'import from png' action. if you have existing pngs previously exported from here, they will import ok now</li>
+					<li>refactored the various hydrus compression code to a new HydrusCompression file</li>
+					<li>exported serialisable data pngs such as from file or search log that hold simple Strings now always compress the data before embedding it in the png. existing pngs that hold uncompressed strings should still load ok</li>
+					<li>the payload in an exported png is now always compressed, and the payload description always states the uncompressed size</li>
+					<li>sped up client shutdown when network traffic has been paused the whole time and a repo sync job might have wanted to run. these jobs also do not hang on a thread worker if network traffic is paused, but they should wake immediately when it is unpaused</li>
+					<li>the hydrus login system is now resistant to connection failures; previously it was getting hung up and jamming the whole hydrus sync system when a server was down</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>added GET /manage_database/mr_bones to the Client API. it returns a JSON Object with the same numbers used in the _help->how boned am I?_ dialog</li>
+					<li>incremented Client API version to 23</li>
+				</ul>
 				<li><h3 id="version_466"><a href="#version_466">version 466</a></h3></li>
 				<ul>
 					<li>video scanbar autohide:</li>

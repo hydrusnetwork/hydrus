@@ -126,6 +126,7 @@
 					<ul>
 						<li><a href="#manage_database_lock_on">POST /manage_database/lock_on</a></li>
 						<li><a href="#manage_database_lock_off">POST /manage_database/lock_off</a></li>
+						<li><a href="#manage_database_mr_bones">GET /manage_database/mr_bones</a></li>
 					</ul>
 			</ul>
 			<h3 id="access_management"><a href="#access_management">Access Management</a></h3>
@@ -247,52 +248,52 @@
 						<ul>
 							<li>
 <pre>{
-    'local_tags': [
+    "local_tags" : [
         {
-            'name': 'my tags',
-            'service_key': '6c6f63616c2074616773'
+            "name" : "my tags",
+            "service_key" : "6c6f63616c2074616773"
         },
         {
-            'name': 'filenames',
-            'service_key': '231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b'
+            "name" : "filenames",
+            "service_key" : "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b"
         }
     ],
-    'tag_repositories': [
+    "tag_repositories" : [
         {
-            'name': 'PTR',
-            'service_key': 'ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9'
+            "name" : "PTR",
+            "service_key" : "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9"
         }
     ],
-    'local_files': [
+    "local_files" : [
         {
-            'name': 'my files',
-            'service_key': '6c6f63616c2066696c6573'
+            "name" : "my files",
+            "service_key" : "6c6f63616c2066696c6573"
         }
     ],
-    'file_repositories': [
+    "file_repositories" : [
     ],
-    'all_local_files': [
+    "all_local_files" : [
         { 
-            'name': 'all local files',
-            'service_key': '616c6c206c6f63616c2066696c6573'
+            "name" : "all local files",
+            "service_key" : "616c6c206c6f63616c2066696c6573"
         }
     ],
-    'all_known_files': [
+    "all_known_files" : [
         {
-            'name': 'all known files',
-            'service_key': '616c6c206b6e6f776e2066696c6573'
+            "name" : "all known files",
+            "service_key" : "616c6c206b6e6f776e2066696c6573"
         }
     ],
-    'all_known_tags': [
+    "all_known_tags" : [
         {
-            'name': 'all known tags',
-            'service_key': '616c6c206b6e6f776e2074616773'
+            "name" : "all known tags",
+            "service_key" : "616c6c206b6e6f776e2074616773"
         }
     ],
-    'trash': [
+    "trash" : [
         {
-            'name': 'trash',
-            'service_key': '7472617368'
+            "name" : "trash",
+            "service_key" : "7472617368"
         }
     ]
 }</pre>
@@ -480,7 +481,7 @@
 }</pre>
 							</li>
 						</ul>
-						<p>Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "[no namespace]:[colon-prefixed-subtag]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.</p>
+						<p>Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ' :' is secretly dealt with internally as "[no namespace]:[colon-prefixed-subtag]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.</p>
 					</li>
 				</ul>
 			</div>
@@ -1549,6 +1550,36 @@
 						<p>Arguments: None</p>
 					</li>
 					<p>This is the obvious complement to the lock. The client will resume processing its job queue and will catch up. If the UI was frozen, it should free up in a few seconds, just like after a big VACUUM.</p>
+				</ul>
+			</div>
+                        <div class="apiborder">
+				<h3 id="manage_database_mr_bones"><a href="#manage_database_mr_bones"><b>GET /manage_database/mr_bones</b></a></h3>
+				<p><i>Get the data from <i>help-&gt;how boned am I?</i>. This is a simple Object of numbers just for hacky advanced purposes if you want to build up some stats in the background. The numbers are the same as the dialog shows, so double check that to confirm what means what.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Database permission needed.</p></li>
+					<li>
+						<p>Arguments: None</p>
+					</li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+    "num_inbox" : 8356,
+    "num_archive" : 229,
+    "num_deleted" : 7010,
+    "size_inbox" : 7052596762,
+    "size_archive" : 262911007,
+    "size_deleted" : 13742290193,
+    "earliest_import_time" : 1451408539,
+    "total_viewtime" : [ 3280, 41621, 2932, 83021 ],
+    "total_alternate_files" : 265,
+    "total_duplicate_files" : 125,
+    "total_potential_pairs" : 3252
+}</pre>
+							</li>
+						</ul>
+					</li>
 				</ul>
 			</div>
 		</div>

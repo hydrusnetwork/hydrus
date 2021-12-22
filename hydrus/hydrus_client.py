@@ -39,7 +39,6 @@ try:
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
-    argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'OBSOLETE: run using TRUNCATE db journaling' )
     argparser.add_argument( '--db_memory_journaling', action='store_true', help = 'OBSOLETE: run using MEMORY db journaling (DANGEROUS)' )
     
@@ -84,8 +83,6 @@ try:
         
         raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
         
-    
-    HG.no_daemons = result.no_daemons
     
     HG.db_journal_mode = result.db_journal_mode
     

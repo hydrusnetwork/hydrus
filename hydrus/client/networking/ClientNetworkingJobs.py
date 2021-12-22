@@ -1700,12 +1700,12 @@ class NetworkJob( object ):
         
         while True:
             
-            self._is_done_event.wait( 5 )
-            
             if self.IsDone():
                 
                 break
                 
+            
+            self._is_done_event.wait( 5 )
             
         
         with self._lock:

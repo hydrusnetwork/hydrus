@@ -46,9 +46,9 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            payload_bytes = ClientSerialisable.GetPayloadBytes( self._payload_obj )
+            ( payload_bytes, payload_length ) = ClientSerialisable.GetPayloadBytesAndLength( self._payload_obj )
             
-            payload_description += ' - {}'.format( HydrusData.ToHumanBytes( len( payload_bytes ) ) )
+            payload_description += ' - {}'.format( HydrusData.ToHumanBytes( payload_length ) )
             
         
         self._payload_description.setText( payload_description )
@@ -151,7 +151,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         width = self._width.value()
         
         payload_description = self._payload_description.text()
-        payload_bytes = ClientSerialisable.GetPayloadBytes( self._payload_obj )
+        ( payload_bytes, payload_length ) = ClientSerialisable.GetPayloadBytesAndLength( self._payload_obj )
         
         title = self._title.text()
         text = self._text.text()

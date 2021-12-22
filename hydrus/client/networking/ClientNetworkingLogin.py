@@ -997,6 +997,8 @@ class LoginScriptHydrus( object ):
         
         network_job.SetForLogin( True )
         
+        network_job.OnlyTryConnectionOnce()
+        
         network_job.AddAdditionalHeader( 'Hydrus-Key', access_key.hex() )
         
         engine.AddJob( network_job )

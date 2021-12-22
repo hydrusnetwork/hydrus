@@ -69,7 +69,9 @@ def DAEMONCheckImportFolders():
             
         
     
-def DAEMONMaintainTrash( controller ):
+def DAEMONMaintainTrash():
+    
+    controller = HG.client_controller
     
     if HC.options[ 'trash_max_size' ] is not None:
         

@@ -281,11 +281,9 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class GallerySeedLogButton( ClientGUICommon.BetterButton ):
+class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_type_string, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
-        
-        ClientGUICommon.BetterButton.__init__( self, parent, '{} log'.format( gallery_type_string ), self._ShowGallerySeedLogFrame )
         
         self._controller = controller
         self._read_only = read_only
@@ -294,9 +292,46 @@ class GallerySeedLogButton( ClientGUICommon.BetterButton ):
         self._gallery_seed_log_get_callable = gallery_seed_log_get_callable
         self._gallery_seed_log_set_callable = gallery_seed_log_set_callable
         
-        self.setToolTip( 'open detailed {} log--right-click for quick actions, if applicable'.format( self._gallery_type_string ) )
+        action = QW.QAction()
         
-        self._widget_event_filter = QP.WidgetEventFilter( self )
+        action.setText( '{} log'.format( gallery_type_string ) )
+        action.setToolTip( 'open detailed {} log'.format( self._gallery_type_string ) )
+        
+        action.triggered.connect( self._ShowGallerySeedLogFrame )
+        
+        ClientGUICommon.ButtonWithMenuArrow.__init__( self, parent, action )
+        
+    
+    def _PopulateMenu( self, menu ):
+        
+        gallery_seed_log = self._gallery_seed_log_get_callable()
+        
+        if len( gallery_seed_log ) > 0:
+            
+            if not self._read_only and gallery_seed_log.CanRestartFailedSearch():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+            
+            submenu = QW.QMenu( menu )
+
+            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPNG )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
+            
+        
+        if not self._read_only:
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPNG )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
+            
         
     
     def _ClearGallerySeeds( self, statuses_to_remove ):
@@ -368,11 +403,11 @@ class GallerySeedLogButton( ClientGUICommon.BetterButton ):
                 
                 path = dlg.GetPath()
                 
-                payload = ClientSerialisable.LoadFromPNG( path )
-                
                 try:
                     
-                    urls = self._GetURLsFromURLsString( payload )
+                    payload_string = ClientSerialisable.LoadStringFromPNG( path )
+                    
+                    urls = self._GetURLsFromURLsString( payload_string )
                     
                     self._ImportURLs( urls )
                     
@@ -524,62 +559,6 @@ class GallerySeedLogButton( ClientGUICommon.BetterButton ):
             
             frame.SetPanel( panel )
             
-        
-    
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.RightButton:
-            
-            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        self.ShowMenu()
-        
-    
-    def ShowMenu( self ):
-        
-        menu = QW.QMenu()
-        
-        gallery_seed_log = self._gallery_seed_log_get_callable()
-        
-        if len( gallery_seed_log ) > 0:
-            
-            if not self._read_only and gallery_seed_log.CanRestartFailedSearch():
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-            
-            submenu = QW.QMenu( menu )
-
-            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
-            
-        
-        if not self._read_only:
-            
-            submenu = QW.QMenu( menu )
-
-            ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
-            
-        
-        CGC.core().PopupMenu( self, menu )
         
     
 class GallerySeedLogStatusControl( QW.QFrame ):

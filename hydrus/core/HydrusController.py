@@ -33,7 +33,6 @@ class HydrusController( object ):
         pubsub_valid_callable = self._GetPubsubValidCallable()
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self, pubsub_valid_callable )
-        self._daemons = []
         self._daemon_jobs = {}
         self._caches = {}
         self._managers = {}
@@ -185,9 +184,9 @@ class HydrusController( object ):
                     
                 
             
-            self._call_to_threads = list(filter( filter_call_to_threads, self._call_to_threads ))
+            self._call_to_threads = list( filter( filter_call_to_threads, self._call_to_threads ) )
             
-            self._long_running_call_to_threads = list(filter( filter_call_to_threads, self._long_running_call_to_threads ))
+            self._long_running_call_to_threads = list( filter( filter_call_to_threads, self._long_running_call_to_threads ) )
             
         
     
@@ -220,16 +219,9 @@ class HydrusController( object ):
             job.Cancel()
             
         
-        self._daemon_jobs = {}
-        
-        for daemon in self._daemons:
-            
-            daemon.shutdown()
-            
-        
         started = HydrusData.GetNow()
         
-        while True in ( daemon.is_alive() for daemon in self._daemons ):
+        while True in ( daemon_job.CurrentlyWorking() for daemon_job in self._daemon_jobs.values() ):
             
             self._ReportShutdownDaemonsStatus()
             
@@ -241,7 +233,7 @@ class HydrusController( object ):
                 
             
         
-        self._daemons = []
+        self._daemon_jobs = {}
         
     
     def _Write( self, action, synchronous, *args, **kwargs ):
@@ -499,7 +491,6 @@ class HydrusController( object ):
         
         threads = []
         
-        threads.extend( self._daemons )
         threads.extend( self._call_to_threads )
         threads.extend( self._long_running_call_to_threads )
         

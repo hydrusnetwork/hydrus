@@ -1,22 +1,8 @@
 import hashlib
 import json
 import os
-import zlib
 
-LZ4_OK = False
-
-try:
-    
-    import lz4
-    import lz4.block
-    
-    LZ4_OK = True
-    
-except: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
-    
-    print( 'Could not import lz4--nbd.' )
-    
-
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
@@ -132,25 +118,9 @@ SERIALISABLE_TYPE_PRESENTATION_IMPORT_OPTIONS = 108
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
-def CreateFromNetworkBytes( network_string, raise_error_on_future_version = False ):
+def CreateFromNetworkBytes( network_bytes: bytes, raise_error_on_future_version = False ):
     
-    try:
-        
-        obj_bytes = zlib.decompress( network_string )
-        
-    except zlib.error:
-        
-        if LZ4_OK:
-            
-            obj_bytes = lz4.block.decompress( network_string )
-            
-        else:
-            
-            raise
-            
-        
-    
-    obj_string = str( obj_bytes, 'utf-8' )
+    obj_string = HydrusCompression.DecompressBytesToString( network_bytes )
     
     return CreateFromString( obj_string, raise_error_on_future_version = raise_error_on_future_version )
     
@@ -245,9 +215,7 @@ class SerialisableBase( object ):
         
         obj_string = self.DumpToString()
         
-        obj_bytes = bytes( obj_string, 'utf-8' )
-        
-        return zlib.compress( obj_bytes, 9 )
+        return HydrusCompression.CompressStringToBytes( obj_string )
         
     
     def DumpToString( self ):

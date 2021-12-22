@@ -453,6 +453,37 @@ class BetterNotebook( QW.QTabWidget ):
         self._ShiftSelection( 1 )
         
     
+class ButtonWithMenuArrow( QW.QToolButton ):
+    
+    def __init__( self, parent: QW.QWidget, action: QW.QAction ):
+        
+        QW.QToolButton.__init__( self, parent )
+        
+        self.setPopupMode( QW.QToolButton.MenuButtonPopup )
+        
+        self.setToolButtonStyle( QC.Qt.ToolButtonTextOnly )
+        
+        self.setDefaultAction( action )
+        
+        self._menu = QW.QMenu( self )
+        
+        self.setMenu( self._menu )
+        
+        self._menu.aboutToShow.connect( self._ClearAndPopulateMenu )
+        
+    
+    def _ClearAndPopulateMenu( self ):
+        
+        self._menu.clear()
+        
+        self._PopulateMenu( self._menu )
+        
+    
+    def _PopulateMenu( self, menu ):
+        
+        raise NotImplementedError()
+        
+    
 class BetterRadioBox( QP.RadioBox ):
     
     def __init__( self, *args, **kwargs ):

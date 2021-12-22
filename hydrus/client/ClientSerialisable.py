@@ -9,6 +9,7 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
@@ -19,6 +20,15 @@ from hydrus.core import HydrusTemp
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
+
+# ok, the serialised png format is:
+
+# the png is monochrome, no alpha channel (mode 'L' in PIL)
+# the data is read left to right in visual pixels. one pixel = one byte
+# first two bytes (i.e. ( 0, 0 ) and ( 1, 0 )), are a big endian unsigned short (!H), and say how tall the header is in number of rows. the actual data starts after that
+# first four bytes of data are a big endian unsigned int (!I) saying how long the payload is in bytes
+# read that many pixels after that, you got the payload
+# it should be zlib compressed these days and is most likely a dumped hydrus serialisable object, which is a json guy with a whole complicated loading system. utf-8 it into a string and you are half way there :^)
 
 if cv2.__version__.startswith( '2' ):
     
@@ -182,19 +192,21 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
         HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     
-def GetPayloadBytes( payload_obj ):
+def GetPayloadBytesAndLength( payload_obj ):
     
     if isinstance( payload_obj, bytes ):
         
-        return payload_obj
+        return ( HydrusCompression.CompressBytesToBytes( payload_obj ), len( payload_obj ) )
         
     elif isinstance( payload_obj, str ):
         
-        return bytes( payload_obj, 'utf-8' )
+        return ( HydrusCompression.CompressStringToBytes( payload_obj ), len( payload_obj ) )
         
     else:
         
-        return payload_obj.DumpToNetworkBytes()
+        payload_string = payload_obj.DumpToString()
+        
+        return ( HydrusCompression.CompressStringToBytes( payload_string ), len( payload_string ) )
         
     
 def GetPayloadTypeString( payload_obj ):
@@ -231,9 +243,9 @@ def GetPayloadTypeString( payload_obj ):
     
 def GetPayloadDescriptionAndBytes( payload_obj ):
     
-    payload_bytes = GetPayloadBytes( payload_obj )
+    ( payload_bytes, payload_length ) = GetPayloadBytesAndLength( payload_obj )
     
-    payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ToHumanBytes( len( payload_bytes ) )
+    payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ToHumanBytes( payload_length )
     
     return ( payload_description, payload_bytes )
     
@@ -334,6 +346,22 @@ def LoadFromPNG( path ):
         
     
     return payload_bytes
+    
+def LoadStringFromPNG( path: str ) -> str:
+    
+    payload_bytes = LoadFromPNG( path )
+    
+    try:
+        
+        payload_string = HydrusCompression.DecompressBytesToString( payload_bytes )
+        
+    except:
+        
+        # older payloads were not compressed
+        payload_string = str( payload_bytes, 'utf-8' )
+        
+    
+    return payload_string
     
 def TextExceedsWidth( painter, text, width ):
     

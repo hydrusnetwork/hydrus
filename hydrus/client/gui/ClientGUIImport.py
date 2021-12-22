@@ -2234,17 +2234,17 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     def ShowMenu( self ):
         
         menu = QW.QMenu()
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'copy to clipboard', 'Serialise this tag import options and copy it to clipboard.', self._Copy )
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'paste from clipboard', 'Try to import serialised tag import options from the clipboard.', self._Paste )
         
         if not self._tag_import_options.IsDefault():
             
             ClientGUIMenus.AppendSeparator( menu )
-
+            
             ClientGUIMenus.AppendMenuItem( menu, 'set to default', 'Set this tag import options to defer to the defaults.', self._SetDefault )
             
         
