@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -483,19 +484,94 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class FileSeedCacheButton( ClientGUICommon.BetterButton ):
+class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
-        
-        ClientGUICommon.BetterButton.__init__( self, parent, 'file log', self._ShowFileSeedCacheFrame )
         
         self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable
         self._file_seed_cache_set_callable = file_seed_cache_set_callable
         
-        self.setToolTip( 'open detailed file log--right-click for quick actions, if applicable' )
+        action = QW.QAction()
         
-        self._widget_event_filter = QP.WidgetEventFilter( self )
+        action.setText( 'file log' )
+        action.setToolTip( 'open detailed file log' )
+        
+        action.triggered.connect( self._ShowFileSeedCacheFrame )
+        
+        ClientGUICommon.ButtonWithMenuArrow.__init__( self, parent, action )
+        
+    
+    def _PopulateMenu( self, menu ):
+        
+        file_seed_cache = self._file_seed_cache_get_callable()
+        
+        num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+        num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
+        num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
+        num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
+        num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
+        
+        if num_errors > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
+            
+        
+        if num_vetoed > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if num_successful > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+            
+        
+        if num_deleted > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this cache to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
+            
+        
+        if num_errors > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
+            
+        
+        if num_vetoed > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this cache to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
+            
+        
+        if num_skipped > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', self._ShowFilesInNewPage, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', self._ShowFilesInNewPage )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if len( file_seed_cache ) > 0:
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPNG )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
+            
+        
+        submenu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
+        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPNG )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
         
     
     def _ClearFileSeeds( self, statuses_to_remove ):
@@ -565,11 +641,11 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
                 
                 path = dlg.GetPath()
                 
-                payload = ClientSerialisable.LoadFromPNG( path )
-                
                 try:
                     
-                    sources = self._GetSourcesFromSourcesString( payload )
+                    payload_string = ClientSerialisable.LoadStringFromPNG( path )
+                    
+                    sources = self._GetSourcesFromSourcesString( payload_string )
                     
                     self._ImportSources( sources )
                     
@@ -723,102 +799,6 @@ class FileSeedCacheButton( ClientGUICommon.BetterButton ):
             
             HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
             
-        
-    
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.RightButton:
-            
-            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        self.ShowMenu()
-        
-    
-    def ShowMenu( self ):
-        
-        menu = QW.QMenu()
-        
-        file_seed_cache = self._file_seed_cache_get_callable()
-        
-        num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-        num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
-        num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
-        num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
-        num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if num_successful > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
-            
-        
-        if num_deleted > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this cache to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
-            
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this cache to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
-            
-        
-        if num_skipped > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', self._ShowFilesInNewPage, show = 'new' )
-        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', self._ShowFilesInNewPage )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if len( file_seed_cache ) > 0:
-            
-            submenu = QW.QMenu( menu )
-
-            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
-            
-        
-        submenu = QW.QMenu( menu )
-
-        ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
-        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPNG )
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
-        
-        CGC.core().PopupMenu( self, menu )
         
     
 class FileSeedCacheStatusControl( QW.QFrame ):

@@ -2411,6 +2411,28 @@ class HydrusResourceClientAPIRestrictedManageDatabase( HydrusResourceClientAPIRe
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_DATABASE )
         
     
+class HydrusResourceClientAPIRestrictedManageDatabaseLockOff( HydrusResourceClientAPIRestrictedManageDatabase ):
+    
+    BLOCKED_WHEN_BUSY = False
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        try:
+            
+            HG.client_busy.release()
+            
+        except threading.ThreadError:
+            
+            raise HydrusExceptions.BadRequestException( 'The server is not busy!' )
+            
+        
+        HG.client_controller.db.PauseAndDisconnect( False )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceClientAPIRestrictedManageDatabaseLockOn( HydrusResourceClientAPIRestrictedManageDatabase ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2441,24 +2463,18 @@ class HydrusResourceClientAPIRestrictedManageDatabaseLockOn( HydrusResourceClien
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedManageDatabaseLockOff( HydrusResourceClientAPIRestrictedManageDatabase ):
+class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClientAPIRestrictedManageDatabase ):
     
-    BLOCKED_WHEN_BUSY = False
-    
-    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        try:
-            
-            HG.client_busy.release()
-            
-        except threading.ThreadError:
-            
-            raise HydrusExceptions.BadRequestException( 'The server is not busy!' )
-            
+        boned_stats = HG.client_controller.Read( 'boned_stats' )
         
-        HG.client_controller.db.PauseAndDisconnect( False )
+        body_dict = { 'boned_stats' : boned_stats }
         
-        response_context = HydrusServerResources.ResponseContext( 200 )
+        mime = HC.APPLICATION_JSON
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
         
         return response_context
         

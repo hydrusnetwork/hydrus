@@ -6,20 +6,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
-LZ4_OK = False
-
-try:
-    
-    import lz4
-    import lz4.block
-    
-    LZ4_OK = True
-    
-except Exception as e: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
-    
-    pass
-    
-
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusImageHandling
@@ -940,11 +927,6 @@ class HydrusBitmap( object ):
     
     def __init__( self, data, size, depth, compressed = True ):
         
-        if not LZ4_OK:
-            
-            compressed = False
-            
-        
         self._compressed = compressed
         
         if isinstance( data, memoryview ) and not data.c_contiguous:
@@ -954,7 +936,7 @@ class HydrusBitmap( object ):
         
         if self._compressed:
             
-            self._data = lz4.block.compress( data )
+            self._data = HydrusCompression.CompressFastBytesToBytes( data )
             
         else:
             
@@ -969,7 +951,7 @@ class HydrusBitmap( object ):
         
         if self._compressed:
             
-            return lz4.block.decompress( self._data )
+            return HydrusCompression.DecompressFastBytesToBytes( self._data )
             
         else:
             

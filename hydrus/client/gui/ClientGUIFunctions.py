@@ -260,6 +260,18 @@ def MouseIsOnMyDisplay( window ):
     
     return mouse_screen is window_screen
     
+def MouseIsOverWidget( win: QW.QWidget ):
+    
+    # note this is different from win.underMouse(), which in different situations seems to be more complicated than just a rect test
+    
+    # I also had QWidget.underMouse() do flicker on the border edge between two lads next to each other. I guess there might be a frameGeometry vs geometry issue, but dunno. not like I test that here
+    
+    global_mouse_pos = QG.QCursor.pos()
+    
+    local_mouse_pos = win.mapFromGlobal( global_mouse_pos )
+    
+    return win.rect().contains( local_mouse_pos )
+    
 def NotebookScreenToHitTest( notebook, screen_position ):
     
     tab_pos = notebook.tabBar().mapFromGlobal( screen_position )    

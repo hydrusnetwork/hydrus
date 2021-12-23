@@ -20,6 +20,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -673,7 +674,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'chardet present: ', str( HydrusText.CHARDET_OK ) ) )
-        library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
+        library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )
@@ -3140,6 +3141,21 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         gui_actions = QW.QMenu( debug )
         
         default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        
+        def flip_macos_antiflicker():
+            
+            HG.macos_antiflicker_test = not HG.macos_antiflicker_test
+            
+            if HG.macos_antiflicker_test:
+                
+                HydrusData.ShowText( 'Hey, the macOS safety code is now disabled. Please open a new media viewer and see if a mix of video and images show ok, no 100% CPU problems.' )
+                
+            
+        
+        if HC.PLATFORM_MACOS:
+            
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'macos anti-flicker test', 'Try it out, let me know how it goes.', flip_macos_antiflicker )
+            
         
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )

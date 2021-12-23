@@ -53,7 +53,8 @@
 				</li>
 				<li>
 					<b>--db_synchronous_override {0,1,2,3}</b>
-					<p>Change the rules governing how SQLite writes committed changes to your disk. Full docs <a href="https://sqlite.org/pragma.html#pragma_synchronous">here</a>. The hydrus default is 1 with WAL, 2 otherwise.</p>
+					<p>Change the rules governing how SQLite writes committed changes to your disk. The hydrus default is 1 with WAL, 2 otherwise.</p>
+                                        <p>A user has written a full guide on this value <a href="Understanding_Database_Synchronization.md">here</a>! SQLite docs <a href="https://sqlite.org/pragma.html#pragma_synchronous">here</a>.</p>
 				</li>
 				<li>
 					<b>--no_db_temp_files</b>
@@ -62,10 +63,6 @@
 				<li>
 					<b>--boot_debug</b>
 					<p>Prints additional debug information to the log during the bootup phase of the application.</p>
-				</li>
-				<li>
-					<b>--no_daemons</b>
-					<p>Launch the program without some background workers. This is an old debug command and does not do much any more.</p>
 				</li>
 			</ul>
 			<p>The server supports the same arguments. It also takes a <i>positional</i> argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.</p>

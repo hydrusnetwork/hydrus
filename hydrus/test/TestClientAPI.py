@@ -1786,6 +1786,30 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertFalse( HG.client_busy.locked() )
         
+        #
+        
+        expected_data = { 'hell forever' : 666 }
+        
+        HG.test_controller.SetRead( 'boned_stats', expected_data )
+        
+        path = '/manage_database/mr_bones'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        boned_stats = d[ 'boned_stats' ]
+        
+        self.assertEqual( boned_stats, dict( expected_data ) )
+        
     
     def _test_manage_pages( self, connection, set_up_permissions ):
         

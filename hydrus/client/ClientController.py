@@ -265,7 +265,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _ReportShutdownDaemonsStatus( self ):
         
-        names = sorted( { daemon.name for daemon in self._daemons if daemon.is_alive() } )
+        names = sorted( ( name for ( name, job ) in self._daemon_jobs.items() if job.CurrentlyWorking() ) )
         
         self.frame_splash_status.SetSubtext( ', '.join( names ) )
         
@@ -332,7 +332,6 @@ class Controller( HydrusController.HydrusController ):
         
         self.CallToThread( do_it, job_key )
         
-    
     
     def _ShutdownManagers( self ):
         
@@ -1258,35 +1257,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.RestartClientServerServices()
         
-        if not HG.no_daemons:
-            
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
-            
-        
         self.files_maintenance_manager.Start()
-        
-        job = self.CallRepeating( 30.0, 86400.0, self.client_files_manager.DoDeferredPhysicalDeletes )
-        job.WakeOnPubSub( 'notify_new_physical_file_deletes' )
-        self._daemon_jobs[ 'deferred_physical_deletes' ] = job
-        
-        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjectsImportant )
-        job.WakeOnPubSub( 'important_dirt_to_clean' )
-        self._daemon_jobs[ 'save_dirty_objects_important' ] = job
-        
-        job = self.CallRepeating( 0.0, 300.0, self.SaveDirtyObjectsInfrequent )
-        self._daemon_jobs[ 'save_dirty_objects_infrequent' ] = job
-        
-        job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
-        job.ShouldDelayOnWakeup( True )
-        job.WakeOnPubSub( 'notify_account_sync_due' )
-        self._daemon_jobs[ 'synchronise_accounts' ] = job
-        
-        job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SynchroniseRepositories )
-        job.ShouldDelayOnWakeup( True )
-        job.WakeOnPubSub( 'notify_restart_repo_sync' )
-        job.WakeOnPubSub( 'notify_new_permissions' )
-        job.WakeOnPubSub( 'wake_idle_workers' )
-        self._daemon_jobs[ 'synchronise_repositories' ] = job
         
         job = self.CallRepeatingQtSafe( self, 10.0, 10.0, 'repeating mouse idle check', self.CheckMouseIdle )
         self._daemon_jobs[ 'check_mouse_idle' ] = job
@@ -1471,6 +1442,20 @@ class Controller( HydrusController.HydrusController ):
     
     def ReportFirstSessionLoaded( self ):
         
+        job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
+        job.ShouldDelayOnWakeup( True )
+        job.WakeOnPubSub( 'notify_account_sync_due' )
+        job.WakeOnPubSub( 'notify_network_traffic_unpaused' )
+        self._daemon_jobs[ 'synchronise_accounts' ] = job
+        
+        job = self.CallRepeating( 5.0, HydrusNetwork.UPDATE_CHECKING_PERIOD, self.SynchroniseRepositories )
+        job.ShouldDelayOnWakeup( True )
+        job.WakeOnPubSub( 'notify_restart_repo_sync' )
+        job.WakeOnPubSub( 'notify_new_permissions' )
+        job.WakeOnPubSub( 'wake_idle_workers' )
+        job.WakeOnPubSub( 'notify_network_traffic_unpaused' )
+        self._daemon_jobs[ 'synchronise_repositories' ] = job
+        
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
         job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
         job.WakeOnPubSub( 'notify_new_import_folders' )
@@ -1482,6 +1467,21 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'notify_new_export_folders' )
         job.ShouldDelayOnWakeup( True )
         self._daemon_jobs[ 'export_folders' ] = job
+        
+        job = self.CallRepeating( 30.0, 3600.0, ClientDaemons.DAEMONMaintainTrash )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'maintain_trash' ] = job
+        
+        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjectsImportant )
+        job.WakeOnPubSub( 'important_dirt_to_clean' )
+        self._daemon_jobs[ 'save_dirty_objects_important' ] = job
+        
+        job = self.CallRepeating( 0.0, 300.0, self.SaveDirtyObjectsInfrequent )
+        self._daemon_jobs[ 'save_dirty_objects_infrequent' ] = job
+        
+        job = self.CallRepeating( 30.0, 86400.0, self.client_files_manager.DoDeferredPhysicalDeletes )
+        job.WakeOnPubSub( 'notify_new_physical_file_deletes' )
+        self._daemon_jobs[ 'deferred_physical_deletes' ] = job
         
         job = self.CallRepeating( 30.0, 600.0, self.MaintainHashedSerialisables )
         job.WakeOnPubSub( 'maintain_hashed_serialisables' )
@@ -1966,6 +1966,11 @@ class Controller( HydrusController.HydrusController ):
     
     def SynchroniseAccounts( self ):
         
+        if HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
+            
+            return
+            
+        
         services = self.services_manager.GetServices( HC.RESTRICTED_SERVICES, randomised = True )
         
         for service in services:
@@ -1980,6 +1985,11 @@ class Controller( HydrusController.HydrusController ):
         
     
     def SynchroniseRepositories( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
+            
+            return
+            
         
         if not self.options[ 'pause_repo_sync' ]:
             

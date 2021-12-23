@@ -96,6 +96,7 @@ class VolumeControl( QW.QWidget ):
         self._global_mute = AudioMuteButton( self, AUDIO_GLOBAL )
         
         self._global_mute.setToolTip( 'Global mute/unmute' )
+        self._global_mute.setFocusPolicy( QC.Qt.NoFocus )
         
         vbox = QP.VBoxLayout( margin = 0, spacing = 0 )
         
@@ -217,12 +218,8 @@ class VolumeControl( QW.QWidget ):
             
             self.move( pos )
             
-            # QWidget.underMouse() doesn't work on the border edge and hence gives flicker, so just do it manually
-            
-            cursor_pos = QG.QCursor.pos()
-            
-            over_parent = parent.rect().contains( parent.mapFromGlobal( cursor_pos ) )
-            over_me = self.rect().contains( self.mapFromGlobal( cursor_pos ) )
+            over_parent = ClientGUIFunctions.MouseIsOverWidget( parent )
+            over_me = ClientGUIFunctions.MouseIsOverWidget( self )
             
             should_show = over_parent or over_me
             

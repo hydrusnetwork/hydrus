@@ -156,27 +156,33 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     if s_size != c_size:
         
-        size_ratio = s_size / c_size
+        absolute_size_ratio = max( s_size, c_size ) / min( s_size, c_size )
         
-        if size_ratio > 2.0:
+        if absolute_size_ratio > 2.0:
             
-            operator = '>>'
-            score = duplicate_comparison_score_much_higher_filesize
+            if s_size > c_size:
+                
+                operator = '>>'
+                score = duplicate_comparison_score_much_higher_filesize
+                
+            else:
+                
+                operator = '<<'
+                score = -duplicate_comparison_score_much_higher_filesize
+                
             
-        elif size_ratio > 1.05:
+        elif absolute_size_ratio > 1.05:
             
-            operator = '>'
-            score = duplicate_comparison_score_higher_filesize
-            
-        elif size_ratio < 0.5:
-            
-            operator = '<<'
-            score = -duplicate_comparison_score_much_higher_filesize
-            
-        elif size_ratio < 0.95:
-            
-            operator = '<'
-            score = -duplicate_comparison_score_higher_filesize
+            if s_size > c_size:
+                
+                operator = '>'
+                score = duplicate_comparison_score_higher_filesize
+                
+            else:
+                
+                operator = '<'
+                score = -duplicate_comparison_score_higher_filesize
+                
             
         else:
             

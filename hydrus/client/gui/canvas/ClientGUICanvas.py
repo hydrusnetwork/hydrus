@@ -2441,7 +2441,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         can_hide = HydrusData.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
         
-        can_check_again = self.underMouse()
+        can_check_again = ClientGUIFunctions.MouseIsOverWidget( self )
         
         if not CC.CAN_HIDE_MOUSE:
             

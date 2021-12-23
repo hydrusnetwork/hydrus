@@ -1732,6 +1732,7 @@ class SubscriptionsManager( object ):
         self._big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
+        self._controller.sub( self, 'Wake', 'notify_network_traffic_unpaused' )
         
     
     def _ClearFinishedSubscriptions( self ):

@@ -189,19 +189,7 @@ def DequantizePILImage( pil_image: PILImage.Image ) -> PILImage.Image:
             
         
     
-    if PILImageHasAlpha( pil_image ):
-        
-        desired_mode = 'RGBA'
-        
-    else:
-        
-        desired_mode = 'RGB'
-        
-    
-    if pil_image.mode != desired_mode:
-        
-        pil_image = pil_image.convert( desired_mode )
-        
+    pil_image = NormalisePILImageToRGB( pil_image )
     
     return pil_image
     
@@ -219,16 +207,24 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     
     if not force_pil:
         
-        pil_image = RawOpenPILImage( path )
-        
-        if HG.media_load_report_mode:
+        try:
             
-            HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+            pil_image = RawOpenPILImage( path )
             
-        
-        if HasICCProfile( pil_image ):
+            if HG.media_load_report_mode:
+                
+                HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                
             
-            force_pil = True
+            if HasICCProfile( pil_image ):
+                
+                force_pil = True
+                
+            
+        except HydrusExceptions.UnsupportedFileException:
+            
+            # pil had trouble, let's cross our fingers cv can do it
+            pass
             
         
     
@@ -527,7 +523,14 @@ def GetImageProperties( path, mime ):
 # this is very rough and misses some finesse
 def GetJPEGQuantizationQualityEstimate( path ):
     
-    pil_image = RawOpenPILImage( path )
+    try:
+        
+        pil_image = RawOpenPILImage( path )
+        
+    except HydrusExceptions.UnsupportedFileException:
+        
+        return ( 'unknown', None )
+        
     
     if hasattr( pil_image, 'quantization' ):
         
@@ -673,7 +676,14 @@ def GetThumbnailResolution( image_resolution, bounding_dimensions ):
     
 def GetTimesToPlayGIF( path ) -> int:
     
-    pil_image = RawOpenPILImage( path )
+    try:
+        
+        pil_image = RawOpenPILImage( path )
+        
+    except HydrusExceptions.UnsupportedFileException:
+        
+        return 1
+        
     
     return GetTimesToPlayGIFFromPIL( pil_image )
     
@@ -753,13 +763,24 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ):
         
         src_profile = PILImageCms.ImageCmsProfile( f )
         
-        if PILImageHasAlpha( pil_image ):
+        if pil_image.mode in ( 'L', 'LA' ):
             
-            outputMode = 'RGBA'
+            # had a bunch of LA pngs that turned pure white on RGBA ICC conversion
+            # but seem to work fine if keep colourspace the same for now
+            # it is a mystery, I guess a PIL bug, but presumably L and LA are technically sRGB so it is still ok to this
+            
+            outputMode = pil_image.mode
             
         else:
             
-            outputMode = 'RGB'
+            if PILImageHasAlpha( pil_image ):
+                
+                outputMode = 'RGBA'
+                
+            else:
+                
+                outputMode = 'RGB'
+                
             
         
         pil_image = PILImageCms.profileToProfile( pil_image, src_profile, PIL_SRGB_PROFILE, outputMode = outputMode )
@@ -775,6 +796,26 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ):
         # in any case, nuke it for now
         
         pass
+        
+    
+    pil_image = NormalisePILImageToRGB( pil_image )
+    
+    return pil_image
+    
+def NormalisePILImageToRGB( pil_image: PILImage.Image ):
+    
+    if PILImageHasAlpha( pil_image ):
+        
+        desired_mode = 'RGBA'
+        
+    else:
+        
+        desired_mode = 'RGB'
+        
+    
+    if pil_image.mode != desired_mode:
+        
+        pil_image = pil_image.convert( desired_mode )
         
     
     return pil_image

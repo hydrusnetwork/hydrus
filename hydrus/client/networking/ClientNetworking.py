@@ -480,6 +480,11 @@ class NetworkEngine( object ):
         
         self.controller.new_options.SetBoolean( 'pause_all_new_network_traffic', self._pause_all_new_network_traffic )
         
+        if not self._pause_all_new_network_traffic:
+            
+            self.controller.pub( 'notify_network_traffic_unpaused' )
+            
+        
     
     def RefreshOptions( self ):
         

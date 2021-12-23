@@ -356,7 +356,7 @@ class CanvasHoverFrame( QW.QFrame ):
             
             if tlw == self or ClientGUIFunctions.IsQtAncestor( tlw, self, through_tlws = True ):
                 
-                if tlw.underMouse():
+                if ClientGUIFunctions.MouseIsOverWidget( tlw ):
                     
                     mouse_is_over_self_or_child = True
                     

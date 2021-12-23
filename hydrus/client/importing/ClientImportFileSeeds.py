@@ -96,10 +96,22 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _AddPrimaryURLs( self, urls ):
         
+        if len( urls ) == 0:
+            
+            return
+            
+        
         urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
         
-        urls.discard( self.file_seed_data )
-        urls.discard( self._referral_url )
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            urls.discard( self.file_seed_data )
+            
+        
+        if self._referral_url is not None:
+            
+            urls.discard( self._referral_url )
+            
         
         self._primary_urls.update( urls )
         self._source_urls.difference_update( urls )
@@ -107,11 +119,37 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _AddSourceURLs( self, urls ):
         
+        if len( urls ) == 0:
+            
+            return
+            
+        
         urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
         
-        urls.discard( self.file_seed_data )
-        urls.discard( self._referral_url )
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            urls.discard( self.file_seed_data )
+            
+        
+        if self._referral_url is not None:
+            
+            urls.discard( self._referral_url )
+            
+        
         urls.difference_update( self._primary_urls )
+        
+        primary_domains = set()
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            primary_domains.add( ClientNetworkingDomain.ConvertURLIntoDomain( self.file_seed_data ) )
+            
+        
+        primary_domains.update( ( ClientNetworkingDomain.ConvertURLIntoDomain( primary_url ) for primary_url in self._primary_urls ) )
+        
+        # ok when a booru has a """"""source"""""" url that points to a file alternate on the same booru, that isn't what we call a source url
+        # so anything that has a source url with the same domain as our primaries, just some same-site loopback, we'll dump
+        urls = { url for url in urls if ClientNetworkingDomain.ConvertURLIntoDomain( url ) not in primary_domains }
         
         self._source_urls.update( urls )
         
@@ -1353,6 +1391,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         except HydrusExceptions.ShutdownException:
             
             return False
+            
+        except HydrusExceptions.UnsupportedFileException as e:
+            
+            status = CC.STATUS_ERROR
+            
+            note = str( e )
+            
+            self.SetStatus( status, note = note )
             
         except HydrusExceptions.VetoException as e:
             
