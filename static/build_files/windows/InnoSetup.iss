@@ -13,6 +13,7 @@ OutputBaseFilename=HydrusInstaller
 Compression=lzma/ultra64
 AppName=Hydrus Network
 AppVerName=Hydrus Network
+AppPublisher=Hydrus Network
 DefaultDirName={sd}\Hydrus Network
 DefaultGroupName=Hydrus Network
 DisableProgramGroupPage=yes
