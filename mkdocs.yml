@@ -25,6 +25,7 @@ theme:
     primary: blue grey
   logo: assets/hydrus-white.svg
   favicon: assets/hydrus-black.svg
+  font: false
   features:
     - navigation.instant
     - navigation.tracking

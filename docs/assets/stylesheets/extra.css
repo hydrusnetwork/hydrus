@@ -5,3 +5,8 @@
 .hydrus-warning {
   color: #d00;
 }
+
+:root {
+  --md-text-font: Roboto, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, sans-serif;
+  --md-code-font: "Roboto Mono", ui-monospace, Consolas, Menlo, monospace;
+}
