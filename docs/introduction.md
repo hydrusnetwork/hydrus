@@ -34,7 +34,7 @@ None of the above are currently true, but I would love to live in a world where 
 
 I try to side with the person over the authority, the distributed over the centralised. I still use gmail and youtube just like pretty much everyone, but I would rather be using different systems, especially in ten years. No one seemed to be making what I wanted for file management, so I decided to do it myself, and here we are.
 
-If, after a few months, you find you enjoy the software and would like to further support it, I have set up a simple no-reward patreon, which you can read more about [here](support.html).
+If, after a few months, you find you enjoy the software and would like to further support it, I have set up a simple no-reward patreon, which you can read more about [here](support.md).
 
 ## license
 

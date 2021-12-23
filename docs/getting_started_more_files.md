@@ -71,7 +71,7 @@ There are many ways to export files from the client:
     
     Just dragging from the thumbnail view will export (copy) all the selected files to wherever you drop them.
     
-    The files will be named by their ugly hexadecimal [hash](faq.html#hashes), which is how they are stored inside the database.
+    The files will be named by their ugly hexadecimal [hash](faq.md#hashes), which is how they are stored inside the database.
     
     If you use this to open a file inside an image editing program, remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.
     

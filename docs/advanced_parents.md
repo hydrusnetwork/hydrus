@@ -12,7 +12,7 @@ For example, whenever you tag a file with _ak-47_, you probably also want to tag
 
 ![](images/tag_parents_venn.png)
 
-Another time, you might tag a file _character:eddard stark_, and then also have to type in _house stark_ and then _series:game of thrones_. (you might also think _series:game of thrones_ should actually be _series:a song of ice and fire_, but that is an issue for [siblings](advanced_siblings.html))
+Another time, you might tag a file _character:eddard stark_, and then also have to type in _house stark_ and then _series:game of thrones_. (you might also think _series:game of thrones_ should actually be _series:a song of ice and fire_, but that is an issue for [siblings](advanced_siblings.md))
 
 Drawing more relationships would make a significantly more complicated venn diagram, so let's draw a family tree instead:
 

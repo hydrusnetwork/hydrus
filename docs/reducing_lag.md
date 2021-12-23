@@ -45,4 +45,4 @@ You can generate a profile by hitting _help->debug->profile mode_, which tells t
 
 Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then check your database folder (most likely _install_dir/db_) for a new 'client profile - DATE.log' file. This file will be filled with several sets of tables with timing information. Please send that whole file to me, or if it is too large, cut what seems important. It should not contain any personal information, but feel free to look through it.
 
-There are several ways to [contact me](contact.html).
+There are several ways to [contact me](contact.md).

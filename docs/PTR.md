@@ -11,7 +11,7 @@ Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed r
 Most of the things in this document also applies to [self-hosted servers](https://hydrusnetwork.github.io/hydrus/help/server.html), except for tag guidelines.
 
 ## Connecting to the PTR
-The easiest method is to use the built in function, found under `help -> add the public tag repository`. For adding it manually, if you so desire, read the Hydrus help document on [access keys](https://hydrusnetwork.github.io/hydrus/help/access_keys.html).  
+The easiest method is to use the built in function, found under `help -> add the public tag repository`. For adding it manually, if you so desire, read the Hydrus help document on [access keys](access_keys.md).  
 If you are starting out completely fresh you can also download a fully synced client [here](https://koto.reisen/quicksync/). Though possibly a bit (couple of days or so usually) out of date it will none the less save time. Some settings may differ from the defaults of an official installation.  
 Once you are connected Hydrus will proceed to download and then process the update files. The progress of this can be seen under `services -> review services -> remote -> tag repositories -> public tag repository`. Here you can view its status, your account (the default account is a shared public account. Currently only janitors and the administrator have personal accounts), tag status, and how synced you are. Being behind on the sync by a certain amount makes you unable to push tags and petitions until you are caught up again.
 
@@ -53,7 +53,7 @@ Janitors are the people that review petitions. You can meet us at the community 
 
 ## Tag Guidelines
 
-These are a mix of standard practice used by various boorus and changes made by Hydrus Developer and PTR users, ratified by the janitors that actually have to manage all of this. The "full" document is viewable at [Cuddle's git repo](https://raw.githubusercontent.com/CuddleBear92/Hydrus-Presets-and-Scripts/master/tag%20guidelines). See Hydrus Developer's [thoughts on a public tagging schema](https://hydrusnetwork.github.io/hydrus/help/tagging_schema.html).
+These are a mix of standard practice used by various boorus and changes made by Hydrus Developer and PTR users, ratified by the janitors that actually have to manage all of this. The "full" document is viewable at [Cuddle's git repo](https://raw.githubusercontent.com/CuddleBear92/Hydrus-Presets-and-Scripts/master/tag%20guidelines). See Hydrus Developer's [thoughts on a public tagging schema](tagging_schema.html).
 
 If you are looking to help out by tagging low tag-count files, remember to keep the tags objective, start simple by for example adding the characters/persons and big obvious things in the image or what else. Tagging every little thing and detail is a sure path to burnout.  
 If you are looking to petition removal of tags then it is preferable to sibling common misspellings, underscores, and defunct tags rather than deleting them outright. The exception is for ambiguous tags where it is better to delete and replace with a less ambiguous tag. When deleting tags that don't belong in the image it can be helpful if you include a short description as to why.  

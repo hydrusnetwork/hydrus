@@ -10,7 +10,7 @@ If any of this is confusing, a simpler guide is [here](https://github.com/Zweiba
 
 So, you have stored some media in your database. Everything is hashed and cached. You can search by inbox and resolution and size and so on, but if you really want to find what we are looking for, you will have to use _tags_.
 
-[FAQ: what is a tag?](faq.html#tags)
+[FAQ: what is a tag?](faq.md#tags)
 
 Your client starts with one local tags service, called 'my tags', which keeps all of its file->tag mappings in your client's database where only you can see them. It is a good place to practise. So, select a file and press F3:
 
@@ -71,7 +71,7 @@ Tag repos store many file->tag relationships. Anyone who has an access key to th
 
 Anyone can run a tag repository, but it is a bit complicated for new users. I ran a public tag repository for a long time, and now this large central store is run by users. It has over a billion tags and is free to access and contribute to.
 
-To connect with it, please check [here](access_keys.html). **Please read that page if you want to try out the PTR. It is only appropriate for someone on an SSD!**
+To connect with it, please check [here](access_keys.md). **Please read that page if you want to try out the PTR. It is only appropriate for someone on an SSD!**
 
 If you add it, your client will download updates from the repository over time and, usually when it is idle or shutting down, 'process' them into its database until it is fully synchronised. The processing step is CPU and HDD heavy, and you can customise when it happens in _file->options->maintenance and processing_. As the repository synchronises, you should see some new tags appear, particularly on famous files that lots of people have.
 
@@ -93,4 +93,4 @@ I recommend you not spam tags to the public tag repo until you get a rough feel 
 
 You can connect to more than one tag repository if you like. When you are in the _manage tags_ dialog, pressing the up or down arrow keys on an empty input switches between your services.
 
-[FAQ: why can my friend not see what I just uploaded?](faq.html#delays)
+[FAQ: why can my friend not see what I just uploaded?](faq.md#delays)

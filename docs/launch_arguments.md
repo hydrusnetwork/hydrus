@@ -20,7 +20,7 @@ Which gives you a full listing of all below arguments, however this will not wor
 
 ##**`-d DB_DIR, --db_dir DB_DIR`**
 
-Lets you customise where hydrus should use for its base database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described [here](database_migration.html). When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:
+Lets you customise where hydrus should use for its base database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described [here](database_migration.md). When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:
 
 ```
 -d="E:\\my hydrus\\hydrus db"

@@ -85,7 +85,7 @@ Again: the real problem with downloading is not finding new things, it is keepin
 
 ## subscriptions
 
-Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. When you are comfortable with downloaders and have an idea of what you like, come back and read the subscription help, which is [here](getting_started_subscriptions.html).
+Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. When you are comfortable with downloaders and have an idea of what you like, come back and read the subscription help, which is [here](getting_started_subscriptions.md).
 
 ## other downloading { id="other_downloaders" }
 

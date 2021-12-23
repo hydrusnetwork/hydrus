@@ -4,7 +4,7 @@ title: subscriptions
 
 # getting started with subscriptions  
 
-Do not try to create a subscription until you are comfortable with a normal gallery download page! Go [here](getting_started_downloading.html).
+Do not try to create a subscription until you are comfortable with a normal gallery download page! Go [here](getting_started_downloading.md).
 
 Let's say you found an artist you like. You downloaded everything of theirs from some site, but one or two pieces of new work is posted every week. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
 

@@ -2,7 +2,7 @@
 # local booru  
 
 !!! warning
-	This was a fun project, but it never advanced beyond a prototype. The future of this system is other people's nice applications plugging into the [Client API](client_api.html).
+	This was a fun project, but it never advanced beyond a prototype. The future of this system is other people's nice applications plugging into the [Client API](client_api.md).
 
 The hydrus client has a simple booru to help you share your files with others over the internet.
 
@@ -61,4 +61,4 @@ You can review all your shares on _services->review services_, under _local->boo
 
 ## future plans { id="future" }
 
-This was a fun project, but it never advanced beyond a prototype. The future of this system is other people's nice applications plugging into the [Client API](client_api.html).
+This was a fun project, but it never advanced beyond a prototype. The future of this system is other people's nice applications plugging into the [Client API](client_api.md).

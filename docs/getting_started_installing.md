@@ -41,7 +41,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 By default, hydrus stores all its data—options, files, subscriptions, _everything_—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.
 
 !!! info "For macOS users"
-    The Hydrus App is **non-portable** and puts your database in ~/Library/Hydrus (i.e. /Users/\[You\]/Library/Hydrus). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at ~/Library/Hydrus, not the App itself.
+    The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.
 
 ## running
 
@@ -58,7 +58,7 @@ To run the client:
 
 === "Linux"
 
-    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are talking './client' from the terminal.
+    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are talking `./client` from the terminal.
     *   If you experience virtual memory crashes, please review [this thorough guide](Fixing_Hydrus_Random_Crashes_Under_Linux.md) by a user.
 
 ## updating
@@ -82,7 +82,7 @@ The update process:
 
 Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.
 
-Releases typically need to update your database to their version. New releases can retroactively perform older database updates, so if the new version is v255 but your database is on v250, you generally only need to get the v255 release, and it'll do all the intervening v250->v251, v251->v252, etc... update steps in order as soon as you boot it. If you need to update from a release more than, say, ten versions older than current, see below. You might also like to skim the release posts or [changelog](changelog.html) to see what is new.
+Releases typically need to update your database to their version. New releases can retroactively perform older database updates, so if the new version is v255 but your database is on v250, you generally only need to get the v255 release, and it'll do all the intervening v250->v251, v251->v252, etc... update steps in order as soon as you boot it. If you need to update from a release more than, say, ten versions older than current, see below. You might also like to skim the release posts or [changelog](changelog.md) to see what is new.
 
 Clients and servers of different versions can usually connect to one another, but from time to time, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or _vice versa_. There is still no _need_ to update the client--it'll still do local stuff like searching for files completely fine. Read my release posts and judge for yourself what you want to do.
 
@@ -138,4 +138,4 @@ By default, hydrus stores all your user data in one location, so backing up is s
 !!! danger
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
 
-I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.html), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
+I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.

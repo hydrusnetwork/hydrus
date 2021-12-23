@@ -30,11 +30,11 @@ When you first boot the client, you will see a blank page. There are no files in
 
 [![](images/import.png)](images/import.png)
 
-The files are being imported into the client's database. [The client discards their filenames.](faq.html#filenames)
+The files are being imported into the client's database. [The client discards their filenames.](faq.md#filenames)
 
 Notice your original folder and its files are untouched. You can move the originals somewhere else, delete them, and the client will still return searches fine. In the same way, you can delete from the client, and the original files will remain unchanged--import is a **copy**, not a move, operation. The client performs all its operations on its internal database, which holds copies of the files it imports. If you find yourself enjoying using the client and decide to completely switch over, you can delete the original files you import without worry. You can always export them back again later.
 
-[FAQ: can the client manage files from their original locations?](faq.html#external_files)
+[FAQ: can the client manage files from their original locations?](faq.md#external_files)
 
 Now:
 

@@ -5,13 +5,13 @@ title: Making a Downloader
 # Making a Downloader
 
 !!! caution
-	Creating custom downloaders is only for advanced users who understand HTML or JSON. Beware! If you are simply looking for how to add new downloaders, please head over [here](adding_new_downloaders.html).
+	Creating custom downloaders is only for advanced users who understand HTML or JSON. Beware! If you are simply looking for how to add new downloaders, please head over [here](adding_new_downloaders.md).
 
 ## this system { id="intro" }
 
 The first versions of hydrus's downloaders were all hardcoded and static--I wrote everything into the program itself and nothing was user-creatable or -fixable. After the maintenance burden of the entire messy system proved too large for me to keep up with and a semi-editable booru system proved successful, I decided to overhaul the entire thing to allow user creation and sharing of every component. It is designed to be very simple to the front-end user--they will typically handle a couple of png files and then select a new downloader from a list--but very flexible (and hence potentially complicated) on the back-end. These help pages describe the different compontents with the intention of making an HTML- or JSON- fluent user able to create and share a full new downloader on their own.
 
-As always, this is all under active development. Your feedback on the system would be appreciated, and if something is confusing or you discover something in here that is out of date, please [let me know](contact.html).
+As always, this is all under active development. Your feedback on the system would be appreciated, and if something is confusing or you discover something in here that is out of date, please [let me know](contact.md).
 
 ## what is a downloader? { id="downloader" }
 
@@ -43,8 +43,8 @@ The Gallery Downloader is the most complicated downloader and uses all the possi
 
 So we have three components:
 
-*   [**Gallery URL Generator (GUG):**](downloader_gugs.html) faces the user and converts text input into initialising Gallery URLs.
-*   [**URL Class:**](downloader_url_classes.html) identifies URLs and informs the client how to deal with them.
-*   [**Parser:**](downloader_parsers.html) converts data from URLs into hydrus-understandable metadata.
+*   [**Gallery URL Generator (GUG):**](downloader_gugs.md) faces the user and converts text input into initialising Gallery URLs.
+*   [**URL Class:**](downloader_url_classes.md) identifies URLs and informs the client how to deal with them.
+*   [**Parser:**](downloader_parsers.md) converts data from URLs into hydrus-understandable metadata.
 
 URL downloaders and watchers do not need the Gallery URL Generator, as their input _is_ an URL. And simple downloaders also have an explicit 'just download it and parse it with this simple rule' action, so they do not use URL Classes (or even full-fledged Page Parsers) either.

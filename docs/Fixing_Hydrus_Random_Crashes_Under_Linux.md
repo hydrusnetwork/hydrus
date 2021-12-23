@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # Virtual Memory Under Linux
 
 ## Why does hydrus keep crashing under Linux when it has lots of virtual memory?
@@ -65,7 +70,7 @@ Set `vm.overcommit_memory=1` this prevents the OS from using a heuristic and it 
 #### What about swappiness?
 Swapiness is a setting you might have seen, but it only determines Linux's desire to spend a little bit of time moving memory you haven't touched in a while out of real memory and into virtual memory, it will not prevent the OOM condition it just determines how much time to use for moving things into swap.
 
-# Why does my Linux system studder or become unresponsive when hydrus has been running a while?
+## Why does my Linux system studder or become unresponsive when hydrus has been running a while?
 
 You are running out of pages because Linux releases I/O buffer pages only when a file is closed. Thus the OS is waiting for you to hit the watermark(as described in "why is hydrus crashing") to start freeing pages, which causes the chug.  When contents is written from memory to disk the page is retained so that if you reread that part of the disk the OS does not need to access disk it just pulls it from the much faster memory.  This is usually a good thing, but Hydrus does not close database files so it eats up pages over time.  This is really good for hydrus but sucks for the responsiveness of other apps, and will cause hydrus to consume pages after doing a lengthy operation in anticipation of needing them again, even when it is thereafter idle.  You need to set `vm.dirtytime_expire_seconds` to a lower value.
 
@@ -84,7 +89,7 @@ https://www.kernel.org/doc/Documentation/sysctl/vm.txt
 
 
 
-# Why does everything become clunky for a bit if I have tuned all of the above settings?
+## Why does everything become clunky for a bit if I have tuned all of the above settings?
 
 The kernel launches a process called `kswapd` to swap and reclaim memory pages, its behaviour is goverened by the following two values
 

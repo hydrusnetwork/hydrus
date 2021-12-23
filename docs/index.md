@@ -30,4 +30,18 @@ And can be extended to download from more locations using easily shareable user-
 
 The program's emphasis is on your freedom. There is no DRM, no spying, no censorship. The program never phones home.
 
-If you would like to try it, I _**strongly**_ recommend you check out the [help and getting started guide](help/index.html). A copy is included with the release as well.
+If you would like to try it, I _**strongly**_ recommend you check out the [help and getting started guide](introduction.md). A copy is included with the release as well.'
+
+## Screenshots
+
+[![](images/screenshot_empty_thumb.png)](images/screenshot_empty.png "An empty page. You can search based on file metadata such as filesize and image resolution, not just tags.") 
+[![](images/screenshot_general_search_thumb.png)](images/screenshot_general_search.png "A simple tag search.") 
+[![](images/screenshot_desu_thumb.png)](images/screenshot_desu.png "You can add more tags to specify a search. Also pictured is the media viewer, for viewing media in larger size.") 
+[![](images/screenshot_thread_watcher_thumb.png)](images/screenshot_thread_watcher.png "The thread watcher works for 4chan and 8chan.") 
+[![](images/screenshot_deviant_art_thumb.png)](images/screenshot_deviant_art.png "The gallery downloader will search for all the files for a particular artist or tag and download them, parsing tags as it goes.") 
+[![](images/screenshot_big_search_thumb.png)](images/screenshot_big_search.png "The client can easily search, display and manage thousands of files.") 
+[![](images/screenshot_gunnerkrigg_collect_thumb.png)](images/screenshot_gunnerkrigg_collect.png "Files can be sorted and collected by their tags.") 
+[![](images/screenshot_fullscreen_blame_thumb.png)](images/screenshot_fullscreen_blame.png "The media viewer can work as a resizable window or completely fullscreen. It is clean and fast.") 
+[![](images/screenshot_video_thumb.png)](images/screenshot_video.png "Many file formats are supported.") 
+[![](images/screenshot_booru_thumb.png)](images/screenshot_booru.png "You can run your own (simple!) booru") 
+[![](images/screenshot_advanced_autocomplete_thumb.png)](images/screenshot_advanced_autocomplete.png "The client can get complicated if you want it to. This screenshot shows a tag sibling, where one tag is immediately swapped with another, and a non-local search, where results that are known but not on the computer are shown.")
