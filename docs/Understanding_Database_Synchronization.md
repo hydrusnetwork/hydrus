@@ -74,9 +74,9 @@ Lets revisit the journal, this time with two transactions.  Note that the databa
 3. Write Change 2
 4. Read data
 5. Write Change 3
-~~6. FLUSH~~
+6. ~~FLUSH~~
 7. End Transaction 1
-~~8. FLUSH~~
+8. ~~FLUSH~~
 9. Begin Transaction 2
 10. Write Change 2
 11. Write Ch

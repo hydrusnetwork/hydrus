@@ -1,14 +1,9 @@
----
-hide:
-  - navigation
----
-
 # Changelog
 
 !!! note
     This is the new changelog. For versions prior to 466 see the [old changelog](old_changelog.html).
 
-## Version 467
+## [Version 467](https://github.com/hydrusnetwork/hydrus/releases/tag/v467)
 
 ### new scanbar cleanup
 * the media container's scanbar and volume control are now combined on the same widget, meaning they now show/hide in sync and faster. their layout calculation is also more sensible. the new controls bar also has a thin border to make it pop better against a background video
@@ -43,7 +38,7 @@ hide:
 * added GET /manage_database/mr_bones to the Client API. it returns a JSON Object with the same numbers used in the _help->how boned am I?_ dialog
 * incremented Client API version to 23
 
-## Version 466
+## [Version 466](https://github.com/hydrusnetwork/hydrus/releases/tag/v466)
 
 ### video scanbar autohide
 * the scanbar that shows below audio and video is now embedded inside the video frame, and it show/hides based on how close your mouse is to it
