@@ -1516,3 +1516,28 @@ Restricted access:
 Arguments: None
 
 This is the obvious complement to the lock. The client will resume processing its job queue and will catch up. If the UI was frozen, it should free up in a few seconds, just like after a big VACUUM.
+
+### **GET `/manage_database/mr_bones`** { id="manage_database_mr_bones" }
+
+_Get the data from help->how boned am I?. This is a simple Object of numbers just for hacky advanced purposes if you want to build up some stats in the background. The numbers are the same as the dialog shows, so double check that to confirm what means what._
+
+Restricted access:
+:   YES. Manage Database permission needed.
+
+Arguments: None
+
+```json title="Example response"
+{
+  "num_inbox": 8356,
+  "num_archive": 229,
+  "num_deleted": 7010,
+  "size_inbox": 7052596762,
+  "size_archive": 262911007,
+  "size_deleted": 13742290193,
+  "earliest_import_time": 1451408539,
+  "total_viewtime": [3280, 41621, 2932, 83021],
+  "total_alternate_files": 265,
+  "total_duplicate_files": 125,
+  "total_potential_pairs": 3252
+}
+```
