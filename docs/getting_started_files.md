@@ -12,7 +12,7 @@ If any of this is confusing, a simpler guide is [here](https://github.com/Zweiba
 
 	There are no limits and few brakes on your behaviour. It is possible to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. Take things slow and figure out good processing workflows that work for your schedule before you start adding 500 subscriptions.
 
-## the problem
+## the problem { id="hellmode_dot_exe" }
 
 If you have ever seen something like this--
 
@@ -22,7 +22,7 @@ If you have ever seen something like this--
 
 Finding the right picture quickly can be difficult. Finding everything by a particular artist at a particular resolution is unthinkable. Integrating new files into the whole nested-folder mess is a further pain, and most operating systems bug out when displaying 10,000+ thumbnails.
 
-## so, what does the hydrus client do?
+## so, what does the hydrus client do? { id="the_client" }
 
 Let's first focus on _importing_ files.
 
@@ -100,7 +100,7 @@ Although some support is imperfect for the complicated filetypes. For the Window
 
 The client can also download files from several websites, including 4chan and other imageboards, many boorus, and gallery sites like deviant art and hentai foundry. You will learn more about this later.
 
-## inbox and archiving
+## inbox and archiving { id="inbox" }
 
 The client sends newly imported files to an **inbox**, just like your email. Inbox acts like a tag, matched by 'system:inbox'. A small envelope icon is drawn in the top corner of all inbox files:
 
@@ -116,7 +116,7 @@ A trashed file will not appear in subsequent normal searches, although you can s
 
 A quick way of processing new files is&ndash;
 
-## filtering
+## filtering { id="filtering_inbox" }
 
 Lets say you just downloaded a good thread, or perhaps you just imported an old folder of miscellany. You now have a whole bunch of files in your inbox--some good, some awful. You probably want to quickly go through them, saying _yes, yes, yes, no, yes, no, no, yes_, where _yes_ means 'keep and archive' and _no_ means 'delete this trash'. **Filtering** is the solution.
 
@@ -132,7 +132,7 @@ Your choices will not be committed until you finish filtering.
 
 This saves time.
 
-## lastly
+## lastly { id="what_hydrus_is_for" }
 
 The hydrus client's workflows are not designed for half-finished files that you are still working on. Think of it as a giant archive for everything excellent you have decided to store away. It lets you find and remember these things quickly.
 

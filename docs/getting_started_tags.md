@@ -6,7 +6,7 @@ title: tags
 
 If any of this is confusing, a simpler guide is [here](https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md), and some video guides are [here](https://github.com/CuddleBear92/Hydrus-guides)!
 
-## how do we find files?
+## how do we find files? { id="intro" }
 
 So, you have stored some media in your database. Everything is hashed and cached. You can search by inbox and resolution and size and so on, but if you really want to find what we are looking for, you will have to use _tags_.
 
@@ -39,7 +39,7 @@ If you add more tags or system predicates to a search, you will limit the result
 
 [![](images/sororitas_hanako.png)](images/sororitas_hanako.png)
 
-You can also exclude a tag by prefixing it with a hyphen (e.g. '-heresy').
+You can also exclude a tag by prefixing it with a hyphen (e.g. `-heresy`).
 
 ## OR searching
 
@@ -57,11 +57,11 @@ If you enter an OR tag incorrectly, you can either cancel or 'rewind' the under-
 
 ![](images/or_buttons.png)
 
-You can also cancel an under-construction OR by hitting Esc on an empty input. You can add any sort of search term to an OR search predicate, including system predicates. Some unusual sub-predicates (typically a '-tag', or a very broad system predicate) can run very slowly, but they will run much faster if you include non-OR search predicates in the search:
+You can also cancel an under-construction OR by hitting Esc on an empty input. You can add any sort of search term to an OR search predicate, including system predicates. Some unusual sub-predicates (typically a `-tag`, or a very broad system predicate) can run very slowly, but they will run much faster if you include non-OR search predicates in the search:
 
 ![](images/or_mixed.png)
 
-This search will return all files that have the tag 'fanfic' and one or more of 'medium:text', a positive value for the like/dislike rating 'read later', or PDF mime.
+This search will return all files that have the tag `fanfic` and one or more of `medium:text`, a positive value for the like/dislike rating 'read later', or PDF mime.
 
 ## tag repositories
 
@@ -94,7 +94,3 @@ I recommend you not spam tags to the public tag repo until you get a rough feel 
 You can connect to more than one tag repository if you like. When you are in the _manage tags_ dialog, pressing the up or down arrow keys on an empty input switches between your services.
 
 [FAQ: why can my friend not see what I just uploaded?](faq.html#delays)
-
-[Read about downloading --->](getting_started_downloading.html)
-
-[Go back to the index --->](index.html)

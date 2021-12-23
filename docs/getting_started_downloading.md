@@ -15,7 +15,7 @@ The downloader is highly parallelisable, and while the default bandwidth rules s
 
 It also takes a decent whack of CPU to import a file. You'll usually never notice this with just one hard drive import going, but if you have twenty different download queues all competing for database access and individual 0.1-second hits of heavy CPU work, you will discover your client starts to judder and lag. Keep it in mind, and you'll figure out what your computer is happy with. I also recommend you try to keep your total loaded files/urls to be under 20,000 to keep things snappy. Remember that you can pause your import queues, if you need to calm things down a bit.
 
-## let's do it
+## let's do it { id="start" }
 
 Open the new page selector with F9 and then hit _download->gallery_:
 
@@ -63,7 +63,7 @@ To edit the defaults, hit up _network->downloaders->manage default tag import op
 !!! warning
     The file limit and file/tag import options on the upper panel, if changed, will only apply to **new** queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.
 
-## watching threads
+## watching threads { id="threads" }
 
 If you are an imageboard user, try going to a thread you like and drag-and-drop its URL (straight from your web browser's address bar) onto the hydrus client. It should open up a new 'watcher' page and import the thread's files!
 
@@ -87,7 +87,7 @@ Again: the real problem with downloading is not finding new things, it is keepin
 
 Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. When you are comfortable with downloaders and have an idea of what you like, come back and read the subscription help, which is [here](getting_started_subscriptions.html).
 
-## other downloading
+## other downloading { id="other_downloaders" }
 
 There are two other ways of downloading, mostly for advanced or one-off use.
 
@@ -113,7 +113,3 @@ Most sites only have one way of logging in, but hydrus does support more. Hentai
 The login system is new and still a bit experimental. Don't try to pull off anything too weird with it! If anything goes wrong, it will likely delay the script (and hence the whole domain) from working for a while, or invalidate it entirely. If the error is something simple, like a password typo or current server maintenance, go back to this dialog to fix and scrub the error and try again. If the site just changed its layout, you may need to update the login script. If it is more complicated, please contact me, hydrus_dev, with the details!
 
 If you would like to login to a site that is not yet supported by hydrus (usually ones with a Captcha in the login page), see about getting a web browser add-on that lets you export a cookies.txt (either for the whole browser or just for that domain) and then drag and drop that file onto the hydrus _network->data->review session cookies_ dialog. This sometimes does not work if your add-on's export formatting is unusual. If it does work, hydrus will import and use those cookies, which skips the login by making your hydrus pretend to be your browser directly. This is obviously advanced and hacky, so if you need to do it, let me know how you get on and what tools you find work best!
-
-[Read about ratings --->](getting_started_ratings.html)
-
-[Go back to the index --->](index.html)

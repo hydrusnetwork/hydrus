@@ -5,7 +5,7 @@ title: ratings
 
 The hydrus client supports two kinds of ratings: _like/dislike_ and _numerical_. Let's start with the simpler one:
 
-## like/dislike
+## like/dislike { id="like_dislike" }
 
 A new client starts with one of these, called 'favourites'. It can set one of two values to a file. It does not have to represent like or dislike--it can be anything you want, like 'send to export folder' or 'explicit/safe' or 'cool babes'. Go to _services->manage services->local->like/dislike ratings_:
 
@@ -23,7 +23,7 @@ As well as the shape and colour options, you can set how many 'stars' to display
 
 If you change the star range at a later date, any existing ratings will be 'stretched' across the new range. As values are collapsed to the nearest integer, this is best done for scales that are multiples. 2/5 will neatly become 4/10 on a zero-allowed service, for instance, and 0/4 can nicely become 1/5 if you disallow zero ratings in the same step. If you didn't intuitively understand that, just don't touch the number of stars or zero rating checkbox after you have created the numerical rating service!
 
-## now what?
+## now what? { id="using_ratings" }
 
 Ratings are displayed in the top-right of the media viewer:
 

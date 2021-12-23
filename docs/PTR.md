@@ -1,3 +1,7 @@
+---
+title: PTR Guide
+---
+
 # PTR for Dummies
 or *Myths and facts about the Public Tag Repository*
 

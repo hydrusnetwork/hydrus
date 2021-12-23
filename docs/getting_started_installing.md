@@ -121,18 +121,18 @@ I use [ToDoList](http://abstractspoon.com/) to remind me of my jobs for the day,
 
 By default, hydrus stores all your user data in one location, so backing up is simple:
 
-*   #### the simple way - inside the client
-    
+#### the simple way - inside the client
+:   
     Go _database->set up a database backup location_ in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.
-    
+
     Once you have your location set up, you can thereafter hit _database->update database backup_. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.
-    
+
     Advanced users who have migrated their database across multiple locations will not have this option--use an external program in this case.
     
-*   #### the powerful way - using an external program
-    
+#### the powerful way - using an external program
+:   
     If you would like to integrate hydrus into a broader backup scheme you already run, or you are an advanced user with a complicated hydrus install that you have migrated across multiple drives, then you need to backup two things: the client\*.db files and your client\_files directory(ies). By default, they are all stored in install\_dir/db. The .db files contain your settings and file metadata like inbox/archive and tags, while the client\_files subdirs store your actual media and its thumbnails. If everything is still under install\_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!
-    
+
     Shut the client down while you run the backup, obviously.
     
 !!! danger

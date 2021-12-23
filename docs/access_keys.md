@@ -24,7 +24,7 @@ I have tried very hard to ensure the PTR respects your privacy. Your account is 
 
 Most users should have very few worries about privacy. The general rule is that it is always healthy to use a VPN, but please check [here for a full discussion and explanation of the anonymisation routine](privacy.html).
 
-## a note on resources
+## a note on resources { id="ssd" }
 
 !!! danger
 	**If you are on an HDD, or your SSD does not have at least 64GB of free space, do not add the PTR!**
@@ -62,7 +62,7 @@ Then you can check your PTR at any time under _services->review services_, under
 
 ![](images/review_repos_public_tag_repo.png)
 
-## jump-starting an install
+## jump-starting an install { id="quicksync" }
 
 A user kindly manages a store of update files and pre-processed empty client databases to get your synced quicker. This is generally recommended for advanced users or those following a guide, but if you are otherwise interested, please check it out:
 

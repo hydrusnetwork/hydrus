@@ -2,7 +2,7 @@
 title: introduction and statement of principles  
 ---
 
-## on being anonymous
+## on being anonymous { id="anonymous" }
 
 Nearly all sites use the same pseudonymous username/password system, and nearly all of them have the same drama, sockpuppets, and egotistical mods. Censorship is routine. That works for many people, but not for me.
 
@@ -10,7 +10,7 @@ I enjoy being anonymous online. When you aren't afraid of repercussions, you can
 
 I've been on the imageboards for a long time, saving everything I like to my hard drive. After a while, the whole collection was just too large to manage on my own.
 
-## the hydrus network
+## the hydrus network { id="hydrus_network" }
 
 So! I'm developing a program that helps people organise their files together anonymously. I want to help you do what you want with your stuff, and that's it. You can share some tags and files with other people if you want to, but you don't have to connect to anything if you don't. **The default is complete privacy, no sharing**, and every upload requires a conscious action on your part. I don't plan to ever record metrics on users, nor serve ads, nor charge for my software. The software never phones home.
 
@@ -24,7 +24,7 @@ As well as the client, there is also a server that anyone can run to store files
 
 I have many plans to expand the client and the network.
 
-## statement of principles
+## statement of principles { id="principles" }
 
 *   No speech should be outlawed.
 *   Everyone should be able to control their own media diet.
