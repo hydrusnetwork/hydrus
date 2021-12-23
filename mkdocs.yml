@@ -4,18 +4,30 @@ repo_name: hydrusnetwork/hydrus
 use_directory_urls: false
 nav:
   - index.md
-  - Getting Started:
-    - introduction.md
-    - getting_started_installing.md
-    - getting_started_files.md
-    - getting_started_tags.md
-    - getting_started_downloading.md
-    - getting_started_ratings.md
+  - Help:
+    - Getting Started:
+      - introduction.md
+      - getting_started_installing.md
+      - getting_started_files.md
+      - getting_started_tags.md
+      - getting_started_downloading.md
+      - getting_started_ratings.md
     - PTR: 
       - access_keys.md
       - PTR.md
-  - Advanced:
-    - docker.md
+    - Next Steps:
+      - getting_started_more_files.md
+      - adding_new_downloaders.md
+      - getting_started_subscriptions.md
+      - filtering duplicates: duplicates.md
+    - Advanced:
+      - advanced_siblings.md
+      - advanced_parents.md
+      - advanced.md
+      - reducing_lag.md
+      - database_migration.md
+      - launch_arguments.md
+      - docker.md
   - API: client_api.md
   - changelog.md
 
