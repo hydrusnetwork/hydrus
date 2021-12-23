@@ -100,7 +100,7 @@ Bear in mind the Client API is still under construction. Setting up the Client A
 
 ## Access Management
 
-### **GET `/api_version`**
+### **GET `/api_version`** { id="api_version" }
 
 _Gets the current API version. I will increment this every time I alter the API._
 
@@ -115,13 +115,13 @@ Response:
     
     ```json title="Example response"
     {
-      "version" : 17,
-      "hydrus_version" : 441
+      "version": 17,
+      "hydrus_version": 441
     }
     ```
         
 
-### **GET `/request_new_permissions`**
+### **GET `/request_new_permissions`** { id="request_new_permissions" }
 
 _Register a new external program with the client. This requires the 'add from api request' mini-dialog under_ services->review services _to be open, otherwise it will 403._
 
@@ -154,7 +154,7 @@ Response:
 {"access_key" : "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"}
 ```     
 
-### **GET `/session_key`**
+### **GET `/session_key`** { id="session_key" }
 
 _Get a new session key._
 
@@ -178,7 +178,7 @@ Response:
     A session key expires after 24 hours of inactivity, whenever the client restarts, or if the underlying access key is deleted. A request on an expired session key returns 419.
     
 
-### **GET `/verify_access_key`**
+### **GET `/verify_access_key`** { id="verify_access_key" }
 
 _Check your access key is valid._
 
@@ -198,7 +198,7 @@ Response:
 ```
         
 
-### **GET `/get_services`**
+### **GET `/get_services`** { id="get_services" }
 
 _Ask the client about its file and tag services._
 
@@ -267,7 +267,7 @@ Response:
 
 ## Adding Files
 
-### **POST `/add_files/add_file`**
+### **POST `/add_files/add_file`** { id="add_files_add_file" }
 
 _Tell the client to import a file._
 
@@ -310,7 +310,7 @@ Response:
     'hash' is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text appropriate to the file status that you may recognise from hydrus's normal import workflow. For an import error, it will always be the full traceback.
     
 
-### **POST `/add_files/delete_files`**
+### **POST `/add_files/delete_files`** { id="add_files_delete_files" }
 
 _Tell the client to send files to the trash._
 
@@ -338,7 +338,7 @@ You can use hash or hashes, whichever is more convenient.
 At the moment, this is only able to send files from 'my files' to the trash, and so it cannot perform physical deletes. There is no error if any files do not currently exist in 'my files'. In future, it will take some sort of file service parameter to do more.
     
 
-### **POST `/add_files/undelete_files`**
+### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
 _Tell the client to pull files back out of the trash._
 
@@ -346,7 +346,7 @@ Restricted access:
 :   YES. Import Files permission needed.
     
 Required Headers:
-:     
+:   
 *   Content-Type : application/json
 
 Arguments (in JSON):
@@ -366,7 +366,7 @@ You can use hash or hashes, whichever is more convenient.
 This is just the reverse of a delete_files--removing files from trash and putting them back in 'my files'. There is no error if any files do not currently exist in 'trash'.
     
 
-### **POST `/add_files/archive_files`**
+### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
 
 _Tell the client to archive inboxed files._
 
@@ -394,7 +394,7 @@ You can use hash or hashes, whichever is more convenient.
 This puts files in the 'archive', taking them out of the inbox. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the archive.
     
 
-### **POST `/add_files/unarchive_files`**
+### **POST `/add_files/unarchive_files`** { id="add_files_unarchive_files" }
 
 _Tell the client re-inbox archived files._
 
@@ -424,7 +424,7 @@ This puts files back in the inbox, taking them out of the archive. It only has m
 
 ## Adding Tags
 
-### **GET `/add_tags/clean_tags`**
+### **GET `/add_tags/clean_tags`** { id="add_tags_clean_tags" }
 
 _Ask the client about how it will see certain tags._
 
@@ -454,10 +454,10 @@ Response:
     Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
     
 
-### **GET `/add_tags/get_tag_services`**
+### **GET `/add_tags/get_tag_services`** { id="add_tags_get_tag_services" }
 
 !!! warning "Deprecated"
-    This is becoming obsolete and will be removed! Use [/get_services](#get_get_services) instead!
+    This is becoming obsolete and will be removed! Use [/get_services](#get_services) instead!
 
 _Ask the client about its tag services._
 
@@ -481,7 +481,7 @@ Response:
         A user can rename their services. Don't assume the client's local tags service will be "my tags".
     
 
-### **POST `/add_tags/add_tags`**
+### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
 
 _Make changes to the tags that files have._
 
@@ -501,7 +501,7 @@ Arguments (in JSON):
 
     You can use either 'hash' or 'hashes'.
 
-    You can use either 'service\_names\_to...' or 'service\_keys\_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the [/get_services](#get_get_services) call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.
+    You can use either 'service\_names\_to...' or 'service\_keys\_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the [/get_services](#get_services) call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.
 
     Also, you can use either '...to\_tags', which is simple and add-only, or '...to\_actions\_to\_tags', which is more complicated and allows you to remove/petition or rescind pending content.
 
@@ -568,7 +568,7 @@ Response description:
 
 ## Adding URLs
 
-### **GET `/add_urls/get_url_files`**
+### **GET `/add_urls/get_url_files`** { id="add_urls_get_url_files" }
 
 _Ask the client about an URL's files._
 
@@ -613,7 +613,7 @@ Response:
     'hash' is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text you may recognise from hydrus's normal import workflow.
     
 
-### **GET `/add_urls/get_url_info`**
+### **GET `/add_urls/get_url_info`** { id="add_urls_get_url_info" }
 
 _Ask the client for information about a URL._
 
@@ -655,7 +655,7 @@ Response:
     'Unknown' URLs are treated in the client as direct File URLs. Even though the 'File URL' type is available, most file urls do not have a URL Class, so they will appear as Unknown. Adding them to the client will pass them to the URL Downloader as a raw file for download and import.
     
 
-### **POST `/add_urls/add_url`**
+### **POST `/add_urls/add_url`** { id="add_urls_add_url" }
 
 _Tell the client to 'import' a URL. This triggers the exact same routine as drag-and-dropping a text URL onto the main client window._
 
@@ -746,7 +746,7 @@ Response:
 
         
 
-### **POST `/add_urls/associate_url`**
+### **POST `/add_urls/associate_url`** { id="add_urls_associate_url" }
 
 _Manage which URLs the client considers to be associated with which files._
 
@@ -783,7 +783,7 @@ Response:
 
 This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.
 
-### **GET `/manage_cookies/get_cookies`**
+### **GET `/manage_cookies/get_cookies`** { id="manage_cookies_get_cookies" }
 
 _Get the cookies for a particular domain._
 
@@ -816,7 +816,7 @@ Response:
 
     This request will also return any cookies for subdomains. The session system in hydrus generally stores cookies according to the second-level domain, so if you request for specific.someoverbooru.net, you will still get the cookies for someoverbooru.net and all its subdomains.
 
-### **POST `/manage_cookies/set_cookies`**
+### **POST `/manage_cookies/set_cookies`** { id="manage_cookies_set_cookies" }
 
 Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.
 
@@ -844,7 +844,7 @@ Arguments (in JSON):
 
     Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
 
-### **POST `/manage_headers/set_user_agent`**
+### **POST `/manage_headers/set_user_agent`** { id="manage_headers_set_user_agent" }
 
 This sets the 'Global' User-Agent for the client, as typically editable under _network->data->manage http headers_, for instance if you want hydrus to appear as a specific browser associated with some cookies.
 
@@ -871,7 +871,7 @@ Arguments (in JSON):
 
 This refers to the pages of the main client UI.
 
-### **GET `/manage_pages/get_pages`**
+### **GET `/manage_pages/get_pages`** { id="manage_pages_get_pages" }
 
 _Get the page structure of the current UI session._
 
@@ -946,7 +946,7 @@ Response:
 
     The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.
 
-### **GET `/manage_pages/get_page_info`**
+### **GET `/manage_pages/get_page_info`** { id="manage_pages_get_page_info" }
 
 _Get information about a specific page._
 
@@ -960,7 +960,7 @@ Required Headers: n/a
     
 Arguments:
 :   
-    *   page\_key : (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#get_manage_pages_get_pages))
+    *   page\_key : (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#manage_pages_get_pages))
     *   simple : true or false (optional, defaulting to true)
 
     ``` title="Example request"
@@ -1040,7 +1040,7 @@ Response description
     For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.
     
 
-### **POST `/manage_pages/add_files`**
+### **POST `/manage_pages/add_files`** { id="manage_pages_add_files" }
 
 _Add files to a page._
 
@@ -1070,7 +1070,7 @@ Response:
 :   200 with no content. If the page key is not found, this will 404.
     
 
-### **POST `/manage_pages/focus_page`**
+### **POST `/manage_pages/focus_page`** { id="manage_pages_focus_page" }
 
 _'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made._
 
@@ -1101,7 +1101,7 @@ Response:
 
 File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.
 
-### **GET `/get_files/search_files`**
+### **GET `/get_files/search_files`** { id="get_files_search_files" }
 
 _Search for the client's files._
 
@@ -1255,7 +1255,7 @@ Response:
 
     This search does **not** apply the implicit limit that most clients set to all searches (usually 10,000), so if you do system:everything on a client with millions of files, expect to get boshed. Even with a system:limit included, complicated queries with large result sets may take several seconds to respond. Just like the client itself.
 
-### **GET `/get_files/file_metadata`**
+### **GET `/get_files/file_metadata`** { id="get_files_file_metadata" }
 
 _Get metadata about files in the client._
 
@@ -1435,7 +1435,7 @@ Response:
     ```
 
 
-### **GET `/get_files/file`**
+### **GET `/get_files/file`** { id="get_files_file" }
 
 _Get a file._
 
@@ -1462,7 +1462,7 @@ Response:
 :   The file itself. You should get the correct mime type as the Content-Type header.
     
 
-### **GET `/get_files/thumbnail`**
+### **GET `/get_files/thumbnail`** { id="get_files_thumbnail" }
 
 _Get a file's thumbnail._
 
@@ -1491,7 +1491,7 @@ Response:
 
 ## Managing the Database
 
-### **POST `/manage_database/lock_on`**
+### **POST `/manage_database/lock_on`** { id="manage_database_lock_on" }
 
 _Pause the client's database activity and disconnect the current connection._
 
@@ -1506,7 +1506,7 @@ This should return pretty quick, but it will wait up to five seconds for the dat
 
 As long as this lock is on, all Client API calls except the unlock command will return 503. (This is a decent way to test the current lock status, too)
 
-### **POST `/manage_database/lock_off`**
+### **POST `/manage_database/lock_off`** { id="manage_database_lock_off" }
 
 _Reconnect the client's database and resume activity._
 
