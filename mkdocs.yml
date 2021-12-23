@@ -33,6 +33,23 @@ nav:
       - docker.md
       - wine.md
       - running_from_source.md
+    - Downloader Creation:
+      - Introduction: downloader_intro.md
+      - downloader_gugs.md
+      - downloader_url_classes.md
+      - Parsers:
+        - Overview: downloader_parsers.md
+        - Components:
+          - Formulae: downloader_parsers_formulae.md
+          - downloader_parsers_content_parsers.md
+          - downloader_parsers_page_parsers.md
+        - Walkthroughs:
+          - downloader_parsers_full_example_gallery_page.md
+          - downloader_parsers_full_example_file_page.md
+          - downloader_parsers_full_example_api.md
+      - downloader_completion.md
+      - Sharing: downloader_sharing.md
+      - downloader_login.md
   - API: client_api.md
   - Misc:
     - faq.md
