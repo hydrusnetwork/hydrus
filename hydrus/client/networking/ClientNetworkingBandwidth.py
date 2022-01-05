@@ -63,8 +63,6 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self.engine = None
-        
         self._dirty = False
         
         self._lock = threading.Lock()

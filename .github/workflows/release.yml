@@ -193,7 +193,7 @@ jobs:
         name: InnoSetup
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
-          ISCC.exe InnoSetup.iss /DVersion=${GITHUB_REF#refs/*/}
+          ISCC.exe InnoSetup.iss /DVersion=${GITHUB_REF##*/v}
       -
         name: Compress Client
         run: |

@@ -758,6 +758,13 @@ class AnimationBar( QW.QWidget ):
             ClientGUIFunctions.DrawText( painter, x, y, s )
             
         
+        #
+        
+        painter.setBrush( QC.Qt.NoBrush )
+        painter.setPen( QG.QPen( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
+        
+        painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
+        
     
     def _ScanToCurrentMousePos( self ):
         
@@ -939,6 +946,8 @@ class MediaContainer( QW.QWidget ):
         if HC.PLATFORM_MACOS and not HG.macos_antiflicker_test:
             
             # does modern macOS still go 100% CPU when this is off?
+            # yes :^(
+            # try again with more layout tech on the full canvas
             
             self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
             
@@ -967,12 +976,9 @@ class MediaContainer( QW.QWidget ):
         
         self._static_image_window.readyForNeighbourPrefetch.connect( self.readyForNeighbourPrefetch )
         
-        self._controls_bar = QW.QFrame( self )
+        self._controls_bar = QW.QWidget( self )
         
-        QP.SetBackgroundColour( self._controls_bar, QP.GetSystemColour( QG.QPalette.Button ) )
-        
-        self._controls_bar.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
-        self._controls_bar.setLineWidth( 1 )
+        QP.SetBackgroundColour( self._controls_bar, QP.GetSystemColour( QG.QPalette.Shadow ) )
         
         self._animation_bar = AnimationBar( self._controls_bar )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self._controls_bar, self._canvas_type, direction = 'up' )
@@ -1557,7 +1563,7 @@ class EmbedButton( QW.QWidget ):
         
         painter.setPen( QG.QPen( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
 
-        painter.setBrush( QG.QBrush( QG.QColor( QC.Qt.transparent ) ) )
+        painter.setBrush( QC.Qt.NoBrush )
         
         painter.drawRect( 0, 0, my_width, my_height )
         

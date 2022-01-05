@@ -52,14 +52,16 @@ class NameException( HydrusException ): pass
 class ShutdownException( HydrusException ): pass
 class QtDeadWindowException(HydrusException): pass
 
+class UnsupportedFileException( HydrusException ): pass
+class ZeroSizeFileException( UnsupportedFileException ): pass
+class DamagedOrUnusualFileException( UnsupportedFileException ): pass
+
 class VetoException( HydrusException ): pass
 
 class CancelledException( VetoException ): pass
 
-class UnsupportedFileException( VetoException ): pass
-class DamagedOrUnusualFileException( UnsupportedFileException ): pass
-class FileSizeException( UnsupportedFileException ): pass
-class DecompressionBombException( FileSizeException ): pass
+class FileImportRulesException( VetoException ): pass
+class DecompressionBombException( FileImportRulesException ): pass
 
 class TagSizeException( VetoException ): pass
 

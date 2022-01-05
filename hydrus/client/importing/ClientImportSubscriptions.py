@@ -21,7 +21,7 @@ from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.networking import ClientNetworkingBandwidth
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingGUG
 
 class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -340,7 +340,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def _SyncQuery(
         self,
         job_key: ClientThreading.JobKey,
-        gug: ClientNetworkingDomain.GalleryURLGenerator, # not actually correct for an ngug, but _whatever_
+        gug: ClientNetworkingGUG.GalleryURLGenerator, # not actually correct for an ngug, but _whatever_
         query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader,
         query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer,
         status_prefix: str

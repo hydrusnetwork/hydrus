@@ -153,7 +153,7 @@ class FileImportJob( object ):
                 
                 ok_to_go = True
                 
-            except HydrusExceptions.FileSizeException as e:
+            except HydrusExceptions.FileImportRulesException as e:
                 
                 ok_to_go = False
                 

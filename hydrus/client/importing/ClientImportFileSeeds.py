@@ -30,6 +30,7 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 
 FILE_SEED_TYPE_HDD = 0
 FILE_SEED_TYPE_URL = 1
@@ -101,7 +102,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
+        urls = ClientNetworkingFunctions.NormaliseAndFilterAssociableURLs( urls )
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
@@ -124,32 +125,30 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( urls )
+        urls = ClientNetworkingFunctions.NormaliseAndFilterAssociableURLs( urls )
+        
+        all_primary_urls = set()
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            urls.discard( self.file_seed_data )
+            all_primary_urls.add( self.file_seed_data )
             
         
         if self._referral_url is not None:
             
-            urls.discard( self._referral_url )
+            all_primary_urls.add( self._referral_url )
             
         
-        urls.difference_update( self._primary_urls )
+        all_primary_urls.update( self._primary_urls )
         
-        primary_domains = set()
+        urls.difference_update( all_primary_urls )
         
-        if self.file_seed_type == FILE_SEED_TYPE_URL:
-            
-            primary_domains.add( ClientNetworkingDomain.ConvertURLIntoDomain( self.file_seed_data ) )
-            
-        
-        primary_domains.update( ( ClientNetworkingDomain.ConvertURLIntoDomain( primary_url ) for primary_url in self._primary_urls ) )
+        primary_url_classes = { HG.client_controller.network_engine.domain_manager.GetURLClass( url ) for url in all_primary_urls }
+        primary_url_classes.discard( None )
         
         # ok when a booru has a """"""source"""""" url that points to a file alternate on the same booru, that isn't what we call a source url
-        # so anything that has a source url with the same domain as our primaries, just some same-site loopback, we'll dump
-        urls = { url for url in urls if ClientNetworkingDomain.ConvertURLIntoDomain( url ) not in primary_domains }
+        # so anything that has a source url with the same url class as our primaries, just some same-site loopback, we'll dump
+        urls = { url for url in urls if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) not in primary_url_classes }
         
         self._source_urls.update( urls )
         
@@ -737,7 +736,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            search_urls = ClientNetworkingDomain.GetSearchURLs( self.file_seed_data )
+            search_urls = ClientNetworkingFunctions.GetSearchURLs( self.file_seed_data )
             
             search_file_seeds = [ FileSeed( FILE_SEED_TYPE_URL, search_url ) for search_url in search_urls ]
             
@@ -845,13 +844,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             self.WriteContentUpdates( file_import_options = file_import_options )
             
-        except HydrusExceptions.UnsupportedFileException as e:
-            
-            self.SetStatus( CC.STATUS_ERROR, exception = e )
-            
         except HydrusExceptions.VetoException as e:
             
             self.SetStatus( CC.STATUS_VETOED, note = str( e ) )
+            
+        except HydrusExceptions.UnsupportedFileException as e:
+            
+            self.SetStatus( CC.STATUS_ERROR, note = str( e ) )
             
         except Exception as e:
             
@@ -1392,14 +1391,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             return False
             
-        except HydrusExceptions.UnsupportedFileException as e:
-            
-            status = CC.STATUS_ERROR
-            
-            note = str( e )
-            
-            self.SetStatus( status, note = note )
-            
         except HydrusExceptions.VetoException as e:
             
             status = CC.STATUS_VETOED
@@ -1436,6 +1427,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             status_hook( '404' )
             
             time.sleep( 2 )
+            
+        except HydrusExceptions.UnsupportedFileException as e:
+            
+            status = CC.STATUS_ERROR
+            
+            note = str( e )
+            
+            self.SetStatus( status, note = note )
             
         except Exception as e:
             
@@ -1501,7 +1500,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        associable_urls = ClientNetworkingDomain.NormaliseAndFilterAssociableURLs( potentially_associable_urls )
+        associable_urls = ClientNetworkingFunctions.NormaliseAndFilterAssociableURLs( potentially_associable_urls )
         
         if len( associable_urls ) > 0:
             
@@ -2107,12 +2106,12 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                         
                         file_seed = ConvertRegularToRawURL( file_seed )
                         
-                        file_seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( file_seed )
+                        file_seed = ClientNetworkingFunctions.ConvertHTTPToHTTPS( file_seed )
                         
                     
                     if 'pixiv.net' in parse.netloc:
                         
-                        file_seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( file_seed )
+                        file_seed = ClientNetworkingFunctions.ConvertHTTPToHTTPS( file_seed )
                         
                     
                     if file_seed in good_file_seeds: # we hit a dupe, so skip it

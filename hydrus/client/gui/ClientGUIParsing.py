@@ -46,7 +46,10 @@ from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingURLClass
 
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -141,7 +144,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gugs_to_include = self._FleshOutNGUGsWithGUGs( gugs_to_include )
         
-        domains = { ClientNetworkingDomain.ConvertURLIntoDomain( example_url ) for example_url in itertools.chain.from_iterable( ( gug.GetExampleURLs() for gug in gugs_to_include ) ) }
+        domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( example_url ) for example_url in itertools.chain.from_iterable( ( gug.GetExampleURLs() for gug in gugs_to_include ) ) }
         
         domain_metadatas_to_include = self._GetDomainMetadatasToInclude( domains )
         
@@ -277,7 +280,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for obj in export_object:
             
-            if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ):
+            if isinstance( obj, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) ):
                 
                 gug_names.add( obj.GetName() )
                 
@@ -318,13 +321,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         possible_new_gugs = [ gug for gug in self._network_engine.domain_manager.GetGUGs() if gug.IsFunctional() and gug not in existing_data and gug not in gugs_to_include ]
         
-        interesting_gug_keys_and_names = list( itertools.chain.from_iterable( [ gug.GetGUGKeysAndNames() for gug in gugs_to_include if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ] ) )
+        interesting_gug_keys_and_names = list( itertools.chain.from_iterable( [ gug.GetGUGKeysAndNames() for gug in gugs_to_include if isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ) ] ) )
         
         interesting_gugs = [ gug for gug in possible_new_gugs if gug.GetGUGKeyAndName() in interesting_gug_keys_and_names ]
         
         gugs_to_include.update( interesting_gugs )
         
-        if True in ( isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) for gug in interesting_gugs ):
+        if True in ( isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ) for gug in interesting_gugs ):
             
             return self._FleshOutNGUGsWithGUGs( gugs_to_include )
             
@@ -338,7 +341,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         url_classes_to_include = set( url_classes )
         
-        api_links_dict = dict( ClientNetworkingDomain.ConvertURLClassesIntoAPIPairs( self._network_engine.domain_manager.GetURLClasses() ) )
+        api_links_dict = dict( ClientNetworkingURLClass.ConvertURLClassesIntoAPIPairs( self._network_engine.domain_manager.GetURLClasses() ) )
         
         for url_class in url_classes:
             
@@ -363,7 +366,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _GetDomainMetadatasToInclude( self, domains ):
         
-        domains = { d for d in itertools.chain.from_iterable( ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain ) for domain in domains ) }
+        domains = { d for d in itertools.chain.from_iterable( ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain ) for domain in domains ) }
         
         existing_domains = { obj.GetDomain() for obj in self._listctrl.GetData() if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) }
         
@@ -447,11 +450,11 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for gug in gugs:
             
-            if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ):
+            if isinstance( gug, ClientNetworkingGUG.GalleryURLGenerator ):
                 
                 example_urls = ( gug.GetExampleURL(), )
                 
-            elif isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ):
+            elif isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ):
                 
                 example_urls = gug.GetExampleURLs()
                 
@@ -473,11 +476,11 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     # add post url matches from same domain
                     
-                    domain = ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( example_url )
+                    domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( example_url )
                     
                     for um in list( self._network_engine.domain_manager.GetURLClasses() ):
                         
-                        if ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( um.GetExampleURL() ) == domain and um.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE ):
+                        if ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( um.GetExampleURL() ) == domain and um.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE ):
                             
                             url_classes_to_include.add( um )
                             

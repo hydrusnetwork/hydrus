@@ -654,7 +654,7 @@ class HydrusResource( Resource ):
                 
                 response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
                 
-            elif isinstance( e, HydrusExceptions.ServerBusyException ):
+            elif isinstance( e, ( HydrusExceptions.ServerBusyException, HydrusExceptions.ShutdownException ) ):
                 
                 response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( e ) )
                 

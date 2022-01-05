@@ -249,7 +249,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
         else:
             
-            trashed_hash_ids = self.FilterCurrentHashIds( self.modules_services.trash_service_id, hash_ids )
+            trashed_hash_ids = self.FilterHashIdsToStatus( self.modules_services.trash_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
             
             ok_to_clear_hash_ids = set( hash_ids ).difference( trashed_hash_ids )
             
@@ -403,23 +403,6 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return pending_hash_ids
         
     
-    def FilterCurrentHashIds( self, service_id, hash_ids ):
-        
-        if service_id == self.modules_services.combined_file_service_id:
-            
-            return set( hash_ids )
-            
-        
-        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-            
-            current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            current_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
-            
-        
-        return current_hash_ids
-        
-    
     def FilterHashIds( self, location_search_context: ClientSearch.LocationSearchContext, hash_ids ) -> set:
         
         if not location_search_context.SearchesAnything():
@@ -482,9 +465,33 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return filtered_hash_ids
         
     
+    def FilterHashIdsToStatus( self, service_id, hash_ids, status ) -> typing.Set[ int ]:
+        
+        if service_id == self.modules_services.combined_file_service_id:
+            
+            if status == HC.CONTENT_STATUS_CURRENT:
+                
+                return set( hash_ids )
+                
+            else:
+                
+                return set()
+                
+            
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            files_table_name = GenerateFilesTableName( service_id, status )
+            
+            result_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, files_table_name ) ) )
+            
+        
+        return result_hash_ids
+        
+    
     def FilterOrphanFileHashIds( self, hash_ids, ignore_service_id = None ):
         
-        useful_hash_ids = self.FilterCurrentHashIds( self.modules_services.combined_local_file_service_id, hash_ids )
+        useful_hash_ids = self.FilterHashIdsToStatus( self.modules_services.combined_local_file_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
         
         orphan_hash_ids = set( hash_ids ).difference( useful_hash_ids )
         
@@ -550,23 +557,6 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         # no need to sharpen that knife too much
         
         return orphan_hash_ids
-        
-    
-    def FilterPendingHashIds( self, service_id, hash_ids ):
-        
-        if service_id == self.modules_services.combined_file_service_id:
-            
-            return set( hash_ids )
-            
-        
-        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-            
-            pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
-            
-            pending_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
-            
-        
-        return pending_hash_ids
         
     
     def GenerateFilesTables( self, service_id: int ):

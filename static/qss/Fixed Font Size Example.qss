@@ -1,0 +1,6 @@
+/* Copy this file to a new filename and then change the font size to whatever you want and set it under _options->style_. You can also insert this style block into any new custom QSS file you create. */
+
+QWidget
+{
+    font-size: 30pt;
+}

@@ -60,6 +60,7 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
 
@@ -330,7 +331,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids = { row[0] for row in rows }
         
-        existing_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, hash_ids )
+        existing_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
         
         new_hash_ids = hash_ids.difference( existing_hash_ids )
         
@@ -5239,7 +5240,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hashes_to_hash_ids = { hash : self.modules_hashes_local_cache.GetHashId( hash ) for hash in hashes if self.modules_hashes.HasHash( hash ) }
         
-        valid_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, set( hashes_to_hash_ids.values() ) )
+        valid_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, set( hashes_to_hash_ids.values() ), HC.CONTENT_STATUS_CURRENT )
         
         return [ hash for hash in hashes if hash in hashes_to_hash_ids and hashes_to_hash_ids[ hash ] in valid_hash_ids ]
         
@@ -5976,94 +5977,205 @@ class DB( HydrusDB.HydrusDB ):
         return names_to_notes
         
     
-    def _GetFileSystemPredicates( self, service_key, force_system_everything = False ):
+    def _GetFileSystemPredicates( self, file_search_context: ClientSearch.FileSearchContext, force_system_everything = False ):
         
-        service_id = self.modules_services.GetServiceId( service_key )
+        location_search_context = file_search_context.GetLocationSearchContext()
         
-        service = self.modules_services.GetService( service_id )
-        
-        service_type = service.GetServiceType()
-        
-        have_ratings = len( self.modules_services.GetServiceIds( HC.RATINGS_SERVICES ) ) > 0
+        system_everything_limit = 10000
+        system_everything_suffix = ''
         
         predicates = []
         
-        system_everything_limit = 10000
+        system_everythings = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
         
-        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
+        blank_pred_types = {
+            ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+        }
+        
+        if len( self.modules_services.GetServiceIds( HC.RATINGS_SERVICES ) ) > 0:
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
+            blank_pred_types.add( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
             
-        elif service_type in HC.REAL_TAG_SERVICES:
+        
+        if location_search_context.IsAllKnownFiles():
             
-            service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
+            tag_service_key = file_search_context.GetTagSearchContext().service_key
             
-            num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                # this shouldn't happen, combined on both sides, but let's do our best anyway
+                
+                if force_system_everything or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+                    
+                    predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) )
+                    
+                
+            else:
+                
+                service_id = self.modules_services.GetServiceId( tag_service_key )
+                
+                service_type = self.modules_services.GetServiceType( service_id )
+                
+                service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES }, calculate_missing = False )
+                
+                if HC.SERVICE_INFO_NUM_FILES in service_info:
+                    
+                    num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    
+                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                    
+                
+            
+        else:
+            
+            # specific file service(s)
+            
+            jobs = []
+            
+            jobs.extend( ( ( file_service_key, HC.CONTENT_STATUS_CURRENT ) for file_service_key in location_search_context.current_service_keys ) )
+            jobs.extend( ( ( file_service_key, HC.CONTENT_STATUS_DELETED ) for file_service_key in location_search_context.deleted_service_keys ) )
+            
+            file_repo_preds = []
+            inbox_archive_preds = []
+            
+            we_saw_a_file_repo = False
+            
+            for ( file_service_key, status ) in jobs:
+                
+                service_id = self.modules_services.GetServiceId( file_service_key )
+                
+                service_type = self.modules_services.GetServiceType( service_id )
+                
+                if service_type not in HC.FILE_SERVICES:
+                    
+                    continue
+                    
+                
+                if status == HC.CONTENT_STATUS_CURRENT:
+                    
+                    service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_NUM_INBOX } )
+                    
+                    num_everything = service_info[ HC.SERVICE_INFO_NUM_VIEWABLE_FILES ]
+                    
+                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                    
+                    if location_search_context.SearchesDeleted():
+                        
+                        # inbox/archive and local/remote are too difficult to get good numbers for and merge for deleted, so we'll exclude if this is a mix
+                        
+                        continue
+                        
+                    
+                    num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
+                    num_archive = num_everything - num_inbox
+                    
+                    if service_type == HC.FILE_REPOSITORY:
+                        
+                        we_saw_a_file_repo = True
+                        
+                        num_local = self.modules_files_storage.GetNumLocal( service_id )
+                        
+                        num_not_local = num_everything - num_local
+                        
+                    else:
+                        
+                        num_local = num_everything
+                        num_not_local = 0
+                        
+                    
+                    file_repo_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = num_local ) )
+                    file_repo_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
+                    
+                    num_archive = num_local - num_inbox
+                    
+                    inbox_archive_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = num_inbox ) )
+                    inbox_archive_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = num_archive ) )
+                    
+                elif status == HC.CONTENT_STATUS_DELETED:
+                    
+                    service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_DELETED_FILES } )
+                    
+                    num_everything = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+                    
+                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                    
+                
+            
+            if we_saw_a_file_repo:
+                
+                predicates.extend( file_repo_preds )
+                
+            
+            if len( inbox_archive_preds ) > 0:
+                
+                inbox_archive_preds = ClientData.MergePredicates( inbox_archive_preds )
+                
+                zero_counts = [ pred.GetCount() == 0 for pred in inbox_archive_preds ]
+                
+                if True in zero_counts and self._controller.new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ):
+                    
+                    if False in zero_counts and location_search_context.IsOneDomain():
+                        
+                        # something is in here, but we are hiding, so let's inform system everything
+                        useful_pred = list( ( pred for pred in inbox_archive_preds if pred.GetCount() > 0 ) )[0]
+                        
+                        if useful_pred.GetType() == ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX:
+                            
+                            system_everything_suffix = 'all in inbox'
+                            
+                        else:
+                            
+                            system_everything_suffix = 'all in archive'
+                            
+                        
+                    
+                else:
+                    
+                    predicates.extend( inbox_archive_preds )
+                    
+                
+            
+            blank_pred_types.update( [
+                ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
+                ] )
+            
+        
+        if len( system_everythings ) > 0:
+            
+            system_everythings = ClientData.MergePredicates( system_everythings )
+            
+            system_everything = list( system_everythings )[0]
+            
+            system_everything.SetCountTextSuffix( system_everything_suffix )
+            
+            num_everything = system_everything.GetCount()
             
             if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
                 
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                predicates.append( system_everything )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH ] ] )
-            
-            if have_ratings:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING ) )
-                
-            
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
-            
-        elif service_type in HC.FILE_SERVICES:
-            
-            service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_NUM_INBOX } )
-            
-            num_everything = service_info[ HC.SERVICE_INFO_NUM_VIEWABLE_FILES ]
-            num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
-            num_archive = num_everything - num_inbox
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                num_local = self.modules_files_storage.GetNumLocal( service_id )
-                
-                num_not_local = num_everything - num_local
-                
-                num_archive = num_local - num_inbox
-                
-            
-            if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
-                
-            
-            show_inbox_and_archive = True
-            
-            if self._controller.new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) and ( num_inbox == 0 or num_archive == 0 ):
-                
-                show_inbox_and_archive = False
-                
-            
-            if show_inbox_and_archive:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = num_inbox ) )
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = num_archive ) )
-                
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = num_local ) )
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
-                
-            
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME ] ] )
-            
-            if have_ratings:
-                
-                predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING ) )
-                
-            
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
-            
+        
+        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in blank_pred_types ] )
+        
+        predicates = ClientData.MergePredicates( predicates )
         
         def sys_preds_key( s ):
             
@@ -6081,9 +6193,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 return ( 2, 0 )
                 
+            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL:
+                
+                return ( 3, 0 )
+                
+            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL:
+                
+                return ( 4, 0 )
+                
             else:
                 
-                return ( 3, s.ToString() )
+                return ( 5, s.ToString() )
                 
             
         
@@ -7296,42 +7416,30 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
+        ( required_file_service_statuses, excluded_file_service_statuses ) = system_predicates.GetFileServiceStatuses()
         
-        for service_key in file_services_to_include_current:
+        for ( service_key, statuses ) in required_file_service_statuses.items():
             
             service_id = self.modules_services.GetServiceId( service_key )
             
-            current_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, query_hash_ids )
-            
-            query_hash_ids = intersection_update_qhi( query_hash_ids, current_hash_ids )
+            for status in statuses:
+                
+                required_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, query_hash_ids, status )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, required_hash_ids )
+                
             
         
-        for service_key in file_services_to_include_pending:
+        for ( service_key, statuses ) in excluded_file_service_statuses.items():
             
             service_id = self.modules_services.GetServiceId( service_key )
             
-            pending_hash_ids = self.modules_files_storage.FilterPendingHashIds( service_id, query_hash_ids )
-            
-            query_hash_ids = intersection_update_qhi( query_hash_ids, pending_hash_ids )
-            
-        
-        for service_key in file_services_to_exclude_current:
-            
-            service_id = self.modules_services.GetServiceId( service_key )
-            
-            current_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, query_hash_ids )
-            
-            query_hash_ids.difference_update( current_hash_ids )
-            
-        
-        for service_key in file_services_to_exclude_pending:
-            
-            service_id = self.modules_services.GetServiceId( service_key )
-            
-            pending_hash_ids = self.modules_files_storage.FilterPendingHashIds( service_id, query_hash_ids )
-            
-            query_hash_ids.difference_update( pending_hash_ids )
+            for status in statuses:
+                
+                excluded_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, query_hash_ids, status )
+                
+                query_hash_ids.difference_update( excluded_hash_ids )
+                
             
         
         #
@@ -7502,7 +7610,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if must_be_local:
                 
-                query_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.combined_local_file_service_id, query_hash_ids )
+                query_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( self.modules_services.combined_local_file_service_id, query_hash_ids, HC.CONTENT_STATUS_CURRENT )
                 
             elif must_not_be_local:
                 
@@ -9317,13 +9425,13 @@ class DB( HydrusDB.HydrusDB ):
         return service_info
         
     
-    def _GetServiceInfoSpecific( self, service_id, service_type, info_types ):
+    def _GetServiceInfoSpecific( self, service_id, service_type, info_types, calculate_missing = True ):
         
         info_types = set( info_types )
         
         results = { info_type : info for ( info_type, info ) in self._Execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HydrusData.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
         
-        if len( results ) != len( info_types ):
+        if len( results ) != len( info_types ) and calculate_missing:
             
             info_types_hit = list( results.keys() )
             
@@ -9732,7 +9840,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetURLStatuses( self, url ) -> typing.List[ ClientImportFiles.FileImportStatus ]:
         
-        search_urls = ClientNetworkingDomain.GetSearchURLs( url )
+        search_urls = ClientNetworkingFunctions.GetSearchURLs( url )
         
         hash_ids = set()
         
@@ -10165,7 +10273,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                pixel_hash_id = self.modules_hashes.GetHashId( hash )
+                pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
                 
                 self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
                 
@@ -10948,7 +11056,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                             elif action == HC.CONTENT_UPDATE_PEND:
                                 
-                                invalid_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, hash_ids )
+                                invalid_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
                                 
                                 valid_hash_ids = hash_ids.difference( invalid_hash_ids )
                                 
@@ -10969,7 +11077,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 reason_id = self.modules_texts.GetTextId( reason )
                                 
-                                valid_hash_ids = self.modules_files_storage.FilterCurrentHashIds( service_id, hash_ids )
+                                valid_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
                                 
                                 self.modules_files_storage.PetitionFiles( service_id, reason_id, valid_hash_ids )
                                 
@@ -13100,6 +13208,69 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepopulateTagDisplayMappingsCache( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetStatusTitle( 'repopulating tag display mappings cache' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self.modules_services.GetServiceId( tag_service_key ), )
+                
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+            
+            for ( i, file_service_id ) in enumerate( file_service_ids ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
+                
+                for ( group_of_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT hash_id FROM {};'.format( table_name ), 1024 ):
+                    
+                    message = 'repopulating {} {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_service_ids ) ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                    
+                    job_key.SetVariable( 'popup_text_1', message )
+                    self._controller.frame_splash_status.SetSubtext( message )
+                    
+                    with self._MakeTemporaryIntegerTable( group_of_ids, 'hash_id' ) as temp_hash_id_table_name:
+                        
+                        for tag_service_id in tag_service_ids:
+                            
+                            self._CacheSpecificMappingsAddFiles( file_service_id, tag_service_id, group_of_ids, temp_hash_id_table_name )
+                            self._CacheSpecificDisplayMappingsAddFiles( file_service_id, tag_service_id, group_of_ids, temp_hash_id_table_name )
+                            
+                        
+                    
+                
+            
+            job_key.SetVariable( 'popup_text_2', '' )
+            self._controller.frame_splash_status.SetSubtext( '' )
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            
+        
+    
     def _ReportOverupdatedDB( self, version ):
         
         message = 'This client\'s database is version {}, but the software is version {}! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
@@ -13601,6 +13772,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 reverse = sort_order == CC.SORT_DESC
+                
+            elif sort_data == CC.SORT_FILES_BY_RANDOM:
+                
+                hash_ids = list( hash_ids )
+                
+                random.shuffle( hash_ids )
+                
+                did_sort = True
                 
             
         
@@ -14219,7 +14398,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     tags_autocomplete = [ shortcut_set for shortcut_set in shortcut_sets if shortcut_set.GetName() == 'tags_autocomplete' ][0]
                     
-                except:
+                except Exception as e:
                     
                     tags_autocomplete = ClientGUIShortcuts.ShortcutSet( 'tags_autocomplete' )
                     
@@ -14238,7 +14417,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_serialisable.SetJSONDump( main_gui )
                 self.modules_serialisable.SetJSONDump( tags_autocomplete )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -14421,7 +14600,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -14810,7 +14989,7 @@ class DB( HydrusDB.HydrusDB ):
                                 f.write( dump )
                                 
                             
-                        except:
+                        except Exception as e:
                             
                             pass
                             
@@ -14973,7 +15152,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -15216,7 +15395,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -15243,7 +15422,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -15376,7 +15555,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -15566,7 +15745,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE )
                     
-                except:
+                except Exception as e:
                     
                     HydrusData.PrintException( e )
                     
@@ -15596,7 +15775,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
                     
-                except:
+                except Exception as e:
                     
                     HydrusData.PrintException( e )
                     
@@ -15604,6 +15783,28 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.pub_initial_message( message )
                     
+                
+            
+        
+        if version == 467:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( 'fixing a pixel duplicates storage problem' )
+                
+                bad_ids = self._STS( self._Execute( 'SELECT hash_id FROM pixel_hash_map WHERE hash_id = pixel_hash_id;' ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( bad_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+                
+                self._Execute( 'DELETE FROM pixel_hash_map WHERE hash_id = pixel_hash_id;' )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to schedule image files for pixel hash maintenance failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         
@@ -16134,6 +16335,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'register_shutdown_work': self.modules_db_maintenance.RegisterShutdownWork( *args, **kwargs )
         elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
         elif action == 'repopulate_tag_cache_missing_subtags': self._RepopulateTagCacheMissingSubtags( *args, **kwargs )
+        elif action == 'repopulate_tag_display_mappings_cache': self._RepopulateTagDisplayMappingsCache( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )

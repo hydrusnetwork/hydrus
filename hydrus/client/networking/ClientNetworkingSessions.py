@@ -9,7 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 
 try:
     
@@ -121,8 +121,6 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self.engine = None
-        
         self._dirty = False
         self._dirty_session_container_names = set()
         self._deletee_session_container_names = set()
@@ -170,7 +168,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         # just in case one of these slips through somehow
         if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
             
-            second_level_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( network_context.context_data )
+            second_level_domain = ClientNetworkingFunctions.ConvertDomainIntoSecondLevelDomain( network_context.context_data )
             
             network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, second_level_domain )
             

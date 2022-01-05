@@ -193,6 +193,16 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return set( self._service_keys_to_service_ids.keys() )
         
     
+    def GetServiceType( self, service_id ) -> ClientServices.Service:
+        
+        if service_id in self._service_ids_to_services:
+            
+            return self._service_ids_to_services[ service_id ].GetServiceType()
+            
+        
+        raise HydrusExceptions.DataMissing( 'Service id error in database: id "{}" does not exist!'.format( service_id ) )
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         return []

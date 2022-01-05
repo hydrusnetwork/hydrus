@@ -533,7 +533,14 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
-        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], vertical = True )
+        choices = [
+            ( 'currently in', HC.CONTENT_STATUS_CURRENT ),
+            ( 'deleted from', HC.CONTENT_STATUS_DELETED ),
+            ( 'pending to', HC.CONTENT_STATUS_PENDING ),
+            ( 'petitioned from', HC.CONTENT_STATUS_PETITIONED )
+        ]
+        
+        self._status = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
         services = HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES )
         
@@ -548,7 +555,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         ( sign, current_pending, file_service_key ) = predicate.GetValue()
         
         self._sign.SetValue( sign )
-        self._current_pending.SetValue( current_pending )
+        self._status.SetValue( current_pending )
         self._file_service_key.SetValue( file_service_key )
         
         #
@@ -557,7 +564,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._current_pending, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
@@ -568,15 +575,15 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
     def GetDefaultPredicate( self ):
         
         sign = True
-        current_pending = HC.CONTENT_STATUS_CURRENT
+        status = HC.CONTENT_STATUS_CURRENT
         file_service_key = bytes()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, current_pending, file_service_key ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, status, file_service_key ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._current_pending.GetValue(), self._file_service_key.GetValue() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._status.GetValue(), self._file_service_key.GetValue() ) ), )
         
         return predicates
         

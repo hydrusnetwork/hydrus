@@ -297,10 +297,8 @@ class FileSystemPredicates( object ):
         self._limit = None
         self._similar_to = None
         
-        self._file_services_to_include_current = []
-        self._file_services_to_include_pending = []
-        self._file_services_to_exclude_current = []
-        self._file_services_to_exclude_pending = []
+        self._required_file_service_statuses = collections.defaultdict( set )
+        self._excluded_file_service_statuses = collections.defaultdict( set )
         
         self._ratings_predicates = []
         
@@ -679,17 +677,15 @@ class FileSystemPredicates( object ):
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
                 
-                ( operator, current_or_pending, service_key ) = value
+                ( operator, status, service_key ) = value
                 
                 if operator == True:
                     
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_include_current.append( service_key )
-                    else: self._file_services_to_include_pending.append( service_key )
+                    self._required_file_service_statuses[ service_key ].add( status )
                     
                 else:
                     
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_exclude_current.append( service_key )
-                    else: self._file_services_to_exclude_pending.append( service_key )
+                    self._excluded_file_service_statuses[ service_key ].add( status )
                     
                 
             
@@ -728,9 +724,9 @@ class FileSystemPredicates( object ):
         return self._duplicate_count_predicates
         
     
-    def GetFileServiceInfo( self ):
+    def GetFileServiceStatuses( self ):
         
-        return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
+        return ( self._required_file_service_statuses, self._excluded_file_service_statuses )
         
     
     def GetFileViewingStatsPredicates( self ):
@@ -1417,6 +1413,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._max_current_count = max_current_count
         self._max_pending_count = max_pending_count
         
+        self._count_text_suffix = ''
+        
         self._ideal_sibling = None
         self._siblings = None
         self._parents = None
@@ -1966,6 +1964,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return True
         
     
+    def SetCountTextSuffix( self, suffix: str ):
+        
+        self._count_text_suffix = suffix
+        
+    
     def SetIdealSibling( self, tag: str ):
         
         self._ideal_sibling = tag
@@ -2014,7 +2017,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     number_text += '-' + HydrusData.ToHumanInt( self._max_current_count )
                     
                 
-                count_text += ' (' + number_text + ')'
+                count_text += ' ({})'.format( number_text )
                 
             
             if self._min_pending_count > 0:
@@ -2026,7 +2029,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     number_text += '-' + HydrusData.ToHumanInt( self._max_pending_count )
                     
                 
-                count_text += ' (+' + number_text + ')'
+                count_text += ' (+{})'.format( number_text )
+                
+            
+            if self._count_text_suffix != '':
+                
+                count_text += ' ({})'.format( self._count_text_suffix )
                 
             
         
@@ -2458,13 +2466,27 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    ( operator, current_or_pending, service_key ) = self._value
+                    ( operator, status, service_key ) = self._value
                     
                     if operator == True: base = 'is'
                     else: base = 'is not'
                     
-                    if current_or_pending == HC.CONTENT_STATUS_PENDING: base += ' pending to '
-                    else: base += ' currently in '
+                    if status == HC.CONTENT_STATUS_CURRENT:
+                        
+                        base += ' currently in '
+                        
+                    elif status == HC.CONTENT_STATUS_DELETED:
+                        
+                        base += ' deleted from '
+                        
+                    elif status == HC.CONTENT_STATUS_PENDING:
+                        
+                        base += ' pending to '
+                        
+                    elif status == HC.CONTENT_STATUS_PETITIONED:
+                        
+                        base += ' petitioned from '
+                        
                     
                     try:
                         

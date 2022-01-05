@@ -27,6 +27,8 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingGUG
+from hydrus.client.networking import ClientNetworkingURLClass
 
 class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -258,7 +260,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, gug: ClientNetworkingDomain.GalleryURLGenerator ):
+    def __init__( self, parent: QW.QWidget, gug: ClientNetworkingGUG.GalleryURLGenerator ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -338,7 +340,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         initial_search_text = self._initial_search_text.text()
         example_search_text = self._example_search_text.text()
         
-        gug = ClientNetworkingDomain.GalleryURLGenerator( name, gug_key = gug_key, url_template = url_template, replacement_phrase = replacement_phrase, search_terms_separator = search_terms_separator, initial_search_text = initial_search_text, example_search_text = example_search_text )
+        gug = ClientNetworkingGUG.GalleryURLGenerator( name, gug_key = gug_key, url_template = url_template, replacement_phrase = replacement_phrase, search_terms_separator = search_terms_separator, initial_search_text = initial_search_text, example_search_text = example_search_text )
         
         return gug
         
@@ -392,7 +394,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def GetValue( self ) -> ClientNetworkingDomain.GalleryURLGenerator:
+    def GetValue( self ) -> ClientNetworkingGUG.GalleryURLGenerator:
         
         gug = self._GetValue()
         
@@ -410,7 +412,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingDomain.NestedGalleryURLGenerator, available_gugs: typing.Iterable[ ClientNetworkingDomain.GalleryURLGenerator ] ):
+    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingGUG.NestedGalleryURLGenerator, available_gugs: typing.Iterable[ ClientNetworkingGUG.GalleryURLGenerator ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -526,7 +528,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def GetValue( self ) -> ClientNetworkingDomain.NestedGalleryURLGenerator:
+    def GetValue( self ) -> ClientNetworkingGUG.NestedGalleryURLGenerator:
         
         gug_key = self._original_ngug.GetGUGKey()
         name = self._name.text()
@@ -534,7 +536,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug_keys_and_names = self._gug_list_ctrl.GetData()
         
-        ngug = ClientNetworkingDomain.NestedGalleryURLGenerator( name, gug_key = gug_key, initial_search_text = initial_search_text, gug_keys_and_names = gug_keys_and_names )
+        ngug = ClientNetworkingGUG.NestedGalleryURLGenerator( name, gug_key = gug_key, initial_search_text = initial_search_text, gug_keys_and_names = gug_keys_and_names )
         
         ngug.RepairGUGs( self._available_gugs )
         
@@ -573,7 +575,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._gug_list_ctrl_panel.AddButton( 'edit', self._EditGUG, enabled_only_on_selection = True )
         self._gug_list_ctrl_panel.AddDeleteButton()
         self._gug_list_ctrl_panel.AddSeparator()
-        self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.GalleryURLGenerator, ), self._AddGUG )
+        self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.GalleryURLGenerator, ), self._AddGUG )
         self._gug_list_ctrl_panel.AddSeparator()
         self._gug_list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultSingleGUGs, self._AddGUG )
         
@@ -589,19 +591,19 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._ngug_list_ctrl_panel.AddButton( 'edit', self._EditNGUG, enabled_only_on_selection = True )
         self._ngug_list_ctrl_panel.AddDeleteButton()
         self._ngug_list_ctrl_panel.AddSeparator()
-        self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.NestedGalleryURLGenerator, ), self._AddNGUG )
+        self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.NestedGalleryURLGenerator, ), self._AddNGUG )
         self._ngug_list_ctrl_panel.AddSeparator()
         self._ngug_list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultNGUGs, self._AddNGUG )
         
         #
         
-        single_gugs = [ gug for gug in gugs if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
+        single_gugs = [ gug for gug in gugs if isinstance( gug, ClientNetworkingGUG.GalleryURLGenerator ) ]
         
         self._gug_list_ctrl.AddDatas( single_gugs )
         
         self._gug_list_ctrl.Sort()
         
-        ngugs = [ gug for gug in gugs if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
+        ngugs = [ gug for gug in gugs if isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ) ]
         
         self._ngug_list_ctrl.AddDatas( ngugs )
         
@@ -625,7 +627,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddNewGUG( self ):
         
-        gug = ClientNetworkingDomain.GalleryURLGenerator( 'new gallery url generator' )
+        gug = ClientNetworkingGUG.GalleryURLGenerator( 'new gallery url generator' )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
             
@@ -646,7 +648,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddNewNGUG( self ):
         
-        ngug = ClientNetworkingDomain.NestedGalleryURLGenerator( 'new nested gallery url generator' )
+        ngug = ClientNetworkingGUG.NestedGalleryURLGenerator( 'new nested gallery url generator' )
         
         available_gugs = self._gug_list_ctrl.GetData()
         
@@ -888,7 +890,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, url_class: ClientNetworkingDomain.URLClass ):
+    def __init__( self, parent: QW.QWidget, url_class: ClientNetworkingURLClass.URLClass ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1028,9 +1030,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._send_referral_url = ClientGUICommon.BetterChoice( self._referral_url_panel )
         
-        for s_r_u_t in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
+        for s_r_u_t in ClientNetworkingURLClass.SEND_REFERRAL_URL_TYPES:
             
-            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ s_r_u_t ], s_r_u_t )
+            self._send_referral_url.addItem( ClientNetworkingURLClass.send_referral_url_string_lookup[ s_r_u_t ], s_r_u_t )
             
         
         tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
@@ -1571,7 +1573,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_url = self._example_url.text()
         
-        url_class = ClientNetworkingDomain.URLClass(
+        url_class = ClientNetworkingURLClass.URLClass(
             name,
             url_class_key = url_class_key,
             url_type = url_type,
@@ -1628,7 +1630,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if True in ( string_match.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
                     
-                    choices.append( ( HydrusData.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
+                    choices.append( ( HydrusData.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingURLClass.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
                     
                 
             
@@ -1636,7 +1638,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if True in ( string_match.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
                     
-                    choices.append( ( key + ' parameter', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PARAMETER, key ) ) )
+                    choices.append( ( key + ' parameter', ( ClientNetworkingURLClass.GALLERY_INDEX_TYPE_PARAMETER, key ) ) )
                     
                 
             
@@ -1731,7 +1733,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 send_referral_url = self._send_referral_url.GetValue()
                 
-                if send_referral_url in ( ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED, ClientNetworkingDomain.SEND_REFERRAL_URL_NEVER ):
+                if send_referral_url in ( ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED, ClientNetworkingURLClass.SEND_REFERRAL_URL_NEVER ):
                     
                     self._referral_url_converter.setEnabled( False )
                     
@@ -1740,7 +1742,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._referral_url_converter.setEnabled( True )
                     
                 
-                if send_referral_url == ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED:
+                if send_referral_url == ClientNetworkingURLClass.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED:
                     
                     referral_url = url_class.GetReferralURL( normalised, None )
                     
@@ -1867,7 +1869,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
-    def GetValue( self ) -> ClientNetworkingDomain.URLClass:
+    def GetValue( self ) -> ClientNetworkingURLClass.URLClass:
         
         url_class = self._GetValue()
         
@@ -1932,7 +1934,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, url_classes: typing.Iterable[ ClientNetworkingDomain.URLClass ] ):
+    def __init__( self, parent: QW.QWidget, url_classes: typing.Iterable[ ClientNetworkingURLClass.URLClass ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1961,7 +1963,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.URLClass, ), self._AddURLClass )
+        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingURLClass.URLClass, ), self._AddURLClass )
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultURLClasses, self._AddURLClass )
         
@@ -1993,7 +1995,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Add( self ):
         
-        url_class = ClientNetworkingDomain.URLClass( 'new url class' )
+        url_class = ClientNetworkingURLClass.URLClass( 'new url class' )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
             
@@ -2121,7 +2123,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateURLClassCheckerText()
         
     
-    def GetValue( self ) -> typing.List[ ClientNetworkingDomain.URLClass ]:
+    def GetValue( self ) -> typing.List[ ClientNetworkingURLClass.URLClass ]:
         
         url_classes = self._list_ctrl.GetData()
         
@@ -2164,7 +2166,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        api_pairs = ClientNetworkingDomain.ConvertURLClassesIntoAPIPairs( url_classes )
+        api_pairs = ClientNetworkingURLClass.ConvertURLClassesIntoAPIPairs( url_classes )
         
         self._api_pairs_list_ctrl.AddDatas( api_pairs )
         

@@ -293,7 +293,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     if not has_video:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'File did not appear to have a video stream!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Wanted to parse video data, but file did not appear to have a video stream!' )
         
     
     resolution = ParseFFMPEGVideoResolution( lines_for_first_second )
@@ -767,7 +767,7 @@ def ParseFFMPEGMimeText( lines ):
         
     except:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading mime!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading file type!' )
         
     
 def ParseFFMPEGNumFramesManually( lines ):

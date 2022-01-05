@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_468"><a href="#version_468">version 468</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed an issue where the one pixel border on the new 'control bar' on the media viewer was annoyingly catching mouse events at the bottom of the screen when in borderless fullscreen mode (and hence dragging the video, not scanning video position). the animation scanbar now owns its own border and processes mouse events on it properly</li>
+					<li>fixed a typo bug in the new pixel hash system that meant new imports were not being added to the system correctly. on update, all files affected will be fixed of bad data and scheduled for a pixel hash regen. sorry for the trouble, and thank you for the quick reports here</li>
+					<li>added a 'fixed font size example' qss file to the install. I have passed this file to others as an example of a quick way to make the font (and essentially ui scale) larger. it has some help comments inside and is now always available. the default example font size is lmao</li>
+					<li>fixed another type checking problem for (mostly Arch/AUR) PyQt5 users (issue #1033)</li>
+					<li>wrote a new display mappings maintenance routine for the database menu that repopulates the display mappings cache for missing rows. this task will be radically faster than a full regen for some problems, but it only solves those problems</li>
+					<li>on boot, the program now explicitly checks if any of the database files are set as read-only and if so will dump out with an appropriate error</li>
+					<li>rewrote my various 'file size problem' exception hierarchy to clearly split 'the file import options disallow this big gif' vs 'this file is zero size/this file is malformed'. we've had several problems here recently, but file import options rule-breaking should set 'ignore' again, and import objects should be better about ignore vs fail state from now on</li>
+					<li>added more error handling for broken image files. some will report cleaner errors, some will now import</li>
+					<li>the new parsing system that discards source urls if they share a domain with a primary import url is now stricter--now discarding only if they share the same url class. the domain check was messing up saving post urls when they were parsed from an api url (issue #1036)</li>
+					<li>the network engine no longer sends a Range header if it is expecting to pull html/json, just files. this fixes fetching pages from nijie.info (and several other server engines, it seems), which has some unusual access rules regarding Range and Accept-Encoding</li>
+					<li>fixed a problem with no_daemons and the docker package server scripts (issue #1039)</li>
+					<li>if the server engine (serverside or client api) is running a request during program shutdown, it now politely says 'Application is shutting down!' with a 503 rather than going bananas and dumping to log with an uncaught 500</li>
+					<li>fixed some bad client db update error handling code</li>
+					<li>.</li>
+					<li>multiple local file services (system predicate edition):</li>
+					<li>system:file service now supports 'deleted' and 'petitioned' status</li>
+					<li>advanced 'all known files' search pages now show more system predicates</li>
+					<li>when inbox and archive are hidden because one has 0 count, and the search space is simple, system everything now says what they are, e.g. "system:everything (24) (all in inbox)"</li>
+					<li>file repos' 'system:local/not local' now sort at the top of the system predicate list, like inbox/archive</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the GET /get_files/file_metadata call now returns the file modified date and imported/deleted timestamps for each file service the file is currently in or deleted from. check the help for an example!</li>
+					<li>fixed client api file search with random sort (file_sort_type = 4)</li>
+					<li>client api version is now 24</li>
+					<li>.</li>
+					<li>boring multiple local file services work:</li>
+					<li>the system predicates listed in a search page dropdown now support the new 'multiple location search context' object, which means in future I will be able to switch over to 'file domain is union of (A, deleted from B, and C)' and all the numbers will add up appropriately with ranged 'x-y' counts and deal with combinations of file repo and local service and current/deleted neatly</li>
+					<li>when fetching system preds in 'all known files', the system:everything 'num files' count will be stated if available in the cache</li>
+					<li>for the new system:file service search, refactored db level file filtering to support all status types</li>
+					<li>cleaned up how system preds are generated</li>
+					<li>.</li>
+					<li>boring refactoring work:</li>
+					<li>moved GUGs from network domain code to their own file</li>
+					<li>moved URL Class from network domain code to its own file</li>
+					<li>moved the pure functions from network domain code to their own file</li>
+					<li>cleared up some file maintenance enum variable names</li>
+					<li>sped up random file sort for large result sets</li>
+					<li>misc client network code cleanup and type hints, and rejiggered cleaner imports after the refactoring</li>
+				</ul>
 				<li><h3 id="version_467"><a href="#version_467">version 467</a></h3></li>
 				<ul>
 					<li>new scanbar cleanup:</li>

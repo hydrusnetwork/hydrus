@@ -9,7 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTags
 
 from hydrus.client.db import ClientDBModule
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 
 class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
     
@@ -786,7 +786,7 @@ class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
     
     def GetURLDomainAndSubdomainIds( self, domain, only_www_subdomains = False ):
         
-        domain = ClientNetworkingDomain.RemoveWWWFromDomain( domain )
+        domain = ClientNetworkingFunctions.RemoveWWWFromDomain( domain )
         
         domain_ids = set()
         
@@ -817,7 +817,7 @@ class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
             
             try:
                 
-                domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
+                domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
                 
             except HydrusExceptions.URLClassException:
                 

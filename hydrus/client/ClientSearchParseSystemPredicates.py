@@ -12,14 +12,38 @@ from hydrus.external import SystemPredicateParser
 
 def file_service_pred_generator( o, v, u ):
     
+    if o.startswith( 'is not' ):
+        
+        is_in = False
+        
+    else:
+        
+        is_in = True
+        
+    
     o_dict = {
-        'is not currently in' : ( False, HC.CONTENT_STATUS_CURRENT ),
-        'is currently in' : ( True, HC.CONTENT_STATUS_CURRENT ),
-        'is not pending to' : ( False, HC.CONTENT_STATUS_PENDING ),
-        'is pending to' : ( True, HC.CONTENT_STATUS_PENDING )
+        'currently in' : HC.CONTENT_STATUS_CURRENT,
+        'deleted from' : HC.CONTENT_STATUS_DELETED,
+        'pending to' : HC.CONTENT_STATUS_PENDING,
+        'petitioned from' : HC.CONTENT_STATUS_PETITIONED
     }
     
-    ( is_in, status ) = o_dict[ o ]
+    status = None
+    
+    for ( phrase, possible_status ) in o_dict.items():
+        
+        if phrase in o:
+            
+            status = possible_status
+            
+            break
+            
+        
+    
+    if status is None:
+        
+        raise HydrusExceptions.BadRequestException( 'Did not understand the file service status!' )
+        
     
     try:
         

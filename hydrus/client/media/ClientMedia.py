@@ -1707,15 +1707,11 @@ class MediaList( object ):
         
         media_sort_fallback = HG.client_controller.new_options.GetFallbackSort()
         
-        ( sort_key, reverse ) = media_sort_fallback.GetSortKeyAndReverse( self._file_service_key )
-        
-        self._sorted_media.sort( sort_key, reverse = reverse )
+        media_sort_fallback.Sort( self._file_service_key, self._sorted_media )
         
         # this is a stable sort, so the fallback order above will remain for equal items
         
-        ( sort_key, reverse ) = self._media_sort.GetSortKeyAndReverse( self._file_service_key )
-        
-        self._sorted_media.sort( sort_key = sort_key, reverse = reverse )
+        self._media_sort.Sort( self._file_service_key, self._sorted_media )
         
         self._RecalcHashes()
         
@@ -3209,6 +3205,22 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return sort_string
         
     
+    def Sort( self, file_service_key: bytes, media_results_list: "SortedList" ):
+        
+        ( sort_metadata, sort_data ) = self.sort_type
+        
+        if sort_data == CC.SORT_FILES_BY_RANDOM:
+            
+            media_results_list.random_sort()
+            
+        else:
+            
+            ( sort_key, reverse ) = self.GetSortKeyAndReverse( file_service_key )
+            
+            media_results_list.sort( sort_key, reverse = reverse )
+            
+        
+    
     def ToString( self ):
         
         sort_type_string = self.GetSortTypeString()
@@ -3330,6 +3342,20 @@ class SortedList( object ):
             
             del self._sorted_list[ index ]
             
+        
+        self._DirtyIndices()
+        
+    
+    def random_sort( self ):
+        
+        def sort_key( x ):
+            
+            return random.random()
+            
+        
+        self._sort_key = sort_key
+        
+        random.shuffle( self._sorted_list )
         
         self._DirtyIndices()
         

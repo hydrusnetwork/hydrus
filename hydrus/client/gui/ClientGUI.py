@@ -2933,6 +2933,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (missing file repopulation)', 'Repopulate the mappings cache if you know it is lacking files, fixing bad tags or miscounts.', self._RepopulateTagDisplayMappingsCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
@@ -4979,28 +4980,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _RepairInvalidTags( self ):
-        
-        message = 'This will scan all your tags and repair any that are invalid. This might mean taking out unrenderable characters or cleaning up improper whitespace. If there is a tag collision once cleaned, it may add a (1)-style number on the end.'
-        message += os.linesep * 2
-        message += 'If you have a lot of tags, it can take a long time, during which the gui may hang. If it finds bad tags, you should restart the program once it is complete.'
-        message += os.linesep * 2
-        message += 'If you have not had tag rendering problems, there is no reason to run this.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            job_key.SetStatusTitle( 'repairing invalid tags' )
-            
-            self._controller.pub( 'message', job_key )
-            
-            self._controller.Write( 'repair_invalid_tags', job_key = job_key )
-            
-        
-    
     def _RegenerateTagCacheSearchableSubtagsMaps( self ):
         
         message = 'This will regenerate the fast search cache\'s \'unusual character logic\' lookup map, for one or all tag services.'
@@ -5058,6 +5037,28 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _RepairInvalidTags( self ):
+        
+        message = 'This will scan all your tags and repair any that are invalid. This might mean taking out unrenderable characters or cleaning up improper whitespace. If there is a tag collision once cleaned, it may add a (1)-style number on the end.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags, it can take a long time, during which the gui may hang. If it finds bad tags, you should restart the program once it is complete.'
+        message += os.linesep * 2
+        message += 'If you have not had tag rendering problems, there is no reason to run this.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetStatusTitle( 'repairing invalid tags' )
+            
+            self._controller.pub( 'message', job_key )
+            
+            self._controller.Write( 'repair_invalid_tags', job_key = job_key )
+            
+        
+    
     def _RepopulateMappingsTables( self ):
         
         message = 'WARNING: Do not run this for no reason!'
@@ -5111,6 +5112,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
             
             self._controller.Write( 'repopulate_tag_cache_missing_subtags', tag_service_key = tag_service_key )
+            
+        
+    
+    def _RepopulateTagDisplayMappingsCache( self ):
+        
+        message = 'This will go through your mappings cache and fill in any missing files. It is radically faster than a full regen, and adds siblings and parents instantly, but it only solves the problem of missing file rows.'
+        message += os.linesep * 2
+        message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'repopulate_tag_display_mappings_cache', tag_service_key = tag_service_key )
             
         
     

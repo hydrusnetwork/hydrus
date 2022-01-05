@@ -230,6 +230,18 @@ def DirectoryIsWriteable( path ):
         return False
         
     
+def FileisWriteable( path: str ):
+    
+    stat_result = os.stat( path )
+    
+    current_bits = stat_result.st_mode
+    
+    desired_bits = GetFileWritePermissionBits()
+    
+    file_is_writeable = ( desired_bits & current_bits ) == desired_bits
+    
+    return file_is_writeable
+    
 def FilterFreePaths( paths ):
     
     free_paths = []
@@ -297,6 +309,21 @@ def GetDevice( path ):
         
     
     return None
+    
+def GetFileWritePermissionBits():
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
+        write_bits = stat.S_IREAD | stat.S_IWRITE
+        
+    else:
+        
+        # guarantee 644 for regular files m8
+        write_bits = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+        
+    
+    return write_bits
     
 def GetFreeSpace( path ):
     
@@ -446,18 +473,9 @@ def MakeFileWriteable( path ):
         
         current_bits = stat_result.st_mode
         
-        if HC.PLATFORM_WINDOWS:
-            
-            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
-            desired_bits = stat.S_IREAD | stat.S_IWRITE
-            
-        else:
-            
-            # guarantee 644 for regular files m8
-            desired_bits = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
-            
+        desired_bits = GetFileWritePermissionBits()
         
-        if not ( desired_bits & current_bits ) == desired_bits:
+        if not FileisWriteable( path ):
             
             os.chmod( path, current_bits | desired_bits )
             

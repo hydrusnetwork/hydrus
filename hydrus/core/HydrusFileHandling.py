@@ -189,7 +189,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
+        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
     if mime is None:
@@ -320,7 +320,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
+        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
     with open( path, 'rb' ) as f:

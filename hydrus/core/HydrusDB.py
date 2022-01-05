@@ -323,6 +323,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             db_path = os.path.join( self._db_dir, filename )
             
+            if os.path.exists( db_path ) and not HydrusPaths.FileisWriteable( db_path ):
+                
+                raise HydrusExceptions.DBAccessException( '"{}" seems to be read-only!'.format( db_path ) )
+                
+            
             self._Execute( 'ATTACH ? AS ' + name + ';', ( db_path, ) )
             
         
@@ -448,6 +453,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         try:
             
+            if os.path.exists( db_path ) and not HydrusPaths.FileisWriteable( db_path ):
+                
+                raise HydrusExceptions.DBAccessException( '"{}" seems to be read-only!'.format( db_path ) )
+                
+            
             self._db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
             
             c = self._db.cursor()
@@ -458,8 +468,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._cursor_transaction_wrapper = HydrusDBBase.DBCursorTransactionWrapper( self._c, HG.db_transaction_commit_period )
             
-            self._LoadModules()
-            
             if HG.no_db_temp_files:
                 
                 self._Execute( 'PRAGMA temp_store = 2;' ) # use memory for temp store exclusively
@@ -467,11 +475,17 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._AttachExternalDatabases()
             
+            self._LoadModules()
+            
             self._Execute( 'ATTACH ":memory:" AS mem;' )
+            
+        except HydrusExceptions.DBAccessException as e:
+            
+            raise
             
         except Exception as e:
             
-            raise HydrusExceptions.DBAccessException( 'Could not connect to database! This could be an issue related to WAL and network storage, or something else. If it is not obvious to you, please let hydrus dev know. Error follows:' + os.linesep * 2 + str( e ) )
+            raise HydrusExceptions.DBAccessException( 'Could not connect to database! If the answer is not obvious to you, please let hydrus dev know. Error follows:' + os.linesep * 2 + str( e ) )
             
         
         HydrusDBBase.TemporaryIntegerTableNameCache.instance().Clear()

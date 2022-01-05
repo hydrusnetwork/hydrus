@@ -211,6 +211,15 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
             pil_image = RawOpenPILImage( path )
             
+            try:
+                
+                pil_image.verify()
+                
+            except:
+                
+                raise HydrusExceptions.UnsupportedFileException()
+                
+            
             if HG.media_load_report_mode:
                 
                 HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
@@ -280,7 +289,14 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
     
     ( w, h ) = pil_image.size
     
-    s = pil_image.tobytes()
+    try:
+        
+        s = pil_image.tobytes()
+        
+    except OSError as e: # e.g. OSError: unrecognized data stream contents when reading image file
+        
+        raise HydrusExceptions.UnsupportedFileException( str( e ) )
+        
     
     depth = len( s ) // ( w * h )
     

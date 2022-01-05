@@ -1,5 +1,5 @@
 #ifndef Version
-    #define Version "vNull"
+    #define Version "Null"
 #endif
 
 [Icons]

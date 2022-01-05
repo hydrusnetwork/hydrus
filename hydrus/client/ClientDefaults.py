@@ -134,23 +134,23 @@ def GetDefaultGUGs():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) )
     
 def GetDefaultNGUGs():
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ) ]
     
     return gugs
     
 def GetDefaultSingleGUGs():
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingGUG.GalleryURLGenerator ) ]
     
     return gugs
     
@@ -468,9 +468,9 @@ def GetDefaultURLClasses():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingURLClass
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLClass, ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingURLClass.URLClass, ) )
     
 def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     

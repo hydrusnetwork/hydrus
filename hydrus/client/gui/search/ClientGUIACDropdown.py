@@ -135,16 +135,7 @@ def ReadFetch(
             
             if we_need_results or db_not_going_to_hang_if_we_hit_it:
                 
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    search_service_key = tag_service_key
-                    
-                else:
-                    
-                    search_service_key = file_service_key
-                    
-                
-                predicates = HG.client_controller.Read( 'file_system_predicates', search_service_key, force_system_everything = force_system_everything )
+                predicates = HG.client_controller.Read( 'file_system_predicates', file_search_context, force_system_everything = force_system_everything )
                 
                 results_cache = ClientSearch.PredicateResultsCacheSystem( predicates )
                 

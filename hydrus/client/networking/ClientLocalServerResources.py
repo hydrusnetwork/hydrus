@@ -28,7 +28,7 @@ from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
@@ -2086,6 +2086,36 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 locations_manager = media_result.GetLocationsManager()
                 
+                metadata_row[ 'file_services' ] = {
+                    'current' : {},
+                    'deleted' : {}
+                }
+                
+                current = locations_manager.GetCurrent()
+                
+                for file_service_key in current:
+                    
+                    timestamp = locations_manager.GetCurrentTimestamp( file_service_key )
+                    
+                    metadata_row[ 'file_services' ][ 'current' ][ file_service_key.hex() ] = {
+                        'time_imported' : timestamp
+                    }
+                    
+                
+                deleted = locations_manager.GetDeleted()
+                
+                for file_service_key in deleted:
+                    
+                    ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( file_service_key )
+                    
+                    metadata_row[ 'file_services' ][ 'deleted' ][ file_service_key.hex() ] = {
+                        'time_deleted' : timestamp,
+                        'time_imported' : original_timestamp
+                    }
+                    
+                
+                metadata_row[ 'time_modified' ] = locations_manager.GetFileModifiedTimestamp()
+                
                 metadata_row[ 'is_inbox' ] = locations_manager.inbox
                 metadata_row[ 'is_local' ] = locations_manager.IsLocal()
                 metadata_row[ 'is_trashed' ] = locations_manager.IsTrashed()
@@ -2345,7 +2375,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
                 
                 domains_set.add( domain )
                 
-                ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires )
+                ClientNetworkingFunctions.AddCookieToSession( session, name, value, domain, path, expires )
                 
             
             HG.client_controller.network_engine.session_manager.SetSessionDirty( network_context )
