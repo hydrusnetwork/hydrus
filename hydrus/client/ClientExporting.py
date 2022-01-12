@@ -470,7 +470,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     num_copied += 1
                     
-                    HydrusPaths.MakeFileWriteable( dest_path )
+                    HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                     
                 
             

@@ -240,7 +240,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         # temp tags to lookup
         self._Execute( 'INSERT OR IGNORE INTO {} SELECT ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
-        self._STI( self._Execute( 'INSERT OR IGNORE INTO {} SELECT tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) ) )
+        self._STI( self._Execute( 'INSERT OR IGNORE INTO {} SELECT ideal_tag_id FROM {} CROSS JOIN {} ON ( ideal_tag_id = tag_id );'.format( results_table_name, tag_ids_table_name, cache_tag_siblings_lookup_table_name ) ) )
         
     
     def FilterChainedIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):

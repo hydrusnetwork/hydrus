@@ -2648,7 +2648,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
-        file_service_key = file_search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
         
         CanvasWithHovers.__init__( self, parent, file_service_key )
         
@@ -2676,8 +2676,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         # so regrettably I turn it off for now
         
         self._hashes_processed_in_this_batch = set()
-        
-        file_service_key = self._file_search_context.GetFileServiceKey()
         
         self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
         
@@ -3145,7 +3143,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        file_service_key = self._file_search_context.GetFileServiceKey()
+        file_service_key = self._file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
         
         if len( self._unprocessed_pairs ) == 0:
             

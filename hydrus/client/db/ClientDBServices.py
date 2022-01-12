@@ -1,3 +1,4 @@
+import itertools
 import sqlite3
 import typing
 
@@ -11,6 +12,56 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDBModule
 
+class FileSearchContextLeaf( object ):
+    
+    def __init__( self, file_service_id: int, tag_service_id: int ):
+        
+        # special thing about a leaf is that it has a specific current domain in the caches
+        # no all known files or deleted files here. leaf might not be file cross-referenced, but it does cover something we can search fast
+        
+        # it should get tag display type at some point, maybe current/pending too
+        
+        self.file_service_id = file_service_id
+        self.tag_service_id = tag_service_id
+        
+    
+class FileSearchContextBranch( object ):
+    
+    def __init__( self, file_search_context: ClientSearch.FileSearchContext, file_service_ids: typing.Collection[ int ], tag_service_ids: typing.Collection[ int ], file_location_is_cross_referenced: bool ):
+        
+        self.file_search_context = file_search_context
+        
+        self.file_service_ids = file_service_ids
+        self.tag_service_ids = tag_service_ids
+        self.file_location_is_cross_referenced = file_location_is_cross_referenced
+        
+    
+    def FileLocationIsCrossReferenced( self ) -> bool:
+        
+        return self.file_location_is_cross_referenced
+        
+    
+    def GetFileSearchContext( self ) -> ClientSearch.FileSearchContext:
+        
+        return self.file_search_context
+        
+    
+    def IterateLeaves( self ):
+        
+        for ( file_service_id, tag_service_id ) in itertools.product( self.file_service_ids, self.tag_service_ids ):
+            
+            yield FileSearchContextLeaf( file_service_id, tag_service_id )
+            
+        
+    
+    def IterateTableIdPairs( self ):
+        
+        for ( file_service_id, tag_service_id ) in itertools.product( self.file_service_ids, self.tag_service_ids ):
+            
+            yield ( file_service_id, tag_service_id )
+            
+        
+    
 class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):

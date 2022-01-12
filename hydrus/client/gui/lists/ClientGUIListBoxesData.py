@@ -242,7 +242,7 @@ class ListBoxItemTextTag( ListBoxItem ):
     
     def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
         
-        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self._tag ) ]
+        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
     
     def GetRowCount( self, child_rows_allowed: bool ):
@@ -350,7 +350,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         
         # with counts? or just merge this into texttag???
         
-        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self._tag ) ]
+        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
     
     def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, child_rows_allowed: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str ] ] ]:

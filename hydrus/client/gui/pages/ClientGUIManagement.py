@@ -260,7 +260,7 @@ def CreateManagementControllerPetitions( petition_service_key ):
     
 def CreateManagementControllerQuery( page_name, file_search_context: ClientSearch.FileSearchContext, search_enabled ):
     
-    file_service_key = file_search_context.GetFileServiceKey()
+    file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY, file_service_key = file_service_key )
     
@@ -823,7 +823,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
             if shift_down and len( predicates ) > 1:
                 
-                predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, predicates ), )
+                predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates ), )
                 
             
             HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
@@ -1432,7 +1432,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._management_controller.SetVariable( 'pixel_dupes_preference', pixel_dupes_preference )
         self._management_controller.SetVariable( 'max_hamming_distance', max_hamming_distance )
         
-        self._SetFileServiceKey( file_search_context.GetFileServiceKey() )
+        self._SetFileServiceKey( file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey() )
         
         self._UpdateBothFilesMatchButton()
         
@@ -1474,7 +1474,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
-        file_service_key = file_search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
         
         if len( hashes ) > 0:
             
@@ -4955,7 +4955,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
-            file_service_key = file_search_context.GetFileServiceKey()
+            file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
             
@@ -5015,16 +5015,16 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
+            display_file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
+            
             self._management_controller.SetVariable( 'file_search_context', file_search_context )
-            self._SetFileServiceKey( file_search_context.GetFileServiceKey() )
+            self._SetFileServiceKey( display_file_service_key )
             
             synchronised = self._tag_autocomplete.IsSynchronised()
             
             self._management_controller.SetVariable( 'synchronised', synchronised )
             
             if synchronised:
-                
-                file_service_key = file_search_context.GetFileServiceKey()
                 
                 if len( file_search_context.GetPredicates() ) > 0:
                     
@@ -5034,11 +5034,11 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
                     
-                    panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, file_service_key )
+                    panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, display_file_service_key )
                     
                 else:
                     
-                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, display_file_service_key, [] )
                     
                     panel.SetEmptyPageStatusOverride( 'no search' )
                     

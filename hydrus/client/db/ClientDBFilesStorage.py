@@ -54,36 +54,51 @@ class DBLocationSearchContext( object ):
         
         self.location_search_context = location_search_context
         
-        self.files_table_name = None
-        
     
     def GetLocationSearchContext( self ) -> ClientSearch.LocationSearchContext:
         
         return self.location_search_context
         
     
-    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ):
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
         
-        if self.location_search_context.IsAllKnownFiles():
-            
-            return table_phrase
-            
-        else:
-            
-            return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
-            
+        raise NotImplementedError()
         
     
-    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ):
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
         
-        if self.location_search_context.IsAllKnownFiles():
-            
-            return table_phrase
-            
-        else:
-            
-            return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
-            
+        raise NotImplementedError()
+        
+    
+class DBLocationSearchContextAllKnownFiles( DBLocationSearchContext ):
+    
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return table_phrase
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return table_phrase
+        
+    
+class DBLocationSearchContextBranch( DBLocationSearchContext ):
+    
+    def __init__( self, location_search_context: ClientSearch.LocationSearchContext, files_table_name: str ):
+        
+        DBLocationSearchContext.__init__( self, location_search_context )
+        
+        self.files_table_name = files_table_name
+        
+    
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
         
     
 class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
@@ -271,20 +286,6 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
         
         return service_ids_to_nums_cleared
-        
-    
-    def ConvertLocationToCoveringFileServiceKeys( self, location_search_context: ClientSearch.LocationSearchContext ):
-        
-        file_location_is_cross_referenced = not ( location_search_context.IsAllKnownFiles() or location_search_context.SearchesDeleted() )
-        
-        file_service_keys = list( location_search_context.current_service_keys )
-        
-        if location_search_context.SearchesDeleted():
-            
-            file_service_keys.append( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
-            
-        
-        return ( file_service_keys, file_location_is_cross_referenced )
         
     
     def DeferFilesDeleteIfNowOrphan( self, hash_ids, definitely_no_thumbnails = False, ignore_service_id = None ):
@@ -775,13 +776,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ] )
             
         
-        db_location_search_context = DBLocationSearchContext( location_search_context )
-        
         if location_search_context.IsAllKnownFiles():
             
             # no table set, obviously
             
-            return db_location_search_context
+            return DBLocationSearchContextAllKnownFiles( location_search_context )
             
         
         table_names = []
@@ -804,7 +803,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             table_name = table_names[0]
             
-            db_location_search_context.files_table_name = table_name
+            files_table_name = table_name
             
         else:
             
@@ -829,10 +828,10 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( self.temp_file_storage_table_name, select_query ) )
             
-            db_location_search_context.files_table_name = self.temp_file_storage_table_name
+            files_table_name = self.temp_file_storage_table_name
             
         
-        return db_location_search_context
+        return DBLocationSearchContextBranch( location_search_context, files_table_name )
         
     
     def GetHashIdsToCurrentServiceIds( self, temp_hash_ids_table_name ):

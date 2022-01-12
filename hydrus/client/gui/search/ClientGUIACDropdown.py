@@ -118,7 +118,6 @@ def ReadFetch(
     force_system_everything
 ):
     
-    file_service_key = file_search_context.GetFileServiceKey()
     tag_search_context = file_search_context.GetTagSearchContext()
     
     tag_service_key = tag_search_context.service_key
@@ -199,7 +198,7 @@ def ReadFetch(
                 
                 if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
                     
                     results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                     
@@ -225,7 +224,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_key.IsCancelled():
                         
@@ -328,7 +327,7 @@ def ReadFetch(
                 return
                 
             
-            predicates = ClientData.MergePredicates( predicates, add_namespaceless = add_namespaceless )
+            predicates = ClientSearch.MergePredicates( predicates, add_namespaceless = add_namespaceless )
             
             matches = predicates
             
@@ -410,7 +409,9 @@ def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearch.ParsedAutocomple
     
     return len( test_text ) <= exact_match_character_threshold
     
-def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, tag_search_context: ClientSearch.TagSearchContext, file_service_key: bytes, results_cache: ClientSearch.PredicateResultsCache ):
+def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_search_context: ClientSearch.FileSearchContext, results_cache: ClientSearch.PredicateResultsCache ):
+    
+    tag_search_context = file_search_context.GetTagSearchContext()
     
     display_tag_service_key = tag_search_context.display_service_key
     
@@ -431,7 +432,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
                 
                 results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                 
@@ -457,7 +458,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
                 search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                 
                 if is_explicit_wildcard:
                     
@@ -478,7 +479,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             # we always do this, because results cache will not have current text input data
             
-            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
+            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
             
             for input_text_predicate in input_text_predicates:
                 
@@ -600,7 +601,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                     
                     skip_ors = True
                     
-                    some_preds_have_count = True in ( predicate.GetCount() > 0 for predicate in predicates )
+                    some_preds_have_count = True in ( predicate.GetCount().HasNonZeroCount() for predicate in predicates )
                     skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ) and some_preds_have_count
                     
                     for ( index, predicate ) in enumerate( predicates ):
@@ -612,7 +613,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                             continue
                             
                         
-                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
+                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount().HasZeroCount():
                             
                             continue
                             
@@ -1546,7 +1547,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         favourite_tags = sorted( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in favourite_tags ]
         
         self._favourites_list.SetPredicates( predicates )
         
@@ -1600,7 +1601,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._under_construction_or_predicate = None
         
-        file_service_key = file_search_context.GetFileServiceKey()
+        file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
         tag_search_context = file_search_context.GetTagSearchContext()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
@@ -1732,7 +1733,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if self._under_construction_or_predicate is None:
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, predicates )
+                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
                 
             else:
                 
@@ -1745,7 +1746,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds )
+                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
                 
             
         else:
@@ -1767,7 +1768,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds ) }
+                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
                 
             
             self._under_construction_or_predicate = None
@@ -1984,7 +1985,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             or_preds = or_preds[:-1]
             
-            self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds )
+            self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
             
         
         self._UpdateORButtons()
@@ -2200,7 +2201,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
-        self._ChangeFileService( self._file_search_context.GetFileServiceKey() )
+        self._ChangeFileService( self._file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey() )
         self._ChangeTagService( self._file_search_context.GetTagSearchContext().service_key )
         
         self._SignalNewSearchState()
@@ -2639,7 +2640,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tags = HydrusTags.CleanTags( tags )
             
-            entry_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags ]
+            entry_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in tags ]
             
             if len( entry_predicates ) > 0:
                 
@@ -2690,9 +2691,12 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, 'set stub predicates', self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ self._file_service_key ] )
         tag_search_context = ClientSearch.TagSearchContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, tag_search_context, self._file_service_key, self._results_cache )
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
+        
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):
@@ -2824,16 +2828,16 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             
                             if len( namespace ) > 0 and subtag == '*':
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
+                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, value = namespace, inclusive = inclusive )
                                 
                             else:
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, tag_string, inclusive )
+                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, value = tag_string, inclusive = inclusive )
                                 
                             
                         else:
                             
-                            row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                            row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag_string, inclusive = inclusive )
                             
                         
                         row_preds.append( row_pred )
@@ -2845,7 +2849,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        self._current_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, row_preds ) )
+                        self._current_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = row_preds ) )
                         
                     
                 

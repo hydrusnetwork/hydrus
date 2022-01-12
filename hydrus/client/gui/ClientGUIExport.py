@@ -873,7 +873,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         HydrusPaths.MirrorFile( source_path, path )
                         
-                        HydrusPaths.MakeFileWriteable( path )
+                        HydrusPaths.TryToGiveFileNicePermissionBits( path )
                         
                     
                 except:

@@ -84,15 +84,19 @@ class TestClientDB( unittest.TestCase ):
         
         file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
+        
+        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ] )
         tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        
+        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
         
         TestClientDB._clear_db()
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'series:*' )
         
         self.assertEqual( result, [] )
         
@@ -126,114 +130,114 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*', add_namespaceless = True )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*', add_namespaceless = False )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'ser*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'ser*' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:c*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'series:c*' )
         
-        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
+        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) )
         
         ( read_pred, ) = result
         
-        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        self.assertEqual( read_pred.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( pred, read_pred )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'car', exact_match = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'car', exact_match = True )
         
-        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 )
+        pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) )
         
         ( read_pred, ) = result
         
-        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        self.assertEqual( read_pred.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( pred, read_pred )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c', exact_match = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = '*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = '*' )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'maker:ford', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'maker:ford', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'series:*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'series:*' )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'c*r*' )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*r*' )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, CC.COMBINED_FILE_SERVICE_KEY, search_text = 'ser*', search_namespaces_into_full_tags = True )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'ser*', search_namespaces_into_full_tags = True )
         
         preds = set()
         
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
@@ -768,14 +772,14 @@ class TestClientDB( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 1 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1 ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 0 ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
+        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 0 ) ) )
         predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS, ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
         
         self.assertEqual( set( result ), set( predicates ) )
         
-        for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount(), predicates[i].GetCount() )
+        for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount().GetMinCount(), predicates[i].GetCount().GetMinCount() )
         
     
     def test_file_updates( self ):
@@ -1160,7 +1164,7 @@ class TestClientDB( unittest.TestCase ):
         
         location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
         
-        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+        fsc = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', count = ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 3 ) ) ] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', fsc, True )
         

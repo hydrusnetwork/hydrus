@@ -164,7 +164,7 @@ def IsComplexWildcard( search_text ):
     
 def SortPredicates( predicates ):
     
-    key = lambda p: p.GetCount()
+    key = lambda p: p.GetCount().GetMinCount()
     
     predicates.sort( key = key, reverse = True )
     
@@ -976,18 +976,6 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._tag_search_context.FixMissingServices( services_manager )
         
     
-    def GetFileServiceKey( self ):
-        
-        if self._location_search_context.SearchesAnything():
-            
-            return self._location_search_context.GetFileServiceKey()
-            
-        else:
-            
-            return CC.COMBINED_FILE_SERVICE_KEY
-            
-        
-    
     def GetLocationSearchContext( self ) -> "LocationSearchContext":
         
         return self._location_search_context
@@ -1073,7 +1061,14 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
         
         if current_service_keys is None:
             
-            current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
+            if deleted_service_keys is None:
+                
+                current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
+                
+            else:
+                
+                current_service_keys = []
+                
             
         
         if deleted_service_keys is None:
@@ -1081,8 +1076,8 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
             deleted_service_keys = []
             
         
-        self.current_service_keys = current_service_keys
-        self.deleted_service_keys = deleted_service_keys
+        self.current_service_keys = set( current_service_keys )
+        self.deleted_service_keys = set( deleted_service_keys )
         
     
     def _GetSerialisableInfo( self ):
@@ -1097,8 +1092,8 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_current_service_keys, serialisable_deleted_service_keys ) = serialisable_info
         
-        self.current_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_current_service_keys ]
-        self.deleted_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys ]
+        self.current_service_keys = { bytes.fromhex( service_key ) for service_key in serialisable_current_service_keys }
+        self.deleted_service_keys = { bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys }
         
     
     def FixMissingServices( self, services_manager ):
@@ -1107,20 +1102,31 @@ class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = services_manager.FilterValidServiceKeys( self.deleted_service_keys )
         
     
-    def GetFileServiceKey( self ):
+    def GetCoveringCurrentFileServiceKeys( self ):
         
-        if not self.IsOneDomain():
+        file_location_is_cross_referenced = not ( self.IsAllKnownFiles() or self.SearchesDeleted() )
+        
+        file_service_keys = list( self.current_service_keys )
+        
+        if self.SearchesDeleted():
             
-            raise Exception( 'Location context was asked for specific file domain, but it did not have a single domain' )
+            file_service_keys.append( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
             
         
-        if len( self.current_service_keys ) > 0:
+        return ( file_service_keys, file_location_is_cross_referenced )
+        
+    
+    def GetBestSingleFileServiceKey( self ):
+        
+        # this could be improved to check multiple local lads -> all local files
+        
+        if self.IsOneDomain() and len( self.current_service_keys ) == 1:
             
-            ( service_key, ) = self.current_service_keys
+            service_key = list( self.current_service_keys )[0]
             
         else:
             
-            ( service_key, ) = self.deleted_service_keys
+            service_key = CC.COMBINED_FILE_SERVICE_KEY
             
         
         return service_key
@@ -1381,6 +1387,138 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER ] = FavouriteSearchManager
 
+class PredicateCount( object ):
+    
+    def __init__(
+        self,
+        min_current_count: int,
+        min_pending_count: int,
+        max_current_count: typing.Optional[ int ],
+        max_pending_count: typing.Optional[ int ]
+        ):
+        
+        self.min_current_count = min_current_count
+        self.min_pending_count = min_pending_count
+        self.max_current_count = max_current_count if max_current_count is not None else min_current_count
+        self.max_pending_count = max_pending_count if max_pending_count is not None else min_pending_count
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, PredicateCount ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return (
+            self.min_current_count,
+            self.min_pending_count,
+            self.max_current_count,
+            self.max_pending_count
+        ).__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return 'Predicate Count: {}-{} +{}-{}'.format( self.min_current_count, self.max_current_count, self.min_pending_count, self.max_pending_count )
+        
+    
+    def AddCounts( self, count: "PredicateCount" ):
+        
+        ( self.min_current_count, self.max_current_count ) = ClientData.MergeCounts( self.min_current_count, self.max_current_count, count.min_current_count, count.max_current_count )
+        ( self.min_pending_count, self.max_pending_count) = ClientData.MergeCounts( self.min_pending_count, self.max_pending_count, count.min_pending_count, count.max_pending_count )
+        
+    
+    def Duplicate( self ):
+        
+        return PredicateCount(
+            self.min_current_count,
+            self.min_pending_count,
+            self.max_current_count,
+            self.max_pending_count
+        )
+        
+    
+    def GetMinCount( self, current_or_pending = None ):
+        
+        if current_or_pending is None:
+            
+            return self.min_current_count + self.min_pending_count
+            
+        elif current_or_pending == HC.CONTENT_STATUS_CURRENT:
+            
+            return self.min_current_count
+            
+        elif current_or_pending == HC.CONTENT_STATUS_PENDING:
+            
+            return self.min_pending_count
+            
+        
+    
+    def GetSuffixString( self ) -> str:
+        
+        suffix_components = []
+        
+        if self.min_current_count > 0 or self.max_current_count > 0:
+            
+            number_text = HydrusData.ToHumanInt( self.min_current_count )
+            
+            if self.max_current_count > self.min_current_count:
+                
+                number_text = '{}-{}'.format( number_text, HydrusData.ToHumanInt( self.max_current_count ) )
+                
+            
+            suffix_components.append( '({})'.format( number_text ) )
+            
+        
+        if self.min_pending_count > 0 or self.max_pending_count > 0:
+            
+            number_text = HydrusData.ToHumanInt( self.min_pending_count )
+            
+            if self.max_pending_count > self.min_pending_count:
+                
+                number_text = '{}-{}'.format( number_text, HydrusData.ToHumanInt( self.max_pending_count ) )
+                
+            
+            suffix_components.append( '(+{})'.format( number_text ) )
+            
+        
+        return ' '.join( suffix_components )
+        
+    
+    def HasNonZeroCount( self ):
+        
+        return self.min_current_count > 0 or self.min_pending_count > 0 or self.max_current_count > 0 or self.max_pending_count > 0
+        
+    
+    def HasZeroCount( self ):
+        
+        return not self.HasNonZeroCount()
+        
+    
+    @staticmethod
+    def STATICCreateCurrentCount( current_count ) -> "PredicateCount":
+        
+        return PredicateCount( current_count, 0, None, None )
+        
+    
+    @staticmethod
+    def STATICCreateNullCount() -> "PredicateCount":
+        
+        return PredicateCount( 0, 0, None, None )
+        
+    
+    @staticmethod
+    def STATICCreateStaticCount( current_count, pending_count ) -> "PredicateCount":
+        
+        return PredicateCount( current_count, pending_count, None, None )
+        
+    
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
@@ -1392,10 +1530,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         predicate_type: int = None,
         value: object = None,
         inclusive: bool = True,
-        min_current_count: HC.noneable_int = 0,
-        min_pending_count: HC.noneable_int = 0,
-        max_current_count: HC.noneable_int = None,
-        max_pending_count: HC.noneable_int = None
+        count = None
         ):
         
         if isinstance( value, ( list, set ) ):
@@ -1403,15 +1538,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             value = tuple( value )
             
         
+        if count is None:
+            
+            count = PredicateCount.STATICCreateNullCount()
+            
+        
         self._predicate_type = predicate_type
         self._value = value
         
         self._inclusive = inclusive
         
-        self._min_current_count = min_current_count
-        self._min_pending_count = min_pending_count
-        self._max_current_count = max_current_count
-        self._max_pending_count = max_pending_count
+        self._count = count
         
         self._count_text_suffix = ''
         
@@ -1465,7 +1602,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
+        return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self._count.GetMinCount() ) )
         
     
     def _RecalcPythonHash( self ):
@@ -1654,51 +1791,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddCounts( self, predicate ):
-        
-        ( min_current_count, max_current_count, min_pending_count, max_pending_count ) = predicate.GetAllCounts()
-        
-        ( self._min_current_count, self._max_current_count ) = ClientData.MergeCounts( self._min_current_count, self._max_current_count, min_current_count, max_current_count )
-        ( self._min_pending_count, self._max_pending_count) = ClientData.MergeCounts( self._min_pending_count, self._max_pending_count, min_pending_count, max_pending_count )
-        
-    
-    def ClearCounts( self ):
-        
-        self._min_current_count = 0
-        self._min_pending_count = 0
-        self._max_current_count = None
-        self._max_pending_count = None
-        
-    
-    def GetAllCounts( self ):
-        
-        return ( self._min_current_count, self._max_current_count, self._min_pending_count, self._max_pending_count )
-        
-    
     def GetCopy( self ):
         
-        return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+        return Predicate( self._predicate_type, self._value, self._inclusive, count = self._count.Duplicate() )
+        
+    
+    def GetCount( self ):
+        
+        return self._count
         
     
     def GetCountlessCopy( self ):
         
         return Predicate( self._predicate_type, self._value, self._inclusive )
-        
-    
-    def GetCount( self, current_or_pending = None ):
-        
-        if current_or_pending is None:
-            
-            return self._min_current_count + self._min_pending_count
-            
-        elif current_or_pending == HC.CONTENT_STATUS_CURRENT:
-            
-            return self._min_current_count
-            
-        elif current_or_pending == HC.CONTENT_STATUS_PENDING:
-            
-            return self._min_pending_count
-            
         
     
     def GetNamespace( self ):
@@ -1858,7 +1963,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( namespace, subtag ) = HydrusTags.SplitTag( self._value )
             
-            return Predicate( self._predicate_type, subtag, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+            return Predicate( self._predicate_type, subtag, self._inclusive, count = self._count.Duplicate() )
             
         
         return self.GetCopy()
@@ -1867,11 +1972,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def GetValue( self ):
         
         return self._value
-        
-    
-    def HasNonZeroCount( self ):
-        
-        return self._min_current_count > 0 or self._min_pending_count > 0
         
     
     def HasIdealSibling( self ):
@@ -2008,28 +2108,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if with_count:
             
-            if self._min_current_count > 0:
-                
-                number_text = HydrusData.ToHumanInt( self._min_current_count )
-                
-                if self._max_current_count is not None:
-                    
-                    number_text += '-' + HydrusData.ToHumanInt( self._max_current_count )
-                    
-                
-                count_text += ' ({})'.format( number_text )
-                
+            suffix = self._count.GetSuffixString()
             
-            if self._min_pending_count > 0:
+            if len( suffix ) > 0:
                 
-                number_text = HydrusData.ToHumanInt( self._min_pending_count )
-                
-                if self._max_pending_count is not None:
-                    
-                    number_text += '-' + HydrusData.ToHumanInt( self._max_pending_count )
-                    
-                
-                count_text += ' (+{})'.format( number_text )
+                count_text += ' {}'.format( suffix )
                 
             
             if self._count_text_suffix != '':
@@ -2792,6 +2875,64 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
         
     
     return matches
+    
+def MergePredicates( predicates, add_namespaceless = False ):
+    
+    master_predicate_dict = {}
+    
+    for predicate in predicates:
+        
+        # this works because predicate.__hash__ exists
+        
+        if predicate in master_predicate_dict:
+            
+            master_predicate_dict[ predicate ].GetCount().AddCounts( predicate.GetCount() )
+            
+        else:
+            
+            master_predicate_dict[ predicate ] = predicate
+            
+        
+    
+    if add_namespaceless:
+        
+        # we want to include the count for namespaced tags in the namespaceless version when:
+        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
+        
+        unnamespaced_predicate_dict = {}
+        subtag_nonzero_instance_counter = collections.Counter()
+        
+        for predicate in master_predicate_dict.values():
+            
+            if predicate.GetCount().HasNonZeroCount():
+                
+                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
+                
+                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
+                
+                if unnamespaced_predicate in unnamespaced_predicate_dict:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ].GetCount().AddCounts( unnamespaced_predicate.GetCount() )
+                    
+                else:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
+                    
+                
+            
+        
+        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
+            
+            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
+            
+            if count > 1:
+                
+                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
+                
+            
+        
+    
+    return list( master_predicate_dict.values() )
     
 def SearchTextIsFetchAll( search_text: str ):
     

@@ -1168,8 +1168,11 @@ class MediaContainer( QW.QWidget ):
             self._embed_button.setFixedSize( self.size() )
             self._embed_button.move( QC.QPoint( 0, 0 ) )
             
-            self._media_window.setFixedSize( self.size() )
-            self._media_window.move( QC.QPoint( 0, 0 ) )
+            if self._media_window is not None:
+                
+                self._media_window.setFixedSize( self.size() )
+                self._media_window.move( QC.QPoint( 0, 0 ) )
+                
             
             controls_bar_rect = self.GetIdealControlsBarRect()
             

@@ -1946,7 +1946,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -1960,6 +1960,63 @@ class TestClientAPI( unittest.TestCase ):
         self.assertIn( 'apply_implicit_limit', kwargs )
         
         self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        # search files and get hashes
+        
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&return_hashes=true'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_hashes_set = { hash.hex() for hash in hash_ids_to_hashes.values() }
+        
+        self.assertEqual( set( d[ 'hashes' ] ), expected_hashes_set )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'hash_ids_to_hashes' )
+        
+        hash_ids = kwargs[ 'hash_ids' ]
+        
+        self.assertEqual( set( hash_ids ), sample_hash_ids )
         
         # sort
         
@@ -1989,7 +2046,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2030,7 +2087,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2076,7 +2133,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2123,7 +2180,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationSearchContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         

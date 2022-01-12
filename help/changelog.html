@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_469"><a href="#version_469">version 469</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>the 'search log' button and the window panel now let you delete log entries. you can delete by completion status from the menu or specifically by row in the panel (just like the file log)</li>
+					<li>fixed the new 'file is writable' checks for Linux/macOS, which were testing permissions overbroadly and messing with users with user-only permissions set. the code now hands off specific user/group negotiation to the OS. thanks to the maintainer of the AUR package for helping me out here (issue #1042)</li>
+					<li>the various places where a file's permission bits are set are also cleaned up--hydrus now makes a distinction between double-checking a file is set user-writable before deleting/overwriting vs making a file's permission bits (which were potentially messed up in the past) 'nice' for human use after export. in the latter case, which still defaults to 644 on linux/macOS, the user's umask is now applied, so it should be 600 if you prefer that</li>
+					<li>fixed a bug where the media viewer could have trouble initialising video when the player window instantiation was delayed (e.g. with embed button)</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>added 'return_hashes' boolean parameter to GET /get_files/search_files, which makes the command return hashes instead of file ids. this is documented in the help and has a new unit test</li>
+					<li>client api version is now 25</li>
+					<li>.</li>
+					<li>multiple local file services work:</li>
+					<li>I rewrote a lot of code this week, but it proved more complex than I expected. I also discovered I'll have to switch the pages and canvases over too before I can nicely switch the top level UI over to allow multiple search. rather than release a borked feature, I decided not to rush the final phase, so this remains boring for now! the good news is that it works well when I hack it in, so I just need to keep pushing</li>
+					<li>rewrote the caller side of tag autocomplete lookup to work on the new multiple file search domain</li>
+					<li>rewrote the main database level tag lookup code to work on the new multiple file search domain</li>
+					<li>certain types of complicated tag autocomplete lookup, particularly on all known tags and any client with lots of siblings, will be faster now</li>
+					<li>an unusual and complicated too-expansive sibling lookup on autocomplete lookups on 'all known tags' is now fixed</li>
+					<li>.</li>
+					<li>boring cleanup and refactoring:</li>
+					<li>predicate counts are now managed by a new object. predicates also support 0 minimum count for x-y count ranges, which is now possible when fetching count results from non-cross-referenced file domains (for now this means searching deleted files)</li>
+					<li>cleaned up a ton of predicate instantiation code</li>
+					<li>updated autocomplete, predicate, and pred count unit tests to handle the new objects and bug fixes</li>
+					<li>wrote new classess to cover convenient multiple file search domain at the database level and updated a bunch of tag autocomplete search code to use it</li>
+					<li>misc cleanup and refactoring for file domain search code</li>
+					<li>purged more single file service inspection code from file search systems</li>
+					<li>refactored most duplicate files storage code (about 70KB) to a new client db module</li>
+				</ul>
 				<li><h3 id="version_468"><a href="#version_468">version 468</a></h3></li>
 				<ul>
 					<li>misc:</li>
