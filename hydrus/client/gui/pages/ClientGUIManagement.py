@@ -942,7 +942,7 @@ def managementScrollbarValueChanged( value ):
     
 class ManagementPanel( QW.QScrollArea ):
     
-    locationChanged = QC.Signal( bytes )
+    locationChanged = QC.Signal( ClientLocation.LocationContext )
     
     SHOW_COLLECT = True
     

@@ -1355,7 +1355,7 @@ class AutoCompleteDropdown( QW.QWidget ):
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
-    locationChanged = QC.Signal( bytes )
+    locationChanged = QC.Signal( ClientLocation.LocationContext )
     tagServiceChanged = QC.Signal( bytes )
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key ):
