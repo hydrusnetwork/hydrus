@@ -2998,7 +2998,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetBestCurrentTimestamp( location_context ) )
+                    return deal_with_none( x.GetLocationsManager().GetBestCurrentTimestamp( location_context ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
