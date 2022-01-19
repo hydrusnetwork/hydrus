@@ -82,7 +82,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def _CanDoWorkNow( self ):
         
         p1 = not ( self._paused or HG.client_controller.options[ 'pause_subs_sync' ] or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) or HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
-        p2 = not ( HG.view_shutdown or self._stop_work_for_shutdown )
+        p2 = not ( HG.started_shutdown or self._stop_work_for_shutdown )
         p3 = self._NoDelays()
         
         if HG.subscription_report_mode:
@@ -91,7 +91,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             message += os.linesep
             message += 'Paused/Global/Network/Dialog Pause: {}/{}/{}/{}'.format( self._paused, HG.client_controller.options[ 'pause_subs_sync' ], HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ), HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
             message += os.linesep
-            message += 'View/Sub shutdown: {}/{}'.format( HG.view_shutdown, self._stop_work_for_shutdown )
+            message += 'Started/Sub shutdown: {}/{}'.format( HG.started_shutdown, self._stop_work_for_shutdown )
             message += os.linesep
             message += 'No delays: {}'.format( self._NoDelays() )
             
@@ -1782,7 +1782,7 @@ class SubscriptionsManager( object ):
         
         p1 = HG.client_controller.options[ 'pause_subs_sync' ] or self._pause_subscriptions_for_editing
         p2 = HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
-        p3 = HG.view_shutdown
+        p3 = HG.started_shutdown
         
         if p1 or p2 or p3:
             
@@ -1899,7 +1899,7 @@ class SubscriptionsManager( object ):
             
             self._wake_event.wait( 3 )
             
-            while not ( HG.view_shutdown or self._shutdown ):
+            while not ( HG.started_shutdown or self._shutdown ):
                 
                 with self._lock:
                     

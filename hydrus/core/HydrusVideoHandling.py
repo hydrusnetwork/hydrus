@@ -412,7 +412,14 @@ def GetMime( path ):
             
         else:
             
-            return HC.VIDEO_MKV
+            if has_video:
+                
+                return HC.VIDEO_MKV
+                
+            else:
+                
+                return HC.AUDIO_MKV
+                
             
         
     elif mime_text in ( 'mpeg', 'mpegvideo', 'mpegts' ):
@@ -941,7 +948,8 @@ def VideoHasAudio( path, info_lines ):
         while len( chunk_of_pcm_data ) > 0:
             
             # iterating over bytes gives you ints, recall
-            if True in ( b != 0 and b != 255 for b in chunk_of_pcm_data ):
+            # this used to be 'if not 0 or 255', but I found some that had 1 too, so let's just change the tolerance to reduce false positives
+            if True in ( 5 <= b <= 250 for b in chunk_of_pcm_data ):
                 
                 return True
                 

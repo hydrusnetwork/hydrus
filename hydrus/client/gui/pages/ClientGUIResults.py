@@ -19,6 +19,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client import ClientStrings
@@ -57,7 +58,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     newMediaAdded = QC.Signal()
     
-    def __init__( self, parent, page_key, file_service_key, media_results ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
         QW.QScrollArea.__init__( self, parent )
         
@@ -68,7 +69,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         self.setWidget( QW.QWidget() )
         self.setWidgetResizable( True )
         
-        ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
+        ClientMedia.ListeningMediaList.__init__( self, location_context, media_results )
         
         self._UpdateBackgroundColour()
         
@@ -84,7 +85,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
-        HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         HG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
@@ -142,7 +142,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
-            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, self._file_service_key, media_results )
+            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, self._location_context, media_results )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -495,7 +495,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
-            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._file_service_key, media_results, first_hash )
+            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._location_context, media_results, first_hash )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -730,7 +730,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( tuple( hashes ), max_hamming ) ) ]
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = initial_predicates )
+            HG.client_controller.pub( 'new_page_query', self._location_context, initial_predicates = initial_predicates )
             
         
     
@@ -969,7 +969,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUITags.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
+                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, self._selected_media )
                 
                 dlg.SetPanel( panel )
                 
@@ -1711,13 +1711,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _ShowDuplicatesInNewPage( self, file_service_key, hash, duplicate_type ):
+    def _ShowDuplicatesInNewPage( self, location_context: ClientLocation.LocationContext, hash, duplicate_type ):
         
-        hashes = HG.client_controller.Read( 'file_duplicate_hashes', file_service_key, hash, duplicate_type )
+        hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', file_service_key, initial_hashes = hashes )
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     
@@ -1727,7 +1727,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
+            HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes )
             
         
     
@@ -1836,18 +1836,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             self._RecalculateVirtualSize()
             
             # no refresh needed since the sort call that always comes after will do it
-            
-        
-    
-    def FileDumped( self, page_key, hash, status ):
-        
-        if page_key == self._page_key:
-            
-            media = self._GetMedia( { hash } )
-            
-            for m in media: m.Dumped( status )
-            
-            self._RedrawMedia( media )
             
         
     
@@ -2251,12 +2239,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
 class MediaPanelLoading( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_key ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
         
         self._current = None
         self._max = None
         
-        MediaPanel.__init__( self, parent, page_key, file_service_key, [] )
+        MediaPanel.__init__( self, parent, page_key, location_context, [] )
         
         HG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
@@ -2297,14 +2285,14 @@ class MediaPanelLoading( MediaPanel ):
     
 class MediaPanelThumbnails( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_key, media_results ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
         self._num_rows_per_actual_page = 1
         
-        MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
+        MediaPanel.__init__( self, parent, page_key, location_context, media_results )
         
         self._last_size = QC.QSize( 20, 20 )
         self._num_columns = 1
@@ -2385,7 +2373,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _DirtyAllPages( self ):
         
-        clean_indices = list(self._clean_canvas_pages.keys())
+        clean_indices = list( self._clean_canvas_pages.keys() )
         
         for clean_index in clean_indices:
             
@@ -2549,12 +2537,12 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _GenerateMediaCollection( self, media_results ):
         
-        return ThumbnailMediaCollection( self._file_service_key, media_results )
+        return ThumbnailMediaCollection( self._location_context, media_results )
         
     
     def _GenerateMediaSingleton( self, media_result ):
         
-        return ThumbnailMediaSingleton( self._file_service_key, media_result )
+        return ThumbnailMediaSingleton( media_result )
         
     
     def _GetMediaCoordinates( self, media ):
@@ -3182,7 +3170,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             page_indices_to_draw.sort()
             
-            potential_clean_indices_to_steal = [ page_index for page_index in list(self._parent._clean_canvas_pages.keys()) if page_index not in page_indices_to_draw ]
+            potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
             
             random.shuffle( potential_clean_indices_to_steal )
             
@@ -3723,21 +3711,23 @@ class MediaPanelThumbnails( MediaPanel ):
             
             focused_hash = focus_singleton.GetHash()
             
+            combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
             if HG.client_controller.DBCurrentlyDoingJob():
                 
                 file_duplicate_info = None
                 
             else:
                 
-                file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._file_service_key, focused_hash )
+                file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._location_context, focused_hash )
                 
-                if HG.client_controller.services_manager.GetService( self._file_service_key ).GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ):
+                if self._location_context.current_service_keys.isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) ):
                     
-                    all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY, focused_hash )
+                    all_local_files_file_duplicate_info = None
                     
                 else:
                     
-                    all_local_files_file_duplicate_info = None
+                    all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
                     
                 
             
@@ -3757,29 +3747,29 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( file_duplicate_info[ 'counts' ] ) > 0:
                     
-                    view_duplicate_relations_jobs.append( ( self._file_service_key, file_duplicate_info ) )
+                    view_duplicate_relations_jobs.append( ( self._location_context, file_duplicate_info ) )
                     
                 
                 if all_local_files_file_duplicate_info is not None and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
                     
-                    view_duplicate_relations_jobs.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, all_local_files_file_duplicate_info ) )
+                    view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
                     
                 
-                for ( duplicates_file_service_key, this_file_duplicate_info ) in view_duplicate_relations_jobs:
+                for ( job_location_context, job_duplicate_info ) in view_duplicate_relations_jobs:
                     
-                    file_duplicate_types_to_counts = this_file_duplicate_info[ 'counts' ]
+                    file_duplicate_types_to_counts = job_duplicate_info[ 'counts' ]
                     
                     duplicates_view_menu = QW.QMenu( duplicates_menu )
                     
                     if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
                         
-                        if this_file_duplicate_info[ 'is_king' ]:
+                        if job_duplicate_info[ 'is_king' ]:
                             
                             ClientGUIMenus.AppendMenuLabel( duplicates_view_menu, 'this is the best quality file of its group' )
                             
                         else:
-
-                            ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, duplicates_file_service_key, focused_hash, HC.DUPLICATE_KING )
+                            
+                            ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
                             
                         
                         ClientGUIMenus.AppendSeparator( duplicates_view_menu )
@@ -3795,7 +3785,7 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                                 label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
                                 
-                                ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, duplicates_file_service_key, focused_hash, duplicate_type )
+                                ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
                                 
                                 if duplicate_type == HC.DUPLICATE_MEMBER:
                                     
@@ -3819,9 +3809,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     label = 'view this file\'s relations'
                     
-                    if duplicates_file_service_key != self._file_service_key:
+                    if job_location_context is combined_local_location_context:
                         
-                        label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( duplicates_file_service_key ) )
+                        label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
                         
                     
                     ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, label )
@@ -4717,12 +4707,9 @@ class Selectable( object ):
     
 class Thumbnail( Selectable ):
     
-    def __init__( self, file_service_key ):
+    def __init__( self ):
         
         Selectable.__init__( self )
-        
-        self._dump_status = CC.DUMPER_NOT_DUMPED
-        self._file_service_key = file_service_key
         
         self._last_tags = None
         
@@ -4749,11 +4736,6 @@ class Thumbnail( Selectable ):
         destination_dimensions = ( destination_width, destination_height )
         
         return ( offset_position, destination_dimensions )
-        
-    
-    def Dumped( self, dump_status ):
-        
-        self._dump_status = dump_status
         
     
     def GetQtImage( self ):
@@ -5133,17 +5115,17 @@ class Thumbnail( Selectable ):
     
 class ThumbnailMediaCollection( Thumbnail, ClientMedia.MediaCollection ):
     
-    def __init__( self, file_service_key, media_results ):
+    def __init__( self, location_context, media_results ):
         
-        ClientMedia.MediaCollection.__init__( self, file_service_key, media_results )
-        Thumbnail.__init__( self, file_service_key )
+        ClientMedia.MediaCollection.__init__( self, location_context, media_results )
+        Thumbnail.__init__( self )
         
     
 class ThumbnailMediaSingleton( Thumbnail, ClientMedia.MediaSingleton ):
     
-    def __init__( self, file_service_key, media_result ):
+    def __init__( self, media_result ):
         
         ClientMedia.MediaSingleton.__init__( self, media_result )
-        Thumbnail.__init__( self, file_service_key )
+        Thumbnail.__init__( self )
         
     

@@ -51,11 +51,6 @@ directions_alignment_string_lookup[ DIRECTION_LEFT ] = 'left'
 directions_alignment_string_lookup[ DIRECTION_RIGHT ] = 'right'
 directions_alignment_string_lookup[ DIRECTION_DOWN ] = 'bottom'
 
-DUMPER_NOT_DUMPED = 0
-DUMPER_DUMPED_OK = 1
-DUMPER_RECOVERABLE_ERROR = 2
-DUMPER_UNRECOVERABLE_ERROR = 3
-
 FIELD_VERIFICATION_RECAPTCHA = 0
 FIELD_COMMENT = 1
 FIELD_TEXT = 2

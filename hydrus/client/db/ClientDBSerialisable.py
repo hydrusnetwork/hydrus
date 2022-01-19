@@ -91,7 +91,7 @@ def GenerateBigSQLiteDumpBuffer( dump ):
     
     if len( dump_bytes ) >= 1000000000: # 1 billion, not 1GB https://sqlite.org/limits.html
         
-        raise Exception( 'A data object could not save to the database because it was bigger than a buffer limit of 1,000,000,000 bytes! If your session has a page with >500k files/URLs, reduce its size NOW or you will lose data! Otherwise, please report this to hydrus dev!' )
+        raise Exception( 'A data object could not save to the database because it was bigger than a buffer limit of 1,000,000,000 bytes! If your session has a page with >500k files/URLs, reduce its size NOW or you will lose it from your session on next load! On a download page, try clicking the arrow on the file log and clearing out successful imports. Otherwise, please report this to hydrus dev!' )
         
     
     try:

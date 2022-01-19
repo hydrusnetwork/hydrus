@@ -18,6 +18,7 @@ from hydrus.core.networking import HydrusNetworkVariableHandling
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
@@ -3349,11 +3350,13 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             try:
                 
+                location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+                
                 for ( multihash, num_files, total_size, note ) in shares:
                     
                     hashes = HG.client_controller.Read( 'service_directory', service_key, multihash )
                     
-                    HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'ipfs directory' )
+                    HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'ipfs directory' )
                     
                     time.sleep( 0.5 )
                     
@@ -3630,6 +3633,8 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
     
     def _OpenSearch( self ):
         
+        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        
         for share_key in self._booru_shares.GetData( only_selected = True ):
             
             info = self._share_key_info[ share_key ]
@@ -3637,7 +3642,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
             name = info[ 'name' ]
             hashes = info[ 'hashes' ]
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'booru share: ' + name )
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'booru share: ' + name )
             
         
     

@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDBModule
@@ -259,14 +260,14 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def LocationSearchContextIsCoveredByCombinedLocalFiles( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def LocationContextIsCoveredByCombinedLocalFiles( self, location_context: ClientLocation.LocationContext ):
         
-        if location_search_context.SearchesDeleted():
+        if location_context.IncludesDeleted():
             
             return False
             
         
-        service_ids = { self.GetServiceId( service_key ) for service_key in location_search_context.current_service_keys }
+        service_ids = { self.GetServiceId( service_key ) for service_key in location_context.current_service_keys }
         
         for service_id in service_ids:
             

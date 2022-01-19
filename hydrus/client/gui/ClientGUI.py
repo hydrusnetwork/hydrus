@@ -38,6 +38,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
+from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
@@ -886,7 +887,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             while result_bytes == b'1':
                 
-                if HG.view_shutdown:
+                if HG.started_shutdown:
                     
                     return
                     
@@ -2493,10 +2494,14 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             for service in local_file_services:
                 
-                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook = True )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
+                
+                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
                 
             
-            ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook = True )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.TRASH_SERVICE_KEY )
+            
+            ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
             
             repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
             
@@ -2504,7 +2509,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             for service in file_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook = True )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
+                
+                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
                 
             
             petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES ]
@@ -3141,7 +3148,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         gui_actions = QW.QMenu( debug )
         
-        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
         
         def flip_macos_antiflicker():
             
@@ -3163,7 +3170,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, True )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a non-cancellable modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, False )
-        ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', default_local_file_service_key )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', default_location_context )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: HG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
@@ -3562,9 +3569,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 if load_a_blank_page:
                     
-                    default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+                    default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
                     
-                    self._notebook.NewPageQuery( default_local_file_service_key, on_deepest_notebook = True )
+                    self._notebook.NewPageQuery( default_location_context, on_deepest_notebook = True )
                     
                 else:
                     
@@ -3815,7 +3822,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                                 
                                 time.sleep( 0.1 )
                                 
-                                if HG.view_shutdown:
+                                if HG.started_shutdown:
                                     
                                     return
                                     
@@ -3934,7 +3941,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                                 
                                 time.sleep( 0.1 )
                                 
-                                if HG.view_shutdown:
+                                if HG.started_shutdown:
                                     
                                     return
                                     
@@ -4442,7 +4449,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                             
                             time.sleep( 0.1 )
                             
-                            if HG.view_shutdown:
+                            if HG.started_shutdown:
                                 
                                 return
                                 
@@ -5548,7 +5555,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
                     
-                    page = self._notebook.NewPageQuery( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    page = self._notebook.NewPageQuery( location_context )
                     
                     return page.GetPageKey()
                     
@@ -5598,13 +5607,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def qt_open_pages():
             
-            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
-            
             page_of_pages = self._notebook.NewPagesNotebook( on_deepest_notebook = False, select_page = True )
             
             t = 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.NewPageQuery, default_local_file_service_key, page_name = 'test', on_deepest_notebook = True )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.NewPageQuery, default_location_context, page_name = 'test', on_deepest_notebook = True )
             
             t += 0.25
             
@@ -5612,7 +5621,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t += 0.25
             
-            HG.client_controller.CallLaterQtSafe( self, t, 'test job', page_of_pages.NewPageQuery, default_local_file_service_key, page_name ='test', on_deepest_notebook = False )
+            HG.client_controller.CallLaterQtSafe( self, t, 'test job', page_of_pages.NewPageQuery, default_location_context, page_name ='test', on_deepest_notebook = False )
             
             t += 0.25
             
@@ -5674,11 +5683,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def qt_test_ac():
             
-            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
             
             SYS_PRED_REFRESH = 1.0
             
-            page = self._notebook.NewPageQuery( default_local_file_service_key, page_name = 'test', select_page = True )
+            page = self._notebook.NewPageQuery( default_location_context, page_name = 'test', select_page = True )
             
             t = 0.5
             
@@ -7006,7 +7015,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
     
-    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False, select_page = True, activate_window = False ):
+    def NewPageQuery( self, location_context: ClientLocation.LocationContext, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False, select_page = True, activate_window = False ):
         
         if initial_hashes is None:
             
@@ -7018,7 +7027,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort, select_page = select_page )
+        self._notebook.NewPageQuery( location_context, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort, select_page = select_page )
         
         if activate_window and not self.isActiveWindow():
             

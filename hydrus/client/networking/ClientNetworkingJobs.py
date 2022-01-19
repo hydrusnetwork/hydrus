@@ -293,7 +293,7 @@ class NetworkJob( object ):
             return True
             
         
-        if HG.model_shutdown:
+        if HG.started_shutdown:
             
             return True
             
@@ -308,7 +308,7 @@ class NetworkJob( object ):
             return True
             
         
-        if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
+        if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
             
             return True
             
@@ -530,7 +530,7 @@ class NetworkJob( object ):
             self._ReportDataUsed( chunk_num_bytes )
             self._WaitOnOngoingBandwidth()
             
-            if HG.view_shutdown:
+            if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException()
                 
@@ -1716,7 +1716,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
+            if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
                 
                 raise HydrusExceptions.ShutdownException()
                 

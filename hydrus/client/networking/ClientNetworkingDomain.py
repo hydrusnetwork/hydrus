@@ -2110,7 +2110,7 @@ class DomainValidationPopupProcess( object ):
                 
                 while result is None:
                     
-                    if HG.view_shutdown:
+                    if HG.started_shutdown:
                         
                         return
                         

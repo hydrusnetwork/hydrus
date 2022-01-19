@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_470"><a href="#version_470">version 470</a></h3></li>
+				<ul>
+					<li>multiple file services:</li>
+					<li>I finished the conversion of all UI search to the new multiple location object. everything from back- to frontend now supports cleverer search. since searching deleted files is simple to add, users in advanced mode will now see 'deleted from...' in a new list in the tag autocomplete dropdown file domain button</li>
+					<li>the next step is writing a widget that allows multiple selection, and then all this should work right out of the box, and we'll be an important step closer to allowing multiple local file services</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the video parsing routine is better at detecting when a present audio track is actually silent (and hence when it should mark a video as 'no audio'). all video with audio will be requeued for a metadata reparse in the files maintenance system on update</li>
+					<li>fixed an error from last week when trying to create a new page from the tags (e.g. middle-clicking them) in the active search list</li>
+					<li>added 'audio mkv' format to the client, to represent mkvs without a video track. I think most of the time this is going to be audio track webms from youtube-dl and similar</li>
+					<li>added 'file relationships: set files as potential duplicates' command to the 'media actions' shortcut set</li>
+					<li>I expanded the 'backing up' section in 'installing and updating' help</li>
+					<li>I wrote an 'anti-virus' section for 'installing and updating' help, since I kept writing the same basic spiel about false positives. please feel free to point people there in future to relieve their concerns</li>
+					<li>improved some shutdown tests, the client and server should exit faster in some cases (e.g. when a hydrus repository network job is hanging on reconnection attempts, holding up the 'synchronise_repository' daemon shutdown)</li>
+					<li>the 'file was xxx at (y timestamp), which was (z time units) before this check' line in file import notes now always puts 'z time units' as that, ignoring the 'always show ISO time' setting, which was just substituting it with 'y timestamp' again. let me know if you spot other bad grammar with this setting on, I'll fix it!</li>
+					<li>fingers crossed, images in the LAB colourspace _should_ now normalise to sRGB with the correct whitepoint. thanks to the user who provided example test tiff images here. this now uses the new PIL-based colourspace conversion I used to make ICC profiles work, just on LAB->sRGB. as far as I understand, OpenCV uses a fixed whitepoint of D65, resulting in yellow/warm conversions for some formats, but PIL may be able to figure out if D50 is needed??? if you have some crazy LUV or YPbPr or YIQ image that shows up wrong, please send it in and I'll see what I can do!</li>
+					<li>.</li>
+					<li>boring rewrites and cleanup while doing file service work:</li>
+					<li>many more UI objects now store and do file service logic using a more complicated 'location context', which can store a mix of multiple services and 'deleted from service' data. all the search code that works on this can now propagate to display:</li>
+					<li>the management objects behind every page now store a multiple location object, not a single file service id</li>
+					<li>all media panels (the thumbnail grid on a page) are now instantiated by a multiple location object, and when they serve a highlighted downloader, they now inherit that from the file import options, which in future will dictate import destinations</li>
+					<li>all canvases are now the same, inheriting their new location context from their parents</li>
+					<li>all tag lists are the same. mostly they don't care much about file domain, but when you middle-click to create new pages from the autocomplete dropdown list or active search list, it can matter, so they now propagate it along</li>
+					<li>the underlying medialist objects are now the same, and various delete logic (e.g. 'should we remove this thumb we just deleted?') is updated to work on complex domains</li>
+					<li>some duplicate lookup code now works on location context</li>
+					<li>renamed 'location search context' object to 'location context' since it is used all over now and put it in its own file. also wrote it some neater initialisation and meta object code</li>
+					<li>mr bones now gives duplicate data based on the union of all non-trash local services sans update files (another case of now supporting n services but n is fixed for the moment at 1, 'my files')</li>
+					<li>a bunch of places across the program that used to default to 'my files' or 'all local files' (which is everything on disk, including trash and repository update files) now default to this new union of all non-trash local media services</li>
+					<li>when doing page-to-page file drag and drops, the location context is now preserved (previously, the new page would always be 'my files')</li>
+					<li>whole heap of other cleanup in these systems</li>
+					<li>when a thumbnail cannot be provided (for deleted files or many 'all known files' situations), the thumbnail cache now provides the hydrus icon stand-in instantly, no delayed waterfall</li>
+					<li>fixed an unusual situation where the file search could not provide a file in a tagless search when that file had no detailed file info row in the database. this seems to effect a legacy borked row or two in the new deleted file domain searches</li>
+					<li>removed some ancient dumper status code from thumbnail objects</li>
+				</ul>
 				<li><h3 id="version_469"><a href="#version_469">version 469</a></h3></li>
 				<ul>
 					<li>misc:</li>

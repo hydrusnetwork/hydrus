@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
@@ -636,10 +637,10 @@ class TestClientDBTags( unittest.TestCase ):
     
     def _test_ac( self, search_text, tag_service_key, file_service_key, expected_storage_tags_to_counts, expected_display_tags_to_counts ):
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
         tag_search_context = ClientSearch.TagSearchContext( tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
         
         preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = search_text )
         

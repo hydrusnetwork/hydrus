@@ -971,6 +971,13 @@ class ThumbnailCache( object ):
         self._delayed_regeneration_queue.sort( key = sort_regen, reverse = True )
         
     
+    def _ShouldBeAbleToProvideThumb( self, media ):
+        
+        locations_manager = media.GetLocationsManager()
+        
+        return locations_manager.IsLocal() or not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        
+    
     def CancelWaterfall( self, page_key: bytes, medias: list ):
         
         with self._lock:
@@ -1049,7 +1056,7 @@ class ThumbnailCache( object ):
         
         while True:
             
-            if HG.view_shutdown:
+            if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 
@@ -1075,9 +1082,9 @@ class ThumbnailCache( object ):
             return self._special_thumbs[ 'hydrus' ]
             
         
-        locations_manager = display_media.GetLocationsManager()
+        can_provide = self._ShouldBeAbleToProvideThumb( display_media )
         
-        if locations_manager.IsLocal() or not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) ):
+        if can_provide:
             
             mime = display_media.GetMime()
             
@@ -1133,9 +1140,17 @@ class ThumbnailCache( object ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            hash = display_media.GetHash()
-            
-            return self._data_cache.HasData( hash )
+            if self._ShouldBeAbleToProvideThumb( display_media ):
+                
+                hash = display_media.GetHash()
+                
+                return self._data_cache.HasData( hash )
+                
+            else:
+                
+                # yes because we provide the hydrus icon instantly
+                return True
+                
             
         else:
             

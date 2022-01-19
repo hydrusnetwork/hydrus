@@ -242,6 +242,7 @@ def boot():
             
         finally:
             
+            HG.started_shutdown = True
             HG.view_shutdown = True
             HG.model_shutdown = True
             

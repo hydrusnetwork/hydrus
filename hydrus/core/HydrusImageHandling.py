@@ -83,19 +83,21 @@ try:
     
     if cv2.__version__.startswith( '2' ):
         
-        CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.CV_LOAD_IMAGE_UNCHANGED
-        CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = CV_IMREAD_FLAGS_SUPPORTS_ALPHA
-        
-        # there's something wrong with these, but I don't have an easy test env for it atm
-        # CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.CV_LOAD_IMAGE_ANYDEPTH | cv2.CV_LOAD_IMAGE_ANYCOLOR
+        CV_IMREAD_FLAGS_PNG = cv2.CV_LOAD_IMAGE_UNCHANGED
+        CV_IMREAD_FLAGS_JPEG = CV_IMREAD_FLAGS_PNG
+        CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
         
         CV_JPEG_THUMBNAIL_ENCODE_PARAMS = []
         CV_PNG_THUMBNAIL_ENCODE_PARAMS = []
         
     else:
         
-        CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.IMREAD_UNCHANGED
-        CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR # this preserves colour info but does EXIF reorientation and flipping
+        # allows alpha channel
+        CV_IMREAD_FLAGS_PNG = cv2.IMREAD_UNCHANGED
+        # this preserves colour info but does EXIF reorientation and flipping
+        CV_IMREAD_FLAGS_JPEG = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
+        # this seems to allow weirdass tiffs to load as non greyscale, although the LAB conversion 'whitepoint' or whatever can be wrong
+        CV_IMREAD_FLAGS_WEIRD = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
         
         CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
         CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
@@ -220,12 +222,17 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
                 raise HydrusExceptions.UnsupportedFileException()
                 
             
-            if HG.media_load_report_mode:
+            if pil_image.mode == 'LAB':
                 
-                HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                force_pil = True
                 
             
             if HasICCProfile( pil_image ):
+                
+                if HG.media_load_report_mode:
+                    
+                    HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                    
                 
                 force_pil = True
                 
@@ -257,11 +264,15 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         if mime == HC.IMAGE_JPEG:
             
-            flags = CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION
+            flags = CV_IMREAD_FLAGS_JPEG
+            
+        elif mime == HC.IMAGE_PNG:
+            
+            flags = CV_IMREAD_FLAGS_PNG
             
         else:
             
-            flags = CV_IMREAD_FLAGS_SUPPORTS_ALPHA
+            flags = CV_IMREAD_FLAGS_WEIRD
             
         
         numpy_image = cv2.imread( path, flags = flags )
@@ -831,7 +842,14 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ):
     
     if pil_image.mode != desired_mode:
         
-        pil_image = pil_image.convert( desired_mode )
+        if pil_image.mode == 'LAB':
+            
+            pil_image = PILImageCms.profileToProfile( pil_image, PILImageCms.createProfile( 'LAB' ), PIL_SRGB_PROFILE, outputMode = 'RGB' )
+            
+        else:
+            
+            pil_image = pil_image.convert( desired_mode )
+            
         
     
     return pil_image

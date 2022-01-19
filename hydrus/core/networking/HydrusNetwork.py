@@ -2741,7 +2741,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
         time_started_nullifying = HydrusData.GetNow()
         time_to_stop_nullifying = time_started_nullifying + 3600
         
-        while not HG.view_shutdown:
+        while not HG.started_shutdown:
             
             with self._lock:
                 
@@ -2822,7 +2822,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             resume_timestamp = HydrusData.GetNowFloat() + time_to_wait
             
-            while not HG.view_shutdown and not HydrusData.TimeHasPassedFloat( resume_timestamp ):
+            while not HG.started_shutdown and not HydrusData.TimeHasPassedFloat( resume_timestamp ):
                 
                 time.sleep( 1 )
                 

@@ -213,7 +213,7 @@ class QuickDownloadManager( object ):
         total_hashes_in_this_run = 0
         total_successful_hashes_in_this_run = 0
         
-        while not ( HydrusThreading.IsThreadShuttingDown() or self._shutting_down or HG.view_shutdown ):
+        while not ( HydrusThreading.IsThreadShuttingDown() or self._shutting_down or HG.started_shutdown ):
             
             with self._lock:
                 

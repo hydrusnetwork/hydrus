@@ -23,6 +23,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
@@ -3322,9 +3323,9 @@ class ServicesManager( object ):
             
         
     
-    def GetDefaultLocalFileServiceKey( self ) -> bytes:
+    def GetDefaultLocationContext( self ) -> bytes:
         
-        return CC.LOCAL_FILE_SERVICE_KEY
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
     
     def GetLocalMediaFileServices( self ):

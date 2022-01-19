@@ -8,6 +8,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -48,16 +49,16 @@ def GenerateFilesTableName( service_id: int, status: int ) -> str:
         return petitioned_files_table_name
         
     
-class DBLocationSearchContext( object ):
+class DBLocationContext( object ):
     
-    def __init__( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def __init__( self, location_context: ClientLocation.LocationContext ):
         
-        self.location_search_context = location_search_context
+        self.location_context = location_context
         
     
-    def GetLocationSearchContext( self ) -> ClientSearch.LocationSearchContext:
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self.location_search_context
+        return self.location_context
         
     
     def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
@@ -70,7 +71,7 @@ class DBLocationSearchContext( object ):
         raise NotImplementedError()
         
     
-class DBLocationSearchContextAllKnownFiles( DBLocationSearchContext ):
+class DBLocationContextAllKnownFiles( DBLocationContext ):
     
     def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
         
@@ -82,11 +83,11 @@ class DBLocationSearchContextAllKnownFiles( DBLocationSearchContext ):
         return table_phrase
         
     
-class DBLocationSearchContextBranch( DBLocationSearchContext ):
+class DBLocationContextBranch( DBLocationContext ):
     
-    def __init__( self, location_search_context: ClientSearch.LocationSearchContext, files_table_name: str ):
+    def __init__( self, location_context: ClientLocation.LocationContext, files_table_name: str ):
         
-        DBLocationSearchContext.__init__( self, location_search_context )
+        DBLocationContext.__init__( self, location_context )
         
         self.files_table_name = files_table_name
         
@@ -404,14 +405,14 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return pending_hash_ids
         
     
-    def FilterHashIds( self, location_search_context: ClientSearch.LocationSearchContext, hash_ids ) -> set:
+    def FilterHashIds( self, location_context: ClientLocation.LocationContext, hash_ids ) -> set:
         
-        if not location_search_context.SearchesAnything():
+        if not location_context.SearchesAnything():
             
             return set()
             
         
-        if location_search_context.IsAllKnownFiles():
+        if location_context.IsAllKnownFiles():
             
             return hash_ids
             
@@ -420,7 +421,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            for file_service_key in location_search_context.current_service_keys:
+            for file_service_key in location_context.current_service_keys:
                 
                 service_id = self.modules_services.GetServiceId( file_service_key )
                 
@@ -441,7 +442,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                     
                 
             
-            for file_service_key in location_search_context.deleted_service_keys:
+            for file_service_key in location_context.deleted_service_keys:
                 
                 service_id = self.modules_services.GetServiceId( file_service_key )
                 
@@ -532,9 +533,9 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                 
             
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = current_service_keys )
+        location_context = ClientLocation.LocationContext.STATICCreateAllCurrent( current_service_keys )
         
-        current_hash_ids = self.FilterHashIds( location_search_context, hash_ids )
+        current_hash_ids = self.FilterHashIds( location_context, hash_ids )
         
         orphan_hash_ids = set( hash_ids ).difference( current_hash_ids )
         
@@ -769,30 +770,30 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return ( is_deleted, timestamp, file_deletion_reason )
         
     
-    def GetDBLocationSearchContext( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def GetDBLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        if not location_search_context.SearchesAnything():
+        if not location_context.SearchesAnything():
             
-            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ] )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
             
         
-        if location_search_context.IsAllKnownFiles():
+        if location_context.IsAllKnownFiles():
             
             # no table set, obviously
             
-            return DBLocationSearchContextAllKnownFiles( location_search_context )
+            return DBLocationContextAllKnownFiles( location_context )
             
         
         table_names = []
         
-        for current_service_key in location_search_context.current_service_keys:
+        for current_service_key in location_context.current_service_keys:
             
             service_id = self.modules_services.GetServiceId( current_service_key )
             
             table_names.append( GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT ) )
             
         
-        for deleted_service_key in location_search_context.deleted_service_keys:
+        for deleted_service_key in location_context.deleted_service_keys:
             
             service_id = self.modules_services.GetServiceId( deleted_service_key )
             
@@ -808,7 +809,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         else:
             
             # while I could make a VIEW of the UNION SELECT, we'll populate an indexed single column table to help query planner later on
-            # we're hardcoding the name to this class for now, so a limit of one db_location_search_context at a time _for now_
+            # we're hardcoding the name to this class for now, so a limit of one db_location_context at a time _for now_
             # we make change this in future to use wrapper temp int tables, we'll see
             
             # maybe I should stick this guy in 'temp' to live through db connection resets, but we'll see I guess. it is generally ephemeral, not going to linger through weird vacuum maintenance or anything right?
@@ -831,7 +832,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             files_table_name = self.temp_file_storage_table_name
             
         
-        return DBLocationSearchContextBranch( location_search_context, files_table_name )
+        return DBLocationContextBranch( location_context, files_table_name )
         
     
     def GetHashIdsToCurrentServiceIds( self, temp_hash_ids_table_name ):
@@ -891,13 +892,13 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         )
         
     
-    def GetLocationSearchContextForAllServicesDeletedFiles( self ) -> ClientSearch.LocationSearchContext:
+    def GetLocationContextForAllServicesDeletedFiles( self ) -> ClientLocation.LocationContext:
         
         deleted_service_keys = { service.GetServiceKey() for service in self.modules_services.GetServices( limited_types = HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE ) }
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [], deleted_service_keys = deleted_service_keys )
+        location_context = ClientLocation.LocationContext( [], deleted_service_keys )
         
-        return location_search_context
+        return location_context
         
     
     def GetNumLocal( self, service_id: int ) -> int:

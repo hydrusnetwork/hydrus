@@ -142,7 +142,7 @@ def GetAllFilePaths( raw_paths, do_human_sort = True ):
         
         for path in paths_to_process:
             
-            if HG.view_shutdown:
+            if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException()
                 
@@ -1019,7 +1019,7 @@ class ClientFilesManager( object ):
         
         pauser = HydrusData.BigJobPauser()
         
-        while not HG.view_shutdown:
+        while not HG.started_shutdown:
             
             with self._rwlock.write:
                 

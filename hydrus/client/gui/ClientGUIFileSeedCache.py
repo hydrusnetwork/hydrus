@@ -14,6 +14,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICore as CGC
@@ -415,7 +416,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     
@@ -797,7 +800,9 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     

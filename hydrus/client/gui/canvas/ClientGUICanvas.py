@@ -16,6 +16,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICore as CGC
@@ -343,13 +344,13 @@ class Canvas( QW.QWidget ):
     
     PREVIEW_WINDOW = False
     
-    def __init__( self, parent, file_service_key ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
         QW.QWidget.__init__( self, parent )
         
         self.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         
         self._current_media_start_time = HydrusData.GetNow()
         
@@ -853,7 +854,7 @@ class Canvas( QW.QWidget ):
         
         manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._location_context, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
         
         manage_tags.SetPanel( panel )
         
@@ -1109,7 +1110,7 @@ class Canvas( QW.QWidget ):
         
         hashes = { hash }
         
-        HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
+        HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes )
         
     
     def _SizeAndPositionMediaContainer( self ):
@@ -1728,9 +1729,9 @@ class Canvas( QW.QWidget ):
         self._ResetMediaWindowCenterPosition()
         
     
-    def SetFileServiceKey( self, file_service_key: bytes ):
+    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         
     
     def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ] ):
@@ -1858,9 +1859,9 @@ class CanvasPanel( Canvas ):
     
     PREVIEW_WINDOW = True
     
-    def __init__( self, parent, page_key, file_service_key ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
         
-        Canvas.__init__( self, parent, file_service_key )
+        Canvas.__init__( self, parent, location_context )
         
         self._page_key = page_key
         
@@ -2116,9 +2117,9 @@ class CanvasPanel( Canvas ):
     
 class CanvasWithDetails( Canvas ):
     
-    def __init__( self, parent, file_service_key ):
+    def __init__( self, parent, location_context ):
         
-        Canvas.__init__( self, parent, file_service_key )
+        Canvas.__init__( self, parent, location_context )
         
         HG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
         
@@ -2388,9 +2389,9 @@ class CanvasWithDetails( Canvas ):
     
 class CanvasWithHovers( CanvasWithDetails ):
     
-    def __init__( self, parent, file_service_key ):
+    def __init__( self, parent, location_context ):
         
-        CanvasWithDetails.__init__( self, parent, file_service_key )
+        CanvasWithDetails.__init__( self, parent, location_context )
         
         top_hover = self._GenerateHoverTopFrame()
         
@@ -2648,9 +2649,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
-        file_service_key = file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
+        location_context = file_search_context.GetLocationContext()
         
-        CanvasWithHovers.__init__( self, parent, file_service_key )
+        CanvasWithHovers.__init__( self, parent, location_context )
         
         hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
         
@@ -2677,7 +2678,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._hashes_processed_in_this_batch = set()
         
-        self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
+        self._media_list = ClientMedia.ListeningMediaList( location_context, [] )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         self._my_shortcuts_handler.AddShortcuts( 'duplicate_filter' )
@@ -3143,8 +3144,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        file_service_key = self._file_search_context.GetLocationSearchContext().GetBestSingleFileServiceKey()
-        
         if len( self._unprocessed_pairs ) == 0:
             
             self._hashes_due_to_be_deleted_in_this_batch = set()
@@ -3153,7 +3152,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self.ClearMedia()
             
-            self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
+            self._media_list = ClientMedia.ListeningMediaList( self._location_context, [] )
             
             self._currently_fetching_pairs = True
             
@@ -3252,7 +3251,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 media_results_with_better_first = ( second_media_result, first_media_result )
                 
             
-            self._media_list = ClientMedia.ListeningMediaList( file_service_key, media_results_with_better_first )
+            self._media_list = ClientMedia.ListeningMediaList( self._location_context, media_results_with_better_first )
             
             # reset zoom gubbins
             self.SetMedia( None )
@@ -3528,10 +3527,10 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     exitFocusMedia = QC.Signal( ClientMedia.Media )
     
-    def __init__( self, parent, page_key, file_service_key, media_results ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasWithHovers.__init__( self, parent, file_service_key )
-        ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
+        CanvasWithHovers.__init__( self, parent, location_context )
+        ClientMedia.ListeningMediaList.__init__( self, location_context, media_results )
         
         self._page_key = page_key
         
@@ -3818,9 +3817,9 @@ def CommitArchiveDelete( page_key, kept_hashes, deleted_hashes ):
     
 class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
-    def __init__( self, parent, page_key, file_service_key, media_results ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasMediaList.__init__( self, parent, page_key, file_service_key, media_results )
+        CanvasMediaList.__init__( self, parent, page_key, location_context, media_results )
         
         self._my_shortcuts_handler.AddShortcuts( 'archive_delete_filter' )
         
@@ -4047,9 +4046,9 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
 class CanvasMediaListNavigable( CanvasMediaList ):
     
-    def __init__( self, parent, page_key, file_service_key, media_results ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasMediaList.__init__( self, parent, page_key, file_service_key, media_results )
+        CanvasMediaList.__init__( self, parent, page_key, location_context, media_results )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         
@@ -4181,9 +4180,9 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
 class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
-    def __init__( self, parent, page_key, file_service_key, media_results, first_hash ):
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results, first_hash ):
         
-        CanvasMediaListNavigable.__init__( self, parent, page_key, file_service_key, media_results )
+        CanvasMediaListNavigable.__init__( self, parent, page_key, location_context, media_results )
         
         self._timer_slideshow_job = None
         self._timer_slideshow_interval = 0

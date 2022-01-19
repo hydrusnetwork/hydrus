@@ -22,6 +22,7 @@ from hydrus.core.networking import HydrusServerResources
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client.importing import ClientImportFiles
@@ -1895,11 +1896,11 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             raise HydrusExceptions.BadRequestException( 'Sorry, search for all known tags over all known files is not supported!' )
             
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         predicates = ParseClientAPISearchPredicates( request )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
         
         file_sort_type = CC.SORT_FILES_BY_IMPORT_TIME
         

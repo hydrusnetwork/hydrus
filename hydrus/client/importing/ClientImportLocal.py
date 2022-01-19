@@ -461,7 +461,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     file_seed = self._file_seed_cache.GetNextFileSeed( status )
                     
-                    if file_seed is None or HG.view_shutdown:
+                    if file_seed is None or HG.started_shutdown:
                         
                         break
                         
@@ -496,7 +496,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     file_seed = self._file_seed_cache.GetNextFileSeed( status )
                     
-                    if file_seed is None or HG.view_shutdown:
+                    if file_seed is None or HG.started_shutdown:
                         
                         break
                         
@@ -851,7 +851,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def DoWork( self ):
         
-        if HG.view_shutdown:
+        if HG.started_shutdown:
             
             return
             

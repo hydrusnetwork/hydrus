@@ -25,6 +25,7 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
@@ -2249,11 +2250,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
-        
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
@@ -2521,9 +2520,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_all_media_files.setEnabled( False )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] )
+        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -2548,9 +2547,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_repo_files.setEnabled( False )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_UPDATE_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -3072,7 +3071,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         num_unimportable_mime_files = 0
         num_occupied_files = 0
         
-        while not HG.view_shutdown:
+        while not HG.started_shutdown:
             
             if not self or not QP.isValid( self ):
                 

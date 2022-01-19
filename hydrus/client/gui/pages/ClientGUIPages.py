@@ -15,6 +15,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -213,11 +214,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                         tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
                         
                     
-                    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
                     
                     tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
+                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
@@ -449,9 +450,9 @@ class Page( QW.QSplitter ):
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetKey( 'file_service' ) )
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetVariable( 'location_context' ) )
         
-        self._management_panel.fileServiceChanged.connect( self._preview_canvas.SetFileServiceKey )
+        self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
@@ -990,16 +991,9 @@ class Page( QW.QSplitter ):
             
             self._SetPrettyStatus( '' )
             
-            if self._management_controller.IsImporter():
-                
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            else:
-                
-                file_service_key = self._management_controller.GetKey( 'file_service' )
-                
+            location_context = self._management_controller.GetVariable( 'location_context' )
             
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
+            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, location_context, media_results )
             
             self._SwapMediaPanel( media_panel )
             
@@ -2758,6 +2752,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
+        source_management_controller = source_page.GetManagementController()
+        
+        location_context = source_management_controller.GetVariable( 'location_context' )
+        
         screen_position = QG.QCursor.pos()
         
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
@@ -2776,7 +2774,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         elif tab_index == -1:
             
-            dest_page = dest_notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            dest_page = dest_notebook.NewPageQuery( location_context, initial_hashes = hashes )
             
             do_add = False
             
@@ -2790,7 +2788,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if result is None:
                     
-                    dest_page = dest_page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+                    dest_page = dest_page.NewPageQuery( location_context, initial_hashes = hashes )
                     
                     do_add = False
                     
@@ -3054,7 +3052,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
+    def NewPageQuery( self, location_context: ClientLocation.LocationContext, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
         
         if initial_hashes is None:
             
@@ -3082,16 +3080,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if location_context.IsAllKnownFiles() and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            location_context = location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-        
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         
@@ -3150,7 +3146,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if give_it_a_blank_page:
             
-            page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            page.NewPageQuery( default_location_context )
             
         
         return page
@@ -3234,7 +3232,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if page is None:
             
-            page = self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            page = self.NewPageQuery( location_context, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
             
         else:
             

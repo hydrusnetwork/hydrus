@@ -1315,7 +1315,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetFileImportOptions( self ):
+    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
         
         with self._lock:
             

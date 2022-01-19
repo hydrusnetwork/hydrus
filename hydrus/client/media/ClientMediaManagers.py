@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.metadata import ClientTags
 
@@ -280,6 +281,22 @@ class LocationsManager( object ):
             
         
         return remote_service_strings
+        
+    
+    def GetBestCurrentTimestamp( self, location_context: ClientLocation.LocationContext ):
+        
+        timestamps = { self.GetCurrentTimestamp( service_key ) for service_key in location_context.current_service_keys }
+        
+        timestamps.discard( None )
+        
+        if len( timestamps ) == 0:
+            
+            return None
+            
+        else:
+            
+            return min( timestamps )
+            
         
     
     def GetCurrentTimestamp( self, service_key ):

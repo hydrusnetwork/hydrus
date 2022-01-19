@@ -607,7 +607,7 @@ class TestNetworkingJob( unittest.TestCase ):
         self.assertFalse( job.IsCancelled() )
         self.assertFalse( job.IsDone() )
         
-        HG.model_shutdown = True
+        HG.started_shutdown = True
         
         try:
             
@@ -616,7 +616,7 @@ class TestNetworkingJob( unittest.TestCase ):
             
         finally:
             
-            HG.model_shutdown = False
+            HG.started_shutdown = False
             
         
     

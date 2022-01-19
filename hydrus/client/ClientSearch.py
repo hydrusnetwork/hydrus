@@ -15,6 +15,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
@@ -814,11 +815,11 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_search_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
         
-        if location_search_context is None:
+        if location_context is None:
             
-            location_search_context = LocationSearchContext()
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
             
         
         if tag_search_context is None:
@@ -831,7 +832,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             predicates = []
             
         
-        self._location_search_context = location_search_context
+        self._location_context = location_context
         self._tag_search_context = tag_search_context
         
         self._search_type = search_type
@@ -846,16 +847,16 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
-        serialisable_location_search_context = self._location_search_context.GetSerialisableTuple()
+        serialisable_location_context = self._location_context.GetSerialisableTuple()
         
-        return ( serialisable_location_search_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
+        return ( serialisable_location_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_location_search_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
+        ( serialisable_location_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._location_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_search_context )
+        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
         self._tag_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_search_context )
         
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
@@ -960,25 +961,25 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             file_service_key = bytes.fromhex( file_service_key_hex )
             
-            location_search_context = LocationSearchContext( current_service_keys = [ file_service_key ] )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
             
-            serialisable_location_search_context = location_search_context.GetSerialisableTuple()
+            serialisable_location_context = location_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_location_search_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( serialisable_location_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
             
             return ( 5, new_serialisable_info )
             
         
     
-    def FixMissingServices( self, services_manager ):
+    def FixMissingServices( self, filter_method ):
         
-        self._location_search_context.FixMissingServices( services_manager )
-        self._tag_search_context.FixMissingServices( services_manager )
+        self._location_context.FixMissingServices( filter_method )
+        self._tag_search_context.FixMissingServices( filter_method )
         
     
-    def GetLocationSearchContext( self ) -> "LocationSearchContext":
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self._location_search_context
+        return self._location_context
         
     
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
@@ -1021,9 +1022,9 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._search_complete = True
         
     
-    def SetLocationSearchContext( self, location_search_context: "LocationSearchContext" ):
+    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        self._location_search_context = location_search_context
+        self._location_context = location_context
         
     
     def SetIncludeCurrentTags( self, value ):
@@ -1050,119 +1051,6 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
-
-class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT
-    SERIALISABLE_NAME = 'Location Search Context'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, current_service_keys = None, deleted_service_keys = None ):
-        
-        if current_service_keys is None:
-            
-            if deleted_service_keys is None:
-                
-                current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
-                
-            else:
-                
-                current_service_keys = []
-                
-            
-        
-        if deleted_service_keys is None:
-            
-            deleted_service_keys = []
-            
-        
-        self.current_service_keys = set( current_service_keys )
-        self.deleted_service_keys = set( deleted_service_keys )
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_current_service_keys = [ service_key.hex() for service_key in self.current_service_keys ]
-        serialisable_deleted_service_keys = [ service_key.hex() for service_key in self.deleted_service_keys ]
-        
-        return ( serialisable_current_service_keys, serialisable_deleted_service_keys )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( serialisable_current_service_keys, serialisable_deleted_service_keys ) = serialisable_info
-        
-        self.current_service_keys = { bytes.fromhex( service_key ) for service_key in serialisable_current_service_keys }
-        self.deleted_service_keys = { bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys }
-        
-    
-    def FixMissingServices( self, services_manager ):
-        
-        self.current_service_keys = services_manager.FilterValidServiceKeys( self.current_service_keys )
-        self.deleted_service_keys = services_manager.FilterValidServiceKeys( self.deleted_service_keys )
-        
-    
-    def GetCoveringCurrentFileServiceKeys( self ):
-        
-        file_location_is_cross_referenced = not ( self.IsAllKnownFiles() or self.SearchesDeleted() )
-        
-        file_service_keys = list( self.current_service_keys )
-        
-        if self.SearchesDeleted():
-            
-            file_service_keys.append( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
-            
-        
-        return ( file_service_keys, file_location_is_cross_referenced )
-        
-    
-    def GetBestSingleFileServiceKey( self ):
-        
-        # this could be improved to check multiple local lads -> all local files
-        
-        if self.IsOneDomain() and len( self.current_service_keys ) == 1:
-            
-            service_key = list( self.current_service_keys )[0]
-            
-        else:
-            
-            service_key = CC.COMBINED_FILE_SERVICE_KEY
-            
-        
-        return service_key
-        
-    
-    def IsAllKnownFiles( self ):
-        
-        return CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
-        
-    
-    def IsAllLocalFiles( self ):
-        
-        return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
-        
-    
-    def IsOneDomain( self ):
-        
-        return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
-        
-    
-    def SearchesAnything( self ):
-        
-        return len( self.current_service_keys ) + len( self.deleted_service_keys ) > 0
-        
-    
-    def SearchesCurrent( self ):
-        
-        return len( self.current_service_keys ) > 0
-        
-    
-    def SearchesDeleted( self ):
-        
-        return len( self.deleted_service_keys ) > 0
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT ] = LocationSearchContext
 
 class TagSearchContext( HydrusSerialisable.SerialisableBase ):
     
@@ -1214,9 +1102,9 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FixMissingServices( self, services_manager ):
+    def FixMissingServices( self, filter_method ):
         
-        if not services_manager.ServiceExists( self.service_key ):
+        if len( filter_method( [ self.service_key ] ) ) == 0:
             
             self.service_key = CC.COMBINED_TAG_SERVICE_KEY
             

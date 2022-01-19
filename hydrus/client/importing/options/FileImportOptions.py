@@ -5,6 +5,9 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
+from hydrus.client import ClientSearch
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 
@@ -248,6 +251,13 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def ExcludesDeleted( self ):
         
         return self._exclude_deleted
+        
+    
+    def GetDestinationLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        # for now this is static, but obviously we'll have a control to handle this (with 'needs at least one service m8' handling/errors) and then import code to make it happen
+        
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
     
     def GetPresentationImportOptions( self ):

@@ -81,7 +81,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 469
+SOFTWARE_VERSION = 470
 CLIENT_API_VERSION = 25
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -549,12 +549,13 @@ GENERAL_ANIMATION = 44
 APPLICATION_CLIP = 45
 AUDIO_WAVE = 46
 VIDEO_OGV = 47
+AUDIO_MKV = 48
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
 GENERAL_FILETYPES = { GENERAL_APPLICATION, GENERAL_AUDIO, GENERAL_IMAGE, GENERAL_VIDEO, GENERAL_ANIMATION }
 
-SEARCHABLE_MIMES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG, APPLICATION_CLIP, APPLICATION_PSD, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z, AUDIO_M4A, AUDIO_MP3, AUDIO_REALMEDIA, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_TRUEAUDIO, AUDIO_WMA, VIDEO_WMV }
+SEARCHABLE_MIMES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG, APPLICATION_CLIP, APPLICATION_PSD, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z, AUDIO_M4A, AUDIO_MP3, AUDIO_REALMEDIA, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_TRUEAUDIO, AUDIO_WMA, VIDEO_WMV, AUDIO_MKV }
 
 STORABLE_MIMES = set( SEARCHABLE_MIMES ).union( { APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS } )
 
@@ -566,7 +567,7 @@ IMAGES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON 
 
 ANIMATIONS = { IMAGE_GIF, IMAGE_APNG }
 
-AUDIO = { AUDIO_M4A, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_WMA, AUDIO_REALMEDIA, AUDIO_TRUEAUDIO }
+AUDIO = { AUDIO_M4A, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_WMA, AUDIO_REALMEDIA, AUDIO_TRUEAUDIO, AUDIO_MKV }
 
 VIDEO = { VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG }
 
@@ -691,6 +692,7 @@ mime_string_lookup[ AUDIO_M4A ] = 'm4a'
 mime_string_lookup[ AUDIO_MP3 ] = 'mp3'
 mime_string_lookup[ AUDIO_OGG ] = 'ogg'
 mime_string_lookup[ AUDIO_FLAC ] = 'flac'
+mime_string_lookup[ AUDIO_MKV ] = 'matroska audio'
 mime_string_lookup[ AUDIO_WAVE ] = 'wave'
 mime_string_lookup[ AUDIO_REALMEDIA ] = 'realaudio'
 mime_string_lookup[ AUDIO_TRUEAUDIO ] = 'tta'
@@ -703,7 +705,7 @@ mime_string_lookup[ VIDEO_MOV ] = 'quicktime'
 mime_string_lookup[ VIDEO_MP4 ] = 'mp4'
 mime_string_lookup[ VIDEO_MPEG ] = 'mpeg'
 mime_string_lookup[ VIDEO_WMV ] = 'wmv'
-mime_string_lookup[ VIDEO_MKV ] = 'matroska'
+mime_string_lookup[ VIDEO_MKV ] = 'matroska video'
 mime_string_lookup[ VIDEO_OGV ] = 'ogv'
 mime_string_lookup[ VIDEO_REALMEDIA ] = 'realvideo'
 mime_string_lookup[ VIDEO_WEBM ] = 'webm'
@@ -743,6 +745,7 @@ mime_mimetype_string_lookup[ AUDIO_M4A ] = 'audio/mp4'
 mime_mimetype_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
 mime_mimetype_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
 mime_mimetype_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
+mime_mimetype_string_lookup[ AUDIO_MKV ] = 'audio/x-matroska'
 mime_mimetype_string_lookup[ AUDIO_WAVE ] = 'audio/x-wav'
 mime_mimetype_string_lookup[ AUDIO_REALMEDIA ] = 'audio/vnd.rn-realaudio'
 mime_mimetype_string_lookup[ AUDIO_TRUEAUDIO ] = 'audio/x-tta'
@@ -793,6 +796,7 @@ mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = ''
 mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ''
 mime_ext_lookup[ AUDIO_M4A ] = '.m4a'
 mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
+mime_ext_lookup[ AUDIO_MKV ] = '.mkv'
 mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_REALMEDIA ] = '.ra'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'

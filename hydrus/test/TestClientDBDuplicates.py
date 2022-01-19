@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
@@ -141,7 +142,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
             self.assertIn( b, self._all_hashes )
             
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[0] )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[0] )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -151,7 +152,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[0], HC.DUPLICATE_POTENTIAL )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[0], HC.DUPLICATE_POTENTIAL )
         
         self.assertEqual( result[0], self._dupe_hashes[0] )
         
@@ -188,7 +189,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -199,7 +200,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[1] )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1] )
         
         self.assertEqual( result[ 'is_king' ], False )
         
@@ -210,7 +211,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[2] )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[2] )
         
         self.assertEqual( result[ 'is_king' ], False )
         
@@ -221,29 +222,29 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[1], HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1], HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._dupe_hashes[1], self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[1], HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1], HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._dupe_hashes[1] )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[2], HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[2], HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._dupe_hashes[2], self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[2], HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[2], HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._dupe_hashes[2] )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
@@ -272,7 +273,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -283,7 +284,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._old_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._old_king_hash )
         
         self.assertEqual( result[ 'is_king' ], False )
         
@@ -294,20 +295,20 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._old_king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._old_king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._old_king_hash, self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._old_king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._old_king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._old_king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
@@ -343,7 +344,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -354,7 +355,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[4] )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[4] )
         
         self.assertEqual( result[ 'is_king' ], False )
         
@@ -365,7 +366,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[5] )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[5] )
         
         self.assertEqual( result[ 'is_king' ], False )
         
@@ -376,29 +377,29 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[4], HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[4], HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._dupe_hashes[4], self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[4], HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[4], HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._dupe_hashes[4] )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[5], HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[5], HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._dupe_hashes[5], self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._dupe_hashes[5], HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[5], HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._dupe_hashes[5] )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
@@ -410,11 +411,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._king_hash = self._dupe_hashes[5]
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
@@ -448,7 +449,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -459,7 +460,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -470,20 +471,20 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_second_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._second_group_king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._second_group_king_hash )
         self.assertEqual( set( result ), self._our_second_dupe_group_hashes )
@@ -512,7 +513,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -523,7 +524,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -534,20 +535,20 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_second_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._second_group_king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._second_group_king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._second_group_king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._second_group_king_hash )
         self.assertEqual( set( result ), self._our_second_dupe_group_hashes )
@@ -585,7 +586,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.update( ( self._dupe_hashes[ i ] for i in range( 6, 14 ) ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -596,11 +597,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_KING )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
         
         self.assertEqual( result, [ self._king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_MEMBER )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
@@ -645,7 +646,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._expected_num_potentials = num_potentials
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -657,7 +658,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._false_positive_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -669,11 +670,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_fp_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_FALSE_POSITIVE )
         
         self.assertEqual( result, [ self._king_hash, self._false_positive_king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
         
         self.assertEqual( result, [ self._false_positive_king_hash, self._king_hash ] )
         
@@ -717,7 +718,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._expected_num_potentials = num_potentials
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -731,9 +732,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._alternate_king_hash, HC.DUPLICATE_POTENTIAL )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_POTENTIAL )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._alternate_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -747,11 +748,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_ALTERNATE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_ALTERNATE )
         
         self.assertEqual( result, [ self._king_hash, self._alternate_king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
         
         self.assertEqual( result, [ self._alternate_king_hash, self._king_hash ] )
         
@@ -778,7 +779,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._our_fp_dupe_group_hashes.add( self._similar_looking_false_positive_hashes[3] )
         self._our_fp_dupe_group_hashes.add( self._similar_looking_false_positive_hashes[4] )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -792,7 +793,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._false_positive_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -804,12 +805,12 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_fp_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 2 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_FALSE_POSITIVE )
         
         self.assertEqual( result[0], self._king_hash )
         self.assertEqual( set( result ), { self._king_hash, self._false_positive_king_hash } )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
         
         self.assertEqual( result[0], self._false_positive_king_hash )
         self.assertEqual( set( result ), { self._false_positive_king_hash, self._king_hash, self._alternate_king_hash } )
@@ -837,7 +838,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._our_alt_dupe_group_hashes.add( self._similar_looking_alternate_hashes[3] )
         self._our_alt_dupe_group_hashes.add( self._similar_looking_alternate_hashes[4] )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -851,7 +852,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._alternate_king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash )
         
         self.assertEqual( result[ 'is_king' ], True )
         
@@ -865,18 +866,18 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash, HC.DUPLICATE_ALTERNATE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_ALTERNATE )
         
         self.assertEqual( result, [ self._king_hash, self._alternate_king_hash ] )
         
-        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
         
         self.assertEqual( result, [ self._alternate_king_hash, self._king_hash ] )
         
     
     def _test_dissolve( self ):
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -892,7 +893,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'remove_potential_pairs', ( self._king_hash, ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -909,7 +910,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.discard( self._dupe_hashes[7] )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -924,7 +925,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'clear_false_positive_relations', ( self._king_hash, ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -942,7 +943,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -954,7 +955,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'remove_alternates_member', ( self._false_positive_king_hash, ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -974,7 +975,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'dissolve_alternates_group', ( self._king_hash, ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -988,7 +989,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -996,7 +997,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'dissolve_duplicates_group', ( self._king_hash, ) )
         
-        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
@@ -1036,9 +1037,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
-        self._file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = [ size_pred ] )
+        self._file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = [ size_pred ] )
         
         self._import_and_find_dupes()
         

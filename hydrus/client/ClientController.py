@@ -291,7 +291,7 @@ class Controller( HydrusController.HydrusController ):
         
         def do_it( job_key: ClientThreading.JobKey ):
             
-            while not HG.view_shutdown:
+            while not HG.started_shutdown:
                 
                 with self._sleep_lock:
                     
@@ -2114,6 +2114,8 @@ class Controller( HydrusController.HydrusController ):
     def THREADExitEverything( self ):
         
         try:
+            
+            HG.started_shutdown = True
             
             self.frame_splash_status.SetTitleText( 'shutting down gui\u2026' )
             
