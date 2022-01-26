@@ -10,6 +10,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -1762,6 +1763,9 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
         
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Or you can paste bitmaps from clipboard!' )
+        
         st = ClientGUICommon.BetterStaticText( self, label = 'Drop downloader-encoded pngs onto Lain to import.' )
         
         lain_path = os.path.join( HC.STATIC_DIR, 'lain.jpg' )
@@ -1782,6 +1786,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._repo_link, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, st, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._select_from_list, self, 'select objects from list' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1797,19 +1802,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ImportPaths( self, paths ):
         
-        have_shown_load_error = False
-        
-        gugs = []
-        url_classes = []
-        parsers = []
-        domain_metadatas = []
-        login_scripts = []
-        
-        num_misc_objects = 0
-        
-        bandwidth_manager = self._network_engine.bandwidth_manager
-        domain_manager = self._network_engine.domain_manager
-        login_manager = self._network_engine.login_manager
+        payloads = []
         
         for path in paths:
             
@@ -1824,6 +1817,30 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 return
                 
             
+            payloads.append( ( 'file "{}"'.format( path ), payload ) )
+            
+        
+        self._ImportPayloads( payloads )
+        
+    
+    def _ImportPayloads( self, payloads ):
+        
+        have_shown_load_error = False
+        
+        gugs = []
+        url_classes = []
+        parsers = []
+        domain_metadatas = []
+        login_scripts = []
+        
+        num_misc_objects = 0
+        
+        bandwidth_manager = self._network_engine.bandwidth_manager
+        domain_manager = self._network_engine.domain_manager
+        login_manager = self._network_engine.login_manager
+        
+        for ( payload_description, payload ) in payloads:
+            
             try:
                 
                 obj_list = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
@@ -1834,7 +1851,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     message = str( e )
                     
-                    if len( paths ) > 1:
+                    if len( payloads ) > 1:
                         
                         message += os.linesep * 2
                         message += 'If there are more unloadable objects in this import, they will be skipped silently.'
@@ -1849,7 +1866,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the file '+path+'!' )
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in {}!'.format( payload_description ) )
                 
                 continue
                 
@@ -1861,7 +1878,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, '+path+' did not look like a package of download data! Instead, it looked like: '+obj_list.SERIALISABLE_NAME )
+                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, {} did not look like a package of download data! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME ) )
                 
                 continue
                 
@@ -2188,6 +2205,46 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         QW.QMessageBox.information( self, 'Information', final_message )
+        
+    
+    def _Paste( self ):
+        
+        if HG.client_controller.ClipboardHasImage():
+            
+            try:
+                
+                qt_image = HG.client_controller.GetClipboardImage()
+                
+                payload_description = 'clipboard image data'
+                payload = ClientSerialisable.LoadFromQtImage( qt_image )
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( str( e ) ) )
+                
+                return
+                
+            
+        else:
+            
+            try:
+                
+                raw_text = HG.client_controller.GetClipboardText()
+                
+                payload_description = 'clipboard text data'
+                payload = HydrusCompression.CompressStringToBytes( raw_text )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                QW.QMessageBox.critical( self, 'Error', str(e) )
+                
+                return
+                
+            
+        
+        payloads = [ ( payload_description, payload ) ]
+        
+        self._ImportPayloads( payloads )
         
     
     def EventLainClick( self, event ):

@@ -20,14 +20,6 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 
-CANVAS_MEDIA_VIEWER = 0
-CANVAS_PREVIEW = 1
-
-canvas_str_lookup = {}
-
-canvas_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
-canvas_str_lookup[ CANVAS_PREVIEW ] = 'preview'
-
 def AddGridboxStretchSpacer( layout: QW.QGridLayout ):
     
     layout.addItem( QW.QSpacerItem( 10, 10, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed ) )

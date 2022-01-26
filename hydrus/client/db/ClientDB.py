@@ -2738,11 +2738,10 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'CREATE TABLE IF NOT EXISTS url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
         self._CreateIndex( 'url_map', [ 'url_id' ] )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER PRIMARY KEY, preview_views INTEGER, preview_viewtime INTEGER, media_views INTEGER, media_viewtime INTEGER );' )
-        self._CreateIndex( 'file_viewing_stats', [ 'preview_views' ] )
-        self._CreateIndex( 'file_viewing_stats', [ 'preview_viewtime' ] )
-        self._CreateIndex( 'file_viewing_stats', [ 'media_views' ] )
-        self._CreateIndex( 'file_viewing_stats', [ 'media_viewtime' ] )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER, canvas_type INTEGER, last_viewed_timestamp INTEGER, views INTEGER, viewtime INTEGER, PRIMARY KEY ( hash_id, canvas_type ) );' )
+        self._CreateIndex( 'file_viewing_stats', [ 'last_viewed_timestamp' ] )
+        self._CreateIndex( 'file_viewing_stats', [ 'views' ] )
+        self._CreateIndex( 'file_viewing_stats', [ 'viewtime' ] )
         
         # inserts
         
@@ -2927,22 +2926,22 @@ class DB( HydrusDB.HydrusDB ):
         
         if media_min is not None:
             
-            self._Execute( 'UPDATE file_viewing_stats SET media_views = CAST( media_viewtime / ? AS INTEGER ) WHERE media_views * ? > media_viewtime;', ( media_min, media_min ) )
+            self._Execute( 'UPDATE file_viewing_stats SET views = CAST( viewtime / ? AS INTEGER ) WHERE views * ? > viewtime AND canvas_type = ?;', ( media_min, media_min, CC.CANVAS_MEDIA_VIEWER ) )
             
         
         if media_max is not None:
             
-            self._Execute( 'UPDATE file_viewing_stats SET media_viewtime = media_views * ? WHERE media_viewtime > media_views * ?;', ( media_max, media_max ) )
+            self._Execute( 'UPDATE file_viewing_stats SET viewtime = views * ? WHERE viewtime > views * ? AND canvas_type = ?;', ( media_max, media_max, CC.CANVAS_MEDIA_VIEWER ) )
             
         
         if preview_min is not None:
             
-            self._Execute( 'UPDATE file_viewing_stats SET preview_views = CAST( preview_viewtime / ? AS INTEGER ) WHERE preview_views * ? > preview_viewtime;', ( preview_min, preview_min ) )
+            self._Execute( 'UPDATE file_viewing_stats SET views = CAST( viewtime / ? AS INTEGER ) WHERE views * ? > viewtime AND canvas_type = ?;', ( preview_min, preview_min, CC.CANVAS_PREVIEW ) )
             
         
         if preview_max is not None:
             
-            self._Execute( 'UPDATE file_viewing_stats SET preview_viewtime = preview_views * ? WHERE preview_viewtime > preview_views * ?;', ( preview_max, preview_max ) )
+            self._Execute( 'UPDATE file_viewing_stats SET viewtime = views * ? WHERE viewtime > views * ? AND canvas_type = ?;', ( preview_max, preview_max, CC.CANVAS_PREVIEW ) )
             
         
     
@@ -4488,21 +4487,19 @@ class DB( HydrusDB.HydrusDB ):
         boned_stats[ 'size_archive' ] = size_archive
         boned_stats[ 'size_deleted' ] = size_deleted
         
-        total_viewtime = self._Execute( 'SELECT SUM( media_views ), SUM( media_viewtime ), SUM( preview_views ), SUM( preview_viewtime ) FROM file_viewing_stats;' ).fetchone()
+        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( 'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM file_viewing_stats GROUP BY canvas_type;' ) }
         
-        if total_viewtime is None:
+        if CC.CANVAS_PREVIEW not in canvas_types_to_total_viewtimes:
             
-            total_viewtime = ( 0, 0, 0, 0 )
+            canvas_types_to_total_viewtimes[ CC.CANVAS_PREVIEW ] = ( 0, 0 )
             
-        else:
+        
+        if CC.CANVAS_MEDIA_VIEWER not in canvas_types_to_total_viewtimes:
             
-            ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
+            canvas_types_to_total_viewtimes[ CC.CANVAS_MEDIA_VIEWER ] = ( 0, 0 )
             
-            if media_views is None:
-                
-                total_viewtime = ( 0, 0, 0, 0 )
-                
-            
+        
+        total_viewtime = canvas_types_to_total_viewtimes[ CC.CANVAS_MEDIA_VIEWER ] + canvas_types_to_total_viewtimes[ CC.CANVAS_PREVIEW ]
         
         #
         
@@ -4812,8 +4809,7 @@ class DB( HydrusDB.HydrusDB ):
             
             blank_pred_types.update( [
                 ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_TIME,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
@@ -5104,33 +5100,43 @@ class DB( HydrusDB.HydrusDB ):
         include_media = 'media' in viewing_locations
         include_preview = 'preview' in viewing_locations
         
+        group_by_phrase = ''
+        
+        if view_type == 'views':
+            
+            content_phrase = 'views'
+            
+        elif view_type == 'viewtime':
+            
+            content_phrase = 'viewtime'
+            
+        
         if include_media and include_preview:
             
-            views_phrase = 'media_views + preview_views'
-            viewtime_phrase = 'media_viewtime + preview_viewtime'
+            group_by_phrase = ' GROUP BY hash_id'
+            
+            if view_type == 'views':
+                
+                content_phrase = 'SUM( views )'
+                
+            elif view_type == 'viewtime':
+                
+                content_phrase = 'SUM( viewtime )'
+                
+            
+            canvas_type_predicate = '1=1'
             
         elif include_media:
             
-            views_phrase = 'media_views'
-            viewtime_phrase = 'media_viewtime'
+            canvas_type_predicate = 'canvas_type = {}'.format( CC.CANVAS_MEDIA_VIEWER )
             
         elif include_preview:
             
-            views_phrase = 'preview_views'
-            viewtime_phrase = 'preview_viewtime'
+            canvas_type_predicate = 'canvas_type = {}'.format( CC.CANVAS_PREVIEW )
             
         else:
             
             return []
-            
-        
-        if view_type == 'views':
-            
-            content_phrase = views_phrase
-            
-        elif view_type == 'viewtime':
-            
-            content_phrase = viewtime_phrase
             
         
         if operator == CC.UNICODE_ALMOST_EQUAL_TO:
@@ -5145,7 +5151,7 @@ class DB( HydrusDB.HydrusDB ):
             test_phrase = content_phrase + operator + str( viewing_value )
             
         
-        select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE ' + test_phrase + ';'
+        select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE {} AND {}{};'.format( test_phrase, canvas_type_predicate, group_by_phrase )
         
         hash_ids = self._STS( self._Execute( select_statement ) )
         
@@ -5660,6 +5666,20 @@ class DB( HydrusDB.HydrusDB ):
             modified_timestamp_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM file_modified_timestamps WHERE {};'.format( pred_string ) ) )
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
+            
+        
+        last_viewed_timestamp_predicates = []
+        
+        if 'min_last_viewed_timestamp' in simple_preds: last_viewed_timestamp_predicates.append( 'last_viewed_timestamp >= ' + str( simple_preds[ 'min_last_viewed_timestamp' ] ) )
+        if 'max_last_viewed_timestamp' in simple_preds: last_viewed_timestamp_predicates.append( 'last_viewed_timestamp <= ' + str( simple_preds[ 'max_last_viewed_timestamp' ] ) )
+        
+        if len( last_viewed_timestamp_predicates ) > 0:
+            
+            pred_string = ' AND '.join( last_viewed_timestamp_predicates )
+            
+            last_viewed_timestamp_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM file_viewing_stats WHERE canvas_type = ? AND {};'.format( pred_string ), ( CC.CANVAS_MEDIA_VIEWER, ) ) )
+            
+            query_hash_ids = intersection_update_qhi( query_hash_ids, last_viewed_timestamp_hash_ids )
             
         
         #
@@ -7378,7 +7398,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_names_and_notes = HydrusData.BuildKeyToListDict( ( ( hash_id, ( name, note ) ) for ( hash_id, name, note ) in self._Execute( 'SELECT file_notes.hash_id, label, note FROM {} CROSS JOIN file_notes USING ( hash_id ), labels, notes ON ( file_notes.name_id = labels.label_id AND file_notes.note_id = notes.note_id );'.format( temp_table_name ) ) ) )
                 
-                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._Execute( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id );'.format( temp_table_name ) ) }
+                hash_ids_to_file_viewing_stats = HydrusData.BuildKeyToListDict( ( ( hash_id, ( canvas_type, last_viewed_timestamp, views, viewtime ) ) for ( hash_id, canvas_type, last_viewed_timestamp, views, viewtime ) in self._Execute( 'SELECT hash_id, canvas_type, last_viewed_timestamp, views, viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id );'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMediaManagers.FileViewingStatsManager( file_viewing_stats ) for ( hash_id, file_viewing_stats ) in hash_ids_to_file_viewing_stats.items() }
                 
                 hash_ids_to_file_modified_timestamps = dict( self._Execute( 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'.format( temp_table_name ) ) )
                 
@@ -9697,7 +9719,13 @@ class DB( HydrusDB.HydrusDB ):
                                         
                                         reason = content_update.GetReason()
                                         
-                                        self.modules_files_storage.SetFileDeletionReason( hash_ids, reason )
+                                        # at the moment, we only set a deletion reason when a file leaves a real file domain. not on second delete from trash, so if file in trash, no new delete reason will be set
+                                        
+                                        location_context = ClientLocation.LocationContext( current_service_keys = ( service_key, ) )
+                                        
+                                        reason_setting_hash_ids = self.modules_files_storage.FilterHashIds( location_context, hash_ids )
+                                        
+                                        self.modules_files_storage.SetFileDeletionReason( reason_setting_hash_ids, reason )
                                         
                                     
                                 
@@ -9817,13 +9845,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+                            ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = row
                             
                             hash_id = self.modules_hashes_local_cache.GetHashId( hash )
                             
-                            self._Execute( 'INSERT OR IGNORE INTO file_viewing_stats ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) VALUES ( ?, ?, ?, ?, ? );', ( hash_id, 0, 0, 0, 0 ) )
+                            self._Execute( 'INSERT OR IGNORE INTO file_viewing_stats ( hash_id, canvas_type, last_viewed_timestamp, views, viewtime ) VALUES ( ?, ?, ?, ?, ? );', ( hash_id, canvas_type, 0, 0, 0 ) )
                             
-                            self._Execute( 'UPDATE file_viewing_stats SET preview_views = preview_views + ?, preview_viewtime = preview_viewtime + ?, media_views = media_views + ?, media_viewtime = media_viewtime + ? WHERE hash_id = ?;', ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta, hash_id ) )
+                            self._Execute( 'UPDATE file_viewing_stats SET last_viewed_timestamp = ?, views = views + ?, viewtime = viewtime + ? WHERE hash_id = ? AND canvas_type = ?;', ( view_timestamp, views_delta, viewtime_delta, hash_id, canvas_type ) )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
@@ -12226,7 +12254,6 @@ class DB( HydrusDB.HydrusDB ):
         sort_order = sort_by.sort_order
         
         query = None
-        select_args_iterator = None
         
         if sort_metadata == 'system':
             
@@ -12245,6 +12272,7 @@ class DB( HydrusDB.HydrusDB ):
             simple_sorts.append( CC.SORT_FILES_BY_MEDIA_VIEWTIME )
             simple_sorts.append( CC.SORT_FILES_BY_APPROX_BITRATE )
             simple_sorts.append( CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP )
+            simple_sorts.append( CC.SORT_FILES_BY_LAST_VIEWED_TIME )
             
             if sort_data in simple_sorts:
                 
@@ -12263,58 +12291,60 @@ class DB( HydrusDB.HydrusDB ):
                     
                     current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
                     
-                    query = 'SELECT hash_id, timestamp FROM {} WHERE hash_id = ?;'.format( current_files_table_name )
+                    query = 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( '{}', current_files_table_name )
                     
                 elif sort_data == CC.SORT_FILES_BY_FILESIZE:
                     
-                    query = 'SELECT hash_id, size FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, size FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_DURATION:
                     
-                    query = 'SELECT hash_id, duration FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, duration FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
                     
-                    query = 'SELECT hash_id, num_frames, duration FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, num_frames, duration FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_NUM_FRAMES:
                     
-                    query = 'SELECT hash_id, num_frames FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, num_frames FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_WIDTH:
                     
-                    query = 'SELECT hash_id, width FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, width FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_HEIGHT:
                     
-                    query = 'SELECT hash_id, height FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, height FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_RATIO:
                     
-                    query = 'SELECT hash_id, width, height FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_NUM_PIXELS:
                     
-                    query = 'SELECT hash_id, width, height FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
                     
-                    query = 'SELECT hash_id, media_views FROM file_viewing_stats WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, views FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
                     
-                    query = 'SELECT hash_id, media_viewtime FROM file_viewing_stats WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
                     
-                    query = 'SELECT hash_id, duration, num_frames, size, width, height FROM files_info WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, duration, num_frames, size, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
                     
-                    query = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps WHERE hash_id = ?;'
+                    query = 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'
                     
-                
-                select_args_iterator = ( ( hash_id, ) for hash_id in hash_ids )
+                elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
+                    
+                    query = 'SELECT hash_id, last_viewed_timestamp FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
+                    
                 
                 if sort_data == CC.SORT_FILES_BY_RATIO:
                     
@@ -12451,9 +12481,10 @@ class DB( HydrusDB.HydrusDB ):
         
         if query is not None:
             
-            hash_ids_and_other_data = list( self._ExecuteManySelect( query, select_args_iterator ) )
-            
-            hash_ids_and_other_data.sort( key = key, reverse = reverse )
+            with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                hash_ids_and_other_data = sorted( self._Execute( query.format( temp_hash_ids_table_name ) ), key = key, reverse = reverse )
+                
             
             original_hash_ids = set( hash_ids )
             
@@ -14174,6 +14205,30 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to schedule audible video files for audio track recheck failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 470:
+            
+            ( result, ) = self._Execute( 'SELECT sql FROM sqlite_master WHERE name = ?;', ( 'file_viewing_stats', ) ).fetchone()
+            
+            if 'preview_views' in result:
+                
+                self._controller.frame_splash_status.SetSubtext( 'reworking file viewing stats' )
+                
+                self._Execute( 'ALTER TABLE file_viewing_stats RENAME TO file_viewing_stats_old;' )
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER, canvas_type INTEGER, last_viewed_timestamp INTEGER, views INTEGER, viewtime INTEGER, PRIMARY KEY ( hash_id, canvas_type ) );' )
+                self._CreateIndex( 'file_viewing_stats', [ 'last_viewed_timestamp' ] )
+                self._CreateIndex( 'file_viewing_stats', [ 'views' ] )
+                self._CreateIndex( 'file_viewing_stats', [ 'viewtime' ] )
+                
+                self._Execute( 'INSERT INTO file_viewing_stats SELECT hash_id, ?, ?, preview_views, preview_viewtime FROM file_viewing_stats_old;', ( CC.CANVAS_PREVIEW, None ) )
+                self._Execute( 'INSERT INTO file_viewing_stats SELECT hash_id, ?, ?, media_views, media_viewtime FROM file_viewing_stats_old;', ( CC.CANVAS_MEDIA_VIEWER, None ) )
+                
+                self.modules_db_maintenance.AnalyzeTable( 'file_viewing_stats' )
+                
+                self._Execute( 'DROP TABLE file_viewing_stats_old;' )
                 
             
         

@@ -2417,7 +2417,7 @@ class TestClientAPI( unittest.TestCase ):
                 locations_manager = ClientMediaManagers.LocationsManager( { random_file_service_hex_current : current_import_timestamp }, { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) }, set(), set(), inbox = False, urls = urls, file_modified_timestamp = file_modified_timestamp )
                 ratings_manager = ClientMediaManagers.RatingsManager( {} )
                 notes_manager = ClientMediaManagers.NotesManager( {} )
-                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
                 
                 media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
                 
@@ -2754,7 +2754,7 @@ class TestClientAPI( unittest.TestCase ):
         locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         

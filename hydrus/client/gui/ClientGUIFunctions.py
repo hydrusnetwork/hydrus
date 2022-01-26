@@ -1,3 +1,4 @@
+import numpy
 import typing
 
 from qtpy import QtCore as QC
@@ -64,6 +65,37 @@ def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
         
         return round( pixels / one_char_width )
         
+    
+def ConvertQtImageToNumPy( qt_image: QG.QImage ):
+    
+    width = qt_image.width()
+    height = qt_image.height()
+    
+    if qt_image.depth() == 1:
+        
+        # this is probably super wrong, but whatever for now
+        depth = 1
+        
+    else:
+        
+        # 8, 24, 32 etc...
+        depth = qt_image.depth() // 8
+        
+    
+    data_bytearray = qt_image.bits()
+    
+    if QP.qtpy.PYSIDE2:
+        
+        data_bytes = bytes( data_bytearray )
+        
+    elif QP.qtpy.PYQT5:
+        
+        data_bytes = data_bytearray.asstring( height * width * depth )
+        
+    
+    numpy_image = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, width, depth ) )
+    
+    return numpy_image
     
 def ConvertTextToPixels( window, char_dimensions ) -> typing.Tuple[ int, int ]:
     

@@ -1713,19 +1713,19 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: since 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: since 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( CC.UNICODE_ALMOST_EQUAL_TO, 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: around 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: around 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: before 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: before 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
@@ -2001,13 +2001,22 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:modified time: before 7 years 2 months ago', "system:date modified > 7 years 2    months" ),
             ( 'system:modified time: since 1 day ago', "system:date modified < 1 day" ),
             ( 'system:modified time: since 1 month 1 day ago', "system:date modified < 0 years 1 month 1 day 1 hour" ),
-            ( 'system:time imported: since 7 years 1 month ago', "system:time_imported < 7 years 45 days 70h" ),
-            ( 'system:time imported: since 2011-06-04', "system:time imported > 2011-06-04" ),
-            ( 'system:time imported: before 7 years 2 months ago', "system:time imported > 7 years 2 months" ),
-            ( 'system:time imported: since 1 day ago', "system:time imported < 1 day" ),
-            ( 'system:time imported: since 1 month 1 day ago', "system:time imported < 0 years 1 month 1 day 1 hour" ),
-            ( 'system:time imported: a month either side of 2011-01-03', " system:time imported ~= 2011-1-3 " ),
-            ( 'system:time imported: a month either side of 1996-05-02', "system:time imported ~= 1996-05-2" ),
+            ( 'system:last view time: since 7 years 1 month ago', "system:last viewed time < 7 years 45 days 70h" ),
+            ( 'system:last view time: since 7 years 1 month ago', "system:last view time < 7 years 45 days 70h" ),
+            ( 'system:import time: since 7 years 1 month ago', "system:time_imported < 7 years 45 days 70h" ),
+            ( 'system:import time: since 2011-06-04', "system:time imported > 2011-06-04" ),
+            ( 'system:import time: before 7 years 2 months ago', "system:time imported > 7 years 2 months" ),
+            ( 'system:import time: since 1 day ago', "system:time imported < 1 day" ),
+            ( 'system:import time: since 1 month 1 day ago', "system:time imported < 0 years 1 month 1 day 1 hour" ),
+            ( 'system:import time: a month either side of 2011-01-03', " system:time imported ~= 2011-1-3 " ),
+            ( 'system:import time: a month either side of 1996-05-02', "system:time imported ~= 1996-05-2" ),
+            ( 'system:import time: since 7 years 1 month ago', "system:import_time < 7 years 45 days 70h" ),
+            ( 'system:import time: since 2011-06-04', "system:import time > 2011-06-04" ),
+            ( 'system:import time: before 7 years 2 months ago', "system:import time > 7 years 2 months" ),
+            ( 'system:import time: since 1 day ago', "system:import time < 1 day" ),
+            ( 'system:import time: since 1 month 1 day ago', "system:import time < 0 years 1 month 1 day 1 hour" ),
+            ( 'system:import time: a month either side of 2011-01-03', " system:import time ~= 2011-1-3 " ),
+            ( 'system:import time: a month either side of 1996-05-02', "system:import time ~= 1996-05-2" ),
             ( 'system:duration < 5.0 seconds', "system:duration < 5 seconds" ),
             ( 'system:duration \u2248 11.0 seconds', "system:duration ~= 5 sec 6000 msecs" ),
             ( 'system:duration > 3 milliseconds', "system:duration > 3 milliseconds" ),

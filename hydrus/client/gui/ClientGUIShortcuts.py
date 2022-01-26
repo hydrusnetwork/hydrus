@@ -1059,6 +1059,8 @@ class ShortcutsHandler( QC.QObject ):
         
         self._catch_mouse = catch_mouse
         
+        self._last_click_down_position = QC.QPoint( 0, 0 )
+        
         filter_target = parent
         
         if alternate_filter_target is not None:
@@ -1201,6 +1203,11 @@ class ShortcutsHandler( QC.QObject ):
             
             if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
                 
+                if event.type() == QC.QEvent.MouseButtonPress:
+                    
+                    self._last_click_down_position = event.globalPos()
+                    
+                
                 if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
                     
                     if event.type() == QC.QEvent.MouseButtonRelease:
@@ -1209,6 +1216,22 @@ class ShortcutsHandler( QC.QObject ):
                         
                     
                     return False
+                    
+                
+                if event.type() == QC.QEvent.MouseButtonRelease:
+                    
+                    release_press_pos = event.globalPos()
+                    
+                    delta = release_press_pos - self._last_click_down_position
+                    
+                    approx_distance = delta.manhattanLength()
+                    
+                    # if mouse release is some distance from mouse down (i.e. we are ending a drag), then don't fire off a release command
+                    
+                    if approx_distance > 20:
+                        
+                        return False
+                        
                     
                 
                 i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )

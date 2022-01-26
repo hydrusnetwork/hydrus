@@ -1894,6 +1894,7 @@ class FilesMaintenanceManager( object ):
             
             big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
             
+            last_time_jobs_were_cleared = HydrusData.GetNow()
             cleared_jobs = []
             
             num_to_do = len( media_results )
@@ -2027,7 +2028,7 @@ class FilesMaintenanceManager( object ):
                     cleared_jobs.append( ( hash, job_type, additional_data ) )
                     
                 
-                if len( cleared_jobs ) > 100:
+                if HydrusData.TimeHasPassed( last_time_jobs_were_cleared + 10 ) or len( cleared_jobs ) > 256:
                     
                     self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
                     

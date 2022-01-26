@@ -80,36 +80,139 @@ class FileViewingStatsManager( object ):
     
     def __init__(
         self,
-        preview_views: int,
-        preview_viewtime: int,
-        media_views: int,
-        media_viewtime: int
+        view_rows: typing.Collection
     ):
         
-        self.preview_views = preview_views
-        self.preview_viewtime = preview_viewtime
-        self.media_views = media_views
-        self.media_viewtime = media_viewtime
+        self.last_viewed_timestamps = {}
+        self.views = collections.Counter()
+        self.viewtimes = collections.Counter()
+        
+        for ( canvas_type, last_viewed_timestamp, views, viewtime ) in view_rows:
+            
+            if last_viewed_timestamp is not None:
+                
+                self.last_viewed_timestamps[ canvas_type ] = last_viewed_timestamp
+                
+            
+            if views != 0:
+                
+                self.views[ canvas_type ] = views
+                
+            
+            if viewtime != 0:
+                
+                self.viewtimes[ canvas_type ] = viewtime
+                
+            
         
     
-    def Duplicate( self ):
+    def Duplicate( self ) -> "FileViewingStatsManager":
         
-        return FileViewingStatsManager( self.preview_views, self.preview_viewtime, self.media_views, self.media_viewtime )
+        view_rows = []
+        
+        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                last_viewed_timestamp = self.last_viewed_timestamps[ canvas_type ]
+                
+            else:
+                
+                last_viewed_timestamp = None
+                
+            
+            views = self.views[ canvas_type ]
+            viewtime = self.viewtimes[ canvas_type ]
+            
+            view_rows.append( ( canvas_type, last_viewed_timestamp, views, viewtime ) )
+            
+        
+        return FileViewingStatsManager( view_rows )
         
     
-    def GetPrettyCombinedLine( self ):
+    def GetLastViewedTime( self, canvas_type: int ) -> typing.Optional[ int ]:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views + self.preview_views ) + ' times, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime + self.preview_viewtime )
+        if canvas_type in self.last_viewed_timestamps:
+            
+            return self.last_viewed_timestamps[ canvas_type ]
+            
+        else:
+            
+            return None
+            
         
     
-    def GetPrettyMediaLine( self ):
+    def GetPrettyViewsLine( self, canvas_types: int ) -> str:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views ) + ' times in media viewer, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime )
+        if len( canvas_types ) == 2:
+            
+            info_string = ''
+            
+        elif CC.CANVAS_MEDIA_VIEWER in canvas_types:
+            
+            info_string = ' in media viewer'
+            
+        elif CC.CANVAS_PREVIEW in canvas_types:
+            
+            info_string = ' in preview window'
+            
+        
+        views_total = sum( ( self.views[ canvas_type ] for canvas_type in canvas_types ) )
+        viewtime_total = sum( ( self.viewtimes[ canvas_type ] for canvas_type in canvas_types ) )
+        
+        if views_total == 0:
+            
+            return 'no view record{}'.format( info_string )
+            
+        
+        last_viewed_times = []
+        
+        for canvas_type in canvas_types:
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                last_viewed_times.append( self.last_viewed_timestamps[ canvas_type ] )
+                
+            
+        
+        if len( last_viewed_times ) == 0:
+            
+            last_viewed_string = 'no recorded last view time'
+            
+        else:
+            
+            last_viewed_string = 'last {}'.format( HydrusData.TimestampToPrettyTimeDelta( max( last_viewed_times ) ) )
+            
+        
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusData.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
         
     
-    def GetPrettyPreviewLine( self ):
+    def GetViews( self, canvas_type: int ) -> int:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.preview_views ) + ' times in preview window, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.preview_viewtime )
+        return self.views[ canvas_type ]
+        
+    
+    def GetViewtime( self, canvas_type: int ) -> int:
+        
+        return self.viewtimes[ canvas_type ]
+        
+    
+    def MergeCounts( self, file_viewing_stats_manager: "FileViewingStatsManager" ):
+        
+        for ( canvas_type, last_viewed_timestamp ) in file_viewing_stats_manager.last_viewed_timestamps.items():
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                self.last_viewed_timestamps[ canvas_type ] = max( self.last_viewed_timestamps[ canvas_type ], last_viewed_timestamp )
+                
+            else:
+                
+                self.last_viewed_timestamps[ canvas_type ] = last_viewed_timestamp
+                
+            
+        
+        self.views.update( file_viewing_stats_manager.views )
+        self.viewtimes.update( file_viewing_stats_manager.viewtimes )
         
     
     def ProcessContentUpdate( self, content_update ):
@@ -118,19 +221,21 @@ class FileViewingStatsManager( object ):
         
         if action == HC.CONTENT_UPDATE_ADD:
             
-            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+            ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = row
             
-            self.preview_views += preview_views_delta
-            self.preview_viewtime += preview_viewtime_delta
-            self.media_views += media_views_delta
-            self.media_viewtime += media_viewtime_delta
+            if view_timestamp is not None:
+                
+                self.last_viewed_timestamps[ canvas_type ] = view_timestamp
+                
+            
+            self.views[ canvas_type ] += views_delta
+            self.viewtimes[ canvas_type ] += viewtime_delta
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
-            self.preview_views = 0
-            self.preview_viewtime = 0
-            self.media_views = 0
-            self.media_viewtime = 0
+            self.last_viewed_timestamps = {}
+            self.views = collections.Counter()
+            self.viewtimes = collections.Counter()
             
         
     
@@ -141,10 +246,7 @@ class FileViewingStatsManager( object ):
         
         for sub_fvsm in sub_fvsms:
             
-            fvsm.preview_views += sub_fvsm.preview_views
-            fvsm.preview_viewtime += sub_fvsm.preview_viewtime
-            fvsm.media_views += sub_fvsm.media_views
-            fvsm.media_viewtime += sub_fvsm.media_viewtime
+            fvsm.MergeCounts( sub_fvsm )
             
         
         return fvsm
@@ -153,7 +255,7 @@ class FileViewingStatsManager( object ):
     @staticmethod
     def STATICGenerateEmptyManager():
         
-        return FileViewingStatsManager( 0, 0, 0, 0 )
+        return FileViewingStatsManager( [] )
         
     
 class LocationsManager( object ):

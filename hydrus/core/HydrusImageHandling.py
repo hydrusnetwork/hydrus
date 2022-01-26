@@ -222,19 +222,23 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
                 raise HydrusExceptions.UnsupportedFileException()
                 
             
-            if pil_image.mode == 'LAB':
+            # I and F are some sort of 32-bit monochrome or whatever, doesn't seem to work in PIL well, with or without ICC
+            if pil_image.mode not in ( 'I', 'F' ):
                 
-                force_pil = True
-                
-            
-            if HasICCProfile( pil_image ):
-                
-                if HG.media_load_report_mode:
+                if pil_image.mode == 'LAB':
                     
-                    HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                    force_pil = True
                     
                 
-                force_pil = True
+                if HasICCProfile( pil_image ):
+                    
+                    if HG.media_load_report_mode:
+                        
+                        HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                        
+                    
+                    force_pil = True
+                    
                 
             
         except HydrusExceptions.UnsupportedFileException:

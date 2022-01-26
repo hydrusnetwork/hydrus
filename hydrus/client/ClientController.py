@@ -335,6 +335,10 @@ class Controller( HydrusController.HydrusController ):
     
     def _ShutdownManagers( self ):
         
+        self.files_maintenance_manager.Shutdown()
+        
+        self.quick_download_manager.Shutdown()
+        
         managers = [ self.subscriptions_manager, self.tag_display_maintenance_manager ]
         
         for manager in managers:
@@ -601,6 +605,20 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def ClipboardHasImage( self ):
+        
+        try:
+            
+            self.GetClipboardImage()
+            
+            return True
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
+        
+    
     def ClosePageKeys( self, page_keys ):
         
         with self._page_key_lock:
@@ -858,11 +876,23 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def GetClipboardImage( self ):
+        
+        clipboard_image = QW.QApplication.clipboard().image()
+        
+        if clipboard_image is None or clipboard_image.isNull():
+            
+            raise HydrusExceptions.DataMissing( 'No bitmap on the clipboard!' )
+            
+        
+        return clipboard_image
+        
+    
     def GetClipboardText( self ):
         
         clipboard_text = QW.QApplication.clipboard().text()
         
-        if not clipboard_text:
+        if clipboard_text is None:
             
             raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
             
@@ -1938,14 +1968,6 @@ class Controller( HydrusController.HydrusController ):
                     self._ReportShutdownException()
                     
                 
-            
-            self.frame_splash_status.SetSubtext( 'files maintenance manager' )
-            
-            self.files_maintenance_manager.Shutdown()
-            
-            self.frame_splash_status.SetSubtext( 'download manager' )
-            
-            self.quick_download_manager.Shutdown()
             
             self.frame_splash_status.SetSubtext( '' )
             

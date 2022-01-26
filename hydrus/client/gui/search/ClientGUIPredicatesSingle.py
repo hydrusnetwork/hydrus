@@ -198,7 +198,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:import time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -263,7 +263,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:import time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -287,6 +287,125 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetStringSelection(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        
+        return predicates
+        
+    
+class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
+        
+        self._date = QW.QCalendarWidget( self )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        qt_dt = QC.QDate( years, months, days )
+        
+        self._date.setSelectedDate( qt_dt )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        qt_dt = QC.QDate.currentDate()
+        
+        qt_dt.addDays( -7 )
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '>', 'date', ( year, month, day ) ) )
+        
+    
+    def GetPredicates( self ):
+        
+        qt_dt = self._date.selectedDate()
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'date', ( year, month, day ) ) ), )
+        
+        return predicates
+        
+    
+class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
+        
+        self._years = QP.MakeQSpinBox( self, max=30 )
+        self._months = QP.MakeQSpinBox( self, max=60 )
+        self._days = QP.MakeQSpinBox( self, max=90 )
+        self._hours = QP.MakeQSpinBox( self, max=24 )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._years.setValue( years )
+        self._months.setValue( months )
+        self._days.setValue( days )
+        self._hours.setValue( hours )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        
+    
+    def GetPredicates( self ):
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         

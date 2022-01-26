@@ -676,12 +676,6 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                         # the crash was in sqlite code, again presumably on subsequent fetch
                         # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
                         # anyway, we now just get the whole lot of results first and then work on the whole lot
-                        '''
-                        #old method
-                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id = ?;'
-                        
-                        results = list( self._ExecuteManySelectSingleParam( select_statement, group_of_current_potentials ) )
-                        '''
                         
                         with self._MakeTemporaryIntegerTable( group_of_current_potentials, 'phash_id' ) as temp_table_name:
                             
@@ -786,7 +780,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     
                 
             
-            similar_hash_ids_and_distances = list( similar_hash_ids_to_distances.items() )
+            similar_hash_ids_and_distances.extend( similar_hash_ids_to_distances.items() )
             
         
         similar_hash_ids_and_distances = HydrusData.DedupeList( similar_hash_ids_and_distances )

@@ -997,9 +997,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashes( self, master_hash_ids ):
         
-        select_statement = 'SELECT hash FROM hashes WHERE master_hash_id = ?;'
-        
-        return [ hash for ( hash, ) in self._ExecuteManySelectSingleParam( select_statement, master_hash_ids ) ]
+        with self._MakeTemporaryIntegerTable( master_hash_ids, 'master_hash_id' ) as temp_hash_ids_table_name:
+            
+            return self._STL( self._Execute( 'SELECT hash FROM {} CROSS JOIN hashes USING ( master_hash_id );'.format( temp_hash_ids_table_name ) ) )
+            
         
     
     def _GetMasterHashId( self, hash ):
@@ -1785,9 +1786,10 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            select_statement = 'SELECT service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
-            
-            deleted_service_hash_ids = self._STI( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
+            with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
+                
+                deleted_service_hash_ids = self._STS( self._Execute( 'SELECT service_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id ) WHERE service_tag_id = ?;'.format( temp_hash_ids_table_name, deleted_mappings_table_name ), ( service_tag_id, ) ) )
+                
             
             service_hash_ids = set( service_hash_ids ).difference( deleted_service_hash_ids )
             
@@ -2007,9 +2009,10 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;'
-        
-        valid_service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
+            
+            valid_service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+            
         
         self._RepositoryRewardFilePetitioners( service_id, valid_service_hash_ids, 1 )
         
@@ -2018,7 +2021,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO ' + deleted_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, timestamp ) for service_hash_id in valid_service_hash_ids ) )
         
-        master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
+        master_hash_ids = self._RepositoryGetMasterHashIds( service_id, valid_service_hash_ids )
         
         self._DeferFilesDeleteIfNowOrphan( master_hash_ids )
         
@@ -2027,9 +2030,10 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
-        
-        valid_service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) )
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
+            
+            valid_service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id ) WHERE service_tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( service_tag_id, ) ) )
+            
         
         self._RepositoryRewardMappingPetitioners( service_id, service_tag_id, valid_service_hash_ids, 1 )
         
@@ -3095,9 +3099,10 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;'
-        
-        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
+            
+            valid_service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+            
         
         self._ExecuteMany( 'REPLACE INTO ' + petitioned_files_table_name + ' ( service_hash_id, account_id, reason_id ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, reason_id ) for service_hash_id in valid_service_hash_ids ) )
         
@@ -3106,9 +3111,10 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT service_hash_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ?;'
-        
-        valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ) ]
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
+            
+            valid_service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} CROSS JOIN {} USING ( service_hash_id ) WHERE service_tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( service_tag_id, ) ) )
+            
         
         self._ExecuteMany( 'REPLACE INTO ' + petitioned_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, reason_id ) VALUES ( ?, ?, ?, ? );', [ ( service_tag_id, service_hash_id, account_id, reason_id ) for service_hash_id in valid_service_hash_ids ] )
         
@@ -3449,13 +3455,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_files_table_name + ' WHERE service_hash_id = ? GROUP BY account_id;'
-        
         counter = collections.Counter()
         
-        for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
             
-            counter[ account_id ] += count
+            for ( account_id, count ) in self._Execute( 'SELECT account_id, COUNT( * ) FROM {} CROSS JOIN {} USING ( service_hash_id ) GROUP BY account_id;'.format( temp_hash_ids_table_name, petitioned_files_table_name ) ):
+                
+                counter[ account_id ] += count
+                
             
         
         scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in counter.items() ]
@@ -3467,13 +3474,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        select_statement = 'SELECT account_id, COUNT( * ) FROM ' + petitioned_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id = ? GROUP BY account_id;'
-        
         counter = collections.Counter()
         
-        for ( account_id, count ) in self._ExecuteManySelectSingleParam( select_statement, service_hash_ids ):
+        with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_hash_ids_table_name:
             
-            counter[ account_id ] += count
+            for ( account_id, count ) in self._Execute( 'SELECT account_id, COUNT( * ) FROM {} CROSS JOIN {} USING ( service_hash_id ) WHERE service_tag_id = ? GROUP BY account_id;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( service_tag_id, ) ):
+                
+                counter[ account_id ] += count
+                
             
         
         scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in counter.items() ]
@@ -3587,6 +3595,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositorySuperBan( self, service_id, admin_account_id, subject_account_ids, timestamp ):
         
+        # this is pending a rewrite, nothing calls it atm, executemanysingleparam no longer exists
+        pass
+        '''
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
         select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE account_id = ?;'
@@ -3639,7 +3650,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id, timestamp )
                 
             
-        
+        '''
     
     def _RewardAccounts( self, service_id, score_type, scores ):
         

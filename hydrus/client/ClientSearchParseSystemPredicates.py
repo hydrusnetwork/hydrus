@@ -172,6 +172,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.URL_CLASS : lambda o, v, u: url_class_pred_generator( True, v ),
     SystemPredicateParser.Predicate.NO_URL_CLASS : lambda o, v, u: url_class_pred_generator( False, v ),
     SystemPredicateParser.Predicate.MOD_DATE : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, o, v ),
+    SystemPredicateParser.Predicate.LAST_VIEWED_TIME : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, o, v ),
     SystemPredicateParser.Predicate.TIME_IMPORTED : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, o, v ),
     SystemPredicateParser.Predicate.FILE_SERVICE : file_service_pred_generator,
     SystemPredicateParser.Predicate.NUM_FILE_RELS : num_file_relationships_pred_generator

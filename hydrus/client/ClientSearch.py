@@ -63,6 +63,8 @@ PREDICATE_TYPE_SYSTEM_NUM_NOTES = 38
 PREDICATE_TYPE_SYSTEM_NOTES = 39
 PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME = 40
 PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE = 41
+PREDICATE_TYPE_SYSTEM_TIME = 42
+PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME = 43
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -73,6 +75,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_LIMIT,
     PREDICATE_TYPE_SYSTEM_SIZE,
     PREDICATE_TYPE_SYSTEM_AGE,
+    PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     PREDICATE_TYPE_SYSTEM_HASH,
     PREDICATE_TYPE_SYSTEM_WIDTH,
@@ -100,7 +103,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
-    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
+    PREDICATE_TYPE_SYSTEM_TIME
 }
 
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
@@ -357,12 +361,17 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'hash' ] = ( hashes, hash_type )
                 
             
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
                 if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
                     
                     min_label = 'min_import_timestamp'
                     max_label = 'max_import_timestamp'
+                    
+                elif predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
+                    
+                    min_label = 'min_last_viewed_timestamp'
+                    max_label = 'max_last_viewed_timestamp'
                     
                 elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     
@@ -1591,7 +1600,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ), hash_type )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
             
             ( operator, age_type, age_value ) = serialisable_value
             
@@ -1924,7 +1933,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
             
             # age_type
             if self._value[1] != ideal_value[1]:
@@ -2018,6 +2027,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
             elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
@@ -2199,11 +2209,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base += ' is ' + HydrusData.ToHumanInt( value )
                     
                 
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
                     
-                    base = 'time imported'
+                    base = 'import time'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
+                    
+                    base = 'last view time'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     

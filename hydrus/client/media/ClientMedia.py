@@ -2029,22 +2029,7 @@ class MediaCollection( MediaList, Media ):
     
     def _RecalcFileViewingStats( self ):
         
-        preview_views = 0
-        preview_viewtime = 0.0
-        media_views = 0
-        media_viewtime = 0.0
-        
-        for m in self._sorted_media:
-            
-            fvsm = m.GetFileViewingStatsManager()
-            
-            preview_views += fvsm.preview_views
-            preview_viewtime += fvsm.preview_viewtime
-            media_views += fvsm.media_views
-            media_viewtime += fvsm.media_viewtime
-            
-        
-        self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
+        self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateCombinedManager( [ m.GetFileViewingStatsManager() for m in self._sorted_media ] )
         
     
     def _RecalcHashes( self ):
@@ -3008,6 +2993,17 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return deal_with_none( x.GetLocationsManager().GetFileModifiedTimestamp() )
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
+                
+                def sort_key( x ):
+                    
+                    fvsm = x.GetFileViewingStatsManager()
+                    
+                    # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
+                    
+                    return deal_with_none( fvsm.GetLastViewedTime( CC.CANVAS_MEDIA_VIEWER ) )
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_HEIGHT:
                 
                 def sort_key( x ):
@@ -3078,7 +3074,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return fvsm.media_views
+                    return fvsm.GetViews( CC.CANVAS_MEDIA_VIEWER )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
@@ -3089,7 +3085,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     # do not do views as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return fvsm.media_viewtime
+                    return fvsm.GetViewtime( CC.CANVAS_MEDIA_VIEWER )
                     
                 
             
@@ -3140,6 +3136,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_LAST_VIEWED_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )

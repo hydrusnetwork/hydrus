@@ -5,6 +5,7 @@ import os
 # If not explicitely set, prefer PySide2 instead of the qtpy default which is PyQt5
 # It is important that this runs on startup *before* anything is imported from qtpy.
 # Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
+
 if not 'QT_API' in os.environ:
     
     try:

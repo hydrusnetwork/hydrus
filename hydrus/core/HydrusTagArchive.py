@@ -115,7 +115,7 @@ class HydrusTagArchive( object ):
     
     def _InitDB( self ):
         
-        self._c.execute( 'CREATE TABLE hash_type ( hash_type INTEGER );', )
+        self._c.execute( 'CREATE TABLE hash_type ( hash_type INTEGER );' )
         
         self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
         self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )

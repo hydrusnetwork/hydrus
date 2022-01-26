@@ -316,20 +316,20 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def DuplicatesFilterKingHashIds( self, allowed_hash_ids ):
         
-        # can't just pull explicit king_hash_ids, since files not in the system are considered king of their group
+        # can't just pull explicit king_hash_ids, since files that do not have a media_id are still kings
+        # kings = hashes - explicitly not kings
         
         if not isinstance( allowed_hash_ids, set ):
             
             allowed_hash_ids = set( allowed_hash_ids )
             
         
-        query = 'SELECT king_hash_id FROM duplicate_files WHERE king_hash_id = ?;'
-        
-        explicit_king_hash_ids = self._STS( self._ExecuteManySelectSingleParam( query, allowed_hash_ids ) )
-        
-        query = 'SELECT hash_id FROM duplicate_file_members WHERE hash_id = ?;'
-        
-        all_duplicate_member_hash_ids = self._STS( self._ExecuteManySelectSingleParam( query, allowed_hash_ids ) )
+        with self._MakeTemporaryIntegerTable( allowed_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            explicit_king_hash_ids = self._STS( self._Execute( 'SELECT king_hash_id FROM {} CROSS JOIN duplicate_files ON ( {}.hash_id = duplicate_files.king_hash_id );'.format( temp_hash_ids_table_name, temp_hash_ids_table_name ) ) )
+            
+            all_duplicate_member_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN duplicate_file_members USING ( hash_id );'.format( temp_hash_ids_table_name ) ) )
+            
         
         all_non_king_hash_ids = all_duplicate_member_hash_ids.difference( explicit_king_hash_ids )
         

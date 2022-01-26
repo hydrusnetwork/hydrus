@@ -456,6 +456,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             self._action_radio.hide()
+            
             self._reason_panel.hide()
             
         
@@ -511,11 +512,18 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetReason( self ):
         
-        reason = self._reason_radio.GetValue()
-        
-        if reason is None:
+        if self._reason_panel.isEnabled():
             
-            reason = self._custom_reason.text()
+            reason = self._reason_radio.GetValue()
+            
+            if reason is None:
+                
+                reason = self._custom_reason.text()
+                
+            
+        else:
+            
+            reason = None
             
         
         return reason
@@ -638,27 +646,27 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
-        reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' )
+        # 'this includes service keys' because if we are deleting physically from the trash, then reason is already set
+        reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' ) and self._this_dialog_includes_service_keys
         
         if reason_permitted:
             
-            self._reason_radio.setEnabled( True )
+            self._reason_panel.setEnabled( True )
+            
+            reason = self._reason_radio.GetValue()
+            
+            if reason is None:
+                
+                self._custom_reason.setEnabled( True )
+                
+            else:
+                
+                self._custom_reason.setEnabled( False )
+                
             
         else:
             
-            self._reason_radio.setEnabled( False )
-            self._custom_reason.setEnabled( False )
-            
-        
-        reason = self._reason_radio.GetValue()
-        
-        if reason is None:
-            
-            self._custom_reason.setEnabled( True )
-            
-        else:
-            
-            self._custom_reason.setEnabled( False )
+            self._reason_panel.setEnabled( False )
             
         
     

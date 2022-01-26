@@ -122,18 +122,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     del painter
     
-    data_bytearray = top_qt_image.bits()
-    
-    if QP.qtpy.PYSIDE2:
-        
-        data_bytes = bytes( data_bytearray )
-        
-    elif QP.qtpy.PYQT5:
-        
-        data_bytes = data_bytearray.asstring( top_height * width * 3 )
-        
-    
-    top_image_rgb = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
+    top_image_rgb = ClientGUIFunctions.ConvertQtImageToNumPy( top_qt_image )
     
     top_image = cv2.cvtColor( top_image_rgb, cv2.COLOR_RGB2GRAY )
     
@@ -249,6 +238,15 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
     
     return ( payload_description, payload_bytes )
     
+def LoadFromQtImage( qt_image: QG.QImage ):
+    
+    # assume this for now
+    depth = 3
+    
+    numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+    
+    return LoadFromNumPyImage( numpy_image )
+    
 def LoadFromPNG( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
@@ -282,7 +280,7 @@ def LoadFromPNG( path ):
                 
                 HydrusData.ShowException( e )
                 
-                raise Exception( 'That did not appear to be a valid image!' )
+                raise Exception( '"{}" did not appear to be a valid image!'.format( path ) )
                 
             
         
@@ -290,6 +288,10 @@ def LoadFromPNG( path ):
         
         HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
+    
+    return LoadFromNumPyImage( numpy_image )
+    
+def LoadFromNumPyImage( numpy_image: numpy.array ):
     
     try:
         
@@ -302,7 +304,7 @@ def LoadFromPNG( path ):
             
             if depth != 1:
                 
-                raise Exception( 'The file did not appear to be monochrome!' )
+                numpy_image = numpy_image[:,:,0] # let's fetch one channel. if the png is a perfect RGB conversion of the original (or, let's say, a Firefox bmp export), this actually works
                 
             
         

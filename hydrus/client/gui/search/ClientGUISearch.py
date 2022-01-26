@@ -23,6 +23,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 EDIT_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT,
     ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH,
@@ -69,6 +70,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_TIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
@@ -213,6 +215,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
         # also it would be nice to have proper rating editing here, think about it
         
         AGE_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
+        LAST_VIEWED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
         MODIFIED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
         KNOWN_URL_EXACT = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', '', '' ) )
         KNOWN_URL_DOMAIN = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', '', '' ) )
@@ -236,6 +239,17 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                 else:
                     
                     self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemAgeDate( self, predicate ) )
+                    
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
+                
+                if predicate.IsUIEditable( LAST_VIEWED_DELTA_PRED ):
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDelta( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDate( self, predicate ) )
                     
                 
             elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
@@ -434,10 +448,13 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         self._predicates = []
         
         label = None
-        editable_pred_panels = []
-        static_pred_buttons = []
+        
+        page_name = 'page'
+        pages = []
         
         recent_predicate_types = [ predicate_type ]
+        static_pred_buttons = []
+        editable_pred_panels = []
         
         if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
             
@@ -452,6 +469,37 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemModifiedDelta, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemModifiedDate, predicate ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_TIME:
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ) ) )
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDate, predicate ) )
+            
+            pages.append( ( 'import', recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
+            static_pred_buttons = []
+            editable_pred_panels = []
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemModifiedDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemModifiedDate, predicate ) )
+            
+            pages.append( ( 'modified', recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
+            static_pred_buttons = []
+            editable_pred_panels = []
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDate, predicate ) )
+            
+            page_name = 'last viewed'
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
@@ -585,6 +633,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemFileViewingStatsViewtime, predicate ) )
             
         
+        pages.append( ( page_name, recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+        
         vbox = QP.VBoxLayout()
         
         if label is not None:
@@ -596,40 +646,69 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        recent_predicates = []
+        page_parent = self
         
-        if len( recent_predicate_types ) > 0:
+        if len( pages ) > 1:
             
-            recent_predicates = HG.client_controller.new_options.GetRecentPredicates( recent_predicate_types )
+            self._notebook = ClientGUICommon.BetterNotebook( self )
             
-            if len( recent_predicates ) > 0:
+            QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            page_parent = self._notebook
+            
+        
+        for ( i, ( page_name, recent_predicate_types, static_pred_buttons, editable_pred_panels ) ) in enumerate( pages ):
+            
+            page_panel = QW.QWidget( page_parent )
+            
+            page_vbox = QP.VBoxLayout()
+            
+            recent_predicates = []
+            
+            if len( recent_predicate_types ) > 0:
                 
-                recent_predicates_box = ClientGUICommon.StaticBox( self, 'recent' )
+                recent_predicates = HG.client_controller.new_options.GetRecentPredicates( recent_predicate_types )
                 
-                for recent_predicate in recent_predicates:
+                if len( recent_predicates ) > 0:
                     
-                    button = ClientGUIPredicatesSingle.StaticSystemPredicateButton( recent_predicates_box, self, ( recent_predicate, ) )
+                    recent_predicates_box = ClientGUICommon.StaticBox( page_panel, 'recent' )
                     
-                    recent_predicates_box.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    for recent_predicate in recent_predicates:
+                        
+                        button = ClientGUIPredicatesSingle.StaticSystemPredicateButton( recent_predicates_box, self, ( recent_predicate, ) )
+                        
+                        recent_predicates_box.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    
+                    QP.AddToLayout( page_vbox, recent_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
-                QP.AddToLayout( vbox, recent_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            for button in static_pred_buttons:
+                
+                QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-        
-        for button in static_pred_buttons:
+            for panel in editable_pred_panels:
+                
+                QP.AddToLayout( page_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
             
-            QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            page_panel.setLayout( page_vbox )
             
-        
-        for panel in editable_pred_panels:
+            if i == 0 and len( static_pred_buttons ) > 0 and len( editable_pred_panels ) == 0:
+                
+                ClientGUIFunctions.SetFocusLater( static_pred_buttons[0] )
+                
             
-            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-        
-        if len( static_pred_buttons ) > 0 and len( editable_pred_panels ) == 0:
-            
-            ClientGUIFunctions.SetFocusLater( static_pred_buttons[0] )
+            if len( pages ) > 1:
+                
+                self._notebook.addTab( page_panel, page_name )
+                
+            else:
+                
+                QP.AddToLayout( vbox, page_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
             
         
         self.widget().setLayout( vbox )

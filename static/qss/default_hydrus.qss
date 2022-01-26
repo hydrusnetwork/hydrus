@@ -120,3 +120,23 @@ QPushButton#HydrusOnOffButton[hydrus_on=false]
 	color: #800000;
 }
 
+/*
+
+Custom Controls
+
+These are drawn by hydev on a blank canvas, so they work a little different.
+
+*/
+
+/*
+
+The scanbar beneath video/audio in the media viewer.
+
+*/
+
+QWidget#HydrusAnimationBar
+{
+	qproperty-hab_border: #000000;
+	qproperty-hab_background: #f0f0f0;
+	qproperty-hab_nub: #606060;
+}

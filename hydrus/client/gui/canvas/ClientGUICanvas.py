@@ -64,7 +64,7 @@ def AddAudioVolumeMenu( menu, canvas_type ):
     mute_volume_type = None
     volume_volume_type = ClientGUIMediaControls.AUDIO_GLOBAL
     
-    if canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+    if canvas_type == CC.CANVAS_MEDIA_VIEWER:
         
         mute_volume_type = ClientGUIMediaControls.AUDIO_MEDIA_VIEWER
         
@@ -73,7 +73,7 @@ def AddAudioVolumeMenu( menu, canvas_type ):
             volume_volume_type = ClientGUIMediaControls.AUDIO_MEDIA_VIEWER
             
         
-    elif canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+    elif canvas_type == CC.CANVAS_PREVIEW:
         
         mute_volume_type = ClientGUIMediaControls.AUDIO_PREVIEW
         
@@ -343,6 +343,7 @@ def CalculateMediaSize( media, zoom ):
 class Canvas( QW.QWidget ):
     
     PREVIEW_WINDOW = False
+    CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
@@ -364,15 +365,6 @@ class Canvas( QW.QWidget ):
         
         self._current_media = None
         
-        if self.PREVIEW_WINDOW:
-            
-            self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
-            
-        else:
-            
-            self._canvas_type = ClientGUICommon.CANVAS_MEDIA_VIEWER
-            
-        
         catch_mouse = True
         
         # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
@@ -384,7 +376,7 @@ class Canvas( QW.QWidget ):
         
         self.installEventFilter( self._click_drag_reporting_filter )
         
-        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self._canvas_type, self._click_drag_reporting_filter )
+        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self.CANVAS_TYPE, self._click_drag_reporting_filter )
         
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
@@ -1059,6 +1051,8 @@ class Canvas( QW.QWidget ):
         
         now = HydrusData.GetNow()
         
+        view_timestamp = self._current_media_start_time
+        
         viewtime_delta = now - self._current_media_start_time
         
         self._current_media_start_time = now
@@ -1068,25 +1062,9 @@ class Canvas( QW.QWidget ):
             return
             
         
-        if self.PREVIEW_WINDOW:
-            
-            viewtype = 'preview'
-            
-        else:
-            
-            if isinstance( self, CanvasFilterDuplicates ):
-                
-                viewtype = 'media_duplicates_filter'
-                
-            else:
-                
-                viewtype = 'media'
-                
-            
-        
         hash = self._current_media.GetHash()
         
-        HG.client_controller.file_viewing_stats_manager.FinishViewing( viewtype, hash, viewtime_delta )
+        HG.client_controller.file_viewing_stats_manager.FinishViewing( hash, self.CANVAS_TYPE, view_timestamp, viewtime_delta )
         
     
     def _SeekDeltaCurrentMedia( self, direction, duration_ms ):
@@ -1858,6 +1836,7 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
 class CanvasPanel( Canvas ):
     
     PREVIEW_WINDOW = True
+    CANVAS_TYPE = CC.CANVAS_PREVIEW
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
         
@@ -1947,7 +1926,7 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        AddAudioVolumeMenu( menu, self._canvas_type )
+        AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
         
         if self._current_media is not None:
             
@@ -2646,6 +2625,8 @@ class CanvasWithHovers( CanvasWithDetails ):
         
     
 class CanvasFilterDuplicates( CanvasWithHovers ):
+    
+    CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
     
     def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
@@ -4414,7 +4395,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._current_zoom ) ) )
                 
             
-            AddAudioVolumeMenu( menu, self._canvas_type )
+            AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
             
             if self.parentWidget().isFullScreen():
                 

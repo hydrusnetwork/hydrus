@@ -96,7 +96,7 @@ class Animation( QW.QWidget ):
         
         self._canvas_qt_pixmap = None
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             shortcut_set = 'media_viewer_media_window'
             
@@ -335,11 +335,11 @@ class Animation( QW.QWidget ):
                     ClientGUIMedia.OpenExternally( self._media )
                     
                 
-            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
                 
-            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == CC.CANVAS_PREVIEW:
                 
                 self.launchMediaViewer.emit()
                 
@@ -569,6 +569,14 @@ class AnimationBar( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
+        self._colours = {
+            'hab_border' : QG.QColor( 0, 0, 0 ),
+            'hab_background' : QG.QColor( 240, 240, 240 ),
+            'hab_nub' : QG.QColor( 96, 96, 96 )
+        }
+        
+        self.setObjectName( 'HydrusAnimationBar' )
+        
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
         self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
@@ -584,9 +592,13 @@ class AnimationBar( QW.QWidget ):
     
     def _DrawBlank( self, painter ):
         
+        self.setProperty( 'playing', False )
+        
         new_options = HG.client_controller.new_options
         
-        painter.setBackground( QP.GetSystemColour( QG.QPalette.Button ) )
+        background_colour = self._colours[ 'hab_background' ]
+        
+        painter.setBackground( background_colour )
         
         painter.eraseRect( painter.viewport() )
         
@@ -638,12 +650,14 @@ class AnimationBar( QW.QWidget ):
         
         ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
         
+        self.setProperty( 'playing', not paused )
+        
         my_width = self.size().width()
         my_height = self.size().height()
         
         painter.setPen( QC.Qt.NoPen )
         
-        background_colour = QP.GetSystemColour( QG.QPalette.Button )
+        background_colour = self._colours[ 'hab_background' ]
         
         if paused:
             
@@ -708,7 +722,7 @@ class AnimationBar( QW.QWidget ):
                 
             
         
-        painter.setBrush( QG.QBrush( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
+        painter.setBrush( QG.QBrush( self._colours[ 'hab_nub' ] ) )
         
         animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
@@ -761,7 +775,8 @@ class AnimationBar( QW.QWidget ):
         #
         
         painter.setBrush( QC.Qt.NoBrush )
-        painter.setPen( QG.QPen( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
+        
+        painter.setPen( QG.QPen( self._colours[ 'hab_border' ] ) )
         
         painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
         
@@ -931,6 +946,40 @@ class AnimationBar( QW.QWidget ):
             self.update()
             
         
+    
+    def get_hab_background( self ):
+        
+        return self._colours[ 'hab_background' ]
+        
+    
+    def get_hab_border( self ):
+        
+        return self._colours[ 'hab_border' ]
+        
+    
+    def get_hab_nub( self ):
+        
+        return self._colours[ 'hab_nub' ]
+        
+    
+    def set_hab_background( self, colour ):
+        
+        self._colours[ 'hab_background' ] = colour
+        
+    
+    def set_hab_border( self, colour ):
+        
+        self._colours[ 'hab_border' ] = colour
+        
+    
+    def set_hab_nub( self, colour ):
+        
+        self._colours[ 'hab_nub' ] = colour
+        
+    
+    hab_border = QC.Property( QG.QColor, get_hab_border, set_hab_border )
+    hab_background = QC.Property( QG.QColor, get_hab_background, set_hab_background )
+    hab_nub = QC.Property( QG.QColor, get_hab_nub, set_hab_nub )
     
 class MediaContainer( QW.QWidget ):
     
@@ -1711,7 +1760,7 @@ class StaticImage( QW.QWidget ):
         
         self._zoom = 1.0
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             shortcut_set = 'media_viewer_media_window'
             
@@ -2003,11 +2052,11 @@ class StaticImage( QW.QWidget ):
                     ClientGUIMedia.OpenExternally( self._media )
                     
                 
-            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
                 
-            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == CC.CANVAS_PREVIEW:
                 
                 self.launchMediaViewer.emit()
                 

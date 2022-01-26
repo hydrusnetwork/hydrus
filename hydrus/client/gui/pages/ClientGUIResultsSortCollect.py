@@ -256,7 +256,7 @@ class MediaSortControl( QW.QWidget ):
         
         submetatypes_to_menus = {}
         
-        for system_sort_type in CC.SYSTEM_SORT_TYPES:
+        for system_sort_type in CC.SYSTEM_SORT_TYPES_SORT_CONTROL_SORTED:
             
             sort_type = ( 'system', system_sort_type )
             

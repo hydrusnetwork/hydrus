@@ -653,7 +653,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         elif qtpy.PYQT5:
 
-            from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401
+            from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
             from sip import SIP_VERSION_STR # pylint: disable=E0401
 
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
@@ -979,7 +979,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ClearFileViewingStats( self ):
         
-        text = 'Are you sure you want to delete _all_ file viewing records? This cannot be undone.'
+        text = 'Are you sure you want to delete _all_ file view count/duration and \'last time viewed\' records? This cannot be undone.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
         

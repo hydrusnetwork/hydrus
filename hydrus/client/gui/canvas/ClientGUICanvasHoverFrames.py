@@ -904,7 +904,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER ), self._canvas_key )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
         
-        self._volume_control = ClientGUIMediaControls.VolumeControl( self, ClientGUICommon.CANVAS_MEDIA_VIEWER )
+        self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
         
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
             
