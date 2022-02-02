@@ -171,14 +171,14 @@ jobs:
         uses: carlosperate/download-file-action@v1.0.3
         id: download_mpv
         with:
-            file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220116-git-1ba0547.7z/'
+            file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z'
             file-name: 'mpv-dev-x86_64.7z'
             location: '.'
       - 
         name: Process mpv-dev
         run: |
           7z x ${{ steps.download_mpv.outputs.file-path }}
-          move mpv-2.dll hydrus\
+          move mpv-1.dll hydrus\
       - 
         name: Build Hydrus
         run: |
