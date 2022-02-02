@@ -17,7 +17,6 @@ from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.widgets import ClientGUICommon
 
 mpv_failed_reason = 'MPV seems ok!'
 

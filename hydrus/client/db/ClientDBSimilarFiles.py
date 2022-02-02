@@ -465,7 +465,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             return [
                 ( 'shape_perceptual_hash_map', 'hash_id' ),
@@ -486,7 +486,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         if job_key is None:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_key = ClientThreading.JobKey( maintenance_mode = maintenance_mode, cancellable = True )
             
             pub_job_key = True
             

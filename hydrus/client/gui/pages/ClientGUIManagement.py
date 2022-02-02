@@ -810,7 +810,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             if name not in self._serialisables or value.DumpToString() != self._serialisables[ name ].DumpToString():
                 
                 self._serialisables[ name ] = value
-                
+            
                 self._SerialisableChangeMade()
                 
             
@@ -2704,7 +2704,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, show_downloader_options, self._OptionsUpdated )
         self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, tag_import_options, show_downloader_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
         
-        # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
+        # suck up watchers from elsewhere in the program (presents a checkboxlistdialog)
         
         #
         
@@ -4233,8 +4233,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._sort_by_left.setEnabled( False )
         self._sort_by_right.setEnabled( False )
         
-        self._contents = QP.CheckListBox( self._petition_panel )
-        self._contents.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self._contents = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents.itemDoubleClicked.connect( self.EventContentDoubleClick )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents, ( 16, 20 ) )
@@ -4313,7 +4312,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         for i in range( self._contents.count() ):
             
-            self._contents.Check( i )
+            self._contents.Check( i, True )
             
         
     
@@ -4580,7 +4579,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _FlipSelected( self ):
         
-        for i in self._contents.GetSelections():
+        for i in self._contents.GetSelectedIndices():
             
             flipped_state = not self._contents.IsChecked( i )
             
@@ -4594,7 +4593,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         for i in range( self._contents.count() ):
             
-            content = QP.GetClientData( self._contents, i )
+            content = self._contents.GetData( i )
             check = self._contents.IsChecked( i )
             
             contents_and_checks.append( ( content, check ) )
@@ -4648,15 +4647,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             content_string = content.ToString()
             
-            self._contents.Append( content_string, content )
+            self._contents.Append( content_string, content, starts_checked = check )
             
-            if check:
-                
-                to_check.append( i )
-                
-            
-        
-        self._contents.SetCheckedItems( to_check )
         
     
     def _ShowHashes( self, hashes ):
@@ -4686,13 +4678,13 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventContentDoubleClick( self, item ):
         
-        selections = self._contents.GetSelections()
+        selected_indices = self._contents.GetSelectedIndices()
         
-        if len( selections ) > 0:
+        if len( selected_indices ) > 0:
             
-            selection = selections[0]
+            selection = selected_indices[0]
             
-            content = QP.GetClientData( self._contents, selection )
+            content = self._contents.GetData( selection )
             
             if content.HasHashes():
                 
@@ -4841,7 +4833,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         for index in range( self._contents.count() ):
             
-            content = QP.GetClientData( self._contents, index )
+            content = self._contents.GetData( index )
             
             if self._contents.IsChecked( index ):
                 
@@ -4877,13 +4869,13 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventRowRightClick( self ):
         
-        selected_indices = self._contents.GetSelections()
+        selected_indices = self._contents.GetSelectedIndices()
         
         selected_contents = []
         
         for i in selected_indices:
             
-            content = QP.GetClientData( self._contents, i )
+            content = self._contents.GetData( i )
             
             selected_contents.append( content )
             
@@ -5073,7 +5065,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
-            self._management_controller.SetVariable( 'file_search_context', file_search_context )
+            self._management_controller.SetVariable( 'file_search_context', file_search_context.Duplicate() )
             
             location_context = file_search_context.GetLocationContext()
             
@@ -5262,7 +5254,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def THREADDoQuery( self, controller, page_key, query_job_key, search_context, sort_by ):
+    def THREADDoQuery( self, controller, page_key, query_job_key, file_search_context: ClientSearch.FileSearchContext, sort_by ):
         
         def qt_code():
             
@@ -5280,7 +5272,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         HG.client_controller.file_viewing_stats_manager.Flush()
         
-        query_hash_ids = controller.Read( 'file_query_ids', search_context, job_key = query_job_key, limit_sort_by = sort_by )
+        query_hash_ids = controller.Read( 'file_query_ids', file_search_context, job_key = query_job_key, limit_sort_by = sort_by )
         
         if query_job_key.IsCancelled():
             
@@ -5305,7 +5297,9 @@ class ManagementPanelQuery( ManagementPanel ):
             controller.WaitUntilViewFree()
             
         
-        search_context.SetComplete()
+        file_search_context.SetComplete()
+        
+        self._management_controller.SetVariable( 'file_search_context', file_search_context.Duplicate() )
         
         QP.CallAfter( qt_code )
         

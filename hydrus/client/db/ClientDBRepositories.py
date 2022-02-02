@@ -475,7 +475,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
                 
@@ -488,7 +488,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 ] )
                 
             
-        elif HC.CONTENT_TYPE_TAG:
+        elif content_type == HC.CONTENT_TYPE_TAG:
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 

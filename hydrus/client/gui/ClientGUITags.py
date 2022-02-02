@@ -1156,12 +1156,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_panel )
         
-        self._simple_blacklist_global_checkboxes = QP.CheckListBox( blacklist_panel )
+        self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_blacklist_namespace_checkboxes = QP.CheckListBox( blacklist_panel )
+        self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
         for namespace in self._namespaces:
             
@@ -1215,12 +1215,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_panel )
         
-        self._simple_whitelist_global_checkboxes = QP.CheckListBox( whitelist_panel )
+        self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_whitelist_namespace_checkboxes = QP.CheckListBox( whitelist_panel )
+        self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
         for namespace in self._namespaces:
             
@@ -1452,14 +1452,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for index in range( self._simple_whitelist_global_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_whitelist_global_checkboxes, index ) in whitelist_tag_slices
+                check = self._simple_whitelist_global_checkboxes.GetData( index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_global_checkboxes.Check( index, check )
                 
             
             for index in range( self._simple_whitelist_namespace_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index ) in whitelist_tag_slices
+                check = self._simple_whitelist_namespace_checkboxes.GetData( index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_namespace_checkboxes.Check( index, check )
                 
@@ -1512,14 +1512,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for index in range( self._simple_blacklist_global_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_blacklist_global_checkboxes, index ) in blacklist_tag_slices
+                check = self._simple_blacklist_global_checkboxes.GetData( index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_global_checkboxes.Check( index, check )
                 
             
             for index in range( self._simple_blacklist_namespace_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index ) in blacklist_tag_slices
+                check = self._simple_blacklist_namespace_checkboxes.GetData( index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_namespace_checkboxes.Check( index, check )
                 
@@ -1701,7 +1701,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index )
+            tag_slice = self._simple_blacklist_namespace_checkboxes.GetData( index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
@@ -1713,7 +1713,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_blacklist_global_checkboxes, index )
+            tag_slice = self._simple_blacklist_global_checkboxes.GetData( index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
@@ -1725,7 +1725,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index )
+            tag_slice = self._simple_whitelist_namespace_checkboxes.GetData( index )
             
             self._AdvancedAddWhitelist( tag_slice )
             
@@ -1737,7 +1737,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_whitelist_global_checkboxes, index )
+            tag_slice = self._simple_whitelist_global_checkboxes.GetData( index )
             
             if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTagSlices():
                 

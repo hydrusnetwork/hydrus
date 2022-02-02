@@ -197,6 +197,29 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         self._durable_temp_db_filename = db_name + '.temp.db'
         
+        durable_temp_db_path = os.path.join( self._db_dir, self._durable_temp_db_filename )
+        
+        if os.path.exists( durable_temp_db_path ):
+            
+            HydrusPaths.DeletePath( durable_temp_db_path )
+            
+            wal_lad = durable_temp_db_path + '-wal'
+            
+            if os.path.exists( wal_lad ):
+                
+                HydrusPaths.DeletePath( wal_lad )
+                
+            
+            shm_lad = durable_temp_db_path + '-shm'
+            
+            if os.path.exists( shm_lad ):
+                
+                HydrusPaths.DeletePath( shm_lad )
+                
+            
+            HydrusData.Print( 'Found and deleted the durable temporary database on boot. The last exit was probably not clean.' )
+            
+        
         self._InitExternalDatabases()
         
         self._is_first_start = False

@@ -970,13 +970,14 @@ def VideoHasAudio( path, info_lines ):
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
-    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24" ):
+    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24", clip_rect = None ):
         
         self._path = path
         self._mime = mime
         self._duration = duration / 1000.0
         self._num_frames = num_frames
         self._target_resolution = target_resolution
+        self._clip_rect = clip_rect
         
         self.lastread = None
         
@@ -1059,6 +1060,13 @@ class VideoRendererFFMPEG( object ):
         if do_ss and not do_fast_seek: # slow seek
             
             cmd.extend( [ '-ss', "%.03f" % ss ] )
+            
+        
+        if self._clip_rect is not None:
+            
+            ( clip_x, clip_y, clip_width, clip_height ) = self._clip_rect
+            
+            cmd.extend( [ '-vf', 'crop={}:{}:{}:{}'.format( clip_width, clip_height, clip_x, clip_y ) ] )
             
         
         cmd.extend( [

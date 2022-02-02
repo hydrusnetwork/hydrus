@@ -223,6 +223,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return num_deleted
         
     
+    def ClearFileDeletionReason( self, hash_ids ):
+        
+        self._ExecuteMany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
     def ClearFilesTables( self, service_id: int, keep_pending = False ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
@@ -282,7 +287,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                     service_ids_to_nums_cleared[ service_id ] = num_cleared
                     
                 
-                self._ExecuteMany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
+                self.ClearFileDeletionReason( ok_to_clear_hash_ids )
                 
             
         
@@ -827,7 +832,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             select_query = ' UNION '.join( ( 'SELECT hash_id FROM {}'.format( table_name ) for table_name in table_names ) )
             
-            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( self.temp_file_storage_table_name, select_query ) )
+            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( self.temp_file_storage_table_name, select_query ) )
             
             files_table_name = self.temp_file_storage_table_name
             
@@ -983,7 +988,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             ( 'deferred_physical_thumbnail_deletes', 'hash_id' )
         ]
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
                 

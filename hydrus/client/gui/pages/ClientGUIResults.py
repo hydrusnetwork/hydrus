@@ -4717,27 +4717,6 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def _ScaleUpThumbnailDimensions( self, thumbnail_dimensions, scale_up_dimensions ):
-        
-        ( thumb_width, thumb_height ) = thumbnail_dimensions
-        ( scale_up_width, scale_up_height ) = scale_up_dimensions
-        
-        # we want to expand the image so that the smallest dimension fills everything
-        
-        scale_factor = max( scale_up_width / thumb_width, scale_up_height / thumb_height )
-        
-        destination_width = int( round( thumb_width * scale_factor ) )
-        destination_height = int( round( thumb_height * scale_factor ) )
-        
-        offset_x = ( scale_up_width - destination_width ) // 2
-        offset_y = ( scale_up_height - destination_height ) // 2
-        
-        offset_position = ( offset_x, offset_y )
-        destination_dimensions = ( destination_width, destination_height )
-        
-        return ( offset_position, destination_dimensions )
-        
-    
     def GetQtImage( self ):
         
         thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
@@ -4785,35 +4764,13 @@ class Thumbnail( Selectable ):
         
         painter.drawRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ) )
         
-        thumbnail_fill = HG.client_controller.new_options.GetBoolean( 'thumbnail_fill' )
-        
         ( thumb_width, thumb_height ) = thumbnail_hydrus_bmp.GetSize() 
         
-        if thumbnail_fill:
-            
-            raw_thumbnail_qt_image_original = thumbnail_hydrus_bmp.GetQtImage()
-            
-            scale_up_dimensions = HC.options[ 'thumbnail_dimensions' ]
-            
-            ( offset_position, destination_dimensions ) = self._ScaleUpThumbnailDimensions( ( thumb_width, thumb_height ), scale_up_dimensions )
-            
-            ( destination_width, destination_height ) = destination_dimensions
-            
-            raw_thumbnail_qt_image = raw_thumbnail_qt_image_original.scaled( destination_width, destination_height, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation )
-            
-            ( x_offset, y_offset ) = offset_position
-            
-            x_offset += thumbnail_border
-            y_offset += thumbnail_border
-            
-        else:
-            
-            raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
-            
-            x_offset = ( width - thumb_width ) // 2
-            
-            y_offset = ( height - thumb_height ) // 2
-            
+        raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
+        
+        x_offset = ( width - thumb_width ) // 2
+        
+        y_offset = ( height - thumb_height ) // 2
         
         painter.drawImage( x_offset, y_offset, raw_thumbnail_qt_image )
         

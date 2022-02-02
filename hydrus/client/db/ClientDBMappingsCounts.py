@@ -469,7 +469,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_TAG:
+        if content_type == HC.CONTENT_TYPE_TAG:
             
             table_dict = self._GetServicesTableGenerationDict()
             

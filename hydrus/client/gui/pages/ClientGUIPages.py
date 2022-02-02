@@ -1379,7 +1379,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         raise HydrusExceptions.DataMissing()
         
     
-    def _GetNotebookFromScreenPosition( self, screen_position ):
+    def _GetNotebookFromScreenPosition( self, screen_position ) -> "PagesNotebook":
         
         current_page = self.currentWidget()
         
@@ -1391,7 +1391,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
             
-            if tab_index != -1:
+            if tab_index == -1:
                 
                 return self
                 
@@ -1731,7 +1731,84 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     ClientGUIMenus.AppendMenu( menu, close_menu, 'close' )
                     
                 
-                #
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        #
+        
+        if click_over_page_of_pages:
+            
+            notebook_to_get_selectable_media_pages_from = self.widget( tab_index )
+            
+        else:
+            
+            notebook_to_get_selectable_media_pages_from = self
+            
+        
+        selectable_media_pages = notebook_to_get_selectable_media_pages_from.GetMediaPages()
+        
+        if len( selectable_media_pages ) > 0:
+            
+            select_menu = QW.QMenu( menu )
+            
+            for selectable_media_page in selectable_media_pages:
+                
+                label = '{} - {}'.format( selectable_media_page.GetName(), selectable_media_page.GetPrettyStatus() )
+                
+                ClientGUIMenus.AppendMenuItem( select_menu, label, 'select this page', self.ShowPage, selectable_media_page )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, select_menu, 'pages' )
+            
+        
+        #
+        
+        if more_than_one_tab:
+            
+            selection_index = self.currentIndex()
+            
+            can_select_home = selection_index > 1
+            can_select_left = selection_index > 0
+            can_select_right = selection_index < end_index
+            can_select_end = selection_index < end_index - 1
+            
+            navigate_menu = QW.QMenu( menu )
+            
+            if can_select_home:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'first page', 'Select the page at the start of these.', self.MoveSelectionEnd, -1 )
+                
+            
+            if can_select_left:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'page to the left', 'Select the page to the left of this one.', self.MoveSelection, -1 )
+                
+            
+            if can_select_right:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'page to the right', 'Select the page to the right of this one.', self.MoveSelection, 1 )
+                
+            
+            if can_select_end:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'last page', 'Select the page at the end of these.', self.MoveSelectionEnd, 1 )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, navigate_menu, 'select' )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        
+        if click_over_tab:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if more_than_one_tab:
                 
                 move_menu = QW.QMenu( menu )
                 
@@ -1757,52 +1834,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendMenu( menu, move_menu, 'move page' )
                 
-                #
-                
-                selection_index = self.currentIndex()
-                
-                can_select_home = selection_index > 1
-                can_select_left = selection_index > 0
-                can_select_right = selection_index < end_index
-                can_select_end = selection_index < end_index - 1
-                
-                select_menu = QW.QMenu( menu )
-                
-                if can_select_home:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'first page', 'Select the page at the start of these.', self.MoveSelectionEnd, -1 )
-                    
-                
-                if can_select_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the left', 'Select the page to the left of this one.', self.MoveSelection, -1 )
-                    
-                
-                if can_select_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the right', 'Select the page to the right of this one.', self.MoveSelection, 1 )
-                    
-                
-                if can_select_end:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'last page', 'Select the page at the end of these.', self.MoveSelectionEnd, 1 )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
-            
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
-        
-        if click_over_tab:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
-            
-            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'duplicate page', 'Duplicate this page.', self._DuplicatePage, tab_index )
             
@@ -1814,8 +1847,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
                 ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
-                ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'asc' )
-                ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'desc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to their names.', self._SortPagesByName, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to their names.', self._SortPagesByName, 'desc' )
                 
                 ClientGUIMenus.AppendMenu( menu, submenu, 'sort pages' )
                 

@@ -60,7 +60,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         if len( names_to_analyze ) > 0:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_key = ClientThreading.JobKey( maintenance_mode = maintenance_mode, cancellable = True )
             
             try:
                 

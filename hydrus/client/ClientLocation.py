@@ -71,6 +71,19 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = frozenset( { bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys } )
         
     
+    def ClearAllLocalFilesServices( self, filter_func: typing.Callable ):
+        
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys:
+            
+            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if filter_func( service_key ) ) )
+            
+        
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.deleted_service_keys:
+            
+            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if filter_func( service_key ) ) )
+            
+        
+    
     def FixMissingServices( self, filter_method: typing.Callable ):
         
         self.current_service_keys = frozenset( filter_method( self.current_service_keys ) )

@@ -39,6 +39,37 @@ def AppendLoadingPredicate( predicates ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_LABEL, value = 'loading results\u2026' ) )
     
+def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool ):
+    
+    services_manager = HG.client_controller.services_manager
+    
+    service_types_in_order = [ HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ]
+    
+    advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+    
+    if advanced_mode:
+        
+        service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
+        
+    
+    service_types_in_order.append( HC.FILE_REPOSITORY )
+    service_types_in_order.append( HC.IPFS )
+    
+    if all_known_files_allowed:
+        
+        service_types_in_order.append( HC.COMBINED_FILE )
+        
+    
+    services = services_manager.GetServices( service_types_in_order )
+    
+    if not advanced_mode:
+        
+        services = [ service for service in services if service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+        
+    
+    return services
+    
+
 def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearch.Predicate ] ):
     
     if include_unusual_predicate_types:
@@ -497,6 +528,120 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
     
     HG.client_controller.CallAfterQtSafe( win, 'write a/c fetch', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    
+class EditLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_location_context = location_context
+        self._all_known_files_allowed = all_known_files_allowed
+        
+        self._location_list = ClientGUICommon.BetterCheckBoxList( self )
+        
+        services = GetPossibleFileDomainServicesInOrder( all_known_files_allowed )
+        
+        for service in services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            starts_checked = service_key in self._original_location_context.current_service_keys
+            
+            self._location_list.Append( name, ( HC.CONTENT_STATUS_CURRENT, service_key ), starts_checked = starts_checked )
+            
+        
+        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if advanced_mode:
+            
+            for service in services:
+                
+                name = service.GetName()
+                service_key = service.GetServiceKey()
+                
+                if service_key in ( CC.COMBINED_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                    
+                    continue
+                    
+                
+                starts_checked = service_key in self._original_location_context.deleted_service_keys
+                
+                self._location_list.Append( 'deleted from {}'.format( name ), ( HC.CONTENT_STATUS_DELETED, service_key ), starts_checked = starts_checked )
+                
+            
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._location_list, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        self._location_list.checkBoxListChanged.connect( self._ClearSurplusServices )
+        
+    
+    def _ClearSurplusServices( self ):
+        
+        # if user clicks all known files, then all other services will be wiped
+        # all local files should do other file services too
+        
+        location_context = self._GetValue()
+        
+        filter_func = lambda service_key: HG.client_controller.services_manager.GetServiceType( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN )
+        
+        location_context.ClearAllLocalFilesServices( filter_func )
+        
+        if set( self._GetStatusesAndServiceKeys( location_context ) ) != set( self._location_list.GetValue() ):
+            
+            self._SetValue( location_context )
+            
+        
+    
+    def _GetStatusesAndServiceKeys( self, location_context: ClientLocation.LocationContext ):
+        
+        statuses_and_service_keys = [ ( HC.CONTENT_STATUS_CURRENT, service_key ) for service_key in location_context.current_service_keys ]
+        statuses_and_service_keys.extend( [ ( HC.CONTENT_STATUS_DELETED, service_key ) for service_key in location_context.deleted_service_keys ] )
+        
+        return statuses_and_service_keys
+        
+    
+    def _GetValue( self ):
+        
+        statuses_and_service_keys = self._location_list.GetValue()
+        
+        current_service_keys = { service_key for ( status, service_key ) in statuses_and_service_keys if status == HC.CONTENT_STATUS_CURRENT }
+        deleted_service_keys = { service_key for ( status, service_key ) in statuses_and_service_keys if status == HC.CONTENT_STATUS_DELETED }
+        
+        location_context = ClientLocation.LocationContext( current_service_keys = current_service_keys, deleted_service_keys = deleted_service_keys )
+        
+        return location_context
+        
+    
+    def _SetValue( self, location_context: ClientLocation.LocationContext ):
+        
+        self._location_list.blockSignals( True )
+        
+        statuses_and_service_keys = self._GetStatusesAndServiceKeys( location_context )
+        
+        self._location_list.SetValue( statuses_and_service_keys )
+        
+        self._location_list.blockSignals( False )
+        
+    
+    def GetValue( self ) -> ClientLocation.LocationContext:
+        
+        location_context = self._GetValue()
+        
+        return location_context
+        
+    
+    def SetValue( self, location_context: ClientLocation.LocationContext ):
+        
+        self._SetValue( location_context )
+        
+        self._location_list.checkBoxListChanged.emit()
+        
     
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
@@ -1394,7 +1539,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
         raise NotImplementedError()
         
@@ -1445,6 +1590,23 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetListDirty()
         
     
+    def _EditMultipleLocationContext( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit multiple location' ) as dlg:
+            
+            panel = EditLocationContextPanel( dlg, self._location_context, self._IsAllKnownFilesServiceTypeAllowed() )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                location_context = panel.GetValue()
+                
+                self._ChangeLocationContext( location_context )
+                
+            
+        
+    
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
         
         raise NotImplementedError()
@@ -1493,39 +1655,20 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def FileButtonHit( self ):
         
-        services_manager = HG.client_controller.services_manager
-        
-        service_types_in_order = [ HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ]
+        services = GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed() )
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
-        if advanced_mode:
-            
-            service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
-            
-        
-        service_types_in_order.append( HC.FILE_REPOSITORY )
-        service_types_in_order.append( HC.IPFS )
-        
-        self._AddAllKnownFilesServiceTypeIfAllowed( service_types_in_order )
-        
-        services = services_manager.GetServices( service_types_in_order )
         
         menu = QW.QMenu()
         
         for service in services:
-            
-            if service.GetServiceKey() == CC.LOCAL_UPDATE_SERVICE_KEY and not advanced_mode:
-                
-                continue
-                
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
             
             ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeLocationContext, location_context )
             
         
-        if advanced_mode:
+        if advanced_mode and False:
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1541,6 +1684,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 ClientGUIMenus.AppendMenuItem( menu, 'deleted from {}'.format( service.GetName() ), 'Change the current file domain to files deleted from ' + service.GetName() + '.', self._ChangeLocationContext, location_context )
                 
             
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'multiple locations', 'Change the current file domain to something with multiple locations.', self._EditMultipleLocationContext )
         
         CGC.core().PopupMenu( self._file_repo_button, menu )
         
@@ -1702,14 +1849,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._search_pause_play.valueChanged.connect( self.SetSynchronised )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
-        if advanced_mode and self._allow_all_known_files:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
+        return advanced_mode and self._allow_all_known_files
         
     
     def _AdvancedORInput( self ):
@@ -2554,12 +2698,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.setLayout( vbox )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
-        if self._allow_all_known_files:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
+        return self._allow_all_known_files
         
     
     def _BroadcastChoices( self, predicates, shift_down ):

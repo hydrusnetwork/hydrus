@@ -49,7 +49,7 @@ def GenerateShapePerceptualHashes( path, mime ):
     if depth == 4:
         
         # doing this on 10000x10000 pngs eats ram like mad
-        # we don't want to do GetThumbnailResolution as for extremely wide or tall images, we'll then scale below 32 pixels for one dimension, losing information!
+        # we don't want to do GetThumbnailResolutionAndClipRegion as for extremely wide or tall images, we'll then scale below 32 pixels for one dimension, losing information!
         # however, it does not matter if we stretch the image a bit, since we'll be coercing 32x32 in a minute
         
         new_x = min( 256, x )

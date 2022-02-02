@@ -75,3 +75,4 @@ Name: {app}\_yaml.cp36-win_amd64.pyd; Type: files; Components: install
 Name: {app}\_yaml.cp37-win_amd64.pyd; Type: files; Components: install
 Name: {app}\_cffi_backend.cp36-win_amd64.pyd; Type: files; Components: install
 Name: {app}\_distutils_findvs.pyd; Type: files; Components: install
+Name: {app}\mpv-1.dll; Type: files; Components: install

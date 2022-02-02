@@ -713,7 +713,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._viewing_locations = QP.CheckListBox( self )
+        self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
@@ -728,7 +728,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         ( view_type, viewing_locations, sign, num ) = predicate.GetValue()
         
-        self._viewing_locations.SetCheckedData( viewing_locations )
+        self._viewing_locations.SetValue( viewing_locations )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
         
@@ -763,7 +763,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        viewing_locations = self._viewing_locations.GetChecked()
+        viewing_locations = self._viewing_locations.GetValue()
         
         if len( viewing_locations ) == 0:
             
@@ -785,7 +785,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._viewing_locations = QP.CheckListBox( self )
+        self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
@@ -800,7 +800,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         ( view_type, viewing_locations, sign, time_delta ) = predicate.GetValue()
         
-        self._viewing_locations.SetCheckedData( viewing_locations )
+        self._viewing_locations.SetValue( viewing_locations )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
         
@@ -835,7 +835,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
     
     def GetPredicates( self ):
         
-        viewing_locations = self._viewing_locations.GetChecked()
+        viewing_locations = self._viewing_locations.GetValue()
         
         if len( viewing_locations ) == 0:
             

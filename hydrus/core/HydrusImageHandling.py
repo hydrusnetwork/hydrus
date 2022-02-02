@@ -109,6 +109,50 @@ except:
     
     OPENCV_OK = False
     
+def MakeClipRectFit( image_resolution, clip_rect ):
+    
+    ( im_width, im_height ) = image_resolution
+    ( x, y, clip_width, clip_height ) = clip_rect
+    
+    x = max( 0, x )
+    y = max( 0, y )
+    
+    clip_width = min( clip_width, im_width )
+    clip_height = min( clip_height, im_height )
+    
+    if x + clip_width > im_width:
+        
+        x = im_width - clip_width
+        
+    
+    if y + clip_height > im_height:
+        
+        y = im_height - clip_height
+        
+    
+    return ( x, y, clip_width, clip_height )
+    
+def ClipNumPyImage( numpy_image: numpy.array, clip_rect ):
+    
+    if len( numpy_image.shape ) == 3:
+        
+        ( im_height, im_width, depth ) = numpy_image.shape
+        
+    else:
+        
+        ( im_height, im_width ) = numpy_image.shape
+        
+    
+    ( x, y, clip_width, clip_height ) = MakeClipRectFit( ( im_width, im_height ), clip_rect )
+    
+    return numpy_image[ y : y + clip_height, x : x + clip_width ]
+    
+def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
+    
+    ( x, y, clip_width, clip_height ) = MakeClipRectFit( pil_image.size, clip_rect )
+    
+    return pil_image.crop( box = ( x, y, x + clip_width, y + clip_height ) )
+    
 def ConvertToPNGIfBMP( path ):
     
     with open( path, 'rb' ) as f:
@@ -298,6 +342,13 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
         
     
+    if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
+        
+        convert = cv2.COLOR_RGBA2RGB
+        
+        numpy_image = cv2.cvtColor( numpy_image, convert )
+        
+    
     return numpy_image
     
 def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
@@ -372,11 +423,16 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     
     return pil_image
     
-def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime ) -> bytes:
+def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = None ) -> bytes:
     
     if OPENCV_OK:
         
         numpy_image = GenerateNumPyImage( path, mime )
+        
+        if clip_rect is not None:
+            
+            numpy_image = ClipNumPyImage( numpy_image, clip_rect )
+            
         
         thumbnail_numpy_image = ResizeNumPyImage( numpy_image, target_resolution )
         
@@ -393,6 +449,11 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime ) -
         
     
     pil_image = GeneratePILImage( path )
+    
+    if clip_rect is None:
+        
+        pil_image = ClipPILImage( pil_image, clip_rect )
+        
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
     
@@ -675,14 +736,29 @@ def GetResolutionAndNumFramesPIL( path, mime ):
     
     return ( ( x, y ), num_frames )
     
-def GetThumbnailResolution( image_resolution, bounding_dimensions ):
+THUMBNAIL_SCALE_DOWN_ONLY = 0
+THUMBNAIL_SCALE_TO_FIT = 1
+THUMBNAIL_SCALE_TO_FILL = 2
+
+thumbnail_scale_str_lookup = {
+    THUMBNAIL_SCALE_DOWN_ONLY : 'scale down only',
+    THUMBNAIL_SCALE_TO_FIT : 'scale to fit',
+    THUMBNAIL_SCALE_TO_FILL : 'scale to fill'
+}
+
+def GetThumbnailResolutionAndClipRegion( image_resolution, bounding_dimensions, thumbnail_scale_type: int ):
+    
+    clip_rect = None
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
     
-    if bounding_width >= im_width and bounding_height >= im_height:
+    if thumbnail_scale_type == THUMBNAIL_SCALE_DOWN_ONLY:
         
-        return ( im_width, im_height )
+        if bounding_width >= im_width and bounding_height >= im_height:
+            
+            return ( clip_rect, ( im_width, im_height ) )
+            
         
     
     width_ratio = im_width / bounding_width
@@ -691,19 +767,51 @@ def GetThumbnailResolution( image_resolution, bounding_dimensions ):
     thumbnail_width = bounding_width
     thumbnail_height = bounding_height
     
-    if width_ratio > height_ratio:
+    if thumbnail_scale_type in ( THUMBNAIL_SCALE_DOWN_ONLY, THUMBNAIL_SCALE_TO_FIT ):
         
-        thumbnail_height = im_height / width_ratio
+        if width_ratio > height_ratio:
+            
+            thumbnail_height = im_height / width_ratio
+            
+        elif height_ratio > width_ratio:
+            
+            thumbnail_width = im_width / height_ratio
+            
         
-    elif height_ratio > width_ratio:
+    elif thumbnail_scale_type == THUMBNAIL_SCALE_TO_FILL:
         
-        thumbnail_width = im_width / height_ratio
+        if width_ratio == height_ratio:
+            
+            # we have something that fits bounding region perfectly, no clip region required
+            
+            pass
+            
+        else:
+            
+            clip_x = 0
+            clip_y = 0
+            clip_width = im_width
+            clip_height = im_height
+            
+            if width_ratio > height_ratio:
+                
+                clip_width = max( int( im_width * height_ratio / width_ratio ), 1 )
+                clip_x = ( im_width - clip_width ) // 2
+                
+            elif height_ratio > width_ratio:
+                
+                clip_height = max( int( im_height * width_ratio / height_ratio ), 1 )
+                clip_y = ( im_height - clip_height ) // 2
+                
+            
+            clip_rect = ( clip_x, clip_y, clip_width, clip_height )
+            
         
     
     thumbnail_width = max( int( thumbnail_width ), 1 )
     thumbnail_height = max( int( thumbnail_height ), 1 )
     
-    return ( thumbnail_width, thumbnail_height )
+    return ( clip_rect, ( thumbnail_width, thumbnail_height ) )
     
 def GetTimesToPlayGIF( path ) -> int:
     
@@ -857,6 +965,31 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ):
         
     
     return pil_image
+    
+def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ):
+    
+    shape = numpy_image.shape
+    
+    if len( shape ) == 2:
+        
+        return False
+        
+    
+    if shape[2] == 4:
+        
+        # RGBA image
+        # if the alpha channel is all opaque, there is no use storing that info in our pixel hash
+        # opaque means 255
+        
+        alpha_channel = numpy_image[:,:,3]
+        
+        if ( alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all():
+            
+            return True
+            
+        
+    
+    return False
     
 def PILImageHasAlpha( pil_image: PILImage.Image ):
     

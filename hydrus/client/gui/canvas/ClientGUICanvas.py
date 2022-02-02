@@ -300,7 +300,10 @@ def CalculateMediaContainerSize( media, zoom, show_action ):
         
         if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
-            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), HG.client_controller.options[ 'thumbnail_dimensions' ] )
+            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            
+            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type )
             
             height = height + thumb_height
             
@@ -2546,6 +2549,8 @@ class CanvasWithHovers( CanvasWithDetails ):
                     global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
                     
                     QG.QCursor.setPos( global_mouse_pos )
+                    
+                    ClientGUIShortcuts.CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH += approx_distance
                     
                 else:
                     

@@ -45,7 +45,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._checkboxes = QP.CheckListBox( self )
+        self._checkboxes = ClientGUICommon.BetterCheckBoxList( self )
         
         self._checkboxes.setMinimumSize( QC.QSize( 320, 420 ) )
         
@@ -86,7 +86,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ) -> list:
         
-        return self._checkboxes.GetChecked()
+        return self._checkboxes.GetValue()
         
     
 class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):

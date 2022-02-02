@@ -285,7 +285,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             return [ ( 'local_hashes', 'hash_id' ) ]
             

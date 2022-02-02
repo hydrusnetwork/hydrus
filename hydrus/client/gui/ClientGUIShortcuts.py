@@ -244,6 +244,8 @@ simple_shortcut_name_to_action_lookup[ 'media_viewer_media_window' ] = SHORTCUTS
 simple_shortcut_name_to_action_lookup[ 'preview_media_window' ] = SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 
+CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
+
 # ok, the problem here is that I get key codes that are converted, so if someone does shift+1 on a US keyboard, this ends up with Shift+! same with ctrl+alt+ to get accented characters
 # it isn't really a big deal since everything still lines up, but the QGuiApplicationPrivate::platformIntegration()->possibleKeys(e) to get some variant of 'yeah this is just !' seems unavailable for python
 # it is basically a display bug, but it'd be nice to have it working right
@@ -1207,6 +1209,10 @@ class ShortcutsHandler( QC.QObject ):
                     
                     self._last_click_down_position = event.globalPos()
                     
+                    global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
+                    
+                    CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
+                    
                 
                 if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
                     
@@ -1224,7 +1230,7 @@ class ShortcutsHandler( QC.QObject ):
                     
                     delta = release_press_pos - self._last_click_down_position
                     
-                    approx_distance = delta.manhattanLength()
+                    approx_distance = delta.manhattanLength() + CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
                     
                     # if mouse release is some distance from mouse down (i.e. we are ending a drag), then don't fire off a release command
                     

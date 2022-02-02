@@ -409,15 +409,16 @@ class ClientFilesManager( object ):
         duration = media.GetDuration()
         num_frames = media.GetNumFrames()
         
-        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+        bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+        thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
         
-        target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
+        ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), bounding_dimensions, thumbnail_scale_type )
         
         percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
         
         try:
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in )
             
         except Exception as e:
             
@@ -1319,8 +1320,9 @@ class ClientFilesManager( object ):
             ( current_width, current_height ) = HydrusImageHandling.GetResolutionNumPy( numpy_image )
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+            thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
             
-            ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions )
+            ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type )
             
             if current_width != expected_width or current_height != expected_height:
                 
