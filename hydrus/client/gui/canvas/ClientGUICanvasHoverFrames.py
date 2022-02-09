@@ -969,16 +969,23 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                self._trash_button.show()
-                self._delete_button.hide()
-                self._undelete_button.hide()
-                
-            elif locations_manager.IsTrashed():
+            if locations_manager.IsTrashed():
                 
                 self._trash_button.hide()
                 self._delete_button.show()
+                
+            elif locations_manager.IsLocal():
+                
+                self._trash_button.show()
+                self._delete_button.hide()
+                
+            
+            if set( locations_manager.GetDeleted() ).isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) ):
+                
+                self._undelete_button.hide()
+                
+            else:
+                
                 self._undelete_button.show()
                 
             

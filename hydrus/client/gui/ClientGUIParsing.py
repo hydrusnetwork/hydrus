@@ -3087,7 +3087,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         produces = page_parser.GetParsableContent()
         
-        produces = sorted( produces )
+        produces = sorted( produces, key = lambda row: ( row[0], row[1] ) ) # ( name, content_type ), ignores potentially unsortable StringMatch etc.. in additional info in case of dupe
         
         pretty_name = name
         pretty_formula = formula.ToPrettyString()

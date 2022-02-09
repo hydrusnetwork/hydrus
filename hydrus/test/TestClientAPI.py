@@ -2434,43 +2434,39 @@ class TestClientAPI( unittest.TestCase ):
             
             for media_result in media_results:
                 
-                metadata_row = {}
-                
                 file_info_manager = media_result.GetFileInfoManager()
                 
-                metadata_row[ 'file_id' ] = file_info_manager.hash_id
-                metadata_row[ 'hash' ] = file_info_manager.hash.hex()
-                metadata_row[ 'size' ] = file_info_manager.size
-                metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
-                metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
-                metadata_row[ 'width' ] = file_info_manager.width
-                metadata_row[ 'height' ] = file_info_manager.height
-                metadata_row[ 'duration' ] = file_info_manager.duration
-                metadata_row[ 'has_audio' ] = file_info_manager.has_audio
-                metadata_row[ 'num_frames' ] = file_info_manager.num_frames
-                metadata_row[ 'num_words' ] = file_info_manager.num_words
-                
-                metadata_row[ 'file_services' ] = {
-                    'current' : {
-                        random_file_service_hex_current.hex() : {
-                            'time_imported' : current_import_timestamp
+                metadata_row = {
+                    'file_id' : file_info_manager.hash_id,
+                    'hash' : file_info_manager.hash.hex(),
+                    'size' : file_info_manager.size,
+                    'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
+                    'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
+                    'width' : file_info_manager.width,
+                    'height' : file_info_manager.height,
+                    'duration' : file_info_manager.duration,
+                    'has_audio' : file_info_manager.has_audio,
+                    'num_frames' : file_info_manager.num_frames,
+                    'num_words' : file_info_manager.num_words,
+                    'file_services' : {
+                        'current' : {
+                            random_file_service_hex_current.hex() : {
+                                'time_imported' : current_import_timestamp
+                            }
+                        },
+                        'deleted' : {
+                            random_file_service_hex_deleted.hex() : {
+                                'time_deleted' : deleted_deleted_timestamp,
+                                'time_imported' : deleted_import_timestamp
+                            }
                         }
                     },
-                    'deleted' : {
-                        random_file_service_hex_deleted.hex() : {
-                            'time_deleted' : deleted_deleted_timestamp,
-                            'time_imported' : deleted_import_timestamp
-                        }
-                    }
+                    'time_modified' : file_modified_timestamp,
+                    'is_inbox' : False,
+                    'is_local' : False,
+                    'is_trashed' : False,
+                    'known_urls' : list( sorted_urls )
                 }
-                
-                metadata_row[ 'time_modified' ] = file_modified_timestamp
-                
-                metadata_row[ 'is_inbox' ] = False
-                metadata_row[ 'is_local' ] = False
-                metadata_row[ 'is_trashed' ] = False
-                
-                metadata_row[ 'known_urls' ] = list( sorted_urls )
                 
                 tags_manager = media_result.GetTagsManager()
                 

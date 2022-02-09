@@ -8,6 +8,29 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_473"><a href="#version_473">version 473</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed the recent problem with drag and dropping thumbnails to a level below the top row of pages. sorry for the trouble!</li>
+					<li>fixed a bug where the client would not load results sorting by 'import time' when the search file domain was a single deleted file domain</li>
+					<li>fixed a list display bug in the edit page parser dialog when a subsidiary page parser has two complicated string-match based content parsers</li>
+					<li>collections now sort by modified time, using the largest known modified time in their collection</li>
+					<li>added sqlite3.exe console back into the windows build--sorry, it was missing since the github build changeover!</li>
+					<li>added a note to the help about backing up when tight on space, which I will repeat here: the sqlite database files are very compressible (70GB->17GB on default 7zip settings!), so if you need more space on your backup drive, this is a good way to reclaim it</li>
+					<li>.</li>
+					<li>command palette:</li>
+					<li>a user has written a cool 'command palette' for the program! it brings up a type-and-search interface to navigate to pages or menu entries.</li>
+					<li>I have integrated his first version and set the default shortcut to Ctrl+P. users who update will get this shortcut if they have nothing else on Ctrl+P on 'main window' set. if you prefer Ctrl+K or anything else, you can change it under _file->shortcuts->the main window_</li>
+					<li>regular users will get a page list they can search and select, advanced users will also get the (potentially dangerous) full scan of the menubar and current thumbnail right-click menu. I will be polishing this latter feature in future to filter out big maintenance jobs and show checkbox status and similar, so if you are advanced, please be careful for now</li>
+					<li>try it out, and let me know how it goes. the underlying widget is neat, and I can change its behaviour and extend it significantly</li>
+					<li>.</li>
+					<li>(mostly advanced) deleted file improvements:</li>
+					<li>files that have been deleted from a local file domain are now aware of their file deletion reason. this is visible in the right-click menu of thumb or media canvas</li>
+					<li>the advanced file deletion dialog now initialises using this stored reason. if all pending deletees have the same existing reason stored, it will display it, and if they are all set but differ, this will be noted and an option to not alter them is also available. this will come up later in niche advanced situations with mutiple file services</li>
+					<li>reversing a recent change, local file deletion reasons are no longer cleared on undelete or (re)import. they'll now hang around invisibly and initialise any future advanced file deletion dialog</li>
+					<li>updated the thumbnail and canvas undelete mechanism to handle multiple services. now, if the files are deleted in more than one domain, you will be asked to multiple-select which you wish to undelete for. if there is only one eligible undelete service, the process remains unchanged--you'll just get a yes/no confirmation if the 'confirm trash' option is set</li>
+					<li>misc multiple local file services code conversion work</li>
+				</ul>
 				<li><h3 id="version_472"><a href="#version_472">version 472</a></h3></li>
 				<ul>
 					<li>highlights:</li>
@@ -26,7 +49,6 @@
 					<li>if the 'durable' temporary database exists on boot, it is now deleted and a fresh one created rather than trying to re-use the old one (which would not have any useful information anyway), and a note is made to log. one user recently had a problem where an existing corrupt temp dir was stopping boot, which this fixes</li>
 					<li>.</li>
 					<li>misc:</li>
-					<li>updated the windows build to use a newer version of mpv, moving from roughly 2021-02 to 2022-01. this replaces mpv-1.dll with mpv-2.dll, and I set the installer to delete the old '1'. if you extract, you can delete the old '1' yourself, but things seems fine with both. in any case, let me know if you have any trouble!</li>
 					<li>updated the windows build to use sqlite 3.37.2, the sqlite3 in the db dir is also updated</li>
 					<li>the deleted files system now neatly cleans up old file deletion reasons on file import and file undelete</li>
 					<li>cleared out some old thumbnail generation code, including deleting an old and now obselete optimisation where too-large thumbs were scaled down to make new thumbs rather than revisiting source. since our thumb situation is more complicated now, this is gone in favour of nicer quality thumbs and simpler code</li>

@@ -857,6 +857,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return hash_ids_to_current_file_service_ids
         
     
+    def GetHashIdsToFileDeletionReasons( self, hash_ids_table_name ):
+        
+        return dict( self._Execute( 'SELECT hash_id, text FROM {} CROSS JOIN local_file_deletion_reasons USING ( hash_id ) CROSS JOIN texts ON ( reason_id = text_id );'.format( hash_ids_table_name ) ) )
+        
+    
     def GetHashIdsToServiceInfoDicts( self, temp_hash_ids_table_name ):
         
         hash_ids_to_current_file_service_ids_and_timestamps = collections.defaultdict( list )

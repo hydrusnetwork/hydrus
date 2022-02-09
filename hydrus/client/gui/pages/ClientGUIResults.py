@@ -1733,42 +1733,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _Undelete( self ):
         
-        hashes = self._GetSelectedHashes( has_location = CC.TRASH_SERVICE_KEY )
+        media = self._GetSelectedFlatMedia()
         
-        num_to_undelete = len( hashes )
-        
-        if num_to_undelete > 0:
-            
-            do_it = False
-            
-            if not HC.options[ 'confirm_trash' ]:
-                
-                do_it = True
-                
-            else:
-                
-                if num_to_undelete == 1:
-                    
-                    message = 'Are you sure you want to undelete this file?'
-                    
-                else:
-                    
-                    message = 'Are you sure you want to undelete these ' + HydrusData.ToHumanInt( num_to_undelete ) + ' files?'
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    do_it = True
-                    
-                
-            
-            if do_it:
-                
-                HG.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
-                
-            
+        ClientGUIMediaActions.UndeleteMedia( self, media )
         
     
     def _UpdateBackgroundColour( self ):
@@ -3261,7 +3228,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.ShowMenu()
         
     
-    def ShowMenu( self ):
+    def ShowMenu( self, do_not_show_just_return = False ):
         
         new_options = HG.client_controller.new_options
         
@@ -4204,9 +4171,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
+        if not do_not_show_just_return:
+            
+            CGC.core().PopupMenu( self, menu )
         
-        CGC.core().PopupMenu( self, menu )
-        
+        else:
+            
+            return menu
+            
     
     def MaintainPageCache( self ):
         

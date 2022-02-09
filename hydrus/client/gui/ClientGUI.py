@@ -75,6 +75,8 @@ from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui import QLocator
+from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
@@ -582,6 +584,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.CallLaterQtSafe( self, 0.5, 'initialise session', self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
         ClientGUIFunctions.UpdateAppDisplayName()
+        
+        # locator setup
+        
+        self._locator = QLocator.QLocator( self )
+        
+        self._locator.setIconBasePath( HC.STATIC_DIR + os.path.sep )
+        
+        # TODO: make configurable which providers + order
+        self._locator.addProvider( ClientGUILocatorSearchProviders.CalculatorSearchProvider() )
+        self._locator.addProvider( ClientGUILocatorSearchProviders.MainMenuSearchProvider() )
+        self._locator.addProvider( ClientGUILocatorSearchProviders.MediaMenuSearchProvider() )
+        self._locator.addProvider( ClientGUILocatorSearchProviders.PagesSearchProvider() )
+        self._locator_widget = QLocator.QLocatorWidget( self,
+            width = 800,
+            resultHeight = 36,
+            titleHeight = 36,
+            primaryTextWidth = 430,
+            secondaryTextWidth = 280,
+            maxVisibleItemCount = 16
+        )
+        self._locator_widget.setDefaultStylingEnabled( False )
+        self._locator_widget.setLocator( self._locator )
+        self._locator_widget.setAlignment( QC.Qt.AlignCenter )
+        self._locator_widget.setEscapeShortcuts( [ QG.QKeySequence( QC.Qt.Key_Escape ) ] )
+        # self._locator_widget.setQueryTimeout( 100 ) # how much to wait before starting a search after user edit. default 0
         
     
     def _AboutWindow( self ):
@@ -7256,6 +7283,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW:
                 
                 HG.client_controller.new_options.FlipBoolean( 'force_animation_scanbar_show' )
+                
+            elif action == CAC.SIMPLE_OPEN_COMMAND_PALETTE:
+                
+                self._locator_widget.start()
                 
             elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 

@@ -6783,6 +6783,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_file_modified_timestamps = dict( self._Execute( 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'.format( temp_table_name ) ) )
                 
+                hash_ids_to_local_file_deletion_reasons = self.modules_files_storage.GetHashIdsToFileDeletionReasons( temp_table_name )
+                
                 hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in hash_ids_to_current_file_service_ids_and_timestamps.items() }
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
@@ -6825,7 +6827,16 @@ class DB( HydrusDB.HydrusDB ):
                     file_modified_timestamp = None
                     
                 
-                locations_manager = ClientMediaManagers.LocationsManager( current_file_service_keys_to_timestamps, deleted_file_service_keys_to_timestamps, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, file_modified_timestamp = file_modified_timestamp )
+                if hash_id in hash_ids_to_local_file_deletion_reasons:
+                    
+                    local_file_deletion_reason = hash_ids_to_local_file_deletion_reasons[ hash_id ]
+                    
+                else:
+                    
+                    local_file_deletion_reason = None
+                    
+                
+                locations_manager = ClientMediaManagers.LocationsManager( current_file_service_keys_to_timestamps, deleted_file_service_keys_to_timestamps, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, file_modified_timestamp = file_modified_timestamp, local_file_deletion_reason = local_file_deletion_reason )
                 
                 #
                 
@@ -6897,7 +6908,7 @@ class DB( HydrusDB.HydrusDB ):
         return media_results[0]
         
     
-    def _GetMediaResultsFromHashes( self, hashes: typing.Iterable[ bytes ], sorted: bytes = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
+    def _GetMediaResultsFromHashes( self, hashes: typing.Iterable[ bytes ], sorted: bool = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
         
         query_hash_ids = set( self.modules_hashes_local_cache.GetHashIds( hashes ) )
         
@@ -8322,15 +8333,30 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
+            file_import_options = file_import_job.GetFileImportOptions()
+            
             file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
             
             now = HydrusData.GetNow()
             
-            for destination_file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, ): # get this list from FIO, with fallback recovery
+            destination_location_context = file_import_options.GetDestinationLocationContext()
+            
+            destination_location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
+            
+            if not destination_location_context.IncludesCurrent():
+                
+                service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
+                
+                service_id = min( service_ids )
+                
+                service_key = self.modules_services.GetService( service_id ).GetServiceKey()
+                
+                destination_location_context = ClientLocation.LocationContext( current_service_keys = ( service_key, ) )
+                
+            
+            for destination_file_service_key in destination_location_context.current_service_keys:
                 
                 destination_service_id = self.modules_services.GetServiceId( destination_file_service_key )
-                
-                self.modules_files_storage.ClearFileDeletionReason( ( hash_id, ) )
                 
                 self._AddFiles( destination_service_id, [ ( hash_id, now ) ] )
                 
@@ -8340,8 +8366,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             #
-            
-            file_import_options = file_import_job.GetFileImportOptions()
             
             if file_import_options.AutomaticallyArchives():
                 
@@ -9103,8 +9127,6 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                 
                             elif action == HC.CONTENT_UPDATE_UNDELETE:
-                                
-                                self.modules_files_storage.ClearFileDeletionReason( hash_ids )
                                 
                                 self._UndeleteFiles( service_id, hash_ids )
                                 
@@ -10045,7 +10067,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'missing_thumbnail_hashes': result = self._GetRepositoryThumbnailHashesIDoNotHave( *args, **kwargs )
         elif action == 'num_deferred_file_deletes': result = self.modules_files_storage.GetDeferredPhysicalDeleteCounts()
         elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
-        elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
@@ -10072,6 +10093,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_display_decorators': result = self.modules_tag_display.GetUIDecorators( *args, **kwargs )
         elif action == 'tag_siblings_and_parents_lookup': result = self.modules_tag_display.GetSiblingsAndParentsForTags( *args, **kwargs )
         elif action == 'tag_siblings_lookup': result = self.modules_tag_siblings.GetTagSiblingsForTags( *args, **kwargs )
+        elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         elif action == 'vacuum_data': result = self.modules_db_maintenance.GetVacuumData( *args, **kwargs )
@@ -11642,7 +11664,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
                     
-                    if location_context.IsOneDomain():
+                    if location_context.IsOneDomain() and location_context.IncludesCurrent():
                         
                         file_service_key = list( location_context.current_service_keys )[0]
                         
@@ -13593,6 +13615,36 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_db_maintenance.AnalyzeTable( 'file_viewing_stats' )
                 
                 self._Execute( 'DROP TABLE file_viewing_stats_old;' )
+                
+            
+        
+        if version == 472:
+            
+            try:
+                
+                from hydrus.client.gui import ClientGUIShortcuts
+                
+                main_gui = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'main_gui' )
+                
+                palette_shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'P' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
+                palette_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_COMMAND_PALETTE )
+                
+                result = main_gui.GetCommand( palette_shortcut )
+                
+                if result is None:
+                    
+                    main_gui.SetCommand( palette_shortcut, palette_command )
+                    
+                    self.modules_serialisable.SetJSONDump( main_gui )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'The new palette shortcut failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
                 
             
         

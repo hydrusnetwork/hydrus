@@ -1221,51 +1221,7 @@ class Canvas( QW.QWidget ):
             return
             
         
-        locations_manager = self._current_media.GetLocationsManager()
-        
-        local_file_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
-        
-        deleted_local_services = [ local_file_service for local_file_service in local_file_services if local_file_service.GetServiceKey() in locations_manager.GetDeleted() ]
-        
-        if len( deleted_local_services ) > 0:
-            
-            choice_tuples = []
-            
-            for service in deleted_local_services:
-                
-                choice_tuples.append( ( service.GetName(), service, service.GetName() ) )
-                
-            
-            try:
-                
-                undelete_service = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Undelete for?', choice_tuples, message = 'Which service to undelete back to?' )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-            do_it = False
-            
-            if len( choice_tuples ) > 1 or not HC.options[ 'confirm_trash' ]:
-                
-                do_it = True
-                
-            else:
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, 'Undelete this file back to {}?'.format( undelete_service.GetName() ) )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    do_it = True
-                    
-                
-            
-            if do_it:
-                
-                HG.client_controller.Write( 'content_updates', { undelete_service.GetServiceKey() : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_media.GetHash(), ) ) ] } )
-                
-            
+        ClientGUIMediaActions.UndeleteMedia( self, ( self._current_media, ) )
         
     
     def _UpdateBackgroundColour( self ):
@@ -3743,7 +3699,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
-def CommitArchiveDelete( page_key, kept_hashes, deleted_hashes ):
+def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.LocationContext, kept_hashes: typing.Collection[ bytes ], deleted_hashes: typing.Collection[ bytes ] ):
     
     if HC.options[ 'remove_filtered_files' ]:
         
@@ -3765,7 +3721,19 @@ def CommitArchiveDelete( page_key, kept_hashes, deleted_hashes ):
         kept_hashes = list( kept_hashes )
         
     
-    # we do a second set of removes to deal with late processing and a quick F5ing user
+    location_context = location_context.Duplicate()
+    
+    location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
+    
+    if location_context.IncludesCurrent():
+        
+        deletee_file_service_keys = location_context.current_service_keys
+        
+    else:
+        
+        # if we are in a weird search domain, then just say 'delete from all local'
+        deletee_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        
     
     for block_of_deleted_hashes in HydrusData.SplitListIntoChunks( deleted_hashes, 64 ):
         
@@ -3773,9 +3741,14 @@ def CommitArchiveDelete( page_key, kept_hashes, deleted_hashes ):
         
         reason = 'Deleted in Archive/Delete filter.'
         
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) ]
+        for deletee_file_service_key in deletee_file_service_keys:
+            
+            service_keys_to_content_updates[ deletee_file_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) ]
+            
         
         HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        # we do a second set of removes to deal with late processing and a quick F5ing user
         
         if HC.options[ 'remove_filtered_files' ]:
             
@@ -3880,7 +3853,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 self._current_media = self._GetFirst() # so the pubsub on close is better
                 
-                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, kept_hashes, deleted_hashes )
+                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, self._location_context, kept_hashes, deleted_hashes )
                 
             
         

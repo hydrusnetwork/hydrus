@@ -269,7 +269,8 @@ class LocationsManager( object ):
         inbox: bool = False,
         urls: typing.Optional[ typing.Set[ str ] ] = None,
         service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
-        file_modified_timestamp: typing.Optional[ int ] = None
+        file_modified_timestamp: typing.Optional[ int ] = None,
+        local_file_deletion_reason: str = None
     ):
         
         self._current_to_timestamps = current_to_timestamps
@@ -297,6 +298,7 @@ class LocationsManager( object ):
         self._service_keys_to_filenames = service_keys_to_filenames
         
         self._file_modified_timestamp = file_modified_timestamp
+        self._local_file_deletion_reason = local_file_deletion_reason
         
     
     def DeletePending( self, service_key ):
@@ -314,7 +316,7 @@ class LocationsManager( object ):
         urls = set( self._urls )
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
         
-        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp )
+        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp, self._local_file_deletion_reason )
         
     
     def GetCDPP( self ):
@@ -425,9 +427,26 @@ class LocationsManager( object ):
             
         
     
+    def GetLocalFileDeletionReason( self ) -> str:
+        
+        if self._local_file_deletion_reason is None:
+            
+            return 'Unknown deletion reason.'
+            
+        else:
+            
+            return self._local_file_deletion_reason
+            
+        
+    
     def GetURLs( self ):
         
         return self._urls
+        
+    
+    def HasLocalFileDeletionReason( self ) -> bool:
+        
+        return self._local_file_deletion_reason is not None
         
     
     def IsDownloading( self ):
@@ -466,7 +485,9 @@ class LocationsManager( object ):
             self._deleted.discard( service_key )
             
         
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        
+        if service_key in local_service_keys:
             
             if CC.TRASH_SERVICE_KEY in self._current_to_timestamps:
                 
@@ -492,7 +513,7 @@ class LocationsManager( object ):
         self._pending.discard( service_key )
         
     
-    def _DeleteFromService( self, service_key ):
+    def _DeleteFromService( self, service_key: bytes, reason: typing.Optional[ str ] ):
         
         if service_key in self._current_to_timestamps:
             
@@ -517,7 +538,12 @@ class LocationsManager( object ):
         
         local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
         
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        if service_key in local_service_keys:
+            
+            if reason is not None:
+                
+                self._local_file_deletion_reason = reason
+                
             
             if self._current.isdisjoint( local_service_keys ):
                 
@@ -528,12 +554,12 @@ class LocationsManager( object ):
             
             for local_service_key in list( self._current.intersection( local_service_keys ) ):
                 
-                self._DeleteFromService( local_service_key )
+                self._DeleteFromService( local_service_key, reason )
                 
             
             if CC.TRASH_SERVICE_KEY in self._current:
                 
-                self._DeleteFromService( CC.TRASH_SERVICE_KEY )
+                self._DeleteFromService( CC.TRASH_SERVICE_KEY, reason )
                 
             
             self.inbox = False
@@ -588,7 +614,16 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
-                self._DeleteFromService( service_key )
+                if content_update.HasReason():
+                    
+                    reason = content_update.GetReason()
+                    
+                else:
+                    
+                    reason = None
+                    
+                
+                self._DeleteFromService( service_key, reason )
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
                 

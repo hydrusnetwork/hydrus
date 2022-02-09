@@ -1389,14 +1389,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         else:
             
-            tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
-            
-            if tab_index == -1:
-                
-                return self
-                
-            
-            on_child_notebook_somewhere = screen_position.y() > current_page.pos().y()
+            on_child_notebook_somewhere = current_page.mapFromGlobal( screen_position ).y() > current_page.pos().y()
             
             if on_child_notebook_somewhere:
                 

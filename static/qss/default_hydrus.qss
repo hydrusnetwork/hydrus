@@ -122,6 +122,18 @@ QPushButton#HydrusOnOffButton[hydrus_on=false]
 
 /*
 
+This is the Command Palette (default Ctrl+P), and specifically the background colour of the item you currently have selected.
+
+*/
+
+QLocatorResultWidget#selectedLocatorResult
+{
+	background-color: #006ffa
+}
+
+
+/*
+
 Custom Controls
 
 These are drawn by hydev on a blank canvas, so they work a little different.

@@ -2061,7 +2061,20 @@ class MediaCollection( MediaList, Media ):
         pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned )
+        modified_times = { locations_manager.GetFileModifiedTimestamp() for locations_manager in all_locations_managers }
+        
+        modified_times.discard( None )
+        
+        if len( modified_times ) > 0:
+            
+            modified_time = max( modified_times )
+            
+        else:
+            
+            modified_time = None
+            
+        
+        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, file_modified_timestamp = modified_time )
         
     
     def _RecalcInternals( self ):
@@ -2485,11 +2498,13 @@ class MediaSingleton( Media ):
         
         deleted_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in deleted_service_keys ]
         
+        local_file_deletion_reason = locations_manager.GetLocalFileDeletionReason()
+        
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
             
             ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'deleted from this client {}'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+            lines.append( 'deleted from this client {} ({})'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) )
             
         elif len( deleted_local_file_services ) > 0:
             
@@ -2497,7 +2512,19 @@ class MediaSingleton( Media ):
                 
                 ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( local_file_service.GetServiceKey() )
                 
-                lines.append( 'removed from {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+                l = 'removed from {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) )
+                
+                if len( deleted_local_file_services ) == 1:
+                    
+                    l = '{} ({})'.format( l, local_file_deletion_reason )
+                    
+                
+                lines.append( l )
+                
+            
+            if len( deleted_local_file_services ) > 1:
+                
+                lines.append( 'Deletion reason: {}'.format( local_file_deletion_reason ) )
                 
             
         

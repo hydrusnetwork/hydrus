@@ -7,6 +7,10 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 
+def ValidLocalDomainsFilter( service_keys ):
+    
+    return [ service_key for service_key in service_keys if HG.client_controller.services_manager.ServiceExists( service_key ) and HG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
+    
 class LocationContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_location_context

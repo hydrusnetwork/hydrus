@@ -64,6 +64,7 @@ jobs:
         run: |
           move ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} hydrus\bin\
           move hydrus\static\build_files\windows\sqlite3.dll hydrus\
+          move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
           move hydrus\static\build_files\windows\client-win.spec client-win.spec
           move hydrus\static\build_files\windows\server-win.spec server-win.spec
           pyinstaller server-win.spec
