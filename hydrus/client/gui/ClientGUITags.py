@@ -21,6 +21,7 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientManagers
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
@@ -1155,12 +1156,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_panel )
         
-        self._simple_blacklist_global_checkboxes = QP.CheckListBox( blacklist_panel )
+        self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_blacklist_namespace_checkboxes = QP.CheckListBox( blacklist_panel )
+        self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
         for namespace in self._namespaces:
             
@@ -1214,12 +1215,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_panel )
         
-        self._simple_whitelist_global_checkboxes = QP.CheckListBox( whitelist_panel )
+        self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_whitelist_namespace_checkboxes = QP.CheckListBox( whitelist_panel )
+        self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
         for namespace in self._namespaces:
             
@@ -1451,14 +1452,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for index in range( self._simple_whitelist_global_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_whitelist_global_checkboxes, index ) in whitelist_tag_slices
+                check = self._simple_whitelist_global_checkboxes.GetData( index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_global_checkboxes.Check( index, check )
                 
             
             for index in range( self._simple_whitelist_namespace_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index ) in whitelist_tag_slices
+                check = self._simple_whitelist_namespace_checkboxes.GetData( index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_namespace_checkboxes.Check( index, check )
                 
@@ -1511,14 +1512,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for index in range( self._simple_blacklist_global_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_blacklist_global_checkboxes, index ) in blacklist_tag_slices
+                check = self._simple_blacklist_global_checkboxes.GetData( index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_global_checkboxes.Check( index, check )
                 
             
             for index in range( self._simple_blacklist_namespace_checkboxes.count() ):
                 
-                check = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index ) in blacklist_tag_slices
+                check = self._simple_blacklist_namespace_checkboxes.GetData( index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_namespace_checkboxes.Check( index, check )
                 
@@ -1700,7 +1701,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index )
+            tag_slice = self._simple_blacklist_namespace_checkboxes.GetData( index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
@@ -1712,7 +1713,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_blacklist_global_checkboxes, index )
+            tag_slice = self._simple_blacklist_global_checkboxes.GetData( index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
@@ -1724,7 +1725,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index )
+            tag_slice = self._simple_whitelist_namespace_checkboxes.GetData( index )
             
             self._AdvancedAddWhitelist( tag_slice )
             
@@ -1736,7 +1737,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if index != -1:
             
-            tag_slice = QP.GetClientData( self._simple_whitelist_global_checkboxes, index )
+            tag_slice = self._simple_whitelist_global_checkboxes.GetData( index )
             
             if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTagSlices():
                 
@@ -1804,11 +1805,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, file_service_key, media, immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, media, immediate_commit = False, canvas_key = None ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
@@ -1837,7 +1838,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_services, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
+            page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             page._add_tag_box.selectUp.connect( self.EventSelectUp )
             page._add_tag_box.selectDown.connect( self.EventSelectDown )
             page._add_tag_box.showPrevious.connect( self.EventShowPrevious )
@@ -2067,11 +2068,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         okSignal = QC.Signal()
         
-        def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit, canvas_key = None ):
+        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, media, immediate_commit, canvas_key = None ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._file_service_key = file_service_key
+            self._location_context = location_context
             self._tag_service_key = tag_service_key
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
@@ -2140,7 +2141,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._location_context, self._tag_service_key, null_entry_callable = self.OK )
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
@@ -2950,10 +2951,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children.setMinimumHeight( preview_height )
             self._parents.setMinimumHeight( preview_height )
             
-            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, default_location_context, service_key, show_paste_button = True )
             self._child_input.setEnabled( False )
             
-            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, default_location_context, service_key, show_paste_button = True )
             self._parent_input.setEnabled( False )
             
             self._add = QW.QPushButton( 'add', self )
@@ -3947,10 +3950,12 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._old_siblings.setMinimumHeight( preview_height )
             
-            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, default_location_context, service_key, show_paste_button = True )
             self._old_input.setEnabled( False )
             
-            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key )
             self._new_input.setEnabled( False )
             
             self._add = QW.QPushButton( 'add', self )

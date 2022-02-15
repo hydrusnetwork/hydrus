@@ -153,7 +153,7 @@ class FileImportJob( object ):
                 
                 ok_to_go = True
                 
-            except HydrusExceptions.FileSizeException as e:
+            except HydrusExceptions.FileImportRulesException as e:
                 
                 ok_to_go = False
                 
@@ -306,14 +306,15 @@ class FileImportJob( object ):
                 
             
             bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
             
-            target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
+            ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), bounding_dimensions, thumbnail_scale_type )
             
             percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
             try:
                 
-                self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
+                self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in )
                 
             except Exception as e:
                 

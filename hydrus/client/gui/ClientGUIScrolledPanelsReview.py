@@ -10,6 +10,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -25,6 +26,7 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
@@ -51,7 +53,9 @@ from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingLogin
+from hydrus.client.networking import ClientNetworkingURLClass
 
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -1759,6 +1763,9 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
         
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Or you can paste bitmaps from clipboard!' )
+        
         st = ClientGUICommon.BetterStaticText( self, label = 'Drop downloader-encoded pngs onto Lain to import.' )
         
         lain_path = os.path.join( HC.STATIC_DIR, 'lain.jpg' )
@@ -1779,6 +1786,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._repo_link, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, st, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._select_from_list, self, 'select objects from list' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1794,19 +1802,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ImportPaths( self, paths ):
         
-        have_shown_load_error = False
-        
-        gugs = []
-        url_classes = []
-        parsers = []
-        domain_metadatas = []
-        login_scripts = []
-        
-        num_misc_objects = 0
-        
-        bandwidth_manager = self._network_engine.bandwidth_manager
-        domain_manager = self._network_engine.domain_manager
-        login_manager = self._network_engine.login_manager
+        payloads = []
         
         for path in paths:
             
@@ -1821,6 +1817,30 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 return
                 
             
+            payloads.append( ( 'file "{}"'.format( path ), payload ) )
+            
+        
+        self._ImportPayloads( payloads )
+        
+    
+    def _ImportPayloads( self, payloads ):
+        
+        have_shown_load_error = False
+        
+        gugs = []
+        url_classes = []
+        parsers = []
+        domain_metadatas = []
+        login_scripts = []
+        
+        num_misc_objects = 0
+        
+        bandwidth_manager = self._network_engine.bandwidth_manager
+        domain_manager = self._network_engine.domain_manager
+        login_manager = self._network_engine.login_manager
+        
+        for ( payload_description, payload ) in payloads:
+            
             try:
                 
                 obj_list = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
@@ -1831,7 +1851,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     message = str( e )
                     
-                    if len( paths ) > 1:
+                    if len( payloads ) > 1:
                         
                         message += os.linesep * 2
                         message += 'If there are more unloadable objects in this import, they will be skipped silently.'
@@ -1846,30 +1866,30 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the file '+path+'!' )
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in {}!'.format( payload_description ) )
                 
                 continue
                 
             
-            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLClass, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
+            if isinstance( obj_list, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator, ClientNetworkingURLClass.URLClass, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
                 
                 obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
                 
             
             if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, '+path+' did not look like a package of download data! Instead, it looked like: '+obj_list.SERIALISABLE_NAME )
+                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, {} did not look like a package of download data! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME ) )
                 
                 continue
                 
             
             for obj in obj_list:
                 
-                if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ):
+                if isinstance( obj, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) ):
                     
                     gugs.append( obj )
                     
-                elif isinstance( obj, ClientNetworkingDomain.URLClass ):
+                elif isinstance( obj, ClientNetworkingURLClass.URLClass ):
                     
                     url_classes.append( obj )
                     
@@ -2095,8 +2115,8 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 return
                 
             
-            new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ) ]
-            new_url_classes = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLClass ) ]
+            new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) ) ]
+            new_url_classes = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingURLClass.URLClass ) ]
             new_parsers = [ obj for obj in new_objects if isinstance( obj, ClientParsing.PageParser ) ]
             new_login_scripts = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingLogin.LoginScriptDomain ) ]
             new_domain_metadatas = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) ]
@@ -2187,6 +2207,46 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         QW.QMessageBox.information( self, 'Information', final_message )
         
     
+    def _Paste( self ):
+        
+        if HG.client_controller.ClipboardHasImage():
+            
+            try:
+                
+                qt_image = HG.client_controller.GetClipboardImage()
+                
+                payload_description = 'clipboard image data'
+                payload = ClientSerialisable.LoadFromQtImage( qt_image )
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( str( e ) ) )
+                
+                return
+                
+            
+        else:
+            
+            try:
+                
+                raw_text = HG.client_controller.GetClipboardText()
+                
+                payload_description = 'clipboard text data'
+                payload = HydrusCompression.CompressStringToBytes( raw_text )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                QW.QMessageBox.critical( self, 'Error', str(e) )
+                
+                return
+                
+            
+        
+        payloads = [ ( payload_description, payload ) ]
+        
+        self._ImportPayloads( payloads )
+        
+    
     def EventLainClick( self, event ):
         
         with QP.FileDialog( self, 'Select the pngs to add.', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles ) as dlg:
@@ -2247,11 +2307,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
-        
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
@@ -2519,9 +2577,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_all_media_files.setEnabled( False )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] )
+        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -2546,9 +2604,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_repo_files.setEnabled( False )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_UPDATE_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -3070,7 +3128,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         num_unimportable_mime_files = 0
         num_occupied_files = 0
         
-        while not HG.view_shutdown:
+        while not HG.started_shutdown:
             
             if not self or not QP.isValid( self ):
                 

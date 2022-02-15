@@ -150,7 +150,7 @@ class VolumeControl( QW.QWidget ):
             
             self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
             
-            if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 option_to_use = 'media_viewer_uses_its_own_audio_volume'
                 volume_type = AUDIO_MEDIA_VIEWER
@@ -163,7 +163,7 @@ class VolumeControl( QW.QWidget ):
             
             self._specific_mute = AudioMuteButton( self, volume_type )
             
-            self._specific_mute.setToolTip( 'Mute/unmute: {}'.format( ClientGUICommon.canvas_str_lookup[ self._canvas_type ] ) )
+            self._specific_mute.setToolTip( 'Mute/unmute: {}'.format( CC.canvas_type_str_lookup[ self._canvas_type ] ) )
             
             if HG.client_controller.new_options.GetBoolean( option_to_use ):
                 

@@ -1946,7 +1946,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -1960,6 +1960,63 @@ class TestClientAPI( unittest.TestCase ):
         self.assertIn( 'apply_implicit_limit', kwargs )
         
         self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        # search files and get hashes
+        
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&return_hashes=true'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_hashes_set = { hash.hex() for hash in hash_ids_to_hashes.values() }
+        
+        self.assertEqual( set( d[ 'hashes' ] ), expected_hashes_set )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'hash_ids_to_hashes' )
+        
+        hash_ids = kwargs[ 'hash_ids' ]
+        
+        self.assertEqual( set( hash_ids ), sample_hash_ids )
         
         # sort
         
@@ -1989,7 +2046,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2030,7 +2087,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2076,7 +2133,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2123,7 +2180,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( file_search_context, ) = args
         
-        self.assertEqual( file_search_context.GetFileServiceKey(), CC.TRASH_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
@@ -2333,6 +2390,14 @@ class TestClientAPI( unittest.TestCase ):
             
             sorted_urls = sorted( urls )
             
+            random_file_service_hex_current = HydrusData.GenerateKey()
+            random_file_service_hex_deleted = HydrusData.GenerateKey()
+            
+            current_import_timestamp = 500
+            deleted_import_timestamp = 300
+            deleted_deleted_timestamp = 450
+            file_modified_timestamp = 20
+            
             for ( file_id, hash ) in file_ids_to_hashes.items():
                 
                 size = random.randint( 8192, 20 * 1048576 )
@@ -2349,10 +2414,10 @@ class TestClientAPI( unittest.TestCase ):
                 
                 tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
                 
-                locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set(), inbox = False, urls = urls )
+                locations_manager = ClientMediaManagers.LocationsManager( { random_file_service_hex_current : current_import_timestamp }, { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) }, set(), set(), inbox = False, urls = urls, file_modified_timestamp = file_modified_timestamp )
                 ratings_manager = ClientMediaManagers.RatingsManager( {} )
                 notes_manager = ClientMediaManagers.NotesManager( {} )
-                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
                 
                 media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
                 
@@ -2369,27 +2434,39 @@ class TestClientAPI( unittest.TestCase ):
             
             for media_result in media_results:
                 
-                metadata_row = {}
-                
                 file_info_manager = media_result.GetFileInfoManager()
                 
-                metadata_row[ 'file_id' ] = file_info_manager.hash_id
-                metadata_row[ 'hash' ] = file_info_manager.hash.hex()
-                metadata_row[ 'size' ] = file_info_manager.size
-                metadata_row[ 'mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.mime ]
-                metadata_row[ 'ext' ] = HC.mime_ext_lookup[ file_info_manager.mime ]
-                metadata_row[ 'width' ] = file_info_manager.width
-                metadata_row[ 'height' ] = file_info_manager.height
-                metadata_row[ 'duration' ] = file_info_manager.duration
-                metadata_row[ 'has_audio' ] = file_info_manager.has_audio
-                metadata_row[ 'num_frames' ] = file_info_manager.num_frames
-                metadata_row[ 'num_words' ] = file_info_manager.num_words
-                
-                metadata_row[ 'is_inbox' ] = False
-                metadata_row[ 'is_local' ] = False
-                metadata_row[ 'is_trashed' ] = False
-                
-                metadata_row[ 'known_urls' ] = list( sorted_urls )
+                metadata_row = {
+                    'file_id' : file_info_manager.hash_id,
+                    'hash' : file_info_manager.hash.hex(),
+                    'size' : file_info_manager.size,
+                    'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
+                    'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
+                    'width' : file_info_manager.width,
+                    'height' : file_info_manager.height,
+                    'duration' : file_info_manager.duration,
+                    'has_audio' : file_info_manager.has_audio,
+                    'num_frames' : file_info_manager.num_frames,
+                    'num_words' : file_info_manager.num_words,
+                    'file_services' : {
+                        'current' : {
+                            random_file_service_hex_current.hex() : {
+                                'time_imported' : current_import_timestamp
+                            }
+                        },
+                        'deleted' : {
+                            random_file_service_hex_deleted.hex() : {
+                                'time_deleted' : deleted_deleted_timestamp,
+                                'time_imported' : deleted_import_timestamp
+                            }
+                        }
+                    },
+                    'time_modified' : file_modified_timestamp,
+                    'is_inbox' : False,
+                    'is_local' : False,
+                    'is_trashed' : False,
+                    'known_urls' : list( sorted_urls )
+                }
                 
                 tags_manager = media_result.GetTagsManager()
                 
@@ -2673,7 +2750,7 @@ class TestClientAPI( unittest.TestCase ):
         locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( 0, 0, 0, 0 )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         

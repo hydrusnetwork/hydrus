@@ -152,7 +152,7 @@ def DeletePath( path ):
     
     if os.path.exists( path ):
         
-        MakeFileWriteable( path )
+        TryToMakeFileWriteable( path )
         
         try:
             
@@ -183,9 +183,6 @@ def DeletePath( path ):
     
 def DirectoryIsWriteable( path ):
     
-    # testing access bits on directories to see if we can make new files is multiplatform hellmode
-    # so, just try it and see what happens
-    
     while not os.path.exists( path ):
         
         try:
@@ -197,6 +194,13 @@ def DirectoryIsWriteable( path ):
             return False
             
         
+    
+    return os.access( path, os.W_OK | os.X_OK )
+    
+    # old crazy method:
+    '''
+    # testing access bits on directories to see if we can make new files is multiplatform hellmode
+    # so, just try it and see what happens
     
     temp_path = os.path.join( path, 'hydrus_temp_test_top_jej' )
     
@@ -229,6 +233,10 @@ def DirectoryIsWriteable( path ):
         
         return False
         
+    '''
+def FileisWriteable( path: str ):
+    
+    return os.access( path, os.W_OK )
     
 def FilterFreePaths( paths ):
     
@@ -433,40 +441,6 @@ def MakeSureDirectoryExists( path ):
     
     os.makedirs( path, exist_ok = True )
     
-def MakeFileWriteable( path ):
-    
-    if not os.path.exists( path ):
-        
-        return
-        
-    
-    try:
-        
-        stat_result = os.stat( path )
-        
-        current_bits = stat_result.st_mode
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
-            desired_bits = stat.S_IREAD | stat.S_IWRITE
-            
-        else:
-            
-            # guarantee 644 for regular files m8
-            desired_bits = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
-            
-        
-        if not ( desired_bits & current_bits ) == desired_bits:
-            
-            os.chmod( path, current_bits | desired_bits )
-            
-        
-    except Exception as e:
-        
-        HydrusData.Print( 'Wanted to add write permission to "{}", but had an error: {}'.format( path, str( e ) ) )
-        
-    
 def safe_copy2( source, dest ):
     
     copy_metadata = True
@@ -497,8 +471,6 @@ def MergeFile( source, dest ):
     # this can merge a file, but if it is given a dir it will just straight up overwrite not merge
     
     if not os.path.isdir( source ):
-        
-        MakeFileWriteable( source )
         
         if PathsHaveSameSizeAndDate( source, dest ):
             
@@ -604,7 +576,7 @@ def MirrorFile( source, dest ):
         
         try:
             
-            MakeFileWriteable( dest )
+            TryToMakeFileWriteable( dest )
             
             safe_copy2( source, dest )
             
@@ -788,7 +760,7 @@ def RecyclePath( path ):
     
     if os.path.exists( path ):
         
-        MakeFileWriteable( path )
+        TryToMakeFileWriteable( path )
         
         try:
             
@@ -819,4 +791,88 @@ def SanitizeFilename( filename ):
         
     
     return filename
+    
+def TryToGiveFileNicePermissionBits( path ):
+    
+    if not os.path.exists( path ):
+        
+        return
+        
+    
+    try:
+        
+        stat_result = os.stat( path )
+        
+        current_bits = stat_result.st_mode
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
+            desired_bits = stat.S_IREAD | stat.S_IWRITE
+            
+        else:
+            
+            # typically guarantee 644 for regular files m8, but now we also take umask into account
+            
+            try:
+                
+                umask = os.umask( 0o022 )
+                os.umask( umask )
+                
+            except:
+                
+                umask = 0o022
+                
+            
+            desired_bits = ( stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH ) & ~umask
+            
+        
+        if not ( desired_bits & current_bits ) == desired_bits:
+            
+            os.chmod( path, current_bits | desired_bits )
+            
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'Wanted to add read and write permission to "{}", but had an error: {}'.format( path, str( e ) ) )
+        
+    
+def TryToMakeFileWriteable( path ):
+    
+    if not os.path.exists( path ):
+        
+        return
+        
+    
+    if FileisWriteable( path ):
+        
+        return
+        
+    
+    try:
+        
+        stat_result = os.stat( path )
+        
+        current_bits = stat_result.st_mode
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
+            desired_bits = stat.S_IREAD | stat.S_IWRITE
+            
+        else:
+            
+            # this only does what we want if we own the file, but only owners can non-sudo change permission anyway
+            desired_bits = stat.S_IWUSR
+            
+        
+        if not ( desired_bits & current_bits ) == desired_bits:
+            
+            os.chmod( path, current_bits | desired_bits )
+            
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'Wanted to add user write permission to "{}", but had an error: {}'.format( path, str( e ) ) )
+        
     

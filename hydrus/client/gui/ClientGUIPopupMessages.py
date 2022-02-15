@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -291,7 +292,9 @@ class PopupMessage( PopupWindow ):
             
             ( popup_files, popup_files_name ) = result
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = popup_files, page_name = popup_files_name )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = popup_files, page_name = popup_files_name )
             
         
     
@@ -949,7 +952,7 @@ class PopupMessageManager( QW.QWidget ):
     
     def _Update( self ):
         
-        if HG.view_shutdown:
+        if HG.started_shutdown:
             
             self._update_job.Cancel()
             

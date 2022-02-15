@@ -13,6 +13,8 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
+from hydrus.client import ClientSearch
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -779,7 +781,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class MediaList( object ):
     
-    def __init__( self, file_service_key, media_results ):
+    def __init__( self, location_context: ClientLocation.LocationContext, media_results ):
         
         hashes_seen = set()
         
@@ -800,7 +802,7 @@ class MediaList( object ):
         
         media_results = media_results_dedupe
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         
         self._hashes = set()
         self._hashes_ordered = []
@@ -860,7 +862,7 @@ class MediaList( object ):
     
     def _GenerateMediaCollection( self, media_results ):
         
-        return MediaCollection( self._file_service_key, media_results )
+        return MediaCollection( self._location_context, media_results )
         
     
     def _GenerateMediaSingleton( self, media_result ):
@@ -1632,18 +1634,19 @@ class MediaList( object ):
                     if action == HC.CONTENT_UPDATE_DELETE:
                         
                         local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                        non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
-                        all_local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
+                        all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ] )
                         
                         #
                         
                         physically_deleted = service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY
                         trashed = service_key in local_file_domains
-                        deleted_from_our_domain = service_key == self._file_service_key
+                        deleted_from_our_domain = self._location_context.IsOneDomain() and service_key in self._location_context.current_service_keys
                         
-                        physically_deleted_and_local_view = physically_deleted and self._file_service_key in all_local_file_services
+                        our_view_is_all_local = self._location_context.IncludesCurrent() and not self._location_context.IncludesDeleted() and self._location_context.current_service_keys.issubset( all_local_file_services )
                         
-                        user_says_remove_and_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and trashed and self._file_service_key in non_trash_local_file_services
+                        physically_deleted_and_local_view = physically_deleted and our_view_is_all_local
+                        
+                        user_says_remove_and_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and trashed and our_view_is_all_local and CC.TRASH_SERVICE_KEY not in self._location_context.current_service_keys
                         
                         deleted_from_repo_and_repo_view = service_key not in all_local_file_services and deleted_from_our_domain
                         
@@ -1661,7 +1664,7 @@ class MediaList( object ):
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        for ( service_key, service_updates ) in list(service_keys_to_service_updates.items()):
+        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             for service_update in service_updates:
                 
@@ -1681,7 +1684,7 @@ class MediaList( object ):
     
     def ResetService( self, service_key ):
         
-        if service_key == self._file_service_key:
+        if self._location_context.IsOneDomain() and service_key in self._location_context.current_service_keys:
             
             self._RemoveMediaDirectly( self._singleton_media, self._collected_media )
             
@@ -1707,15 +1710,11 @@ class MediaList( object ):
         
         media_sort_fallback = HG.client_controller.new_options.GetFallbackSort()
         
-        ( sort_key, reverse ) = media_sort_fallback.GetSortKeyAndReverse( self._file_service_key )
-        
-        self._sorted_media.sort( sort_key, reverse = reverse )
+        media_sort_fallback.Sort( self._location_context, self._sorted_media )
         
         # this is a stable sort, so the fallback order above will remain for equal items
         
-        ( sort_key, reverse ) = self._media_sort.GetSortKeyAndReverse( self._file_service_key )
-        
-        self._sorted_media.sort( sort_key = sort_key, reverse = reverse )
+        self._media_sort.Sort( self._location_context, self._sorted_media )
         
         self._RecalcHashes()
         
@@ -1891,9 +1890,9 @@ class FileFilter( object ):
     
 class ListeningMediaList( MediaList ):
     
-    def __init__( self, file_service_key, media_results ):
+    def __init__( self, location_context: ClientLocation.LocationContext, media_results ):
         
-        MediaList.__init__( self, file_service_key, media_results )
+        MediaList.__init__( self, location_context, media_results )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
@@ -1922,12 +1921,12 @@ class ListeningMediaList( MediaList ):
     
 class MediaCollection( MediaList, Media ):
     
-    def __init__( self, file_service_key, media_results ):
+    def __init__( self, location_context: ClientLocation.LocationContext, media_results ):
         
         # note for later: ideal here is to stop this multiple inheritance mess and instead have this be a media that *has* a list, not *is* a list
         
         Media.__init__( self )
-        MediaList.__init__( self, file_service_key, media_results )
+        MediaList.__init__( self, location_context, media_results )
         
         self._archive = True
         self._inbox = False
@@ -2030,22 +2029,7 @@ class MediaCollection( MediaList, Media ):
     
     def _RecalcFileViewingStats( self ):
         
-        preview_views = 0
-        preview_viewtime = 0.0
-        media_views = 0
-        media_viewtime = 0.0
-        
-        for m in self._sorted_media:
-            
-            fvsm = m.GetFileViewingStatsManager()
-            
-            preview_views += fvsm.preview_views
-            preview_viewtime += fvsm.preview_viewtime
-            media_views += fvsm.media_views
-            media_viewtime += fvsm.media_viewtime
-            
-        
-        self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
+        self._file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateCombinedManager( [ m.GetFileViewingStatsManager() for m in self._sorted_media ] )
         
     
     def _RecalcHashes( self ):
@@ -2077,7 +2061,20 @@ class MediaCollection( MediaList, Media ):
         pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned )
+        modified_times = { locations_manager.GetFileModifiedTimestamp() for locations_manager in all_locations_managers }
+        
+        modified_times.discard( None )
+        
+        if len( modified_times ) > 0:
+            
+            modified_time = max( modified_times )
+            
+        else:
+            
+            modified_time = None
+            
+        
+        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, file_modified_timestamp = modified_time )
         
     
     def _RecalcInternals( self ):
@@ -2501,11 +2498,13 @@ class MediaSingleton( Media ):
         
         deleted_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in deleted_service_keys ]
         
+        local_file_deletion_reason = locations_manager.GetLocalFileDeletionReason()
+        
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
             
             ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'deleted from this client {}'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+            lines.append( 'deleted from this client {} ({})'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) )
             
         elif len( deleted_local_file_services ) > 0:
             
@@ -2513,7 +2512,19 @@ class MediaSingleton( Media ):
                 
                 ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( local_file_service.GetServiceKey() )
                 
-                lines.append( 'removed from {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+                l = 'removed from {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) )
+                
+                if len( deleted_local_file_services ) == 1:
+                    
+                    l = '{} ({})'.format( l, local_file_deletion_reason )
+                    
+                
+                lines.append( l )
+                
+            
+            if len( deleted_local_file_services ) > 1:
+                
+                lines.append( 'Deletion reason: {}'.format( local_file_deletion_reason ) )
                 
             
         
@@ -2851,7 +2862,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSortKeyAndReverse( self, file_service_key ):
+    def GetSortKeyAndReverse( self, location_context: ClientLocation.LocationContext ):
         
         ( sort_metadata, sort_data ) = self.sort_type
         
@@ -2997,18 +3008,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
             elif sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
                 
-                file_service = HG.client_controller.services_manager.GetService( file_service_key )
-                
-                file_service_type = file_service.GetServiceType()
-                
-                if file_service_type == HC.LOCAL_FILE_DOMAIN:
-                    
-                    file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-                    
-                
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetCurrentTimestamp( file_service_key ) )
+                    return deal_with_none( x.GetLocationsManager().GetBestCurrentTimestamp( location_context ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
@@ -3016,6 +3018,17 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 def sort_key( x ):
                     
                     return deal_with_none( x.GetLocationsManager().GetFileModifiedTimestamp() )
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
+                
+                def sort_key( x ):
+                    
+                    fvsm = x.GetFileViewingStatsManager()
+                    
+                    # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
+                    
+                    return deal_with_none( fvsm.GetLastViewedTime( CC.CANVAS_MEDIA_VIEWER ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_HEIGHT:
@@ -3088,7 +3101,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return fvsm.media_views
+                    return fvsm.GetViews( CC.CANVAS_MEDIA_VIEWER )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
@@ -3099,7 +3112,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     # do not do views as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return fvsm.media_viewtime
+                    return fvsm.GetViewtime( CC.CANVAS_MEDIA_VIEWER )
                     
                 
             
@@ -3150,6 +3163,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_LAST_VIEWED_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
@@ -3207,6 +3221,22 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
         return sort_string
+        
+    
+    def Sort( self, location_context: ClientLocation.LocationContext, media_results_list: "SortedList" ):
+        
+        ( sort_metadata, sort_data ) = self.sort_type
+        
+        if sort_data == CC.SORT_FILES_BY_RANDOM:
+            
+            media_results_list.random_sort()
+            
+        else:
+            
+            ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context )
+            
+            media_results_list.sort( sort_key, reverse = reverse )
+            
         
     
     def ToString( self ):
@@ -3330,6 +3360,20 @@ class SortedList( object ):
             
             del self._sorted_list[ index ]
             
+        
+        self._DirtyIndices()
+        
+    
+    def random_sort( self ):
+        
+        def sort_key( x ):
+            
+            return random.random()
+            
+        
+        self._sort_key = sort_key
+        
+        random.shuffle( self._sorted_list )
         
         self._DirtyIndices()
         

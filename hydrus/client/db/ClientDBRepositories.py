@@ -154,7 +154,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         self._ReprocessRepository( service_id, ( HC.CONTENT_TYPE_DEFINITIONS, ) )
         
-        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
         
         self._cursor_transaction_wrapper.CommitAndBegin()
@@ -403,7 +403,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         all_hash_ids = set( hash_ids_to_content_types_to_process.keys() )
         
-        all_local_hash_ids = self.modules_files_storage.FilterCurrentHashIds( self.modules_services.local_update_service_id, all_hash_ids )
+        all_local_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( self.modules_services.local_update_service_id, all_hash_ids, HC.CONTENT_STATUS_CURRENT )
         
         for sorted_update_index in sorted( update_indices_to_unprocessed_hash_ids.keys() ):
             
@@ -475,7 +475,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
                 
@@ -488,7 +488,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 ] )
                 
             
-        elif HC.CONTENT_TYPE_TAG:
+        elif content_type == HC.CONTENT_TYPE_TAG:
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 

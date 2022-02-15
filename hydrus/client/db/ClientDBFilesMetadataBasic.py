@@ -133,7 +133,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             return [
                 ( 'file_inbox', 'hash_id' ),

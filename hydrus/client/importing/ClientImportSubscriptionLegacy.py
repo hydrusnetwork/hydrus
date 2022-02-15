@@ -520,7 +520,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     def _CanDoWorkNow( self ):
         
         p1 = not ( self._paused or HG.client_controller.options[ 'pause_subs_sync' ] or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
-        p2 = not ( HG.view_shutdown or HydrusThreading.IsThreadShuttingDown() )
+        p2 = not ( HG.started_shutdown or HydrusThreading.IsThreadShuttingDown() )
         p3 = self._NoDelays()
         
         if HG.subscription_report_mode:
@@ -529,7 +529,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             message += os.linesep
             message += 'Paused/Global/Network Pause: {}/{}/{}'.format( self._paused, HG.client_controller.options[ 'pause_subs_sync' ], HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             message += os.linesep
-            message += 'View/Thread shutdown: {}/{}'.format( HG.view_shutdown, HydrusThreading.IsThreadShuttingDown() )
+            message += 'Started/Thread shutdown: {}/{}'.format( HG.started_shutdown, HydrusThreading.IsThreadShuttingDown() )
             message += os.linesep
             message += 'No delays: {}'.format( self._NoDelays() )
             

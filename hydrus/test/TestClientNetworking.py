@@ -20,6 +20,7 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client.networking import ClientNetworkingURLClass
 
 from hydrus.test import TestController
 
@@ -248,7 +249,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         parameters[ 's' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
         parameters[ 'id' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ), None )
         
-        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
         gallery_index_type = None
         gallery_index_identifier = None
@@ -263,7 +264,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
         bad_url = 'https://wew.lad/123456'
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -280,7 +281,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         alphabetise_get_parameters = False
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -290,9 +291,9 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         #
         
-        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_NEVER
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_NEVER
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -309,9 +310,9 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         referral_url_converter = ClientStrings.StringConverter( conversions, good_url )
         
-        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -320,9 +321,9 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         #
         
-        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_CONVERTER
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_CONVERTER
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -349,7 +350,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         parameters = {}
         
-        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
         gallery_index_type = None
         gallery_index_identifier = None
@@ -358,7 +359,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         keep_fragment = False
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -366,7 +367,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         keep_fragment = True
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
@@ -409,7 +410,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         example_url = single_value_good_url
         
-        url_class = ClientNetworkingDomain.URLClass(
+        url_class = ClientNetworkingURLClass.URLClass(
             name,
             url_type = url_type,
             preferred_scheme = preferred_scheme,
@@ -606,7 +607,7 @@ class TestNetworkingJob( unittest.TestCase ):
         self.assertFalse( job.IsCancelled() )
         self.assertFalse( job.IsDone() )
         
-        HG.model_shutdown = True
+        HG.started_shutdown = True
         
         try:
             
@@ -615,7 +616,7 @@ class TestNetworkingJob( unittest.TestCase ):
             
         finally:
             
-            HG.model_shutdown = False
+            HG.started_shutdown = False
             
         
     

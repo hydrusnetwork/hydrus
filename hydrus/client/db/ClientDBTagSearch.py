@@ -753,7 +753,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_TAG:
+        if content_type == HC.CONTENT_TYPE_TAG:
             
             tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
             

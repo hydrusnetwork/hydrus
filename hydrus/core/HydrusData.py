@@ -624,29 +624,49 @@ def GenerateKey():
     
 def Get64BitHammingDistance( perceptual_hash1, perceptual_hash2 ):
     
-    # old way of doing this was:
+    # old slow strategy:
+    
     #while xor > 0:
     #    
     #    distance += 1
     #    xor &= xor - 1
     #    
     
-    # convert to unsigned long long, then xor
-    # then through the power of stackexchange magic, we get number of bits in record time
+    # ---------------------
+    
+    # cool stackexchange strategy:
+    
     # Here it is: https://stackoverflow.com/questions/9829578/fast-way-of-counting-non-zero-bits-in-positive-integer/9830282#9830282
     
-    n = struct.unpack( '!Q', perceptual_hash1 )[0] ^ struct.unpack( '!Q', perceptual_hash2 )[0]
+    # n = struct.unpack( '!Q', perceptual_hash1 )[0] ^ struct.unpack( '!Q', perceptual_hash2 )[0]
     
-    n = ( n & 0x5555555555555555 ) + ( ( n & 0xAAAAAAAAAAAAAAAA ) >> 1 ) # 10101010, 01010101
-    n = ( n & 0x3333333333333333 ) + ( ( n & 0xCCCCCCCCCCCCCCCC ) >> 2 ) # 11001100, 00110011
-    n = ( n & 0x0F0F0F0F0F0F0F0F ) + ( ( n & 0xF0F0F0F0F0F0F0F0 ) >> 4 ) # 11110000, 00001111
-    n = ( n & 0x00FF00FF00FF00FF ) + ( ( n & 0xFF00FF00FF00FF00 ) >> 8 ) # etc...
-    n = ( n & 0x0000FFFF0000FFFF ) + ( ( n & 0xFFFF0000FFFF0000 ) >> 16 )
-    n = ( n & 0x00000000FFFFFFFF ) + ( n >> 32 )
+    # n = ( n & 0x5555555555555555 ) + ( ( n & 0xAAAAAAAAAAAAAAAA ) >> 1 ) # 10101010, 01010101
+    # n = ( n & 0x3333333333333333 ) + ( ( n & 0xCCCCCCCCCCCCCCCC ) >> 2 ) # 11001100, 00110011
+    # n = ( n & 0x0F0F0F0F0F0F0F0F ) + ( ( n & 0xF0F0F0F0F0F0F0F0 ) >> 4 ) # 11110000, 00001111
+    # n = ( n & 0x00FF00FF00FF00FF ) + ( ( n & 0xFF00FF00FF00FF00 ) >> 8 ) # etc...
+    # n = ( n & 0x0000FFFF0000FFFF ) + ( ( n & 0xFFFF0000FFFF0000 ) >> 16 )
+    # n = ( n & 0x00000000FFFFFFFF ) + ( n >> 32 )
     
     # you technically are going n & 0xFFFFFFFF00000000 at the end, but that's a no-op with the >> 32 afterwards, so can be omitted
     
-    return n
+    # ---------------------
+    
+    # lame but about 9% faster than the stackexchange using timeit (0.1286 vs 0.1383 for 100000 comparisons) (when including the xor and os.urandom to generate phashes)
+    
+    # n = struct.unpack( '!Q', perceptual_hash1 )[0] ^ struct.unpack( '!Q', perceptual_hash2 )[0]
+    
+    # return bin( n ).count( '1' )
+    
+    # collapsed because that also boosts by another 1% or so
+    
+    return bin( struct.unpack( '!Q', perceptual_hash1 )[0] ^ struct.unpack( '!Q', perceptual_hash2 )[0] ).count( '1' )
+    
+    # ---------------------
+    
+    # once python 3.10 rolls around apparently you can just do int.bit_count(), which _may_ be six times faster
+    # not sure how that handles signed numbers, but shouldn't matter here
+    
+    # another option is https://www.valuedlessons.com/2009/01/popcount-in-python-with-benchmarks.html, which is just an array where the byte value is an address on a list to the answer
     
 def GetNicelyDivisibleNumberForZoom( zoom, no_bigger_than ):
     
@@ -1904,7 +1924,7 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
-                ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = self._row
+                ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = self._row
                 
                 hashes = { hash }
                 

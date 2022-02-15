@@ -200,7 +200,7 @@ class BitmapManager( object ):
         
         qt_image_format = self._GetQtImageFormat( depth )
         
-        bytes_per_line = ( depth / 8 ) * width
+        bytes_per_line = ( depth // 8 ) * width
         
         # no copy, no new data allocated
         qt_image = QG.QImage( data, width, height, bytes_per_line, qt_image_format )
@@ -253,76 +253,64 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
-    def _GenerateViewsRow( self, viewtype, viewtime_delta ):
+    def _GenerateViewsRow( self, canvas_type, view_timestamp, viewtime_delta ):
         
         new_options = HG.client_controller.new_options
         
-        preview_views_delta = 0
-        preview_viewtime_delta = 0
-        media_views_delta = 0
-        media_viewtime_delta = 0
+        result_views_delta = 0
+        result_viewtime_delta = 0
         
-        if viewtype == 'preview':
+        do_it = True
+        
+        if canvas_type == CC.CANVAS_PREVIEW:
             
-            preview_min = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
-            preview_max = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
+            viewtime_min = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
+            viewtime_max = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
             
-            if preview_max is not None:
+        elif canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
+            
+            viewtime_min = new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
+            viewtime_max = new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+            
+            if canvas_type == CC.CANVAS_MEDIA_VIEWER_DUPLICATES and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
                 
-                viewtime_delta = min( viewtime_delta, preview_max )
-                
-            
-            if preview_min is None or viewtime_delta >= preview_min:
-                
-                preview_views_delta = 1
-                preview_viewtime_delta = viewtime_delta
-                
-            
-        elif viewtype in ( 'media', 'media_duplicates_filter' ):
-            
-            do_it = True
-            
-            if viewtype == 'media_duplicates_filter' and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
+                canvas_type = CC.CANVAS_MEDIA_VIEWER
                 
                 do_it = False
                 
             
-            if do_it:
+        
+        if do_it:
+            
+            # if a cap on max viewtime, cap it
+            if viewtime_max is not None:
                 
-                media_min = new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
-                media_max = new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+                viewtime_delta = min( viewtime_delta, viewtime_max )
                 
-                if media_max is not None:
-                    
-                    viewtime_delta = min( viewtime_delta, media_max )
-                    
+            
+            # if a min on viewtime, then maybe don't do anything
+            if viewtime_min is None or viewtime_delta >= viewtime_min:
                 
-                if media_min is None or viewtime_delta >= media_min:
-                    
-                    media_views_delta = 1
-                    media_viewtime_delta = viewtime_delta
-                    
+                result_views_delta = 1
+                result_viewtime_delta = viewtime_delta
                 
             
         
-        return ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        return ( canvas_type, ( view_timestamp, result_views_delta, result_viewtime_delta ) )
         
     
     def _RowMakesChanges( self, row ):
         
-        ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+        ( view_timestamp, views_delta, viewtime_delta ) = row
         
-        preview_change = preview_views_delta != 0 or preview_viewtime_delta != 0
-        media_change = media_views_delta != 0 or media_viewtime_delta != 0
-        
-        return preview_change or media_change
+        return views_delta != 0 or viewtime_delta != 0
         
     
-    def _PubSubRow( self, hash, row ):
+    def _PubSubRow( self, hash, canvas_type, row ):
         
-        ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+        ( view_timestamp, views_delta, viewtime_delta ) = row
         
-        pubsub_row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        pubsub_row = ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta )
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, pubsub_row )
         
@@ -330,11 +318,6 @@ class FileViewingStatsManager( object ):
         
         HG.client_controller.pub( 'content_updates_data', service_keys_to_content_updates )
         HG.client_controller.pub( 'content_updates_gui', service_keys_to_content_updates )
-        
-    
-    def REPEATINGFlush( self ):
-        
-        self.Flush()
         
     
     def Flush( self ):
@@ -345,9 +328,9 @@ class FileViewingStatsManager( object ):
                 
                 content_updates = []
                 
-                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in self._pending_updates.items():
+                for ( ( hash, canvas_type ), ( view_timestamp, views_delta, viewtime_delta ) ) in self._pending_updates.items():
                     
-                    row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+                    row = ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta )
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
                     
@@ -364,7 +347,7 @@ class FileViewingStatsManager( object ):
             
         
     
-    def FinishViewing( self, viewtype, hash, viewtime_delta ):
+    def FinishViewing( self, hash, canvas_type, view_timestamp, viewtime_delta ):
         
         if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
@@ -373,28 +356,35 @@ class FileViewingStatsManager( object ):
         
         with self._lock:
             
-            row = self._GenerateViewsRow( viewtype, viewtime_delta )
+            ( canvas_type, row ) = self._GenerateViewsRow( canvas_type, view_timestamp, viewtime_delta )
             
             if not self._RowMakesChanges( row ):
                 
                 return
                 
             
-            if hash not in self._pending_updates:
+            key = ( hash, canvas_type )
+            
+            if key not in self._pending_updates:
                 
-                self._pending_updates[ hash ] = row
+                self._pending_updates[ key ] = row
                 
             else:
                 
-                ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+                ( view_timestamp, views_delta, viewtime_delta ) = row
                 
-                ( existing_preview_views_delta, existing_preview_viewtime_delta, existing_media_views_delta, existing_media_viewtime_delta ) = self._pending_updates[ hash ]
+                ( existing_view_timestamp, existing_views_delta, existing_viewtime_delta ) = self._pending_updates[ key ]
                 
-                self._pending_updates[ hash ] = ( existing_preview_views_delta + preview_views_delta, existing_preview_viewtime_delta + preview_viewtime_delta, existing_media_views_delta + media_views_delta, existing_media_viewtime_delta + media_viewtime_delta )
+                self._pending_updates[ key ] = ( max( view_timestamp, existing_view_timestamp ), existing_views_delta + views_delta, existing_viewtime_delta + viewtime_delta )
                 
             
         
-        self._PubSubRow( hash, row )
+        self._PubSubRow( hash, canvas_type, row )
+        
+    
+    def REPEATINGFlush( self ):
+        
+        self.Flush()
         
     
 class UndoManager( object ):

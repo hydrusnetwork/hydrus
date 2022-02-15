@@ -6,6 +6,22 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
+def DoingAFileJoinTagSearchIsFaster( estimated_file_row_count, estimated_tag_row_count ):
+    
+    # ok, so there are times we want to do a tag search when we already know a superset of the file results (e.g. 'get all of these files that are tagged with samus')
+    # sometimes it is fastest to just do the search using tag outer-join-loop/indices and intersect/difference in python
+    # sometimes it is fastest to do the search with a temp file table and CROSS JOIN or EXISTS or similar to effect file outer-join-loop/indices
+    
+    # with experimental profiling, it is generally 2.5 times as slow to look up mappings using file indices. it also takes about 0.1 the time to set up temp table and other misc overhead
+    # so, when we have file result A, and we want to fetch B, if the estimated size of A is < 2.6 the estimated size of B, we can save a bunch of time
+    
+    # normally, we could let sqlite do NATURAL JOIN analyze profiling, but that sometimes fails for me when the queries get complex, I believe due to my wewlad 'temp table' queries and weird tag/file index distribution
+    
+    file_lookup_speed_ratio = 2.5
+    temp_table_overhead = 0.1
+    
+    return estimated_file_row_count * ( file_lookup_speed_ratio + temp_table_overhead ) < estimated_tag_row_count
+    
 def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
@@ -19,6 +35,18 @@ def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str
     petitioned_mappings_table_name = 'external_mappings.petitioned_mappings_{}'.format( suffix )
     
     return ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name )
+    
+def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
+    
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
+    
+    cache_current_mappings_table_name = 'external_caches.specific_current_mappings_cache_{}'.format( suffix )
+    
+    cache_deleted_mappings_table_name = 'external_caches.specific_deleted_mappings_cache_{}'.format( suffix )
+    
+    cache_pending_mappings_table_name = 'external_caches.specific_pending_mappings_cache_{}'.format( suffix )
+    
+    return ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name )
     
 class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
     
@@ -130,6 +158,29 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
         return count
         
     
+    def GetFastestStorageMappingTableNames( self, file_service_id: int, tag_service_id: int ):
+        
+        statuses_to_table_names = {}
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+        
+        statuses_to_table_names[ HC.CONTENT_STATUS_CURRENT ] = current_mappings_table_name
+        statuses_to_table_names[ HC.CONTENT_STATUS_DELETED ] = deleted_mappings_table_name
+        statuses_to_table_names[ HC.CONTENT_STATUS_PENDING ] = pending_mappings_table_name
+        statuses_to_table_names[ HC.CONTENT_STATUS_PETITIONED ] = petitioned_mappings_table_name
+        
+        if file_service_id != self.modules_services.combined_file_service_id:
+            
+            ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            statuses_to_table_names[ HC.CONTENT_STATUS_CURRENT ] = cache_current_mappings_table_name
+            statuses_to_table_names[ HC.CONTENT_STATUS_DELETED ] = cache_deleted_mappings_table_name
+            statuses_to_table_names[ HC.CONTENT_STATUS_PENDING ] = cache_pending_mappings_table_name
+            
+        
+        return statuses_to_table_names
+        
+    
     def GetPendingMappingsCount( self, service_id: int ) -> int:
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
@@ -156,7 +207,7 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 
@@ -170,7 +221,7 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
                 ] )
                 
             
-        elif HC.CONTENT_TYPE_TAG:
+        elif content_type == HC.CONTENT_TYPE_TAG:
             
             for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
                 

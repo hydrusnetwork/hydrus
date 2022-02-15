@@ -293,7 +293,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     if not has_video:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'File did not appear to have a video stream!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Wanted to parse video data, but file did not appear to have a video stream!' )
         
     
     resolution = ParseFFMPEGVideoResolution( lines_for_first_second )
@@ -412,7 +412,14 @@ def GetMime( path ):
             
         else:
             
-            return HC.VIDEO_MKV
+            if has_video:
+                
+                return HC.VIDEO_MKV
+                
+            else:
+                
+                return HC.AUDIO_MKV
+                
             
         
     elif mime_text in ( 'mpeg', 'mpegvideo', 'mpegts' ):
@@ -767,7 +774,7 @@ def ParseFFMPEGMimeText( lines ):
         
     except:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading mime!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading file type!' )
         
     
 def ParseFFMPEGNumFramesManually( lines ):
@@ -941,7 +948,8 @@ def VideoHasAudio( path, info_lines ):
         while len( chunk_of_pcm_data ) > 0:
             
             # iterating over bytes gives you ints, recall
-            if True in ( b != 0 and b != 255 for b in chunk_of_pcm_data ):
+            # this used to be 'if not 0 or 255', but I found some that had 1 too, so let's just change the tolerance to reduce false positives
+            if True in ( 5 <= b <= 250 for b in chunk_of_pcm_data ):
                 
                 return True
                 
@@ -962,13 +970,14 @@ def VideoHasAudio( path, info_lines ):
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
-    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24" ):
+    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24", clip_rect = None ):
         
         self._path = path
         self._mime = mime
         self._duration = duration / 1000.0
         self._num_frames = num_frames
         self._target_resolution = target_resolution
+        self._clip_rect = clip_rect
         
         self.lastread = None
         
@@ -1051,6 +1060,13 @@ class VideoRendererFFMPEG( object ):
         if do_ss and not do_fast_seek: # slow seek
             
             cmd.extend( [ '-ss', "%.03f" % ss ] )
+            
+        
+        if self._clip_rect is not None:
+            
+            ( clip_x, clip_y, clip_width, clip_height ) = self._clip_rect
+            
+            cmd.extend( [ '-vf', 'crop={}:{}:{}:{}'.format( clip_width, clip_height, clip_x, clip_y ) ] )
             
         
         cmd.extend( [

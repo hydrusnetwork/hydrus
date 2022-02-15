@@ -16,7 +16,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientStrings
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
 
 try:
@@ -2388,7 +2388,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetSafeSummary( self ):
         
-        domains = sorted( { ClientNetworkingDomain.ConvertURLIntoDomain( url ) for url in self._example_urls } )
+        domains = sorted( { ClientNetworkingFunctions.ConvertURLIntoDomain( url ) for url in self._example_urls } )
         
         return 'Parser "' + self._name + '" - ' + ', '.join( domains )
         
@@ -2894,7 +2894,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             single_value_parameters = []
             
-            full_request_url = self._url + '?' + ClientNetworkingDomain.ConvertQueryDictToText( request_args, single_value_parameters )
+            full_request_url = self._url + '?' + ClientNetworkingFunctions.ConvertQueryDictToText( request_args, single_value_parameters )
             
             job_key.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( full_request_url, 32 ) )
             

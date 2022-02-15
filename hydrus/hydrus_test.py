@@ -66,6 +66,8 @@ def boot():
             
         finally:
             
+            HG.started_shutdown = True
+            
             HG.view_shutdown = True
             
             controller.pubimmediate( 'wake_daemons' )

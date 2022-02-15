@@ -13,6 +13,7 @@ from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client.media import ClientMediaManagers
@@ -290,11 +291,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if file_search_context is None:
             
-            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
             
-            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
-            
-            file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
             
         
         if phrase is None:
@@ -470,7 +469,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     num_copied += 1
                     
-                    HydrusPaths.MakeFileWriteable( dest_path )
+                    HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                     
                 
             

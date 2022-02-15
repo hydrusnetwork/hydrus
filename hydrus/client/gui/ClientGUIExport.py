@@ -14,6 +14,7 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientExporting
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -73,10 +74,9 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
         delete_from_client_after_export = False
         
-        default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
+        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
         period = 15 * 60
         
@@ -873,7 +873,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         HydrusPaths.MirrorFile( source_path, path )
                         
-                        HydrusPaths.MakeFileWriteable( path )
+                        HydrusPaths.TryToGiveFileNicePermissionBits( path )
                         
                     
                 except:

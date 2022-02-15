@@ -139,7 +139,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ) -> ClientGUIListBoxesData.ListBoxItemPredicate:
         
-        predicate.ClearCounts()
+        predicate = predicate.GetCountlessCopy()
         
         return ClientGUIListBoxesData.ListBoxItemPredicate( predicate )
         

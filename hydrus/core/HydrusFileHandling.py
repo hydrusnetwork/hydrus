@@ -59,7 +59,7 @@ headers_and_mime = [
     ( ( ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C' ), ), HC.UNDETERMINED_WM )
     ]
 
-def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
+def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, clip_rect = None, percentage_in = 35 ):
     
     if target_resolution == ( 0, 0 ):
         
@@ -68,7 +68,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
         
-        thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime )
+        thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = clip_rect )
         
     elif mime == HC.APPLICATION_PSD:
         
@@ -78,13 +78,13 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusVideoHandling.RenderImageToPNGPath( path, temp_path )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime, clip_rect = clip_rect )
             
         except:
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime, clip_rect = clip_rect )
             
         finally:
             
@@ -99,13 +99,13 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusClipHandling.ExtractDBPNGToPath( path, temp_path )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime, clip_rect = clip_rect )
             
         except:
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'clip.png' )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime, clip_rect = clip_rect )
             
         finally:
             
@@ -120,13 +120,13 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime, clip_rect = clip_rect )
             
         except:
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime, clip_rect = clip_rect )
             
         finally:
             
@@ -135,7 +135,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         
     else:
         
-        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, clip_rect = clip_rect )
         
         renderer.read_frame() # this initialises the renderer and loads the first frame as a fallback
         
@@ -189,7 +189,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
+        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
     if mime is None:
@@ -292,13 +292,9 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
     
-def GetFileModifiedTimestamp( path ):
+def GetFileModifiedTimestamp( path ) -> int:
     
-    s = os.stat( path )
-    
-    file_modified_timestamp = int( s.st_mtime )
-    
-    return file_modified_timestamp
+    return int( os.path.getmtime( path ) )
     
 def GetHashFromPath( path ):
     
@@ -320,7 +316,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     if size == 0:
         
-        raise HydrusExceptions.FileSizeException( 'File is of zero length!' )
+        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
     with open( path, 'rb' ) as f:

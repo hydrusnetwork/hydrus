@@ -238,30 +238,6 @@ class DBBase( object ):
         self._c.executemany( query, args_iterator )
         
     
-    def _ExecuteManySelectSingleParam( self, query, single_param_iterator ):
-        
-        select_args_iterator = ( ( param, ) for param in single_param_iterator )
-        
-        return self._ExecuteManySelect( query, select_args_iterator )
-        
-    
-    def _ExecuteManySelect( self, query, select_args_iterator ):
-        
-        # back in python 2, we did batches of 256 hash_ids/whatever at a time in big "hash_id IN (?,?,?,?,...)" predicates.
-        # this was useful to get over some 100,000 x fetchall() call overhead, but it would sometimes throw the SQLite query planner off and do non-optimal queries
-        # (basically, the "hash_id in (256)" would weight the hash_id index request x 256 vs another when comparing the sqlite_stat1 tables, which could lead to WEWLAD for some indices with low median very-high mean skewed distribution
-        # python 3 is better about call overhead, so we'll go back to what is pure
-        # cursor.executemany SELECT when
-        
-        for select_args in select_args_iterator:
-            
-            for result in self._Execute( query, select_args ):
-                
-                yield result
-                
-            
-        
-    
     def _GenerateIndexName( self, table_name, columns ):
         
         return '{}_{}_index'.format( table_name, '_'.join( columns ) )

@@ -20,14 +20,6 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 
-CANVAS_MEDIA_VIEWER = 0
-CANVAS_PREVIEW = 1
-
-canvas_str_lookup = {}
-
-canvas_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
-canvas_str_lookup[ CANVAS_PREVIEW ] = 'preview'
-
 def AddGridboxStretchSpacer( layout: QW.QGridLayout ):
     
     layout.addItem( QW.QSpacerItem( 10, 10, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed ) )
@@ -255,6 +247,120 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         button_label = ClientGUIFunctions.EscapeMnemonics( label )
         
         QW.QPushButton.setText( self, button_label )
+        
+    
+class BetterCheckBoxList( QW.QListWidget ):
+    
+    checkBoxListChanged = QC.Signal()
+    rightClicked = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        QW.QListWidget.__init__( self, parent )
+        
+        self.itemClicked.connect( self._ItemCheckStateChanged )
+        
+        self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        
+    
+    def _ItemCheckStateChanged( self, item ):
+        
+        self.checkBoxListChanged.emit()
+        
+    
+    def Append( self, text, data, starts_checked = False ):
+        
+        item = QW.QListWidgetItem()
+        
+        item.setFlags( item.flags() | QC.Qt.ItemIsUserCheckable )
+        
+        qt_state = QC.Qt.Checked if starts_checked else QC.Qt.Unchecked
+        
+        item.setCheckState( qt_state )
+        
+        item.setText( text )
+        
+        item.setData( QC.Qt.UserRole, data )
+        
+        self.addItem( item )
+        
+        self._ItemCheckStateChanged( item )
+        
+    
+    def Check( self, index: int, value: bool = True ):
+        
+        qt_state = QC.Qt.Checked if value else QC.Qt.Unchecked
+        
+        item = self.item( index )
+        
+        item.setCheckState( qt_state )
+        
+        self._ItemCheckStateChanged( item )
+        
+    
+    def Flip( self, index: int ):
+        
+        self.Check( index, not self.IsChecked( index ) )
+        
+    
+    def GetData( self, index: int ):
+        
+        return self.item( index ).data( QC.Qt.UserRole )
+        
+    
+    def GetCheckedIndices( self ) -> typing.List[ int ]:
+        
+        checked_indices = [ i for i in range( self.count() ) if self.IsChecked( i ) ]
+        
+        return checked_indices
+        
+    
+    def GetSelectedIndices( self ):
+        
+        selected_indices = [ i for i in range( self.count() ) if self.IsSelected( i ) ]
+        
+        return selected_indices
+        
+    
+    def GetValue( self ):
+        
+        result = [ self.GetData( index ) for index in self.GetCheckedIndices() ]
+        
+        return result
+        
+    
+    def IsChecked( self, index: int ) -> bool:
+        
+        return self.item( index ).checkState() == QC.Qt.Checked
+        
+    
+    def IsSelected( self, index: int ) -> bool:
+        
+        return self.item( index ).isSelected()
+        
+    
+    def SetValue( self, datas: typing.Collection ):
+        
+        for index in range( self.count() ):
+            
+            data = self.GetData( index )
+            
+            check_it = data in datas
+            
+            self.Check( index, check_it )
+            
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if event.button() == QC.Qt.RightButton:
+            
+            self.rightClicked.emit()
+            
+        else:
+            
+            QW.QListWidget.mousePressEvent( self, event )
+            
         
     
 class BetterChoice( QW.QComboBox ):

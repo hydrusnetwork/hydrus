@@ -18,6 +18,7 @@ from hydrus.core.networking import HydrusNetworkVariableHandling
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
@@ -348,94 +349,6 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         else: name_to_display = hta_path + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
         
         return name_to_display
-        
-    
-    def EventArchiveAdd( self, event ):
-        
-        if self._archive_sync.GetCount() == 0:
-            
-            QW.QMessageBox.warning( self, 'Warning', 'Be careful with this tool! Syncing a lot of files to a large archive can take a very long time to initialise.' )
-            
-        
-        text = 'Select the Hydrus Tag Archive\'s location.'
-        
-        with QP.FileDialog( self, message = text, acceptMode = QW.QFileDialog.AcceptOpen ) as dlg_file:
-            
-            if dlg_file.exec() == QW.QDialog.Accepted:
-                
-                hta_path = dlg_file.GetPath()
-                
-                portable_hta_path = HydrusPaths.ConvertAbsPathToPortablePath( hta_path )
-                
-                hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-                
-                archive_namespaces = sorted( hta.GetNamespaces() )
-                
-                choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
-                
-                try:
-                    
-                    namespaces = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select namespaces', choice_tuples )
-                    
-                except HydrusExceptions.CancelledException:
-                    
-                    return
-                    
-                
-                name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-                
-                self._archive_sync.addItem( name_to_display, (portable_hta_path, namespaces) )
-                
-            
-        
-    
-    def EventArchiveEdit( self, event ):
-        
-        selection = self._archive_sync.GetSelection()
-        
-        if selection != -1:
-            
-            ( portable_hta_path, existing_namespaces ) = QP.GetClientData( self._archive_sync, selection )
-            
-            hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-            
-            if not os.path.exists( hta_path ):
-                
-                QW.QMessageBox.critical( self, 'Error', 'This archive does not seem to exist any longer!' )
-                
-                return
-                
-            
-            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-            
-            archive_namespaces = sorted( hta.GetNamespaces() )
-            
-            choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
-            
-            try:
-                
-                namespaces = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select namespaces', choice_tuples )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-            name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-            
-            self._archive_sync.SetString( selection, name_to_display )
-            self._archive_sync.SetClientData( selection, ( portable_hta_path, namespaces ) )
-            
-        
-    
-    def EventArchiveRemove( self, event ):
-        
-        selection = self._archive_sync.GetSelection()
-        
-        if selection != -1:
-            
-            self._archive_sync.Delete( selection )
-            
         
     
     def GetValue( self ):
@@ -3349,11 +3262,13 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             try:
                 
+                location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+                
                 for ( multihash, num_files, total_size, note ) in shares:
                     
                     hashes = HG.client_controller.Read( 'service_directory', service_key, multihash )
                     
-                    HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'ipfs directory' )
+                    HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'ipfs directory' )
                     
                     time.sleep( 0.5 )
                     
@@ -3630,6 +3545,8 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
     
     def _OpenSearch( self ):
         
+        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        
         for share_key in self._booru_shares.GetData( only_selected = True ):
             
             info = self._share_key_info[ share_key ]
@@ -3637,7 +3554,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
             name = info[ 'name' ]
             hashes = info[ 'hashes' ]
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'booru share: ' + name )
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'booru share: ' + name )
             
         
     

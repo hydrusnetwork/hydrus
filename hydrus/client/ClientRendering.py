@@ -210,7 +210,16 @@ class ImageRenderer( object ):
         
         self._path = client_files_manager.GetFilePath( self._hash, self._mime )
         
-        self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
+        try:
+            
+            self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Problem rendering image at "{}"! Error follows:'.format( self._path ) )
+            
+            HydrusData.ShowException( e )
+            
         
         if not self._this_is_for_metadata_alone:
             
@@ -558,7 +567,7 @@ class RasterContainerVideo( RasterContainer ):
         
         while True:
             
-            if self._stop or HG.view_shutdown:
+            if self._stop or HG.started_shutdown:
                 
                 self._renderer.Stop()
                 

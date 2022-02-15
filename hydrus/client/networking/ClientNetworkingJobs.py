@@ -17,7 +17,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.networking import ClientNetworkingContexts
-from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 
 try:
     
@@ -143,7 +143,7 @@ class NetworkJob( object ):
     IS_HYDRUS_SERVICE = False
     IS_IPFS_SERVICE = False
     
-    def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+    def __init__( self, method: str, url: str, body = None, referral_url = None, temp_path = None ):
         
         if body is not None and isinstance( body, str ):
             
@@ -159,8 +159,8 @@ class NetworkJob( object ):
         
         self._max_connection_attempts_allowed = 5
         
-        self._domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
-        self._second_level_domain = ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( self._url )
+        self._domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self._url )
+        self._second_level_domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( self._url )
         
         self._body = body
         self._referral_url = referral_url
@@ -259,7 +259,7 @@ class NetworkJob( object ):
         
         network_contexts.append( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
         
-        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( self._domain )
+        domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( self._domain )
         
         network_contexts.extend( ( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
         
@@ -293,7 +293,7 @@ class NetworkJob( object ):
             return True
             
         
-        if HG.model_shutdown:
+        if HG.started_shutdown:
             
             return True
             
@@ -308,7 +308,7 @@ class NetworkJob( object ):
             return True
             
         
-        if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
+        if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
             
             return True
             
@@ -530,7 +530,7 @@ class NetworkJob( object ):
             self._ReportDataUsed( chunk_num_bytes )
             self._WaitOnOngoingBandwidth()
             
-            if HG.view_shutdown:
+            if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException()
                 
@@ -617,17 +617,23 @@ class NetworkJob( object ):
                 headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
                 
             
-            headers[ 'Range' ] = 'bytes={}-'.format( self._num_bytes_read )
+            referral_url = self.engine.domain_manager.GetReferralURL( url, self._referral_url )
             
-            referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
+            url_class = self.engine.domain_manager.GetURLClass( url )
             
-            url_headers = self.engine.domain_manager.GetURLClassHeaders( self._url )
+            if url_class is not None:
+                
+                headers.update( url_class.GetHeaderOverrides() )
+                
             
-            headers.update( url_headers )
+            if url_class is None or url_class.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
+                
+                headers[ 'Range' ] = 'bytes={}-'.format( self._num_bytes_read )
+                
             
             if HG.network_report_mode:
                 
-                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( self._url, os.linesep, self._referral_url, os.linesep, referral_url ) )
+                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( url, os.linesep, self._referral_url, os.linesep, referral_url ) )
                 
             
             if referral_url is not None:
@@ -643,7 +649,7 @@ class NetworkJob( object ):
                     
                     if HG.network_report_mode:
                         
-                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( self._url, os.linesep, referral_url ) )
+                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( url, os.linesep, referral_url ) )
                         
                     
                 
@@ -781,7 +787,7 @@ class NetworkJob( object ):
                         session.cookies.clear( cookie.domain, cookie.path, cookie.name )
                         
                     
-                    domain = '.{}'.format( ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( self._url ) )
+                    domain = '.{}'.format( ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( self._url ) )
                     path = '/'
                     expires = HydrusData.GetNow() + 30 * 86400
                     secure = True
@@ -789,7 +795,7 @@ class NetworkJob( object ):
                     
                     for ( name, value ) in cf_tokens.items():
                         
-                        ClientNetworkingDomain.AddCookieToSession( session, name, value, domain, path, expires, secure = secure, rest = rest )
+                        ClientNetworkingFunctions.AddCookieToSession( session, name, value, domain, path, expires, secure = secure, rest = rest )
                         
                     
                     self.engine.session_manager.SetSessionDirty( snc )
@@ -1231,7 +1237,7 @@ class NetworkJob( object ):
             
         
     
-    def SetError( self, e, error ):
+    def SetError( self, e: Exception, error: str ):
         
         with self._lock:
             
@@ -1255,7 +1261,7 @@ class NetworkJob( object ):
             
         
     
-    def SetForLogin( self, for_login ):
+    def SetForLogin( self, for_login: bool ):
         
         with self._lock:
             
@@ -1263,7 +1269,7 @@ class NetworkJob( object ):
             
         
     
-    def SetGalleryToken( self, token_name ):
+    def SetGalleryToken( self, token_name: str ):
         
         with self._lock:
             
@@ -1271,7 +1277,7 @@ class NetworkJob( object ):
             
         
     
-    def SetStatus( self, text ):
+    def SetStatus( self, text: str ):
         
         with self._lock:
             
@@ -1543,7 +1549,7 @@ class NetworkJob( object ):
                 
                 trace = traceback.format_exc()
                 
-                if not isinstance( e, ( HydrusExceptions.NetworkInfrastructureException, HydrusExceptions.StreamTimeoutException, HydrusExceptions.FileSizeException ) ):
+                if not isinstance( e, ( HydrusExceptions.NetworkInfrastructureException, HydrusExceptions.StreamTimeoutException, HydrusExceptions.FileImportRulesException ) ):
                     
                     HydrusData.Print( trace )
                     
@@ -1567,7 +1573,7 @@ class NetworkJob( object ):
             
         
     
-    def TokensOK( self ):
+    def TokensOK( self ) -> bool:
         
         with self._lock:
             
@@ -1710,7 +1716,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
+            if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
                 
                 raise HydrusExceptions.ShutdownException()
                 
@@ -1741,7 +1747,7 @@ class NetworkJob( object ):
             
         
     
-    def WillingToWaitOnInvalidLogin( self ):
+    def WillingToWaitOnInvalidLogin( self ) -> bool:
         
         return self.WILLING_TO_WAIT_ON_INVALID_LOGIN
         

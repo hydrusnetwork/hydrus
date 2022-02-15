@@ -108,7 +108,7 @@ def GetRepeatingJobInitialDelay():
     
 def PageImporterShouldStopWorking( page_key ):
     
-    return HG.view_shutdown or not HG.client_controller.PageAlive( page_key )
+    return HG.started_shutdown or not HG.client_controller.PageAlive( page_key )
     
 def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button, publish_files_to_page ):
     

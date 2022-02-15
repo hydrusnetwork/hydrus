@@ -40,7 +40,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on gallery_seed add/remove
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, self._ConvertGallerySeedToListCtrlTuples )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, self._ConvertGallerySeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
         
         #
         
@@ -129,6 +129,23 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             text = separator.join( notes )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _DeleteSelected( self ):
+        
+        gallery_seeds_to_delete = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( gallery_seeds_to_delete ) > 0:
+            
+            message = 'Are you sure you want to delete the {} selected entries? This is only useful if you have a really really huge list.'.format( HydrusData.ToHumanInt( len( gallery_seeds_to_delete ) ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._gallery_seed_log.RemoveGallerySeeds( gallery_seeds_to_delete )
+                
             
         
     
@@ -305,6 +322,33 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     def _PopulateMenu( self, menu ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
+        
+        num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
+        num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )
+        num_errors = gallery_seed_log.GetGallerySeedCount( CC.STATUS_ERROR )
+        num_skipped = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SKIPPED )
+        
+        if num_successful > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, ) )
+            
+        
+        if num_errors > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_ERROR, ) )
+            
+        
+        if num_vetoed > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_VETOED, ) )
+            
+        
+        if num_skipped > 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_SKIPPED, ) )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
         
         if len( gallery_seed_log ) > 0:
             

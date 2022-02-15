@@ -9,6 +9,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 
 def GetClientDefaultOptions():
     
@@ -134,23 +135,23 @@ def GetDefaultGUGs():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) )
     
 def GetDefaultNGUGs():
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ) ]
     
     return gugs
     
 def GetDefaultSingleGUGs():
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingGUG
     
-    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingGUG.GalleryURLGenerator ) ]
     
     return gugs
     
@@ -380,6 +381,7 @@ def GetDefaultShortcuts():
     main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'W' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_CLOSE_PAGE ) )
     main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Y' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REDO ) )
     main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_UNDO ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'P' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_COMMAND_PALETTE ) )
     
     shortcuts.append( main_gui )
     
@@ -468,9 +470,9 @@ def GetDefaultURLClasses():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
-    from hydrus.client.networking import ClientNetworkingDomain
+    from hydrus.client.networking import ClientNetworkingURLClass
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLClass, ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingURLClass.URLClass, ) )
     
 def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
@@ -671,7 +673,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     foldername = 'example search'
     name = 'inbox filter'
     
-    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
     tag_search_context = ClientSearch.TagSearchContext()
     
@@ -687,7 +689,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
     
-    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
     
     synchronised = True
     media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
@@ -700,13 +702,13 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     foldername = None
     name = 'empty page'
     
-    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
     tag_search_context = ClientSearch.TagSearchContext()
     
     predicates = []
     
-    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
     
     synchronised = True
     media_sort = None

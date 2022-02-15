@@ -306,6 +306,14 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+        
+        with self._lock:
+            
+            return self._file_import_options
+            
+        
+    
     def GetHighlightedWatcher( self ):
         
         with self._lock:

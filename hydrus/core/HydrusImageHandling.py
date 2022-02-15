@@ -83,19 +83,21 @@ try:
     
     if cv2.__version__.startswith( '2' ):
         
-        CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.CV_LOAD_IMAGE_UNCHANGED
-        CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = CV_IMREAD_FLAGS_SUPPORTS_ALPHA
-        
-        # there's something wrong with these, but I don't have an easy test env for it atm
-        # CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.CV_LOAD_IMAGE_ANYDEPTH | cv2.CV_LOAD_IMAGE_ANYCOLOR
+        CV_IMREAD_FLAGS_PNG = cv2.CV_LOAD_IMAGE_UNCHANGED
+        CV_IMREAD_FLAGS_JPEG = CV_IMREAD_FLAGS_PNG
+        CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
         
         CV_JPEG_THUMBNAIL_ENCODE_PARAMS = []
         CV_PNG_THUMBNAIL_ENCODE_PARAMS = []
         
     else:
         
-        CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.IMREAD_UNCHANGED
-        CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR # this preserves colour info but does EXIF reorientation and flipping
+        # allows alpha channel
+        CV_IMREAD_FLAGS_PNG = cv2.IMREAD_UNCHANGED
+        # this preserves colour info but does EXIF reorientation and flipping
+        CV_IMREAD_FLAGS_JPEG = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
+        # this seems to allow weirdass tiffs to load as non greyscale, although the LAB conversion 'whitepoint' or whatever can be wrong
+        CV_IMREAD_FLAGS_WEIRD = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
         
         CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
         CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
@@ -106,6 +108,50 @@ try:
 except:
     
     OPENCV_OK = False
+    
+def MakeClipRectFit( image_resolution, clip_rect ):
+    
+    ( im_width, im_height ) = image_resolution
+    ( x, y, clip_width, clip_height ) = clip_rect
+    
+    x = max( 0, x )
+    y = max( 0, y )
+    
+    clip_width = min( clip_width, im_width )
+    clip_height = min( clip_height, im_height )
+    
+    if x + clip_width > im_width:
+        
+        x = im_width - clip_width
+        
+    
+    if y + clip_height > im_height:
+        
+        y = im_height - clip_height
+        
+    
+    return ( x, y, clip_width, clip_height )
+    
+def ClipNumPyImage( numpy_image: numpy.array, clip_rect ):
+    
+    if len( numpy_image.shape ) == 3:
+        
+        ( im_height, im_width, depth ) = numpy_image.shape
+        
+    else:
+        
+        ( im_height, im_width ) = numpy_image.shape
+        
+    
+    ( x, y, clip_width, clip_height ) = MakeClipRectFit( ( im_width, im_height ), clip_rect )
+    
+    return numpy_image[ y : y + clip_height, x : x + clip_width ]
+    
+def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
+    
+    ( x, y, clip_width, clip_height ) = MakeClipRectFit( pil_image.size, clip_rect )
+    
+    return pil_image.crop( box = ( x, y, x + clip_width, y + clip_height ) )
     
 def ConvertToPNGIfBMP( path ):
     
@@ -211,14 +257,32 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
             pil_image = RawOpenPILImage( path )
             
-            if HG.media_load_report_mode:
+            try:
                 
-                HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                pil_image.verify()
+                
+            except:
+                
+                raise HydrusExceptions.UnsupportedFileException()
                 
             
-            if HasICCProfile( pil_image ):
+            # I and F are some sort of 32-bit monochrome or whatever, doesn't seem to work in PIL well, with or without ICC
+            if pil_image.mode not in ( 'I', 'F' ):
                 
-                force_pil = True
+                if pil_image.mode == 'LAB':
+                    
+                    force_pil = True
+                    
+                
+                if HasICCProfile( pil_image ):
+                    
+                    if HG.media_load_report_mode:
+                        
+                        HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
+                        
+                    
+                    force_pil = True
+                    
                 
             
         except HydrusExceptions.UnsupportedFileException:
@@ -248,11 +312,15 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         if mime == HC.IMAGE_JPEG:
             
-            flags = CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION
+            flags = CV_IMREAD_FLAGS_JPEG
+            
+        elif mime == HC.IMAGE_PNG:
+            
+            flags = CV_IMREAD_FLAGS_PNG
             
         else:
             
-            flags = CV_IMREAD_FLAGS_SUPPORTS_ALPHA
+            flags = CV_IMREAD_FLAGS_WEIRD
             
         
         numpy_image = cv2.imread( path, flags = flags )
@@ -274,13 +342,27 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
         
     
+    if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
+        
+        convert = cv2.COLOR_RGBA2RGB
+        
+        numpy_image = cv2.cvtColor( numpy_image, convert )
+        
+    
     return numpy_image
     
 def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
     
     ( w, h ) = pil_image.size
     
-    s = pil_image.tobytes()
+    try:
+        
+        s = pil_image.tobytes()
+        
+    except OSError as e: # e.g. OSError: unrecognized data stream contents when reading image file
+        
+        raise HydrusExceptions.UnsupportedFileException( str( e ) )
+        
     
     depth = len( s ) // ( w * h )
     
@@ -341,11 +423,16 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     
     return pil_image
     
-def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime ) -> bytes:
+def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = None ) -> bytes:
     
     if OPENCV_OK:
         
         numpy_image = GenerateNumPyImage( path, mime )
+        
+        if clip_rect is not None:
+            
+            numpy_image = ClipNumPyImage( numpy_image, clip_rect )
+            
         
         thumbnail_numpy_image = ResizeNumPyImage( numpy_image, target_resolution )
         
@@ -362,6 +449,11 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime ) -
         
     
     pil_image = GeneratePILImage( path )
+    
+    if clip_rect is None:
+        
+        pil_image = ClipPILImage( pil_image, clip_rect )
+        
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
     
@@ -644,14 +736,29 @@ def GetResolutionAndNumFramesPIL( path, mime ):
     
     return ( ( x, y ), num_frames )
     
-def GetThumbnailResolution( image_resolution, bounding_dimensions ):
+THUMBNAIL_SCALE_DOWN_ONLY = 0
+THUMBNAIL_SCALE_TO_FIT = 1
+THUMBNAIL_SCALE_TO_FILL = 2
+
+thumbnail_scale_str_lookup = {
+    THUMBNAIL_SCALE_DOWN_ONLY : 'scale down only',
+    THUMBNAIL_SCALE_TO_FIT : 'scale to fit',
+    THUMBNAIL_SCALE_TO_FILL : 'scale to fill'
+}
+
+def GetThumbnailResolutionAndClipRegion( image_resolution, bounding_dimensions, thumbnail_scale_type: int ):
+    
+    clip_rect = None
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
     
-    if bounding_width >= im_width and bounding_height >= im_height:
+    if thumbnail_scale_type == THUMBNAIL_SCALE_DOWN_ONLY:
         
-        return ( im_width, im_height )
+        if bounding_width >= im_width and bounding_height >= im_height:
+            
+            return ( clip_rect, ( im_width, im_height ) )
+            
         
     
     width_ratio = im_width / bounding_width
@@ -660,19 +767,51 @@ def GetThumbnailResolution( image_resolution, bounding_dimensions ):
     thumbnail_width = bounding_width
     thumbnail_height = bounding_height
     
-    if width_ratio > height_ratio:
+    if thumbnail_scale_type in ( THUMBNAIL_SCALE_DOWN_ONLY, THUMBNAIL_SCALE_TO_FIT ):
         
-        thumbnail_height = im_height / width_ratio
+        if width_ratio > height_ratio:
+            
+            thumbnail_height = im_height / width_ratio
+            
+        elif height_ratio > width_ratio:
+            
+            thumbnail_width = im_width / height_ratio
+            
         
-    elif height_ratio > width_ratio:
+    elif thumbnail_scale_type == THUMBNAIL_SCALE_TO_FILL:
         
-        thumbnail_width = im_width / height_ratio
+        if width_ratio == height_ratio:
+            
+            # we have something that fits bounding region perfectly, no clip region required
+            
+            pass
+            
+        else:
+            
+            clip_x = 0
+            clip_y = 0
+            clip_width = im_width
+            clip_height = im_height
+            
+            if width_ratio > height_ratio:
+                
+                clip_width = max( int( im_width * height_ratio / width_ratio ), 1 )
+                clip_x = ( im_width - clip_width ) // 2
+                
+            elif height_ratio > width_ratio:
+                
+                clip_height = max( int( im_height * width_ratio / height_ratio ), 1 )
+                clip_y = ( im_height - clip_height ) // 2
+                
+            
+            clip_rect = ( clip_x, clip_y, clip_width, clip_height )
+            
         
     
     thumbnail_width = max( int( thumbnail_width ), 1 )
     thumbnail_height = max( int( thumbnail_height ), 1 )
     
-    return ( thumbnail_width, thumbnail_height )
+    return ( clip_rect, ( thumbnail_width, thumbnail_height ) )
     
 def GetTimesToPlayGIF( path ) -> int:
     
@@ -815,10 +954,42 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ):
     
     if pil_image.mode != desired_mode:
         
-        pil_image = pil_image.convert( desired_mode )
+        if pil_image.mode == 'LAB':
+            
+            pil_image = PILImageCms.profileToProfile( pil_image, PILImageCms.createProfile( 'LAB' ), PIL_SRGB_PROFILE, outputMode = 'RGB' )
+            
+        else:
+            
+            pil_image = pil_image.convert( desired_mode )
+            
         
     
     return pil_image
+    
+def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ):
+    
+    shape = numpy_image.shape
+    
+    if len( shape ) == 2:
+        
+        return False
+        
+    
+    if shape[2] == 4:
+        
+        # RGBA image
+        # if the alpha channel is all opaque, there is no use storing that info in our pixel hash
+        # opaque means 255
+        
+        alpha_channel = numpy_image[:,:,3]
+        
+        if ( alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all():
+            
+            return True
+            
+        
+    
+    return False
     
 def PILImageHasAlpha( pil_image: PILImage.Image ):
     

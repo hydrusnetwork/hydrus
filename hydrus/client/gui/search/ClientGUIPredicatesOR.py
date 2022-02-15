@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.gui import QtPorting as QP
 
@@ -31,9 +32,9 @@ class ORPredicateControl( QW.QWidget ):
         
         page_key = HydrusData.GenerateKey()
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.LOCAL_FILE_SERVICE_KEY ] )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, predicates = predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
         
         self._search_control = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, hide_favourites_edit_actions = True )
         

@@ -217,7 +217,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( tag_ids_table_name, counts_cache_table_name ) ) )
         
     
-    def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, zero_count_ok = False, job_key = None, tag_ids_table_name = None ):
+    def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, domain_is_cross_referenced = True, zero_count_ok = False, job_key = None, tag_ids_table_name = None ):
         
         if len( tag_ids ) == 0:
             
@@ -303,16 +303,30 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 continue
                 
             
-            if tag_id in ids_to_count:
+            current_max = current_count
+            pending_max = pending_count
+            
+            if domain_is_cross_referenced:
                 
-                ( current_min, current_max, pending_min, pending_max ) = ids_to_count[ tag_id ]
+                # file counts are perfectly accurate
                 
-                ( current_min, current_max ) = ClientData.MergeCounts( current_min, current_max, current_count, None )
-                ( pending_min, pending_max ) = ClientData.MergeCounts( pending_min, pending_max, pending_count, None )
+                current_min = current_count
+                pending_min = pending_count
                 
             else:
                 
-                ( current_min, current_max, pending_min, pending_max ) = ( current_count, None, pending_count, None )
+                # for instance this is a search for 'my files' deleted files, but we are searching on 'all deleted files' domain
+                
+                current_min = 0
+                pending_min = 0
+                
+            
+            if tag_id in ids_to_count:
+                
+                ( existing_current_min, existing_current_max, existing_pending_min, existing_pending_max ) = ids_to_count[ tag_id ]
+                
+                ( current_min, current_max ) = ClientData.MergeCounts( existing_current_min, existing_current_max, current_min, current_max )
+                ( pending_min, pending_max ) = ClientData.MergeCounts( existing_pending_min, existing_pending_max, pending_min, pending_max )
                 
             
             ids_to_count[ tag_id ] = ( current_min, current_max, pending_min, pending_max )
@@ -324,7 +338,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 
                 if tag_id not in ids_to_count:
                     
-                    ids_to_count[ tag_id ] = ( 0, None, 0, None )
+                    ids_to_count[ tag_id ] = ( 0, 0, 0, 0 )
                     
                 
             
@@ -455,7 +469,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_TAG:
+        if content_type == HC.CONTENT_TYPE_TAG:
             
             table_dict = self._GetServicesTableGenerationDict()
             

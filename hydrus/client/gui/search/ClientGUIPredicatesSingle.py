@@ -198,7 +198,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:import time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -263,7 +263,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:import time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -287,6 +287,125 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetStringSelection(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        
+        return predicates
+        
+    
+class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
+        
+        self._date = QW.QCalendarWidget( self )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        qt_dt = QC.QDate( years, months, days )
+        
+        self._date.setSelectedDate( qt_dt )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        qt_dt = QC.QDate.currentDate()
+        
+        qt_dt.addDays( -7 )
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '>', 'date', ( year, month, day ) ) )
+        
+    
+    def GetPredicates( self ):
+        
+        qt_dt = self._date.selectedDate()
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'date', ( year, month, day ) ) ), )
+        
+        return predicates
+        
+    
+class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
+        
+        self._years = QP.MakeQSpinBox( self, max=30 )
+        self._months = QP.MakeQSpinBox( self, max=60 )
+        self._days = QP.MakeQSpinBox( self, max=90 )
+        self._hours = QP.MakeQSpinBox( self, max=24 )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._years.setValue( years )
+        self._months.setValue( months )
+        self._days.setValue( days )
+        self._hours.setValue( hours )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        
+    
+    def GetPredicates( self ):
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -533,7 +652,14 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
-        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], vertical = True )
+        choices = [
+            ( 'currently in', HC.CONTENT_STATUS_CURRENT ),
+            ( 'deleted from', HC.CONTENT_STATUS_DELETED ),
+            ( 'pending to', HC.CONTENT_STATUS_PENDING ),
+            ( 'petitioned from', HC.CONTENT_STATUS_PETITIONED )
+        ]
+        
+        self._status = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
         services = HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES )
         
@@ -548,7 +674,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         ( sign, current_pending, file_service_key ) = predicate.GetValue()
         
         self._sign.SetValue( sign )
-        self._current_pending.SetValue( current_pending )
+        self._status.SetValue( current_pending )
         self._file_service_key.SetValue( file_service_key )
         
         #
@@ -557,7 +683,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._current_pending, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
@@ -568,15 +694,15 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
     def GetDefaultPredicate( self ):
         
         sign = True
-        current_pending = HC.CONTENT_STATUS_CURRENT
+        status = HC.CONTENT_STATUS_CURRENT
         file_service_key = bytes()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, current_pending, file_service_key ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, status, file_service_key ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._current_pending.GetValue(), self._file_service_key.GetValue() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._status.GetValue(), self._file_service_key.GetValue() ) ), )
         
         return predicates
         
@@ -587,7 +713,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._viewing_locations = QP.CheckListBox( self )
+        self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
@@ -602,7 +728,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         ( view_type, viewing_locations, sign, num ) = predicate.GetValue()
         
-        self._viewing_locations.SetCheckedData( viewing_locations )
+        self._viewing_locations.SetValue( viewing_locations )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
         
@@ -637,7 +763,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        viewing_locations = self._viewing_locations.GetChecked()
+        viewing_locations = self._viewing_locations.GetValue()
         
         if len( viewing_locations ) == 0:
             
@@ -659,7 +785,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._viewing_locations = QP.CheckListBox( self )
+        self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
@@ -674,7 +800,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         ( view_type, viewing_locations, sign, time_delta ) = predicate.GetValue()
         
-        self._viewing_locations.SetCheckedData( viewing_locations )
+        self._viewing_locations.SetValue( viewing_locations )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
         
@@ -709,7 +835,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
     
     def GetPredicates( self ):
         
-        viewing_locations = self._viewing_locations.GetChecked()
+        viewing_locations = self._viewing_locations.GetValue()
         
         if len( viewing_locations ) == 0:
             

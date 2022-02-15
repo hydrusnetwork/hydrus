@@ -15,6 +15,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
@@ -62,6 +63,8 @@ PREDICATE_TYPE_SYSTEM_NUM_NOTES = 38
 PREDICATE_TYPE_SYSTEM_NOTES = 39
 PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME = 40
 PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE = 41
+PREDICATE_TYPE_SYSTEM_TIME = 42
+PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME = 43
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -72,6 +75,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_LIMIT,
     PREDICATE_TYPE_SYSTEM_SIZE,
     PREDICATE_TYPE_SYSTEM_AGE,
+    PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     PREDICATE_TYPE_SYSTEM_HASH,
     PREDICATE_TYPE_SYSTEM_WIDTH,
@@ -99,7 +103,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
-    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
+    PREDICATE_TYPE_SYSTEM_TIME
 }
 
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
@@ -164,7 +169,7 @@ def IsComplexWildcard( search_text ):
     
 def SortPredicates( predicates ):
     
-    key = lambda p: p.GetCount()
+    key = lambda p: p.GetCount().GetMinCount()
     
     predicates.sort( key = key, reverse = True )
     
@@ -297,10 +302,8 @@ class FileSystemPredicates( object ):
         self._limit = None
         self._similar_to = None
         
-        self._file_services_to_include_current = []
-        self._file_services_to_include_pending = []
-        self._file_services_to_exclude_current = []
-        self._file_services_to_exclude_pending = []
+        self._required_file_service_statuses = collections.defaultdict( set )
+        self._excluded_file_service_statuses = collections.defaultdict( set )
         
         self._ratings_predicates = []
         
@@ -358,12 +361,17 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'hash' ] = ( hashes, hash_type )
                 
             
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
                 if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
                     
                     min_label = 'min_import_timestamp'
                     max_label = 'max_import_timestamp'
+                    
+                elif predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
+                    
+                    min_label = 'min_last_viewed_timestamp'
+                    max_label = 'max_last_viewed_timestamp'
                     
                 elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     
@@ -679,17 +687,15 @@ class FileSystemPredicates( object ):
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
                 
-                ( operator, current_or_pending, service_key ) = value
+                ( operator, status, service_key ) = value
                 
                 if operator == True:
                     
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_include_current.append( service_key )
-                    else: self._file_services_to_include_pending.append( service_key )
+                    self._required_file_service_statuses[ service_key ].add( status )
                     
                 else:
                     
-                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_exclude_current.append( service_key )
-                    else: self._file_services_to_exclude_pending.append( service_key )
+                    self._excluded_file_service_statuses[ service_key ].add( status )
                     
                 
             
@@ -728,9 +734,9 @@ class FileSystemPredicates( object ):
         return self._duplicate_count_predicates
         
     
-    def GetFileServiceInfo( self ):
+    def GetFileServiceStatuses( self ):
         
-        return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
+        return ( self._required_file_service_statuses, self._excluded_file_service_statuses )
         
     
     def GetFileViewingStatsPredicates( self ):
@@ -818,11 +824,11 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_search_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
         
-        if location_search_context is None:
+        if location_context is None:
             
-            location_search_context = LocationSearchContext()
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
             
         
         if tag_search_context is None:
@@ -835,7 +841,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             predicates = []
             
         
-        self._location_search_context = location_search_context
+        self._location_context = location_context
         self._tag_search_context = tag_search_context
         
         self._search_type = search_type
@@ -850,16 +856,16 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
-        serialisable_location_search_context = self._location_search_context.GetSerialisableTuple()
+        serialisable_location_context = self._location_context.GetSerialisableTuple()
         
-        return ( serialisable_location_search_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
+        return ( serialisable_location_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_location_search_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
+        ( serialisable_location_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._location_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_search_context )
+        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
         self._tag_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_search_context )
         
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
@@ -964,37 +970,25 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             file_service_key = bytes.fromhex( file_service_key_hex )
             
-            location_search_context = LocationSearchContext( current_service_keys = [ file_service_key ] )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
             
-            serialisable_location_search_context = location_search_context.GetSerialisableTuple()
+            serialisable_location_context = location_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_location_search_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( serialisable_location_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
             
             return ( 5, new_serialisable_info )
             
         
     
-    def FixMissingServices( self, services_manager ):
+    def FixMissingServices( self, filter_method ):
         
-        self._location_search_context.FixMissingServices( services_manager )
-        self._tag_search_context.FixMissingServices( services_manager )
-        
-    
-    def GetFileServiceKey( self ):
-        
-        if self._location_search_context.SearchesAnything():
-            
-            return self._location_search_context.GetFileServiceKey()
-            
-        else:
-            
-            return CC.COMBINED_FILE_SERVICE_KEY
-            
+        self._location_context.FixMissingServices( filter_method )
+        self._tag_search_context.FixMissingServices( filter_method )
         
     
-    def GetLocationSearchContext( self ) -> "LocationSearchContext":
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self._location_search_context
+        return self._location_context
         
     
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
@@ -1037,9 +1031,9 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._search_complete = True
         
     
-    def SetLocationSearchContext( self, location_search_context: "LocationSearchContext" ):
+    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        self._location_search_context = location_search_context
+        self._location_context = location_context
         
     
     def SetIncludeCurrentTags( self, value ):
@@ -1066,101 +1060,6 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
-
-class LocationSearchContext( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT
-    SERIALISABLE_NAME = 'Location Search Context'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, current_service_keys = None, deleted_service_keys = None ):
-        
-        if current_service_keys is None:
-            
-            current_service_keys = [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
-            
-        
-        if deleted_service_keys is None:
-            
-            deleted_service_keys = []
-            
-        
-        self.current_service_keys = current_service_keys
-        self.deleted_service_keys = deleted_service_keys
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_current_service_keys = [ service_key.hex() for service_key in self.current_service_keys ]
-        serialisable_deleted_service_keys = [ service_key.hex() for service_key in self.deleted_service_keys ]
-        
-        return ( serialisable_current_service_keys, serialisable_deleted_service_keys )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( serialisable_current_service_keys, serialisable_deleted_service_keys ) = serialisable_info
-        
-        self.current_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_current_service_keys ]
-        self.deleted_service_keys = [ bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys ]
-        
-    
-    def FixMissingServices( self, services_manager ):
-        
-        self.current_service_keys = services_manager.FilterValidServiceKeys( self.current_service_keys )
-        self.deleted_service_keys = services_manager.FilterValidServiceKeys( self.deleted_service_keys )
-        
-    
-    def GetFileServiceKey( self ):
-        
-        if not self.IsOneDomain():
-            
-            raise Exception( 'Location context was asked for specific file domain, but it did not have a single domain' )
-            
-        
-        if len( self.current_service_keys ) > 0:
-            
-            ( service_key, ) = self.current_service_keys
-            
-        else:
-            
-            ( service_key, ) = self.deleted_service_keys
-            
-        
-        return service_key
-        
-    
-    def IsAllKnownFiles( self ):
-        
-        return CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
-        
-    
-    def IsAllLocalFiles( self ):
-        
-        return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
-        
-    
-    def IsOneDomain( self ):
-        
-        return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
-        
-    
-    def SearchesAnything( self ):
-        
-        return len( self.current_service_keys ) + len( self.deleted_service_keys ) > 0
-        
-    
-    def SearchesCurrent( self ):
-        
-        return len( self.current_service_keys ) > 0
-        
-    
-    def SearchesDeleted( self ):
-        
-        return len( self.deleted_service_keys ) > 0
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_SEARCH_CONTEXT ] = LocationSearchContext
 
 class TagSearchContext( HydrusSerialisable.SerialisableBase ):
     
@@ -1212,9 +1111,9 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FixMissingServices( self, services_manager ):
+    def FixMissingServices( self, filter_method ):
         
-        if not services_manager.ServiceExists( self.service_key ):
+        if len( filter_method( [ self.service_key ] ) ) == 0:
             
             self.service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1385,6 +1284,138 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER ] = FavouriteSearchManager
 
+class PredicateCount( object ):
+    
+    def __init__(
+        self,
+        min_current_count: int,
+        min_pending_count: int,
+        max_current_count: typing.Optional[ int ],
+        max_pending_count: typing.Optional[ int ]
+        ):
+        
+        self.min_current_count = min_current_count
+        self.min_pending_count = min_pending_count
+        self.max_current_count = max_current_count if max_current_count is not None else min_current_count
+        self.max_pending_count = max_pending_count if max_pending_count is not None else min_pending_count
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, PredicateCount ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return (
+            self.min_current_count,
+            self.min_pending_count,
+            self.max_current_count,
+            self.max_pending_count
+        ).__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return 'Predicate Count: {}-{} +{}-{}'.format( self.min_current_count, self.max_current_count, self.min_pending_count, self.max_pending_count )
+        
+    
+    def AddCounts( self, count: "PredicateCount" ):
+        
+        ( self.min_current_count, self.max_current_count ) = ClientData.MergeCounts( self.min_current_count, self.max_current_count, count.min_current_count, count.max_current_count )
+        ( self.min_pending_count, self.max_pending_count) = ClientData.MergeCounts( self.min_pending_count, self.max_pending_count, count.min_pending_count, count.max_pending_count )
+        
+    
+    def Duplicate( self ):
+        
+        return PredicateCount(
+            self.min_current_count,
+            self.min_pending_count,
+            self.max_current_count,
+            self.max_pending_count
+        )
+        
+    
+    def GetMinCount( self, current_or_pending = None ):
+        
+        if current_or_pending is None:
+            
+            return self.min_current_count + self.min_pending_count
+            
+        elif current_or_pending == HC.CONTENT_STATUS_CURRENT:
+            
+            return self.min_current_count
+            
+        elif current_or_pending == HC.CONTENT_STATUS_PENDING:
+            
+            return self.min_pending_count
+            
+        
+    
+    def GetSuffixString( self ) -> str:
+        
+        suffix_components = []
+        
+        if self.min_current_count > 0 or self.max_current_count > 0:
+            
+            number_text = HydrusData.ToHumanInt( self.min_current_count )
+            
+            if self.max_current_count > self.min_current_count:
+                
+                number_text = '{}-{}'.format( number_text, HydrusData.ToHumanInt( self.max_current_count ) )
+                
+            
+            suffix_components.append( '({})'.format( number_text ) )
+            
+        
+        if self.min_pending_count > 0 or self.max_pending_count > 0:
+            
+            number_text = HydrusData.ToHumanInt( self.min_pending_count )
+            
+            if self.max_pending_count > self.min_pending_count:
+                
+                number_text = '{}-{}'.format( number_text, HydrusData.ToHumanInt( self.max_pending_count ) )
+                
+            
+            suffix_components.append( '(+{})'.format( number_text ) )
+            
+        
+        return ' '.join( suffix_components )
+        
+    
+    def HasNonZeroCount( self ):
+        
+        return self.min_current_count > 0 or self.min_pending_count > 0 or self.max_current_count > 0 or self.max_pending_count > 0
+        
+    
+    def HasZeroCount( self ):
+        
+        return not self.HasNonZeroCount()
+        
+    
+    @staticmethod
+    def STATICCreateCurrentCount( current_count ) -> "PredicateCount":
+        
+        return PredicateCount( current_count, 0, None, None )
+        
+    
+    @staticmethod
+    def STATICCreateNullCount() -> "PredicateCount":
+        
+        return PredicateCount( 0, 0, None, None )
+        
+    
+    @staticmethod
+    def STATICCreateStaticCount( current_count, pending_count ) -> "PredicateCount":
+        
+        return PredicateCount( current_count, pending_count, None, None )
+        
+    
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
@@ -1396,10 +1427,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         predicate_type: int = None,
         value: object = None,
         inclusive: bool = True,
-        min_current_count: HC.noneable_int = 0,
-        min_pending_count: HC.noneable_int = 0,
-        max_current_count: HC.noneable_int = None,
-        max_pending_count: HC.noneable_int = None
+        count = None
         ):
         
         if isinstance( value, ( list, set ) ):
@@ -1407,15 +1435,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             value = tuple( value )
             
         
+        if count is None:
+            
+            count = PredicateCount.STATICCreateNullCount()
+            
+        
         self._predicate_type = predicate_type
         self._value = value
         
         self._inclusive = inclusive
         
-        self._min_current_count = min_current_count
-        self._min_pending_count = min_pending_count
-        self._max_current_count = max_current_count
-        self._max_pending_count = max_pending_count
+        self._count = count
+        
+        self._count_text_suffix = ''
         
         self._ideal_sibling = None
         self._siblings = None
@@ -1467,7 +1499,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
+        return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self._count.GetMinCount() ) )
         
     
     def _RecalcPythonHash( self ):
@@ -1568,7 +1600,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ), hash_type )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
             
             ( operator, age_type, age_value ) = serialisable_value
             
@@ -1656,51 +1688,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddCounts( self, predicate ):
-        
-        ( min_current_count, max_current_count, min_pending_count, max_pending_count ) = predicate.GetAllCounts()
-        
-        ( self._min_current_count, self._max_current_count ) = ClientData.MergeCounts( self._min_current_count, self._max_current_count, min_current_count, max_current_count )
-        ( self._min_pending_count, self._max_pending_count) = ClientData.MergeCounts( self._min_pending_count, self._max_pending_count, min_pending_count, max_pending_count )
-        
-    
-    def ClearCounts( self ):
-        
-        self._min_current_count = 0
-        self._min_pending_count = 0
-        self._max_current_count = None
-        self._max_pending_count = None
-        
-    
-    def GetAllCounts( self ):
-        
-        return ( self._min_current_count, self._max_current_count, self._min_pending_count, self._max_pending_count )
-        
-    
     def GetCopy( self ):
         
-        return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+        return Predicate( self._predicate_type, self._value, self._inclusive, count = self._count.Duplicate() )
+        
+    
+    def GetCount( self ):
+        
+        return self._count
         
     
     def GetCountlessCopy( self ):
         
         return Predicate( self._predicate_type, self._value, self._inclusive )
-        
-    
-    def GetCount( self, current_or_pending = None ):
-        
-        if current_or_pending is None:
-            
-            return self._min_current_count + self._min_pending_count
-            
-        elif current_or_pending == HC.CONTENT_STATUS_CURRENT:
-            
-            return self._min_current_count
-            
-        elif current_or_pending == HC.CONTENT_STATUS_PENDING:
-            
-            return self._min_pending_count
-            
         
     
     def GetNamespace( self ):
@@ -1860,7 +1860,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( namespace, subtag ) = HydrusTags.SplitTag( self._value )
             
-            return Predicate( self._predicate_type, subtag, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+            return Predicate( self._predicate_type, subtag, self._inclusive, count = self._count.Duplicate() )
             
         
         return self.GetCopy()
@@ -1869,11 +1869,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def GetValue( self ):
         
         return self._value
-        
-    
-    def HasNonZeroCount( self ):
-        
-        return self._min_current_count > 0 or self._min_pending_count > 0
         
     
     def HasIdealSibling( self ):
@@ -1938,7 +1933,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
             
             # age_type
             if self._value[1] != ideal_value[1]:
@@ -1964,6 +1959,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
         return True
+        
+    
+    def SetCountTextSuffix( self, suffix: str ):
+        
+        self._count_text_suffix = suffix
         
     
     def SetIdealSibling( self, tag: str ):
@@ -2005,28 +2005,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if with_count:
             
-            if self._min_current_count > 0:
+            suffix = self._count.GetSuffixString()
+            
+            if len( suffix ) > 0:
                 
-                number_text = HydrusData.ToHumanInt( self._min_current_count )
-                
-                if self._max_current_count is not None:
-                    
-                    number_text += '-' + HydrusData.ToHumanInt( self._max_current_count )
-                    
-                
-                count_text += ' (' + number_text + ')'
+                count_text += ' {}'.format( suffix )
                 
             
-            if self._min_pending_count > 0:
+            if self._count_text_suffix != '':
                 
-                number_text = HydrusData.ToHumanInt( self._min_pending_count )
-                
-                if self._max_pending_count is not None:
-                    
-                    number_text += '-' + HydrusData.ToHumanInt( self._max_pending_count )
-                    
-                
-                count_text += ' (+' + number_text + ')'
+                count_text += ' ({})'.format( self._count_text_suffix )
                 
             
         
@@ -2039,6 +2027,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
             elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
@@ -2220,11 +2209,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base += ' is ' + HydrusData.ToHumanInt( value )
                     
                 
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
                     
-                    base = 'time imported'
+                    base = 'import time'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
+                    
+                    base = 'last view time'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     
@@ -2458,13 +2451,27 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    ( operator, current_or_pending, service_key ) = self._value
+                    ( operator, status, service_key ) = self._value
                     
                     if operator == True: base = 'is'
                     else: base = 'is not'
                     
-                    if current_or_pending == HC.CONTENT_STATUS_PENDING: base += ' pending to '
-                    else: base += ' currently in '
+                    if status == HC.CONTENT_STATUS_CURRENT:
+                        
+                        base += ' currently in '
+                        
+                    elif status == HC.CONTENT_STATUS_DELETED:
+                        
+                        base += ' deleted from '
+                        
+                    elif status == HC.CONTENT_STATUS_PENDING:
+                        
+                        base += ' pending to '
+                        
+                    elif status == HC.CONTENT_STATUS_PETITIONED:
+                        
+                        base += ' petitioned from '
+                        
                     
                     try:
                         
@@ -2770,6 +2777,64 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
         
     
     return matches
+    
+def MergePredicates( predicates, add_namespaceless = False ):
+    
+    master_predicate_dict = {}
+    
+    for predicate in predicates:
+        
+        # this works because predicate.__hash__ exists
+        
+        if predicate in master_predicate_dict:
+            
+            master_predicate_dict[ predicate ].GetCount().AddCounts( predicate.GetCount() )
+            
+        else:
+            
+            master_predicate_dict[ predicate ] = predicate
+            
+        
+    
+    if add_namespaceless:
+        
+        # we want to include the count for namespaced tags in the namespaceless version when:
+        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
+        
+        unnamespaced_predicate_dict = {}
+        subtag_nonzero_instance_counter = collections.Counter()
+        
+        for predicate in master_predicate_dict.values():
+            
+            if predicate.GetCount().HasNonZeroCount():
+                
+                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
+                
+                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
+                
+                if unnamespaced_predicate in unnamespaced_predicate_dict:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ].GetCount().AddCounts( unnamespaced_predicate.GetCount() )
+                    
+                else:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
+                    
+                
+            
+        
+        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
+            
+            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
+            
+            if count > 1:
+                
+                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
+                
+            
+        
+    
+    return list( master_predicate_dict.values() )
     
 def SearchTextIsFetchAll( search_text: str ):
     

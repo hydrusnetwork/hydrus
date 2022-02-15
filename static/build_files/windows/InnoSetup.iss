@@ -1,3 +1,7 @@
+#ifndef Version
+    #define Version "Null"
+#endif
+
 [Icons]
 Name: {group}\hydrus client; Filename: {app}\client.exe; WorkingDir: {app}; Tasks: programgroupicons
 Name: {group}\hydrus server; Filename: {app}\server.exe; WorkingDir: {app}; Tasks: programgroupicons
@@ -13,6 +17,8 @@ OutputBaseFilename=HydrusInstaller
 Compression=lzma/ultra64
 AppName=Hydrus Network
 AppVerName=Hydrus Network
+AppPublisher=Hydrus Network
+AppVersion={#Version}
 DefaultDirName={sd}\Hydrus Network
 DefaultGroupName=Hydrus Network
 DisableProgramGroupPage=yes

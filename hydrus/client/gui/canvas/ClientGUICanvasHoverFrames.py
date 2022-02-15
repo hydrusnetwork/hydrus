@@ -904,7 +904,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER ), self._canvas_key )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
         
-        self._volume_control = ClientGUIMediaControls.VolumeControl( self, ClientGUICommon.CANVAS_MEDIA_VIEWER )
+        self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
         
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
             
@@ -969,16 +969,23 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                self._trash_button.show()
-                self._delete_button.hide()
-                self._undelete_button.hide()
-                
-            elif locations_manager.IsTrashed():
+            if locations_manager.IsTrashed():
                 
                 self._trash_button.hide()
                 self._delete_button.show()
+                
+            elif locations_manager.IsLocal():
+                
+                self._trash_button.show()
+                self._delete_button.hide()
+                
+            
+            if set( locations_manager.GetDeleted() ).isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) ):
+                
+                self._undelete_button.hide()
+                
+            else:
+                
                 self._undelete_button.show()
                 
             

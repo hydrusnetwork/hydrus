@@ -11,6 +11,6 @@ stop() {
 
 trap "stop" SIGTERM
 
-su-exec ${USER_ID}:${GROUP_ID} python3 /opt/hydrus/server.py -d="/opt/hydrus/db" --no_daemons &
+su-exec ${USER_ID}:${GROUP_ID} python3 /opt/hydrus/server.py -d="/opt/hydrus/db" &
 
 wait $!

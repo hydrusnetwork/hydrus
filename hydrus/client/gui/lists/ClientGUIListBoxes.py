@@ -16,6 +16,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIAsync
@@ -2106,9 +2107,9 @@ class ListBoxTags( ListBox ):
         return copyable_tag_strings
         
     
-    def _GetCurrentFileServiceKey( self ):
+    def _GetCurrentLocationContext( self ):
         
-        return CC.LOCAL_FILE_SERVICE_KEY
+        return ClientLocation.GetLocationContextForAllLocalMedia()
         
     
     def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
@@ -2180,9 +2181,9 @@ class ListBoxTags( ListBox ):
             
             page_name = ', '.join( s )
             
-            file_service_key = self._GetCurrentFileServiceKey()
+            location_context = self._GetCurrentLocationContext()
             
-            HG.client_controller.pub( 'new_page_query', file_service_key, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+            HG.client_controller.pub( 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
             
             activate_window = False
             

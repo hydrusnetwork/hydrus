@@ -16,6 +16,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICore as CGC
@@ -38,6 +39,37 @@ def AppendLoadingPredicate( predicates ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_LABEL, value = 'loading results\u2026' ) )
     
+def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool ):
+    
+    services_manager = HG.client_controller.services_manager
+    
+    service_types_in_order = [ HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ]
+    
+    advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+    
+    if advanced_mode:
+        
+        service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
+        
+    
+    service_types_in_order.append( HC.FILE_REPOSITORY )
+    service_types_in_order.append( HC.IPFS )
+    
+    if all_known_files_allowed:
+        
+        service_types_in_order.append( HC.COMBINED_FILE )
+        
+    
+    services = services_manager.GetServices( service_types_in_order )
+    
+    if not advanced_mode:
+        
+        services = [ service for service in services if service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+        
+    
+    return services
+    
+
 def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearch.Predicate ] ):
     
     if include_unusual_predicate_types:
@@ -118,7 +150,6 @@ def ReadFetch(
     force_system_everything
 ):
     
-    file_service_key = file_search_context.GetFileServiceKey()
     tag_search_context = file_search_context.GetTagSearchContext()
     
     tag_service_key = tag_search_context.service_key
@@ -135,16 +166,7 @@ def ReadFetch(
             
             if we_need_results or db_not_going_to_hang_if_we_hit_it:
                 
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    search_service_key = tag_service_key
-                    
-                else:
-                    
-                    search_service_key = file_service_key
-                    
-                
-                predicates = HG.client_controller.Read( 'file_system_predicates', search_service_key, force_system_everything = force_system_everything )
+                predicates = HG.client_controller.Read( 'file_system_predicates', file_search_context, force_system_everything = force_system_everything )
                 
                 results_cache = ClientSearch.PredicateResultsCacheSystem( predicates )
                 
@@ -208,7 +230,7 @@ def ReadFetch(
                 
                 if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
                     
                     results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                     
@@ -234,7 +256,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, tag_search_context, file_service_key, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_key.IsCancelled():
                         
@@ -337,7 +359,7 @@ def ReadFetch(
                 return
                 
             
-            predicates = ClientData.MergePredicates( predicates, add_namespaceless = add_namespaceless )
+            predicates = ClientSearch.MergePredicates( predicates, add_namespaceless = add_namespaceless )
             
             matches = predicates
             
@@ -419,7 +441,9 @@ def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearch.ParsedAutocomple
     
     return len( test_text ) <= exact_match_character_threshold
     
-def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, tag_search_context: ClientSearch.TagSearchContext, file_service_key: bytes, results_cache: ClientSearch.PredicateResultsCache ):
+def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_search_context: ClientSearch.FileSearchContext, results_cache: ClientSearch.PredicateResultsCache ):
+    
+    tag_search_context = file_search_context.GetTagSearchContext()
     
     display_tag_service_key = tag_search_context.display_service_key
     
@@ -440,7 +464,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
                 
                 results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                 
@@ -466,7 +490,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
                 search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                 
                 if is_explicit_wildcard:
                     
@@ -487,7 +511,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             # we always do this, because results cache will not have current text input data
             
-            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, tag_search_context, file_service_key, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
+            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
             
             for input_text_predicate in input_text_predicates:
                 
@@ -504,6 +528,120 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
     
     HG.client_controller.CallAfterQtSafe( win, 'write a/c fetch', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    
+class EditLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_location_context = location_context
+        self._all_known_files_allowed = all_known_files_allowed
+        
+        self._location_list = ClientGUICommon.BetterCheckBoxList( self )
+        
+        services = GetPossibleFileDomainServicesInOrder( all_known_files_allowed )
+        
+        for service in services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            starts_checked = service_key in self._original_location_context.current_service_keys
+            
+            self._location_list.Append( name, ( HC.CONTENT_STATUS_CURRENT, service_key ), starts_checked = starts_checked )
+            
+        
+        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if advanced_mode:
+            
+            for service in services:
+                
+                name = service.GetName()
+                service_key = service.GetServiceKey()
+                
+                if service_key in ( CC.COMBINED_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                    
+                    continue
+                    
+                
+                starts_checked = service_key in self._original_location_context.deleted_service_keys
+                
+                self._location_list.Append( 'deleted from {}'.format( name ), ( HC.CONTENT_STATUS_DELETED, service_key ), starts_checked = starts_checked )
+                
+            
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._location_list, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        self._location_list.checkBoxListChanged.connect( self._ClearSurplusServices )
+        
+    
+    def _ClearSurplusServices( self ):
+        
+        # if user clicks all known files, then all other services will be wiped
+        # all local files should do other file services too
+        
+        location_context = self._GetValue()
+        
+        filter_func = lambda service_key: HG.client_controller.services_manager.GetServiceType( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN )
+        
+        location_context.ClearAllLocalFilesServices( filter_func )
+        
+        if set( self._GetStatusesAndServiceKeys( location_context ) ) != set( self._location_list.GetValue() ):
+            
+            self._SetValue( location_context )
+            
+        
+    
+    def _GetStatusesAndServiceKeys( self, location_context: ClientLocation.LocationContext ):
+        
+        statuses_and_service_keys = [ ( HC.CONTENT_STATUS_CURRENT, service_key ) for service_key in location_context.current_service_keys ]
+        statuses_and_service_keys.extend( [ ( HC.CONTENT_STATUS_DELETED, service_key ) for service_key in location_context.deleted_service_keys ] )
+        
+        return statuses_and_service_keys
+        
+    
+    def _GetValue( self ):
+        
+        statuses_and_service_keys = self._location_list.GetValue()
+        
+        current_service_keys = { service_key for ( status, service_key ) in statuses_and_service_keys if status == HC.CONTENT_STATUS_CURRENT }
+        deleted_service_keys = { service_key for ( status, service_key ) in statuses_and_service_keys if status == HC.CONTENT_STATUS_DELETED }
+        
+        location_context = ClientLocation.LocationContext( current_service_keys = current_service_keys, deleted_service_keys = deleted_service_keys )
+        
+        return location_context
+        
+    
+    def _SetValue( self, location_context: ClientLocation.LocationContext ):
+        
+        self._location_list.blockSignals( True )
+        
+        statuses_and_service_keys = self._GetStatusesAndServiceKeys( location_context )
+        
+        self._location_list.SetValue( statuses_and_service_keys )
+        
+        self._location_list.blockSignals( False )
+        
+    
+    def GetValue( self ) -> ClientLocation.LocationContext:
+        
+        location_context = self._GetValue()
+        
+        return location_context
+        
+    
+    def SetValue( self, location_context: ClientLocation.LocationContext ):
+        
+        self._SetValue( location_context )
+        
+        self._location_list.checkBoxListChanged.emit()
+        
     
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
@@ -609,7 +747,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                     
                     skip_ors = True
                     
-                    some_preds_have_count = True in ( predicate.GetCount() > 0 for predicate in predicates )
+                    some_preds_have_count = True in ( predicate.GetCount().HasNonZeroCount() for predicate in predicates )
                     skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ) and some_preds_have_count
                     
                     for ( index, predicate ) in enumerate( predicates ):
@@ -621,7 +759,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                             continue
                             
                         
-                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
+                        if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount().HasZeroCount():
                             
                             continue
                             
@@ -1362,33 +1500,28 @@ class AutoCompleteDropdown( QW.QWidget ):
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
-    fileServiceChanged = QC.Signal( bytes )
+    locationChanged = QC.Signal( ClientLocation.LocationContext )
     tagServiceChanged = QC.Signal( bytes )
     
-    def __init__( self, parent, file_service_key, tag_service_key ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key ):
         
-        if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
-            
-            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-            
+        location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
         if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
             
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         self._tag_service_key = tag_service_key
         
         AutoCompleteDropdown.__init__( self, parent )
         
         self._allow_all_known_files = True
         
-        file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
-        
         tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
-        self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, file_service.GetName(), self.FileButtonHit )
+        self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, location_context.ToString( HG.client_controller.services_manager.GetName ), self.FileButtonHit )
         self._file_repo_button.setMinimumWidth( 20 )
         
         self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
@@ -1406,30 +1539,27 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
         raise NotImplementedError()
         
     
-    def _ChangeFileService( self, file_service_key ):
+    def _ChangeLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
-            
-            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-            
+        location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if location_context.IsAllKnownFiles() and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
             local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
             
             self._ChangeTagService( local_tag_services[0].GetServiceKey() )
             
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         
         self._UpdateFileServiceLabel()
         
-        self.fileServiceChanged.emit( self._file_service_key )
+        self.locationChanged.emit( self._location_context )
         
         self._SetListDirty()
         
@@ -1441,11 +1571,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._location_context.IsAllKnownFiles():
             
-            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
             
-            self._ChangeFileService( default_local_file_service_key )
+            self._ChangeLocationContext( default_location_context )
             
         
         self._tag_service_key = tag_service_key
@@ -1458,6 +1588,23 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self.tagServiceChanged.emit( self._tag_service_key )
         
         self._SetListDirty()
+        
+    
+    def _EditMultipleLocationContext( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit multiple location' ) as dlg:
+            
+            panel = EditLocationContextPanel( dlg, self._location_context, self._IsAllKnownFilesServiceTypeAllowed() )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                location_context = panel.GetValue()
+                
+                self._ChangeLocationContext( location_context )
+                
+            
         
     
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
@@ -1490,9 +1637,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _UpdateFileServiceLabel( self ):
         
-        file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
-        
-        name = file_service.GetName()
+        name = self._location_context.ToString( HG.client_controller.services_manager.GetName )
         
         self._file_repo_button.setText( name )
         
@@ -1510,35 +1655,39 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def FileButtonHit( self ):
         
-        services_manager = HG.client_controller.services_manager
-        
-        service_types_in_order = [ HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ]
+        services = GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed() )
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
-        if advanced_mode:
-            
-            service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
-            
-        
-        service_types_in_order.append( HC.FILE_REPOSITORY )
-        service_types_in_order.append( HC.IPFS )
-        
-        self._AddAllKnownFilesServiceTypeIfAllowed( service_types_in_order )
-        
-        services = services_manager.GetServices( service_types_in_order )
         
         menu = QW.QMenu()
         
         for service in services:
             
-            if service.GetServiceKey() == CC.LOCAL_UPDATE_SERVICE_KEY and not advanced_mode:
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
+            
+            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeLocationContext, location_context )
+            
+        
+        if advanced_mode and False:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            for service in services:
                 
-                continue
+                if service.GetServiceKey() in ( CC.COMBINED_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                    
+                    continue
+                    
+                
+                location_context = ClientLocation.LocationContext( [], [ service.GetServiceKey() ] )
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'deleted from {}'.format( service.GetName() ), 'Change the current file domain to files deleted from ' + service.GetName() + '.', self._ChangeLocationContext, location_context )
                 
             
-            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
-            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'multiple locations', 'Change the current file domain to something with multiple locations.', self._EditMultipleLocationContext )
         
         CGC.core().PopupMenu( self._file_repo_button, menu )
         
@@ -1547,22 +1696,22 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def NotifyNewServices( self ):
         
-        self.SetFileServiceKey( self._file_service_key )
-        self.SetTagServiceKey( self._tag_service_key )
+        self._ChangeLocationContext( self._location_context )
+        self._ChangeTagService( self._tag_service_key )
         
     
     def RefreshFavouriteTags( self ):
         
         favourite_tags = sorted( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in favourite_tags ]
         
         self._favourites_list.SetPredicates( predicates )
         
     
-    def SetFileServiceKey( self, file_service_key ):
+    def ChangeLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        self._ChangeFileService( file_service_key )
+        self._ChangeLocationContext( location_context )
         
     
     def SetStubPredicates( self, job_key, stub_predicates, parsed_autocomplete_text ):
@@ -1609,7 +1758,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._under_construction_or_predicate = None
         
-        file_service_key = file_search_context.GetFileServiceKey()
+        location_context = file_search_context.GetLocationContext()
         tag_search_context = file_search_context.GetTagSearchContext()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
@@ -1625,7 +1774,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context = file_search_context
         
-        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_search_context.service_key )
+        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_search_context.service_key )
         
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
@@ -1700,14 +1849,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._search_pause_play.valueChanged.connect( self.SetSynchronised )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
-        if advanced_mode and self._allow_all_known_files:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
+        return advanced_mode and self._allow_all_known_files
         
     
     def _AdvancedORInput( self ):
@@ -1741,7 +1887,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if self._under_construction_or_predicate is None:
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, predicates )
+                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
                 
             else:
                 
@@ -1754,7 +1900,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds )
+                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
                 
             
         else:
@@ -1776,7 +1922,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds ) }
+                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
                 
             
             self._under_construction_or_predicate = None
@@ -1807,13 +1953,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._ClearInput()
         
     
-    def _ChangeFileService( self, file_service_key ):
+    def _ChangeLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        AutoCompleteDropdownTags._ChangeFileService( self, file_service_key )
+        AutoCompleteDropdownTags._ChangeLocationContext( self, location_context )
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
-        
-        self._file_search_context.SetLocationSearchContext( location_search_context )
+        self._file_search_context.SetLocationContext( location_context )
         
         self._SignalNewSearchState()
         
@@ -1993,7 +2137,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             or_preds = or_preds[:-1]
             
-            self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_preds )
+            self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
             
         
         self._UpdateORButtons()
@@ -2209,7 +2353,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
-        self._ChangeFileService( self._file_search_context.GetFileServiceKey() )
+        self._ChangeLocationContext( self._file_search_context.GetLocationContext() )
         self._ChangeTagService( self._file_search_context.GetTagSearchContext().service_key )
         
         self._SignalNewSearchState()
@@ -2440,9 +2584,9 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         self._DataHasChanged()
         
     
-    def _GetCurrentFileServiceKey( self ):
+    def _GetCurrentLocationContext( self ):
         
-        return self._my_ac_parent.GetFileSearchContext().GetFileServiceKey()
+        return self._my_ac_parent.GetFileSearchContext().GetLocationContext()
         
     
     def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
@@ -2515,7 +2659,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, chosen_tag_callable, file_service_key, tag_service_key, null_entry_callable = None, tag_service_key_changed_callable = None, show_paste_button = False ):
+    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, null_entry_callable = None, tag_service_key_changed_callable = None, show_paste_button = False ):
         
         self._display_tag_service_key = tag_service_key
         
@@ -2527,9 +2671,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tag_autocomplete_options = HG.client_controller.tag_display_manager.GetTagAutocompleteOptions( tag_service_key )
         
-        ( file_service_key, tag_service_key ) = tag_autocomplete_options.GetWriteAutocompleteServiceKeys( file_service_key )
+        ( location_context, tag_service_key ) = tag_autocomplete_options.GetWriteAutocompleteDomain( location_context )
         
-        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
+        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_service_key )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' )
@@ -2554,12 +2698,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.setLayout( vbox )
         
     
-    def _AddAllKnownFilesServiceTypeIfAllowed( self, service_types_in_order ):
+    def _IsAllKnownFilesServiceTypeAllowed( self ):
         
-        if self._allow_all_known_files:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
+        return self._allow_all_known_files
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -2648,7 +2789,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tags = HydrusTags.CleanTags( tags )
             
-            entry_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags ]
+            entry_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in tags ]
             
             if len( entry_predicates ) > 0:
                 
@@ -2701,7 +2842,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, tag_search_context, self._file_service_key, self._results_cache )
+        file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context, tag_search_context = tag_search_context )
+        
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):
@@ -2833,16 +2976,16 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             
                             if len( namespace ) > 0 and subtag == '*':
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
+                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, value = namespace, inclusive = inclusive )
                                 
                             else:
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, tag_string, inclusive )
+                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, value = tag_string, inclusive = inclusive )
                                 
                             
                         else:
                             
-                            row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                            row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag_string, inclusive = inclusive )
                             
                         
                         row_preds.append( row_pred )
@@ -2854,7 +2997,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        self._current_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, row_preds ) )
+                        self._current_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = row_preds ) )
                         
                     
                 

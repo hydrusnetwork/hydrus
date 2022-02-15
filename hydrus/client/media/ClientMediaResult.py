@@ -71,7 +71,7 @@ class MediaResult( object ):
         return self._file_info_manager
         
     
-    def GetFileViewingStatsManager( self ):
+    def GetFileViewingStatsManager( self ) -> ClientMediaManagers.FileViewingStatsManager:
         
         return self._file_viewing_stats_manager
         

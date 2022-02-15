@@ -209,7 +209,7 @@ class Controller( HydrusController.HydrusController ):
         
         ( file_hash, thumbnail_hash ) = self.Read( 'deferred_physical_delete' )
         
-        while ( file_hash is not None or thumbnail_hash is not None ) and not HG.view_shutdown:
+        while ( file_hash is not None or thumbnail_hash is not None ) and not HG.started_shutdown:
             
             if file_hash is not None:
                 
@@ -249,6 +249,8 @@ class Controller( HydrusController.HydrusController ):
         
     
     def Exit( self ):
+        
+        HG.started_shutdown = True
         
         self.SaveDirtyObjects()
         

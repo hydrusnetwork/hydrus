@@ -77,6 +77,7 @@ class Predicate(Enum):
     FILETYPE = auto()
     HASH = auto()
     MOD_DATE = auto()
+    LAST_VIEWED_TIME = auto()
     TIME_IMPORTED = auto()
     DURATION = auto()
     FILE_SERVICE = auto()
@@ -162,7 +163,8 @@ SYSTEM_PREDICATES = {
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.ONLY_EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
     'modified date|date modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'time imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'last viewed time|last view time': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'time imported|import time': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
@@ -442,7 +444,13 @@ examples = [
     "system:time imported < 1 day",
     "system:time imported < 0 years 1 month 1 day 1 hour",
     " system:time imported ~= 2011-1-3 ",
-    "system:time imported ~= 1996-05-2",
+    "system:import time < 7 years 45 days 70h",
+    "system:import time > 2011-06-04",
+    "system:import time > 7 years 2 months",
+    "system:import time < 1 day",
+    "system:import time < 0 years 1 month 1 day 1 hour",
+    " system:import time ~= 2011-1-3 ",
+    "system:import time ~= 1996-05-2",
     "system:duration < 5 seconds",
     "system:duration ~= 5 sec 6000 msecs",
     "system:duration > 3 milliseconds",

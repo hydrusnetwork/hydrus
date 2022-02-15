@@ -15,6 +15,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -213,11 +214,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                         tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
                         
                     
-                    location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
                     
                     tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context )
+                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
@@ -449,9 +450,9 @@ class Page( QW.QSplitter ):
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetKey( 'file_service' ) )
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetVariable( 'location_context' ) )
         
-        self._management_panel.fileServiceChanged.connect( self._preview_canvas.SetFileServiceKey )
+        self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
@@ -990,16 +991,9 @@ class Page( QW.QSplitter ):
             
             self._SetPrettyStatus( '' )
             
-            if self._management_controller.IsImporter():
-                
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            else:
-                
-                file_service_key = self._management_controller.GetKey( 'file_service' )
-                
+            location_context = self._management_controller.GetVariable( 'location_context' )
             
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
+            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, location_context, media_results )
             
             self._SwapMediaPanel( media_panel )
             
@@ -1385,7 +1379,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         raise HydrusExceptions.DataMissing()
         
     
-    def _GetNotebookFromScreenPosition( self, screen_position ):
+    def _GetNotebookFromScreenPosition( self, screen_position ) -> "PagesNotebook":
         
         current_page = self.currentWidget()
         
@@ -1395,14 +1389,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         else:
             
-            tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
-            
-            if tab_index != -1:
-                
-                return self
-                
-            
-            on_child_notebook_somewhere = screen_position.y() > current_page.pos().y()
+            on_child_notebook_somewhere = current_page.mapFromGlobal( screen_position ).y() > current_page.pos().y()
             
             if on_child_notebook_somewhere:
                 
@@ -1737,7 +1724,84 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     ClientGUIMenus.AppendMenu( menu, close_menu, 'close' )
                     
                 
-                #
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        #
+        
+        if click_over_page_of_pages:
+            
+            notebook_to_get_selectable_media_pages_from = self.widget( tab_index )
+            
+        else:
+            
+            notebook_to_get_selectable_media_pages_from = self
+            
+        
+        selectable_media_pages = notebook_to_get_selectable_media_pages_from.GetMediaPages()
+        
+        if len( selectable_media_pages ) > 0:
+            
+            select_menu = QW.QMenu( menu )
+            
+            for selectable_media_page in selectable_media_pages:
+                
+                label = '{} - {}'.format( selectable_media_page.GetName(), selectable_media_page.GetPrettyStatus() )
+                
+                ClientGUIMenus.AppendMenuItem( select_menu, label, 'select this page', self.ShowPage, selectable_media_page )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, select_menu, 'pages' )
+            
+        
+        #
+        
+        if more_than_one_tab:
+            
+            selection_index = self.currentIndex()
+            
+            can_select_home = selection_index > 1
+            can_select_left = selection_index > 0
+            can_select_right = selection_index < end_index
+            can_select_end = selection_index < end_index - 1
+            
+            navigate_menu = QW.QMenu( menu )
+            
+            if can_select_home:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'first page', 'Select the page at the start of these.', self.MoveSelectionEnd, -1 )
+                
+            
+            if can_select_left:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'page to the left', 'Select the page to the left of this one.', self.MoveSelection, -1 )
+                
+            
+            if can_select_right:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'page to the right', 'Select the page to the right of this one.', self.MoveSelection, 1 )
+                
+            
+            if can_select_end:
+                
+                ClientGUIMenus.AppendMenuItem( navigate_menu, 'last page', 'Select the page at the end of these.', self.MoveSelectionEnd, 1 )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, navigate_menu, 'select' )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        
+        if click_over_tab:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if more_than_one_tab:
                 
                 move_menu = QW.QMenu( menu )
                 
@@ -1763,52 +1827,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendMenu( menu, move_menu, 'move page' )
                 
-                #
-                
-                selection_index = self.currentIndex()
-                
-                can_select_home = selection_index > 1
-                can_select_left = selection_index > 0
-                can_select_right = selection_index < end_index
-                can_select_end = selection_index < end_index - 1
-                
-                select_menu = QW.QMenu( menu )
-                
-                if can_select_home:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'first page', 'Select the page at the start of these.', self.MoveSelectionEnd, -1 )
-                    
-                
-                if can_select_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the left', 'Select the page to the left of this one.', self.MoveSelection, -1 )
-                    
-                
-                if can_select_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'page to the right', 'Select the page to the right of this one.', self.MoveSelection, 1 )
-                    
-                
-                if can_select_end:
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'last page', 'Select the page at the end of these.', self.MoveSelectionEnd, 1 )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
-            
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
-        
-        if click_over_tab:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
-            
-            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( menu, 'duplicate page', 'Duplicate this page.', self._DuplicatePage, tab_index )
             
@@ -1820,8 +1840,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
                 ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
-                ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'asc' )
-                ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to how many files they appear to have.', self._SortPagesByName, 'desc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to their names.', self._SortPagesByName, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to their names.', self._SortPagesByName, 'desc' )
                 
                 ClientGUIMenus.AppendMenu( menu, submenu, 'sort pages' )
                 
@@ -2758,6 +2778,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
+        source_management_controller = source_page.GetManagementController()
+        
+        location_context = source_management_controller.GetVariable( 'location_context' )
+        
         screen_position = QG.QCursor.pos()
         
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
@@ -2776,7 +2800,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         elif tab_index == -1:
             
-            dest_page = dest_notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            dest_page = dest_notebook.NewPageQuery( location_context, initial_hashes = hashes )
             
             do_add = False
             
@@ -2790,7 +2814,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if result is None:
                     
-                    dest_page = dest_page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+                    dest_page = dest_page.NewPageQuery( location_context, initial_hashes = hashes )
                     
                     do_add = False
                     
@@ -3054,7 +3078,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
+    def NewPageQuery( self, location_context: ClientLocation.LocationContext, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
         
         if initial_hashes is None:
             
@@ -3082,16 +3106,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if location_context.IsAllKnownFiles() and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            location_context = location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-        
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ file_service_key ] )
         
         tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context, tag_search_context = tag_search_context, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         
@@ -3150,7 +3172,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if give_it_a_blank_page:
             
-            page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            page.NewPageQuery( default_location_context )
             
         
         return page
@@ -3234,7 +3258,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if page is None:
             
-            page = self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            page = self.NewPageQuery( location_context, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
             
         else:
             

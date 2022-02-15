@@ -1155,30 +1155,75 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportFromClipboard( self ):
         
-        try:
+        if HG.client_controller.ClipboardHasImage():
             
-            raw_text = HG.client_controller.GetClipboardText()
+            try:
+                
+                qt_image = HG.client_controller.GetClipboardImage()
+                
+            except:
+                
+                # no image on clipboard obviously
+                do_text = True
+                
             
-        except HydrusExceptions.DataMissing as e:
+            try:
+                
+                payload = ClientSerialisable.LoadFromQtImage( qt_image )
+                
+                obj = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
+                
+            except HydrusExceptions.SerialisationException as e:
+                
+                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( str( e ) ) )
+                
+                return
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( str( e ) ) )
+                
+                return
+                
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+        else:
             
-            return
+            try:
+                
+                raw_text = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                QW.QMessageBox.critical( self, 'Error', str(e) )
+                
+                return
+                
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text, raise_error_on_future_version = True )
+                
+            except HydrusExceptions.SerialisationException as e:
+                
+                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( str( e ) ) )
+                
+                return
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( str( e ) ) )
+                
+                return
+                
             
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text, raise_error_on_future_version = True )
-            
             self._ImportObject( obj )
-            
-        except HydrusExceptions.SerialisationException as e:
-            
-            QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'Problem importing: {}'.format( str( e ) ) )
             
         
         self._listctrl.Sort()

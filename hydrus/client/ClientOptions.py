@@ -158,8 +158,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
         self._dictionary[ 'booleans' ][ 'touchscreen_canvas_drags_unanchor' ] = False
         
-        self._dictionary[ 'booleans' ][ 'thumbnail_fill' ] = False
-        
         self._dictionary[ 'booleans' ][ 'import_page_progress_display' ] = True
         
         self._dictionary[ 'booleans' ][ 'process_subs_in_random_order' ] = True
@@ -336,6 +334,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'max_network_jobs' ] = 15
         self._dictionary[ 'integers' ][ 'max_network_jobs_per_domain' ] = 3
+        
+        from hydrus.core import HydrusImageHandling
+        
+        self._dictionary[ 'integers' ][ 'thumbnail_scale_type' ] = HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY
         
         self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
         

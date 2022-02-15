@@ -8,6 +8,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -48,42 +49,57 @@ def GenerateFilesTableName( service_id: int, status: int ) -> str:
         return petitioned_files_table_name
         
     
-class DBLocationSearchContext( object ):
+class DBLocationContext( object ):
     
-    def __init__( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def __init__( self, location_context: ClientLocation.LocationContext ):
         
-        self.location_search_context = location_search_context
-        
-        self.files_table_name = None
+        self.location_context = location_context
         
     
-    def GetLocationSearchContext( self ) -> ClientSearch.LocationSearchContext:
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self.location_search_context
-        
-    
-    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ):
-        
-        if self.location_search_context.IsAllKnownFiles():
-            
-            return table_phrase
-            
-        else:
-            
-            return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
-            
+        return self.location_context
         
     
-    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ):
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
         
-        if self.location_search_context.IsAllKnownFiles():
-            
-            return table_phrase
-            
-        else:
-            
-            return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
-            
+        raise NotImplementedError()
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+class DBLocationContextAllKnownFiles( DBLocationContext ):
+    
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return table_phrase
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return table_phrase
+        
+    
+class DBLocationContextBranch( DBLocationContext ):
+    
+    def __init__( self, location_context: ClientLocation.LocationContext, files_table_name: str ):
+        
+        DBLocationContext.__init__( self, location_context )
+        
+        self.files_table_name = files_table_name
+        
+    
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
         
     
 class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
@@ -207,6 +223,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return num_deleted
         
     
+    def ClearFileDeletionReason( self, hash_ids ):
+        
+        self._ExecuteMany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
     def ClearFilesTables( self, service_id: int, keep_pending = False ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
@@ -249,7 +270,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
         else:
             
-            trashed_hash_ids = self.FilterCurrentHashIds( self.modules_services.trash_service_id, hash_ids )
+            trashed_hash_ids = self.FilterHashIdsToStatus( self.modules_services.trash_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
             
             ok_to_clear_hash_ids = set( hash_ids ).difference( trashed_hash_ids )
             
@@ -266,25 +287,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                     service_ids_to_nums_cleared[ service_id ] = num_cleared
                     
                 
-                self._ExecuteMany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in ok_to_clear_hash_ids ) )
+                self.ClearFileDeletionReason( ok_to_clear_hash_ids )
                 
             
         
         return service_ids_to_nums_cleared
-        
-    
-    def ConvertLocationToCoveringFileServiceKeys( self, location_search_context: ClientSearch.LocationSearchContext ):
-        
-        file_location_is_cross_referenced = not ( location_search_context.IsAllKnownFiles() or location_search_context.SearchesDeleted() )
-        
-        file_service_keys = list( location_search_context.current_service_keys )
-        
-        if location_search_context.SearchesDeleted():
-            
-            file_service_keys.append( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
-            
-        
-        return ( file_service_keys, file_location_is_cross_referenced )
         
     
     def DeferFilesDeleteIfNowOrphan( self, hash_ids, definitely_no_thumbnails = False, ignore_service_id = None ):
@@ -403,31 +410,14 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return pending_hash_ids
         
     
-    def FilterCurrentHashIds( self, service_id, hash_ids ):
+    def FilterHashIds( self, location_context: ClientLocation.LocationContext, hash_ids ) -> set:
         
-        if service_id == self.modules_services.combined_file_service_id:
-            
-            return set( hash_ids )
-            
-        
-        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-            
-            current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            current_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
-            
-        
-        return current_hash_ids
-        
-    
-    def FilterHashIds( self, location_search_context: ClientSearch.LocationSearchContext, hash_ids ) -> set:
-        
-        if not location_search_context.SearchesAnything():
+        if not location_context.SearchesAnything():
             
             return set()
             
         
-        if location_search_context.IsAllKnownFiles():
+        if location_context.IsAllKnownFiles():
             
             return hash_ids
             
@@ -436,7 +426,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            for file_service_key in location_search_context.current_service_keys:
+            for file_service_key in location_context.current_service_keys:
                 
                 service_id = self.modules_services.GetServiceId( file_service_key )
                 
@@ -457,7 +447,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                     
                 
             
-            for file_service_key in location_search_context.deleted_service_keys:
+            for file_service_key in location_context.deleted_service_keys:
                 
                 service_id = self.modules_services.GetServiceId( file_service_key )
                 
@@ -482,9 +472,33 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return filtered_hash_ids
         
     
+    def FilterHashIdsToStatus( self, service_id, hash_ids, status ) -> typing.Set[ int ]:
+        
+        if service_id == self.modules_services.combined_file_service_id:
+            
+            if status == HC.CONTENT_STATUS_CURRENT:
+                
+                return set( hash_ids )
+                
+            else:
+                
+                return set()
+                
+            
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            files_table_name = GenerateFilesTableName( service_id, status )
+            
+            result_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, files_table_name ) ) )
+            
+        
+        return result_hash_ids
+        
+    
     def FilterOrphanFileHashIds( self, hash_ids, ignore_service_id = None ):
         
-        useful_hash_ids = self.FilterCurrentHashIds( self.modules_services.combined_local_file_service_id, hash_ids )
+        useful_hash_ids = self.FilterHashIdsToStatus( self.modules_services.combined_local_file_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
         
         orphan_hash_ids = set( hash_ids ).difference( useful_hash_ids )
         
@@ -524,9 +538,9 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                 
             
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = current_service_keys )
+        location_context = ClientLocation.LocationContext.STATICCreateAllCurrent( current_service_keys )
         
-        current_hash_ids = self.FilterHashIds( location_search_context, hash_ids )
+        current_hash_ids = self.FilterHashIds( location_context, hash_ids )
         
         orphan_hash_ids = set( hash_ids ).difference( current_hash_ids )
         
@@ -550,23 +564,6 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         # no need to sharpen that knife too much
         
         return orphan_hash_ids
-        
-    
-    def FilterPendingHashIds( self, service_id, hash_ids ):
-        
-        if service_id == self.modules_services.combined_file_service_id:
-            
-            return set( hash_ids )
-            
-        
-        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-            
-            pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )
-            
-            pending_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, pending_files_table_name ) ) )
-            
-        
-        return pending_hash_ids
         
     
     def GenerateFilesTables( self, service_id: int ):
@@ -778,32 +775,30 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return ( is_deleted, timestamp, file_deletion_reason )
         
     
-    def GetDBLocationSearchContext( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def GetDBLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        if not location_search_context.SearchesAnything():
+        if not location_context.SearchesAnything():
             
-            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ CC.COMBINED_FILE_SERVICE_KEY ] )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
             
         
-        db_location_search_context = DBLocationSearchContext( location_search_context )
-        
-        if location_search_context.IsAllKnownFiles():
+        if location_context.IsAllKnownFiles():
             
             # no table set, obviously
             
-            return db_location_search_context
+            return DBLocationContextAllKnownFiles( location_context )
             
         
         table_names = []
         
-        for current_service_key in location_search_context.current_service_keys:
+        for current_service_key in location_context.current_service_keys:
             
             service_id = self.modules_services.GetServiceId( current_service_key )
             
             table_names.append( GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT ) )
             
         
-        for deleted_service_key in location_search_context.deleted_service_keys:
+        for deleted_service_key in location_context.deleted_service_keys:
             
             service_id = self.modules_services.GetServiceId( deleted_service_key )
             
@@ -814,12 +809,12 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             table_name = table_names[0]
             
-            db_location_search_context.files_table_name = table_name
+            files_table_name = table_name
             
         else:
             
             # while I could make a VIEW of the UNION SELECT, we'll populate an indexed single column table to help query planner later on
-            # we're hardcoding the name to this class for now, so a limit of one db_location_search_context at a time _for now_
+            # we're hardcoding the name to this class for now, so a limit of one db_location_context at a time _for now_
             # we make change this in future to use wrapper temp int tables, we'll see
             
             # maybe I should stick this guy in 'temp' to live through db connection resets, but we'll see I guess. it is generally ephemeral, not going to linger through weird vacuum maintenance or anything right?
@@ -837,12 +832,12 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             select_query = ' UNION '.join( ( 'SELECT hash_id FROM {}'.format( table_name ) for table_name in table_names ) )
             
-            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( self.temp_file_storage_table_name, select_query ) )
+            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( self.temp_file_storage_table_name, select_query ) )
             
-            db_location_search_context.files_table_name = self.temp_file_storage_table_name
+            files_table_name = self.temp_file_storage_table_name
             
         
-        return db_location_search_context
+        return DBLocationContextBranch( location_context, files_table_name )
         
     
     def GetHashIdsToCurrentServiceIds( self, temp_hash_ids_table_name ):
@@ -860,6 +855,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
         
         return hash_ids_to_current_file_service_ids
+        
+    
+    def GetHashIdsToFileDeletionReasons( self, hash_ids_table_name ):
+        
+        return dict( self._Execute( 'SELECT hash_id, text FROM {} CROSS JOIN local_file_deletion_reasons USING ( hash_id ) CROSS JOIN texts ON ( reason_id = text_id );'.format( hash_ids_table_name ) ) )
         
     
     def GetHashIdsToServiceInfoDicts( self, temp_hash_ids_table_name ):
@@ -902,13 +902,13 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         )
         
     
-    def GetLocationSearchContextForAllServicesDeletedFiles( self ) -> ClientSearch.LocationSearchContext:
+    def GetLocationContextForAllServicesDeletedFiles( self ) -> ClientLocation.LocationContext:
         
         deleted_service_keys = { service.GetServiceKey() for service in self.modules_services.GetServices( limited_types = HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE ) }
         
-        location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [], deleted_service_keys = deleted_service_keys )
+        location_context = ClientLocation.LocationContext( [], deleted_service_keys )
         
-        return location_search_context
+        return location_context
         
     
     def GetNumLocal( self, service_id: int ) -> int:
@@ -993,7 +993,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             ( 'deferred_physical_thumbnail_deletes', 'hash_id' )
         ]
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
                 

@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.metadata import ClientTags
 
@@ -79,36 +80,139 @@ class FileViewingStatsManager( object ):
     
     def __init__(
         self,
-        preview_views: int,
-        preview_viewtime: int,
-        media_views: int,
-        media_viewtime: int
+        view_rows: typing.Collection
     ):
         
-        self.preview_views = preview_views
-        self.preview_viewtime = preview_viewtime
-        self.media_views = media_views
-        self.media_viewtime = media_viewtime
+        self.last_viewed_timestamps = {}
+        self.views = collections.Counter()
+        self.viewtimes = collections.Counter()
+        
+        for ( canvas_type, last_viewed_timestamp, views, viewtime ) in view_rows:
+            
+            if last_viewed_timestamp is not None:
+                
+                self.last_viewed_timestamps[ canvas_type ] = last_viewed_timestamp
+                
+            
+            if views != 0:
+                
+                self.views[ canvas_type ] = views
+                
+            
+            if viewtime != 0:
+                
+                self.viewtimes[ canvas_type ] = viewtime
+                
+            
         
     
-    def Duplicate( self ):
+    def Duplicate( self ) -> "FileViewingStatsManager":
         
-        return FileViewingStatsManager( self.preview_views, self.preview_viewtime, self.media_views, self.media_viewtime )
+        view_rows = []
+        
+        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                last_viewed_timestamp = self.last_viewed_timestamps[ canvas_type ]
+                
+            else:
+                
+                last_viewed_timestamp = None
+                
+            
+            views = self.views[ canvas_type ]
+            viewtime = self.viewtimes[ canvas_type ]
+            
+            view_rows.append( ( canvas_type, last_viewed_timestamp, views, viewtime ) )
+            
+        
+        return FileViewingStatsManager( view_rows )
         
     
-    def GetPrettyCombinedLine( self ):
+    def GetLastViewedTime( self, canvas_type: int ) -> typing.Optional[ int ]:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views + self.preview_views ) + ' times, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime + self.preview_viewtime )
+        if canvas_type in self.last_viewed_timestamps:
+            
+            return self.last_viewed_timestamps[ canvas_type ]
+            
+        else:
+            
+            return None
+            
         
     
-    def GetPrettyMediaLine( self ):
+    def GetPrettyViewsLine( self, canvas_types: int ) -> str:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.media_views ) + ' times in media viewer, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime )
+        if len( canvas_types ) == 2:
+            
+            info_string = ''
+            
+        elif CC.CANVAS_MEDIA_VIEWER in canvas_types:
+            
+            info_string = ' in media viewer'
+            
+        elif CC.CANVAS_PREVIEW in canvas_types:
+            
+            info_string = ' in preview window'
+            
+        
+        views_total = sum( ( self.views[ canvas_type ] for canvas_type in canvas_types ) )
+        viewtime_total = sum( ( self.viewtimes[ canvas_type ] for canvas_type in canvas_types ) )
+        
+        if views_total == 0:
+            
+            return 'no view record{}'.format( info_string )
+            
+        
+        last_viewed_times = []
+        
+        for canvas_type in canvas_types:
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                last_viewed_times.append( self.last_viewed_timestamps[ canvas_type ] )
+                
+            
+        
+        if len( last_viewed_times ) == 0:
+            
+            last_viewed_string = 'no recorded last view time'
+            
+        else:
+            
+            last_viewed_string = 'last {}'.format( HydrusData.TimestampToPrettyTimeDelta( max( last_viewed_times ) ) )
+            
+        
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusData.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
         
     
-    def GetPrettyPreviewLine( self ):
+    def GetViews( self, canvas_type: int ) -> int:
         
-        return 'viewed ' + HydrusData.ToHumanInt( self.preview_views ) + ' times in preview window, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.preview_viewtime )
+        return self.views[ canvas_type ]
+        
+    
+    def GetViewtime( self, canvas_type: int ) -> int:
+        
+        return self.viewtimes[ canvas_type ]
+        
+    
+    def MergeCounts( self, file_viewing_stats_manager: "FileViewingStatsManager" ):
+        
+        for ( canvas_type, last_viewed_timestamp ) in file_viewing_stats_manager.last_viewed_timestamps.items():
+            
+            if canvas_type in self.last_viewed_timestamps:
+                
+                self.last_viewed_timestamps[ canvas_type ] = max( self.last_viewed_timestamps[ canvas_type ], last_viewed_timestamp )
+                
+            else:
+                
+                self.last_viewed_timestamps[ canvas_type ] = last_viewed_timestamp
+                
+            
+        
+        self.views.update( file_viewing_stats_manager.views )
+        self.viewtimes.update( file_viewing_stats_manager.viewtimes )
         
     
     def ProcessContentUpdate( self, content_update ):
@@ -117,19 +221,21 @@ class FileViewingStatsManager( object ):
         
         if action == HC.CONTENT_UPDATE_ADD:
             
-            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+            ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = row
             
-            self.preview_views += preview_views_delta
-            self.preview_viewtime += preview_viewtime_delta
-            self.media_views += media_views_delta
-            self.media_viewtime += media_viewtime_delta
+            if view_timestamp is not None:
+                
+                self.last_viewed_timestamps[ canvas_type ] = view_timestamp
+                
+            
+            self.views[ canvas_type ] += views_delta
+            self.viewtimes[ canvas_type ] += viewtime_delta
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
-            self.preview_views = 0
-            self.preview_viewtime = 0
-            self.media_views = 0
-            self.media_viewtime = 0
+            self.last_viewed_timestamps = {}
+            self.views = collections.Counter()
+            self.viewtimes = collections.Counter()
             
         
     
@@ -140,10 +246,7 @@ class FileViewingStatsManager( object ):
         
         for sub_fvsm in sub_fvsms:
             
-            fvsm.preview_views += sub_fvsm.preview_views
-            fvsm.preview_viewtime += sub_fvsm.preview_viewtime
-            fvsm.media_views += sub_fvsm.media_views
-            fvsm.media_viewtime += sub_fvsm.media_viewtime
+            fvsm.MergeCounts( sub_fvsm )
             
         
         return fvsm
@@ -152,7 +255,7 @@ class FileViewingStatsManager( object ):
     @staticmethod
     def STATICGenerateEmptyManager():
         
-        return FileViewingStatsManager( 0, 0, 0, 0 )
+        return FileViewingStatsManager( [] )
         
     
 class LocationsManager( object ):
@@ -166,7 +269,8 @@ class LocationsManager( object ):
         inbox: bool = False,
         urls: typing.Optional[ typing.Set[ str ] ] = None,
         service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
-        file_modified_timestamp: typing.Optional[ int ] = None
+        file_modified_timestamp: typing.Optional[ int ] = None,
+        local_file_deletion_reason: str = None
     ):
         
         self._current_to_timestamps = current_to_timestamps
@@ -194,6 +298,7 @@ class LocationsManager( object ):
         self._service_keys_to_filenames = service_keys_to_filenames
         
         self._file_modified_timestamp = file_modified_timestamp
+        self._local_file_deletion_reason = local_file_deletion_reason
         
     
     def DeletePending( self, service_key ):
@@ -211,7 +316,7 @@ class LocationsManager( object ):
         urls = set( self._urls )
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
         
-        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp )
+        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp, self._local_file_deletion_reason )
         
     
     def GetCDPP( self ):
@@ -282,6 +387,22 @@ class LocationsManager( object ):
         return remote_service_strings
         
     
+    def GetBestCurrentTimestamp( self, location_context: ClientLocation.LocationContext ):
+        
+        timestamps = { self.GetCurrentTimestamp( service_key ) for service_key in location_context.current_service_keys }
+        
+        timestamps.discard( None )
+        
+        if len( timestamps ) == 0:
+            
+            return None
+            
+        else:
+            
+            return min( timestamps )
+            
+        
+    
     def GetCurrentTimestamp( self, service_key ):
         
         if service_key in self._current_to_timestamps:
@@ -306,9 +427,26 @@ class LocationsManager( object ):
             
         
     
+    def GetLocalFileDeletionReason( self ) -> str:
+        
+        if self._local_file_deletion_reason is None:
+            
+            return 'Unknown deletion reason.'
+            
+        else:
+            
+            return self._local_file_deletion_reason
+            
+        
+    
     def GetURLs( self ):
         
         return self._urls
+        
+    
+    def HasLocalFileDeletionReason( self ) -> bool:
+        
+        return self._local_file_deletion_reason is not None
         
     
     def IsDownloading( self ):
@@ -347,7 +485,9 @@ class LocationsManager( object ):
             self._deleted.discard( service_key )
             
         
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        
+        if service_key in local_service_keys:
             
             if CC.TRASH_SERVICE_KEY in self._current_to_timestamps:
                 
@@ -373,7 +513,7 @@ class LocationsManager( object ):
         self._pending.discard( service_key )
         
     
-    def _DeleteFromService( self, service_key ):
+    def _DeleteFromService( self, service_key: bytes, reason: typing.Optional[ str ] ):
         
         if service_key in self._current_to_timestamps:
             
@@ -398,7 +538,12 @@ class LocationsManager( object ):
         
         local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
         
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        if service_key in local_service_keys:
+            
+            if reason is not None:
+                
+                self._local_file_deletion_reason = reason
+                
             
             if self._current.isdisjoint( local_service_keys ):
                 
@@ -409,12 +554,12 @@ class LocationsManager( object ):
             
             for local_service_key in list( self._current.intersection( local_service_keys ) ):
                 
-                self._DeleteFromService( local_service_key )
+                self._DeleteFromService( local_service_key, reason )
                 
             
             if CC.TRASH_SERVICE_KEY in self._current:
                 
-                self._DeleteFromService( CC.TRASH_SERVICE_KEY )
+                self._DeleteFromService( CC.TRASH_SERVICE_KEY, reason )
                 
             
             self.inbox = False
@@ -469,7 +614,16 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
-                self._DeleteFromService( service_key )
+                if content_update.HasReason():
+                    
+                    reason = content_update.GetReason()
+                    
+                else:
+                    
+                    reason = None
+                    
+                
+                self._DeleteFromService( service_key, reason )
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
                 

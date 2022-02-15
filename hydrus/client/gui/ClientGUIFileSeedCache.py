@@ -14,6 +14,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUICore as CGC
@@ -167,7 +168,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( file_seeds_to_delete ) > 0:
             
-            message = 'Are you sure you want to delete all the selected entries?'
+            message = 'Are you sure you want to delete the {} selected entries?'.format( HydrusData.ToHumanInt( len( file_seeds_to_delete ) ) )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -415,7 +416,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     
@@ -514,39 +517,39 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if num_errors > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this log to reattempt all its error failures.', self._RetryErrors )
             
         
         if num_vetoed > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this log to reattempt all its ignored/vetoed results.', self._RetryIgnored )
             
         
         ClientGUIMenus.AppendSeparator( menu )
         
         if num_successful > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
             
         
         if num_deleted > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this cache to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this log to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
             
         
         if num_errors > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
             
         
         if num_vetoed > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this cache to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
             
         
         if num_skipped > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -797,7 +800,9 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     

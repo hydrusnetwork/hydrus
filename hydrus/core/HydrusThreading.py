@@ -80,7 +80,7 @@ def IsThreadShuttingDown():
     
     if isinstance( me, DAEMON ):
         
-        if HG.view_shutdown:
+        if HG.started_shutdown:
             
             return True
             

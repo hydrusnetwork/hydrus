@@ -23,6 +23,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
@@ -1884,7 +1885,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                     except HydrusExceptions.FileMissingException:
                         
-                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
                         raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
@@ -1900,7 +1901,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                     except:
                         
-                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
                         
                         raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
@@ -2011,7 +2012,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                     except HydrusExceptions.FileMissingException:
                         
-                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
                         raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
@@ -2027,7 +2028,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                     except:
                         
-                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
                         
                         raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
@@ -3322,9 +3323,9 @@ class ServicesManager( object ):
             
         
     
-    def GetDefaultLocalFileServiceKey( self ) -> bytes:
+    def GetDefaultLocationContext( self ) -> bytes:
         
-        return CC.LOCAL_FILE_SERVICE_KEY
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
     
     def GetLocalMediaFileServices( self ):

@@ -45,7 +45,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._checkboxes = QP.CheckListBox( self )
+        self._checkboxes = ClientGUICommon.BetterCheckBoxList( self )
         
         self._checkboxes.setMinimumSize( QC.QSize( 320, 420 ) )
         
@@ -86,7 +86,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ) -> list:
         
-        return self._checkboxes.GetChecked()
+        return self._checkboxes.GetValue()
         
     
 class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -344,6 +344,9 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
+    SPECIAL_CHOICE_CUSTOM = 0
+    SPECIAL_CHOICE_NO_REASON = 1
+    
     def __init__( self, parent: QW.QWidget, media, default_reason, suggested_file_service_key = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
@@ -351,6 +354,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._media = self._FilterForDeleteLock( ClientMedia.FlattenMedia( media ), suggested_file_service_key )
         
         self._question_is_already_resolved = len( self._media ) == 0
+        
+        ( self._all_files_have_existing_file_deletion_reasons, self._existing_shared_file_deletion_reason ) = self._GetExistingSharedFileDeletionReason()
         
         self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
         
@@ -389,9 +394,20 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._reason_panel = ClientGUICommon.StaticBox( self, 'reason' )
         
+        existing_reason_was_in_list = False
+        
         permitted_reason_choices = []
         
-        permitted_reason_choices.append( ( default_reason, default_reason ) )
+        if self._existing_shared_file_deletion_reason is not None and default_reason == self._existing_shared_file_deletion_reason:
+            
+            existing_reason_was_in_list = True
+            
+            permitted_reason_choices.append( ( 'keep existing reason: {}'.format( default_reason ), default_reason ) )
+            
+        else:
+            
+            permitted_reason_choices.append( ( default_reason, default_reason ) )
+            
         
         if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
             
@@ -413,7 +429,16 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for ( i, s ) in enumerate( HG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ) ):
             
-            permitted_reason_choices.append( ( s, s ) )
+            if self._existing_shared_file_deletion_reason is not None and s == self._existing_shared_file_deletion_reason and not existing_reason_was_in_list:
+                
+                existing_reason_was_in_list = True
+                
+                permitted_reason_choices.append( ( 'keep existing reason: {}'.format( s ), s ) )
+                
+            else:
+                
+                permitted_reason_choices.append( ( s, s ) )
+                
             
             if last_advanced_file_deletion_reason is not None and s == last_advanced_file_deletion_reason:
                 
@@ -421,7 +446,19 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        permitted_reason_choices.append( ( 'custom', None ) )
+        if self._existing_shared_file_deletion_reason is not None and not existing_reason_was_in_list:
+            
+            permitted_reason_choices.append( ( 'keep existing reason: {}'.format( self._existing_shared_file_deletion_reason ), self._existing_shared_file_deletion_reason ) )
+            
+        
+        custom_index = len( permitted_reason_choices )
+        
+        permitted_reason_choices.append( ( 'custom', self.SPECIAL_CHOICE_CUSTOM ) )
+        
+        if self._all_files_have_existing_file_deletion_reasons and self._existing_shared_file_deletion_reason is None:
+            
+            permitted_reason_choices.append( ( '(all files have existing file deletion reasons and they differ): do not alter them.', self.SPECIAL_CHOICE_NO_REASON ) )
+            
         
         self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, vertical = True )
         
@@ -429,7 +466,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if selection_index is None:
             
-            selection_index = len( permitted_reason_choices ) - 1 # custom
+            selection_index = custom_index
             
             self._custom_reason.setText( last_advanced_file_deletion_reason )
             
@@ -456,6 +493,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             self._action_radio.hide()
+            
             self._reason_panel.hide()
             
         
@@ -509,13 +547,55 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         return media
         
     
+    def _GetExistingSharedFileDeletionReason( self ):
+        
+        all_files_have_existing_file_deletion_reasons = True
+        reasons = set()
+        
+        for m in self._media:
+            
+            lm = m.GetLocationsManager()
+            
+            if not lm.HasLocalFileDeletionReason():
+                
+                all_files_have_existing_file_deletion_reasons = False
+                
+                return ( all_files_have_existing_file_deletion_reasons, None )
+                
+            
+            reason = lm.GetLocalFileDeletionReason()
+            
+            reasons.add( reason )
+            
+        
+        shared_reason = None
+        
+        if all_files_have_existing_file_deletion_reasons and len( reasons ) == 1:
+            
+            shared_reason = list( reasons )[0]
+            
+        
+        return ( all_files_have_existing_file_deletion_reasons, shared_reason )
+        
+    
     def _GetReason( self ):
         
-        reason = self._reason_radio.GetValue()
-        
-        if reason is None:
+        if self._reason_panel.isEnabled():
             
-            reason = self._custom_reason.text()
+            reason = self._reason_radio.GetValue()
+            
+            if reason == self.SPECIAL_CHOICE_CUSTOM:
+                
+                reason = self._custom_reason.text()
+                
+            elif reason == self.SPECIAL_CHOICE_NO_REASON:
+                
+                reason = None
+                
+            
+        else:
+            
+            reason = None
             
         
         return reason
@@ -638,27 +718,27 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
-        reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' )
+        # 'this includes service keys' because if we are deleting physically from the trash, then reason is already set
+        reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' ) and self._this_dialog_includes_service_keys
         
         if reason_permitted:
             
-            self._reason_radio.setEnabled( True )
+            self._reason_panel.setEnabled( True )
+            
+            reason = self._reason_radio.GetValue()
+            
+            if reason == self.SPECIAL_CHOICE_CUSTOM:
+                
+                self._custom_reason.setEnabled( True )
+                
+            else:
+                
+                self._custom_reason.setEnabled( False )
+                
             
         else:
             
-            self._reason_radio.setEnabled( False )
-            self._custom_reason.setEnabled( False )
-            
-        
-        reason = self._reason_radio.GetValue()
-        
-        if reason is None:
-            
-            self._custom_reason.setEnabled( True )
-            
-        else:
-            
-            self._custom_reason.setEnabled( False )
+            self._reason_panel.setEnabled( False )
             
         
     

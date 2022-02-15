@@ -10,6 +10,18 @@ BLANK_PERCEPTUAL_HASH = b'\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but ev
 
 CAN_HIDE_MOUSE = True
 
+CANVAS_MEDIA_VIEWER = 0
+CANVAS_PREVIEW = 1
+CANVAS_MEDIA_VIEWER_DUPLICATES = 2
+
+CANVAS_MEDIA_VIEWER_TYPES = { CANVAS_MEDIA_VIEWER, CANVAS_MEDIA_VIEWER_DUPLICATES }
+
+canvas_type_str_lookup = {}
+
+canvas_type_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
+canvas_type_str_lookup[ CANVAS_PREVIEW ] = 'preview'
+canvas_type_str_lookup[ CANVAS_MEDIA_VIEWER_DUPLICATES ] = 'duplicates filter'
+
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_LIGHT_SELECTED = QG.QColor( 235, 248, 255 )
 COLOUR_SELECTED = QG.QColor( 217, 242, 255 )
@@ -50,11 +62,6 @@ directions_alignment_string_lookup[ DIRECTION_UP ] = 'top'
 directions_alignment_string_lookup[ DIRECTION_LEFT ] = 'left'
 directions_alignment_string_lookup[ DIRECTION_RIGHT ] = 'right'
 directions_alignment_string_lookup[ DIRECTION_DOWN ] = 'bottom'
-
-DUMPER_NOT_DUMPED = 0
-DUMPER_DUMPED_OK = 1
-DUMPER_RECOVERABLE_ERROR = 2
-DUMPER_UNRECOVERABLE_ERROR = 3
 
 FIELD_VERIFICATION_RECAPTCHA = 0
 FIELD_COMMENT = 1
@@ -314,27 +321,29 @@ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP = 14
 SORT_FILES_BY_FRAMERATE = 15
 SORT_FILES_BY_NUM_FRAMES = 16
 SORT_FILES_BY_NUM_COLLECTION_FILES = 17
+SORT_FILES_BY_LAST_VIEWED_TIME = 18
 
-SYSTEM_SORT_TYPES = []
-
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_HEIGHT )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_WIDTH )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_RATIO )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_PIXELS )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_DURATION )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FRAMERATE )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_COLLECTION_FILES )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_FRAMES )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FILESIZE )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_IMPORT_TIME )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_APPROX_BITRATE )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_HAS_AUDIO )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MIME )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_RANDOM )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_NUM_TAGS )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MEDIA_VIEWS )
-SYSTEM_SORT_TYPES.append( SORT_FILES_BY_MEDIA_VIEWTIME )
+SYSTEM_SORT_TYPES = {
+    SORT_FILES_BY_NUM_COLLECTION_FILES,
+    SORT_FILES_BY_HEIGHT,
+    SORT_FILES_BY_WIDTH,
+    SORT_FILES_BY_RATIO,
+    SORT_FILES_BY_NUM_PIXELS,
+    SORT_FILES_BY_DURATION,
+    SORT_FILES_BY_FRAMERATE,
+    SORT_FILES_BY_NUM_FRAMES,
+    SORT_FILES_BY_FILESIZE,
+    SORT_FILES_BY_APPROX_BITRATE,
+    SORT_FILES_BY_HAS_AUDIO,
+    SORT_FILES_BY_MIME,
+    SORT_FILES_BY_RANDOM,
+    SORT_FILES_BY_NUM_TAGS,
+    SORT_FILES_BY_MEDIA_VIEWS,
+    SORT_FILES_BY_MEDIA_VIEWTIME,
+    SORT_FILES_BY_IMPORT_TIME,
+    SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP,
+    SORT_FILES_BY_LAST_VIEWED_TIME
+}
 
 system_sort_type_submetatype_string_lookup = {}
 
@@ -350,10 +359,11 @@ system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'fi
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'file'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MIME ] = 'file'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'file'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RANDOM ] = None
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'tags'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'time'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'time'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'time'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'views'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views'
 
@@ -371,8 +381,9 @@ sort_type_basic_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'approximate bit
 sort_type_basic_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'filesize'
 sort_type_basic_string_lookup[ SORT_FILES_BY_MIME ] = 'filetype'
 sort_type_basic_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'has audio'
-sort_type_basic_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'time imported'
+sort_type_basic_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'import time'
 sort_type_basic_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'modified time'
+sort_type_basic_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'last viewed time'
 sort_type_basic_string_lookup[ SORT_FILES_BY_RANDOM ] = 'random'
 sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'number of tags'
 sort_type_basic_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'media views'
@@ -392,6 +403,8 @@ for sort_type in SYSTEM_SORT_TYPES:
     
     sort_type_string_lookup[ sort_type ] = s
     
+
+SYSTEM_SORT_TYPES_SORT_CONTROL_SORTED = sorted( SYSTEM_SORT_TYPES, key = lambda sst: sort_type_string_lookup[ sst ] )
 
 SORT_ASC = 0
 SORT_DESC = 1

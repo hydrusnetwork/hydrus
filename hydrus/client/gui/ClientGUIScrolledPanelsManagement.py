@@ -12,6 +12,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -3259,8 +3260,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
             favourites_st.setWordWrap( True )
             
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
             self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
-            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -3537,7 +3540,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_dict = {}
             
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
             
@@ -3750,11 +3755,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_border = QP.MakeQSpinBox( self, min=0, max=20 )
             self._thumbnail_margin = QP.MakeQSpinBox( self, min=0, max=20 )
             
+            self._thumbnail_scale_type = ClientGUICommon.BetterChoice( self )
+            
             self._video_thumbnail_percentage_in = QP.MakeQSpinBox( self, min=0, max=100 )
             
-            self._thumbnail_scroll_rate = QW.QLineEdit( self )
+            for t in ( HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, HydrusImageHandling.THUMBNAIL_SCALE_TO_FILL ):
+                
+                self._thumbnail_scale_type.addItem( HydrusImageHandling.thumbnail_scale_str_lookup[ t ], t )
+                
             
-            self._thumbnail_fill = QW.QCheckBox( self )
+            self._thumbnail_scroll_rate = QW.QLineEdit( self )
             
             self._thumbnail_visibility_scroll_percent = QP.MakeQSpinBox( self, min=1, max=99 )
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
@@ -3771,11 +3781,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_border.setValue( self._new_options.GetInteger( 'thumbnail_border' ) )
             self._thumbnail_margin.setValue( self._new_options.GetInteger( 'thumbnail_margin' ) )
             
+            self._thumbnail_scale_type.SetValue( self._new_options.GetInteger( 'thumbnail_scale_type' ) )
+            
             self._video_thumbnail_percentage_in.setValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             
             self._thumbnail_scroll_rate.setText( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
-            
-            self._thumbnail_fill.setChecked( self._new_options.GetBoolean( 'thumbnail_fill' ) )
             
             self._thumbnail_visibility_scroll_percent.setValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
             
@@ -3794,10 +3804,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
             rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
+            rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
-            rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -3818,6 +3828,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'thumbnail_border', self._thumbnail_border.value() )
             self._new_options.SetInteger( 'thumbnail_margin', self._thumbnail_margin.value() )
             
+            self._new_options.SetInteger( 'thumbnail_scale_type', self._thumbnail_scale_type.GetValue() )
+            
             self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.value() )
             
             try:
@@ -3832,8 +3844,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pass
                 
-            
-            self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.isChecked() )
             
             self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.value() )
             

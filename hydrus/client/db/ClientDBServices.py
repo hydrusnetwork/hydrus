@@ -1,3 +1,4 @@
+import itertools
 import sqlite3
 import typing
 
@@ -7,10 +8,61 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDBModule
 
+class FileSearchContextLeaf( object ):
+    
+    def __init__( self, file_service_id: int, tag_service_id: int ):
+        
+        # special thing about a leaf is that it has a specific current domain in the caches
+        # no all known files or deleted files here. leaf might not be file cross-referenced, but it does cover something we can search fast
+        
+        # it should get tag display type at some point, maybe current/pending too
+        
+        self.file_service_id = file_service_id
+        self.tag_service_id = tag_service_id
+        
+    
+class FileSearchContextBranch( object ):
+    
+    def __init__( self, file_search_context: ClientSearch.FileSearchContext, file_service_ids: typing.Collection[ int ], tag_service_ids: typing.Collection[ int ], file_location_is_cross_referenced: bool ):
+        
+        self.file_search_context = file_search_context
+        
+        self.file_service_ids = file_service_ids
+        self.tag_service_ids = tag_service_ids
+        self.file_location_is_cross_referenced = file_location_is_cross_referenced
+        
+    
+    def FileLocationIsCrossReferenced( self ) -> bool:
+        
+        return self.file_location_is_cross_referenced
+        
+    
+    def GetFileSearchContext( self ) -> ClientSearch.FileSearchContext:
+        
+        return self.file_search_context
+        
+    
+    def IterateLeaves( self ):
+        
+        for ( file_service_id, tag_service_id ) in itertools.product( self.file_service_ids, self.tag_service_ids ):
+            
+            yield FileSearchContextLeaf( file_service_id, tag_service_id )
+            
+        
+    
+    def IterateTableIdPairs( self ):
+        
+        for ( file_service_id, tag_service_id ) in itertools.product( self.file_service_ids, self.tag_service_ids ):
+            
+            yield ( file_service_id, tag_service_id )
+            
+        
+    
 class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
@@ -193,19 +245,29 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return set( self._service_keys_to_service_ids.keys() )
         
     
+    def GetServiceType( self, service_id ) -> ClientServices.Service:
+        
+        if service_id in self._service_ids_to_services:
+            
+            return self._service_ids_to_services[ service_id ].GetServiceType()
+            
+        
+        raise HydrusExceptions.DataMissing( 'Service id error in database: id "{}" does not exist!'.format( service_id ) )
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         return []
         
     
-    def LocationSearchContextIsCoveredByCombinedLocalFiles( self, location_search_context: ClientSearch.LocationSearchContext ):
+    def LocationContextIsCoveredByCombinedLocalFiles( self, location_context: ClientLocation.LocationContext ):
         
-        if location_search_context.SearchesDeleted():
+        if location_context.IncludesDeleted():
             
             return False
             
         
-        service_ids = { self.GetServiceId( service_key ) for service_key in location_search_context.current_service_keys }
+        service_ids = { self.GetServiceId( service_key ) for service_key in location_context.current_service_keys }
         
         for service_id in service_ids:
             

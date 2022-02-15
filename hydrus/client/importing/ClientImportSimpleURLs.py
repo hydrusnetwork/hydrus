@@ -971,6 +971,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+        
+        with self._lock:
+            
+            return self._file_import_options
+            
+        
+    
     def GetFileSeedCache( self ):
         
         with self._lock:

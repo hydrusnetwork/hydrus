@@ -178,95 +178,18 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
-def MergeCounts( min_a, max_a, min_b, max_b ):
+def MergeCounts( min_a: int, max_a: int, min_b: int, max_b: int ):
     
-    # 100-None and 100-None returns 100-200
-    # 1-None and 4-5 returns 5-6
-    # 1-2, and 5-7 returns 6, 9
+    # this no longer takes 'None' maxes, and it is now comfortable with 0-5 ranges
     
-    if min_a == 0:
-        
-        ( min_answer, max_answer ) = ( min_b, max_b )
-        
-    elif min_b == 0:
-        
-        ( min_answer, max_answer ) = ( min_a, max_a )
-        
-    else:
-        
-        if max_a is None:
-            
-            max_a = min_a
-            
-        
-        if max_b is None:
-            
-            max_b = min_b
-            
-        
-        min_answer = max( min_a, min_b )
-        max_answer = max_a + max_b
-        
+    # 100-100 and 100-100 returns 100-200
+    # 1-1 and 4-5 returns 4-6
+    # 1-2, and 5-7 returns 5-9
+    
+    min_answer = max( min_a, min_b )
+    max_answer = max_a + max_b
     
     return ( min_answer, max_answer )
-    
-def MergePredicates( predicates, add_namespaceless = False ):
-    
-    master_predicate_dict = {}
-    
-    for predicate in predicates:
-        
-        # this works because predicate.__hash__ exists
-        
-        if predicate in master_predicate_dict:
-            
-            master_predicate_dict[ predicate ].AddCounts( predicate )
-            
-        else:
-            
-            master_predicate_dict[ predicate ] = predicate
-            
-        
-    
-    if add_namespaceless:
-        
-        # we want to include the count for namespaced tags in the namespaceless version when:
-        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
-        
-        unnamespaced_predicate_dict = {}
-        subtag_nonzero_instance_counter = collections.Counter()
-        
-        for predicate in master_predicate_dict.values():
-            
-            if predicate.HasNonZeroCount():
-                
-                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
-                
-                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
-                
-                if unnamespaced_predicate in unnamespaced_predicate_dict:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ].AddCounts( unnamespaced_predicate )
-                    
-                else:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
-                    
-                
-            
-        
-        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
-            
-            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
-            
-            if count > 1:
-                
-                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
-                
-            
-        
-    
-    return list( master_predicate_dict.values() )
     
 def OrdIsSensibleASCII( o ):
     

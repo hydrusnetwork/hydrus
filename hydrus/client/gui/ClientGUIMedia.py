@@ -141,7 +141,7 @@ def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ Cl
         insert = 'these {} files'.format( HydrusData.ToHumanInt( len( flat_medias ) ) )
         
     
-    message = 'Clear the file viewing stats for {}?'.format( insert )
+    message = 'Clear the file viewing count/duration and \'last viewed time\' for {}?'.format( insert )
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
@@ -362,14 +362,14 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
     
     if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED:
         
-        combined_line = fvsm.GetPrettyCombinedLine()
+        combined_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ) )
         
         ClientGUIMenus.AppendMenuLabel( menu, combined_line )
         
     else:
         
-        media_line = fvsm.GetPrettyMediaLine()
-        preview_line = fvsm.GetPrettyPreviewLine()
+        media_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_MEDIA_VIEWER, ) )
+        preview_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_PREVIEW, ) )
         
         if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY:
             

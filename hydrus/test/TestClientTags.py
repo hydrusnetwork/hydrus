@@ -1570,6 +1570,115 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( set( predicate_results_cache.FilterPredicates( CC.COMBINED_TAG_SERVICE_KEY, 'samus aran*' ) ), { samus_aran, character_samus_aran } )
         
     
+    def test_predicate_counts( self ):
+        
+        # quick test for counts and __hash__
+        
+        p_c = ClientSearch.PredicateCount( 1, 2, 3, 4 )
+        
+        self.assertEqual( p_c.min_current_count, 1 )
+        self.assertEqual( p_c.min_pending_count, 2 )
+        self.assertEqual( p_c.max_current_count, 3 )
+        self.assertEqual( p_c.max_pending_count, 4 )
+        
+        self.assertNotEqual( p_c, ClientSearch.PredicateCount( 1, 2, 3, 5 ) )
+        self.assertNotEqual( p_c, ClientSearch.PredicateCount( 1, 5, 3, 4 ) )
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 1, 2, 3, 4 ) )
+        
+        #
+        
+        null = ClientSearch.PredicateCount.STATICCreateNullCount()
+        
+        self.assertEqual( null, ClientSearch.PredicateCount( 0, 0, 0, 0 ) )
+        self.assertEqual( null.GetMinCount(), 0 )
+        self.assertEqual( null.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 0 )
+        self.assertEqual( null.GetMinCount( HC.CONTENT_STATUS_PENDING ), 0 )
+        self.assertEqual( null.HasZeroCount(), True )
+        self.assertEqual( null.HasNonZeroCount(), False )
+        self.assertEqual( null.GetSuffixString(), '' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 3, 0, 3, 0 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 3, 0, 3, 0 ) )
+        self.assertEqual( p_c.GetMinCount(), 3 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 3 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 0 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(3)' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 0, 5, 0, 5 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 0, 5, 0, 5 ) )
+        self.assertEqual( p_c.GetMinCount(), 5 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 0 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 5 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(+5)' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 100, 0, 150, 0 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 100, 0, 150, 0 ) )
+        self.assertEqual( p_c.GetMinCount(), 100 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 100 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 0 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(100-150)' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 0, 80, 0, 85 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 0, 80, 0, 85 ) )
+        self.assertEqual( p_c.GetMinCount(), 80 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 0 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 80 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(+80-85)' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 0, 0, 1500, 0 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 0, 0, 1500, 0 ) )
+        self.assertEqual( p_c.GetMinCount(), 0 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 0 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 0 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(0-1,500)' )
+        
+        #
+        
+        p_c = ClientSearch.PredicateCount( 1, 2, 3, 4 )
+        
+        self.assertEqual( p_c, ClientSearch.PredicateCount( 1, 2, 3, 4 ) )
+        self.assertEqual( p_c.GetMinCount(), 3 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
+        self.assertEqual( p_c.GetMinCount( HC.CONTENT_STATUS_PENDING ), 2 )
+        self.assertEqual( p_c.HasZeroCount(), False )
+        self.assertEqual( p_c.HasNonZeroCount(), True )
+        self.assertEqual( p_c.GetSuffixString(), '(1-3) (+2-4)' )
+        
+        #
+        
+        p_c_1 = ClientSearch.PredicateCount( 10, 2, 12, 4 )
+        p_c_2 = ClientSearch.PredicateCount( 1, 0, 2, 4 )
+        
+        p_c_1.AddCounts( p_c_2 )
+        
+        self.assertEqual( p_c_1, ClientSearch.PredicateCount( 10, 2, 14, 8 ) )
+        
+    
     def test_predicate_strings_and_namespaces( self ):
         
         render_for_user = False
@@ -1580,7 +1689,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), '' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', True, count = ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 2 ) )
         
         self.assertEqual( p.ToString( with_count = False ), 'tag' )
         self.assertEqual( p.ToString( with_count = True ), 'tag (1) (+2)' )
@@ -1593,7 +1702,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), '' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'tag', False, count = ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 2 ) )
         
         self.assertEqual( p.ToString( with_count = False ), '-tag' )
         self.assertEqual( p.ToString( with_count = True ), '-tag (1) (+2)' )
@@ -1604,23 +1713,23 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: since 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: since 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( CC.UNICODE_ALMOST_EQUAL_TO, 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: around 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: around 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.ToString(), 'system:time imported: before 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:import time: before 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1000 ) )
         
         self.assertEqual( p.ToString(), 'system:archive (1,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1632,7 +1741,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 2000 ) )
         
         self.assertEqual( p.ToString(), 'system:everything (2,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1644,9 +1753,21 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_DELETED, CC.LOCAL_FILE_SERVICE_KEY ) )
+        
+        self.assertEqual( p.ToString(), 'system:is deleted from my files' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:is not pending to my files' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PETITIONED, CC.LOCAL_FILE_SERVICE_KEY ) )
+        
+        self.assertEqual( p.ToString(), 'system:is not petitioned from my files' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
@@ -1686,7 +1807,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1000 ) )
         
         self.assertEqual( p.ToString(), 'system:inbox (1,000)' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1698,7 +1819,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 100 ) )
         
         self.assertEqual( p.ToString(), 'system:local (100)' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1722,7 +1843,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 100 ) )
         
         self.assertEqual( p.ToString(), 'system:not local (100)' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1880,13 +2001,22 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:modified time: before 7 years 2 months ago', "system:date modified > 7 years 2    months" ),
             ( 'system:modified time: since 1 day ago', "system:date modified < 1 day" ),
             ( 'system:modified time: since 1 month 1 day ago', "system:date modified < 0 years 1 month 1 day 1 hour" ),
-            ( 'system:time imported: since 7 years 1 month ago', "system:time_imported < 7 years 45 days 70h" ),
-            ( 'system:time imported: since 2011-06-04', "system:time imported > 2011-06-04" ),
-            ( 'system:time imported: before 7 years 2 months ago', "system:time imported > 7 years 2 months" ),
-            ( 'system:time imported: since 1 day ago', "system:time imported < 1 day" ),
-            ( 'system:time imported: since 1 month 1 day ago', "system:time imported < 0 years 1 month 1 day 1 hour" ),
-            ( 'system:time imported: a month either side of 2011-01-03', " system:time imported ~= 2011-1-3 " ),
-            ( 'system:time imported: a month either side of 1996-05-02', "system:time imported ~= 1996-05-2" ),
+            ( 'system:last view time: since 7 years 1 month ago', "system:last viewed time < 7 years 45 days 70h" ),
+            ( 'system:last view time: since 7 years 1 month ago', "system:last view time < 7 years 45 days 70h" ),
+            ( 'system:import time: since 7 years 1 month ago', "system:time_imported < 7 years 45 days 70h" ),
+            ( 'system:import time: since 2011-06-04', "system:time imported > 2011-06-04" ),
+            ( 'system:import time: before 7 years 2 months ago', "system:time imported > 7 years 2 months" ),
+            ( 'system:import time: since 1 day ago', "system:time imported < 1 day" ),
+            ( 'system:import time: since 1 month 1 day ago', "system:time imported < 0 years 1 month 1 day 1 hour" ),
+            ( 'system:import time: a month either side of 2011-01-03', " system:time imported ~= 2011-1-3 " ),
+            ( 'system:import time: a month either side of 1996-05-02', "system:time imported ~= 1996-05-2" ),
+            ( 'system:import time: since 7 years 1 month ago', "system:import_time < 7 years 45 days 70h" ),
+            ( 'system:import time: since 2011-06-04', "system:import time > 2011-06-04" ),
+            ( 'system:import time: before 7 years 2 months ago', "system:import time > 7 years 2 months" ),
+            ( 'system:import time: since 1 day ago', "system:import time < 1 day" ),
+            ( 'system:import time: since 1 month 1 day ago', "system:import time < 0 years 1 month 1 day 1 hour" ),
+            ( 'system:import time: a month either side of 2011-01-03', " system:import time ~= 2011-1-3 " ),
+            ( 'system:import time: a month either side of 1996-05-02', "system:import time ~= 1996-05-2" ),
             ( 'system:duration < 5.0 seconds', "system:duration < 5 seconds" ),
             ( 'system:duration \u2248 11.0 seconds', "system:duration ~= 5 sec 6000 msecs" ),
             ( 'system:duration > 3 milliseconds', "system:duration > 3 milliseconds" ),

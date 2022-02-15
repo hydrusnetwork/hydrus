@@ -79,7 +79,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = QW.QLineEdit( self )
         
-        self._basic_permissions = QP.CheckListBox( self )
+        self._basic_permissions = ClientGUICommon.BetterCheckBoxList( self )
         
         for permission in ClientAPI.ALLOWED_PERMISSIONS:
             
@@ -106,7 +106,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         basic_permissions = api_permissions.GetBasicPermissions()
         
-        self._basic_permissions.SetCheckedData( basic_permissions )
+        self._basic_permissions.SetValue( basic_permissions )
         
         #
         
@@ -129,12 +129,12 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateEnabled()
         
-        self._basic_permissions.checkListBoxChanged.connect( self._UpdateEnabled )
+        self._basic_permissions.checkBoxListChanged.connect( self._UpdateEnabled )
         
     
     def _UpdateEnabled( self ):
         
-        can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetChecked()
+        can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetValue()
         
         self._search_tag_filter.setEnabled( can_search )
         
@@ -144,7 +144,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         name = self._name.text()
         access_key = bytes.fromhex( self._access_key.text() )
         
-        basic_permissions = self._basic_permissions.GetChecked()
+        basic_permissions = self._basic_permissions.GetValue()
         search_tag_filter = self._search_tag_filter.GetValue()
         
         api_permissions = ClientAPI.APIPermissions( name = name, access_key = access_key, basic_permissions = basic_permissions, search_tag_filter = search_tag_filter )

@@ -505,7 +505,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         
         self._status_st = ClientGUICommon.BetterStaticText( self._accounts_box )
         
-        self._account_list = QP.CheckListBox( self._accounts_box )
+        self._account_list = ClientGUICommon.BetterCheckBoxList( self._accounts_box )
         self._account_list.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._account_list, ( 74, 6 ) )
@@ -541,11 +541,11 @@ class ReviewAccountsPanel( QW.QWidget ):
     
     def _AccountClicked( self ):
         
-        selections = sorted( self._account_list.GetSelections() )
+        selected_indices = sorted( self._account_list.GetSelectedIndices() )
         
-        if len( selections ) > 0:
+        if len( selected_indices ) > 0:
             
-            item = self._account_list.item( selections[0] )
+            item = self._account_list.item( selected_indices[0] )
             
             account_info_components = []
             

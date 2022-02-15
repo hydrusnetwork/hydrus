@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.media import ClientMedia
@@ -320,6 +321,77 @@ def UndeleteFiles( hashes ):
             service_keys_to_content_updates = { service_key : [ content_update ] }
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+def UndeleteMedia( win, media ):
+    
+    media_deleted_service_keys = HydrusData.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in media ) )
+    
+    local_file_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
+    
+    undeletable_services = [ local_file_service for local_file_service in local_file_services if local_file_service.GetServiceKey() in media_deleted_service_keys ]
+    
+    if len( undeletable_services ) > 0:
+        
+        do_it = False
+        
+        if len( undeletable_services ) > 1:
+            
+            choice_tuples = []
+            
+            for ( i, service ) in enumerate( undeletable_services ):
+                
+                choice_tuples.append( ( service.GetName(), service, i == 0 ) )
+                
+            
+            try:
+                
+                undelete_services = ClientGUIDialogsQuick.SelectMultipleFromList( win, 'Undelete for?', choice_tuples )
+                
+                do_it = True
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        else:
+            
+            undelete_services = undeletable_services
+            
+            if HC.options[ 'confirm_trash' ]:
+                
+                result = ClientGUIDialogsQuick.GetYesNo( win, 'Undelete this file back to {}?'.format( undelete_services[0].GetName() ) )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    do_it = True
+                    
+                
+            else:
+                
+                do_it = True
+                
+            
+        
+        if do_it:
+            
+            for chunk_of_media in HydrusData.SplitIteratorIntoChunks( media, 64 ):
+                
+                service_keys_to_content_updates = collections.defaultdict( list )
+                
+                for service in undelete_services:
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    undeletee_hashes = [ m.GetHash() for m in chunk_of_media if service_key in m.GetLocationsManager().GetDeleted() ]
+                    
+                    service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undeletee_hashes ) ]
+                    
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
             
         
     

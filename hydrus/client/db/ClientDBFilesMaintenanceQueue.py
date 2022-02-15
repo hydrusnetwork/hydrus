@@ -103,7 +103,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if HC.CONTENT_TYPE_HASH:
+        if content_type == HC.CONTENT_TYPE_HASH:
             
             tables_and_columns.append( ( 'file_maintenance_jobs', 'hash_id' ) )
             

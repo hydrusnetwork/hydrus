@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -219,11 +220,9 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             foldername = None
             name = 'new favourite search'
             
-            default_local_file_service_key = HG.client_controller.services_manager.GetDefaultLocalFileServiceKey()
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
             
-            location_search_context = ClientSearch.LocationSearchContext( current_service_keys = [ default_local_file_service_key ] )
-            
-            file_search_context = ClientSearch.FileSearchContext( location_search_context = location_search_context )
+            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
             
             synchronised = True
             media_sort = None

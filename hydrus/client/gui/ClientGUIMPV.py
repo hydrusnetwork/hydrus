@@ -12,11 +12,11 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientApplicationCommand as CAC
+from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.widgets import ClientGUICommon
 
 mpv_failed_reason = 'MPV seems ok!'
 
@@ -81,7 +81,7 @@ class mpvWidget( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._canvas_type = ClientGUICommon.CANVAS_PREVIEW
+        self._canvas_type = CC.CANVAS_PREVIEW
         
         self._stop_for_slideshow = False
         
@@ -143,14 +143,14 @@ class mpvWidget( QW.QWidget ):
     
     def _GetAudioOptionNames( self ):
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
                 
                 return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
                 
             
-        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+        elif self._canvas_type == CC.CANVAS_PREVIEW:
             
             if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
                 
@@ -167,11 +167,11 @@ class mpvWidget( QW.QWidget ):
         
         mute_option_name = global_mute_option_name
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
             
-        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+        elif self._canvas_type == CC.CANVAS_PREVIEW:
             
             ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
             
@@ -183,14 +183,14 @@ class mpvWidget( QW.QWidget ):
         
         ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
                 
                 ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
                 
             
-        elif self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+        elif self._canvas_type == CC.CANVAS_PREVIEW:
             
             if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
                 
@@ -384,11 +384,11 @@ class mpvWidget( QW.QWidget ):
                     ClientGUIMedia.OpenExternally( self._media )
                     
                 
-            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
                 
-            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == ClientGUICommon.CANVAS_PREVIEW:
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == CC.CANVAS_PREVIEW:
                 
                 self.launchMediaViewer.emit()
                 
@@ -455,7 +455,7 @@ class mpvWidget( QW.QWidget ):
         
         self._canvas_type = canvas_type
         
-        if self._canvas_type == ClientGUICommon.CANVAS_MEDIA_VIEWER:
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             shortcut_set = 'media_viewer_media_window'
             

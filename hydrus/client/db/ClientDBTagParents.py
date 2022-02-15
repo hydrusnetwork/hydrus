@@ -447,7 +447,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
-        if HC.CONTENT_TYPE_TAG:
+        if content_type == HC.CONTENT_TYPE_TAG:
             
             return [
                 ( 'tag_parents', 'child_tag_id' ),
