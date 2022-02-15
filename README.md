@@ -6,7 +6,7 @@ I am continually working on the software and try to put out a new release every 
 
 This github repository is currently a weekly sync with my home dev environment, where I work on hydrus by myself. **Feel free to fork and do whatever you like with my code, but please do not make pull requests.** The [issue tracker here on Github](https://github.com/hydrusnetwork/hydrus/issues) is active and run by blessed volunteer users. I am not active here on Github, and I have difficulty keeping up with social media in general, but I welcome feedback of any sort and will eventually catch up with and reply to email, the 8chan or Endchan, tumblr, twitter, or the discord.
 
-The client can do quite a lot! Please check out the help inside the release or [here](https://hydrusnetwork.github.io/hydrus/help), which includes a comprehensive getting started guide.
+The client can do quite a lot! Please check out the help inside the release or [here](https://hydrusnetwork.github.io/hydrus/), which includes a comprehensive getting started guide.
 
 A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](https://github.com/hydrusnetwork/hydrus/blob/master/static/build_files/docker/README.md).
 
