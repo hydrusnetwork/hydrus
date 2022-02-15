@@ -1119,6 +1119,7 @@ Arguments (in percent-encoded JSON):
     *   tag\_service\_key : (optional, selective, hexadecimal, the tag domain on which to search)
     *   file\_sort\_type : (optional, integer, the results sort method)
     *   file\_sort\_asc : true or false (optional, the results sort order)
+    *   return_hashes : true or false (optional, default false, returns hex hashes instead of file ids)
     *   _system_inbox : true or false (obsolete, use tags)_
     *   _system_archive : true or false (obsolete, use tags)_
 
@@ -1248,6 +1249,15 @@ Response:
 ```json title="Example response"
 {
 	"file_ids": [125462, 4852415, 123, 591415]
+}
+```
+```json title="Example response with return_hashes=true"
+{
+  "hashes": [
+    "1b04c4df7accd5a61c5d02b36658295686b0abfebdc863110e7d7249bba3f9ad",
+    "fe416723c731d679aa4d20e9fd36727f4a38cd0ac6d035431f0f452fad54563f",
+    "b53505929c502848375fbc4dab2f40ad4ae649d34ef72802319a348f81b52bad"
+  ]
 }
 ```
 
