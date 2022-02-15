@@ -62,7 +62,20 @@ nav:
 theme:
   name: material
   palette:
-    primary: blue grey
+    - media: "(prefers-color-scheme: light)" 
+      scheme: default
+      primary: blue grey
+      accent: blue
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
   logo: assets/hydrus-white.svg
   favicon: assets/hydrus-black.svg
   font: false
