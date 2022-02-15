@@ -24,7 +24,6 @@ jobs:
       - 
         name: Build docs to /help
         run: mkdocs build -d help
-        working-directory: hydrus
       - 
         name: Install PyOxidizer
         run: python3 -m pip install pyoxidizer
