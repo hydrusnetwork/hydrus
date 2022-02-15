@@ -1302,6 +1302,11 @@ Response:
       "width": 640,
       "height": 480,
       "duration": null,
+      "time_modified": null,
+      "file_services": {
+        "current": {},
+        "deleted": {}
+      },
       "has_audio": false,
       "num_frames": null,
       "num_words": null,
@@ -1323,6 +1328,20 @@ Response:
       "width": 1920,
       "height": 1080,
       "duration": 4040,
+      "time_modified": 1624055647,
+      "file_services": {
+        "current": {
+          "616c6c206c6f63616c2066696c6573": {
+            "time_imported" : 1641044491
+          }
+        },
+        "deleted": {
+          "6c6f63616c2066696c6573": {
+            "time_deleted": 1641204274,
+            "time_imported": 1641044491
+          }
+        }
+      },
       "has_audio": true,
       "num_frames": 102,
       "num_words": null,
@@ -1397,23 +1416,26 @@ Response:
 
     Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
-    The service\_names\_to\_statuses\_to\_tags and service\_keys\_to\_statuses\_to\_tags structures are similar to the /add\_tags/add\_tags scheme, excepting that the status numbers are:
+    file_services stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
+
+    The `service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags` structures are similar to the `/add_tags/add_tags` scheme, excepting that the status numbers are:
 
     *   0 - current
     *   1 - pending
     *   2 - deleted
     *   3 - petitioned
 
-    The tag structure is duplicated for both 'name' and 'key'. The use of 'name' is an increasingly legacy issue--a hack when the Client API was young--and 'service\_names\_to...' lookups are likely to be deleted in future in favour of service_key. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the [/get_services](#get_services) call (and cache the response--it doesn't change much!).
+    The tag structure is duplicated for both `name` and `key`. The use of `name` is an increasingly legacy issue--a hack when the Client API was young--and 'service\_names\_to...' lookups are likely to be deleted in future in favour of `service_key`. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the [/get_services](#get_services) call (and cache the response--it doesn't change much!).
 
     !!! note
         Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-    While service\_XXX\_to\_statuses\_to\_tags represent the actual tags stored on the database for a file, the service\_XXX\_to\_statuses\_to\__display_\_tags structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with service\_keys\_to\_statuses\_to\_tags. If you want to render to the user, use service\_keys\_to\_statuses\_to\_displayed\_tags.
+    While `service_XXX_to_statuses_to_tags` represent the actual tags stored on the database for a file, the <code>service_XXX_to_statuses_to_<i>display</i>_tags</code> structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with `service_keys_to_statuses_to_tags`. If you want to render to the user, use `service_keys_to_statuses_to_displayed_tags`.
 
-    If you add hide\_service\_names\_tags=true, the 'service\_names\_to\_statuses\_to\_tags' and 'service\_names\_to\_statuses\_to\_display\_tags' Objects will not be included. Use this to save data/CPU on large queries.
+    If you add `hide_service_names_tags=true`, the `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects will not be included. Use this to save data/CPU on large queries.
 
-    If you add detailed\_url\_information=true, a new entry, 'detailed\_known\_urls', will be added for each file, with a list of the same structure as /add\_urls/get\_url_info. This may be an expensive request if you are querying thousands of files at once.
+    If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
+
 
     ```json title="For example"
     "detailed_known_urls" : [
@@ -1528,16 +1550,18 @@ Arguments: None
 
 ```json title="Example response"
 {
-  "num_inbox": 8356,
-  "num_archive": 229,
-  "num_deleted": 7010,
-  "size_inbox": 7052596762,
-  "size_archive": 262911007,
-  "size_deleted": 13742290193,
-  "earliest_import_time": 1451408539,
-  "total_viewtime": [3280, 41621, 2932, 83021],
-  "total_alternate_files": 265,
-  "total_duplicate_files": 125,
-  "total_potential_pairs": 3252
+  "boned_stats": {
+    "num_inbox": 8356,
+    "num_archive": 229,
+    "num_deleted": 7010,
+    "size_inbox": 7052596762,
+    "size_archive": 262911007,
+    "size_deleted": 13742290193,
+    "earliest_import_time": 1451408539,
+    "total_viewtime": [3280, 41621, 2932, 83021],
+    "total_alternate_files": 265,
+    "total_duplicate_files": 125,
+    "total_potential_pairs": 3252
+  }
 }
 ```
