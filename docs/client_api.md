@@ -131,8 +131,8 @@ Required Headers: n/a
     
 Arguments:
     
-:   *   name : (descriptive name of your access)
-    *   basic_permissions : A JSON-encoded list of numerical permission identifiers you want to request.
+:   *   `name`: (descriptive name of your access)
+    *   `basic_permissions`: A JSON-encoded list of numerical permission identifiers you want to request.
         
         The permissions are currently:
 
@@ -278,7 +278,7 @@ Required Headers:
 :   - Content-Type: `application/json` (if sending path), `application/octet-stream` (if sending file)
 
 Arguments (in JSON):
-:   - path: (the path you want to import)
+:   - `path`: (the path you want to import)
 
     ```json title="Example request body"
     {"path": "E:\\to_import\\ayanami.jpg"}
@@ -319,12 +319,12 @@ Restricted access:
     
 Required Headers:
 :   
-*   Content-Type : `application/json`
+*   `Content-Type`: `application/json`
 
 Arguments (in JSON):
 :   
-*   hash : (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   hashes : (a list of SHA256 hashes)
+*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (a list of SHA256 hashes)
 
     ```json title="Example request body"
     {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -347,12 +347,12 @@ Restricted access:
     
 Required Headers:
 :   
-*   Content-Type : application/json
+*   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   
-*   hash : (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   hashes : (a list of SHA256 hashes)
+*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (a list of SHA256 hashes)
 
     ```json title="Example request body"
     {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -375,12 +375,12 @@ Restricted access:
     
 Required Headers:
 :   
-*   Content-Type : application/json
+*   `Content-Type`: application/json
 
 Arguments (in JSON):
 :  
-*   hash : (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   hashes : (a list of SHA256 hashes)
+*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (a list of SHA256 hashes)
 
     ```json title="Example request body"
     {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -403,12 +403,12 @@ Restricted access:
     
 Required Headers:
 :   
-*   Content-Type : application/json
+*   `Content-Type`: application/json
 
 Arguments (in JSON):
 :  
-*   hash : (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   hashes : (a list of SHA256 hashes)
+*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (a list of SHA256 hashes)
 
     ```json title="Example request body"
     {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -435,7 +435,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-*   tags : (a list of the tags you want cleaned)
+*   `tags`: (a list of the tags you want cleaned)
 
 Example request:
 :   Given tags `#!json [ " bikini ", "blue    eyes", " character : samus aran ", ":)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]`:
@@ -492,12 +492,12 @@ Required Headers: n/a
     
 Arguments (in JSON):
 :   
-*   hash : (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
-*   hashes : (selective A, a list of SHA256 hashes)
-*   service\_names\_to_tags : (selective B, an Object of service names to lists of tags to be 'added' to the files)
-*   service\_keys\_to_tags : (selective B, an Object of service keys to lists of tags to be 'added' to the files)
-*   service\_names\_to\_actions\_to_tags : (selective B, an Object of service names to content update actions to lists of tags)
-*   service\_keys\_to\_actions\_to_tags : (selective B, an Object of service keys to content update actions to lists of tags)
+*   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (selective A, a list of SHA256 hashes)
+*   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
+*   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
+*   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
+*   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
 
     You can use either 'hash' or 'hashes'.
 
@@ -579,7 +579,7 @@ Required Headers: n/a
     
 Arguments:
 :       
-    *   url : (the url you want to ask about)
+    *   `url`: (the url you want to ask about)
 
 Example request:
 :   for URL `http://safebooru.org/index.php?page=post&s=view&id=2753608`:
@@ -602,15 +602,15 @@ Response:
 }
 ```
     
-    The 'url\_file\_statuses' is a list of zero-to-n JSON Objects, each representing a file match the client found in its database for the URL. Typically, it will be of length 0 (for as-yet-unvisited URLs or Gallery/Watchable URLs that are not attached to files) or 1, but sometimes multiple files are given the same URL (sometimes by mistaken misattribution, sometimes by design, such as pixiv manga pages). Handling n files per URL is a pain but an unavoidable issue you should account for.
+    The `url_file_statuses` is a list of zero-to-n JSON Objects, each representing a file match the client found in its database for the URL. Typically, it will be of length 0 (for as-yet-unvisited URLs or Gallery/Watchable URLs that are not attached to files) or 1, but sometimes multiple files are given the same URL (sometimes by mistaken misattribution, sometimes by design, such as pixiv manga pages). Handling n files per URL is a pain but an unavoidable issue you should account for.
     
-    'status' is the same as for /add\_files/add\_file:
+    `status` is the same as for `/add_files/add_file`:
     
     *   0 - File not in database, ready for import (you will only see this very rarely--usually in this case you will just get no matches)
     *   2 - File already in database
     *   3 - File previously deleted
     
-    'hash' is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text you may recognise from hydrus's normal import workflow.
+    `hash` is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text you may recognise from hydrus's normal import workflow.
     
 
 ### **GET `/add_urls/get_url_info`** { id="add_urls_get_url_info" }
@@ -624,7 +624,7 @@ Required Headers: n/a
     
 Arguments:
 :   
-    *   url : (the url you want to ask about)
+    *   `url`: (the url you want to ask about)
 
 Example request:
 :   for URL `https://8ch.net/tv/res/1846574.html`:
@@ -664,27 +664,27 @@ Restricted access:
     
 Required Headers:
 :   
-    *   Content-Type : `application/json`
+    *   `Content-Type`: `application/json`
 
 Arguments (in JSON):
 :    
 
-    *   url : (the url you want to add)
-    *   destination\_page\_key : (optional page identifier for the page to receive the url)
-    *   destination\_page\_name : (optional page name to receive the url)
-    *   show\_destination\_page : (optional, defaulting to false, controls whether the UI will change pages on add)
-    *   service\_names\_to\_additional\_tags : (optional, selective, tags to give to any files imported from this url)
-    *   service\_keys\_to\_additional\_tags : (optional, selective, tags to give to any files imported from this url)
-    *   filterable_tags : (optional tags to be filtered by any tag import options that applies to the URL)
-    *   _service\_names\_to\_tags : (obsolete, legacy synonym for service\_names\_to\_additional_tags)_
+    *   `url`: (the url you want to add)
+    *   `destination_page_key`: (optional page identifier for the page to receive the url)
+    *   `destination_page_name`: (optional page name to receive the url)
+    *   `show_destination_page`: (optional, defaulting to false, controls whether the UI will change pages on add)
+    *   `service_names_to_additional_tags`: (optional, selective, tags to give to any files imported from this url)
+    *   `service_keys_to_additional_tags`: (optional, selective, tags to give to any files imported from this url)
+    *   `filterable_tags`: (optional tags to be filtered by any tag import options that applies to the URL)
+    *   _`service_names_to_tags`: (obsolete, legacy synonym for service\_names\_to\_additional_tags)_
 
-    If you specify a destination\_page\_name and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
+    If you specify a `destination_page_name` and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
 
-    Alternately, destination\_page\_key defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.
+    Alternately, `destination_page_key` defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.
 
-    show\_destination\_page defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
+    `show_destination_page` defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
 
-    service\_names\_to\_additional\_tags and service\_keys\_to\_additional\_tags use the same data structure as in /add\_tags/add\_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
+    `service_names_to_additional_tags` and `service_keys_to_additional_tags` use the same data structure as in /add\_tags/add\_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
 
     filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a _tag import options_, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.
 
@@ -755,19 +755,19 @@ Restricted access:
     
 Required Headers:
 :       
-    *   Content-Type : `application/json`
+    *   `Content-Type`: `application/json`
 
 
 Arguments (in JSON):
 :   
-    *   url\_to\_add : (an url you want to associate with the file(s))
-    *   urls\_to\_add : (a list of urls you want to associate with the file(s))
-    *   url\_to\_delete : (an url you want to disassociate from the file(s))
-    *   urls\_to\_delete : (a list of urls you want to disassociate from the file(s))
-    *   hash : (an SHA256 hash for a file in 64 characters of hexadecimal)
-    *   hashes : (a list of SHA256 hashes)
+    *   `url_to_add`: (an url you want to associate with the file(s))
+    *   `urls_to_add`: (a list of urls you want to associate with the file(s))
+    *   `url_to_delete`: (an url you want to disassociate from the file(s))
+    *   `urls_to_delete`: (a list of urls you want to disassociate from the file(s))
+    *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
+    *   `hashes`: (a list of SHA256 hashes)
 
-    All of these are optional, but you obviously need to have at least one of 'url' arguments and one of the 'hash' arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
+    All of these are optional, but you obviously need to have at least one of `url` arguments and one of the `hash` arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
 ```json title="Example request body"
 {
   "url_to_add": "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
@@ -793,7 +793,7 @@ Restricted access:
 Required Headers: n/a
     
 Arguments:
-:   *  domain
+:   *  `domain`
 
     ``` title="Example request (for gelbooru.com)"
     /manage_cookies/get_cookies?domain=gelbooru.com
@@ -825,11 +825,11 @@ Restricted access:
     
 Required Headers:
 :   
-    *   Content-Type : application/json
+    *   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   
-    *   cookies : (a list of cookie rows in the same format as the GET request above)
+    *   `cookies`: (a list of cookie rows in the same format as the GET request above)
 
     ```json title="Example request body"
     {
@@ -853,11 +853,11 @@ Restricted access:
     
 Required Headers:
 :    
-    *   Content-Type : application/json
+    *   `Content-Type`: application/json
 
 Arguments (in JSON):
 :       
-    *   user-agent : (a string)
+    *   `user-agent`: (a string)
 
     ```json title="Example request body"
     {
@@ -865,7 +865,7 @@ Arguments (in JSON):
     }
     ```
         
-    Send an empty string to reset the client back to the default User-Agent, which should be 'Mozilla/5.0 (compatible; Hydrus Client)'.
+    Send an empty string to reset the client back to the default User-Agent, which should be `Mozilla/5.0 (compatible; Hydrus Client)`.
 
 ## Managing Pages
 
@@ -960,8 +960,8 @@ Required Headers: n/a
     
 Arguments:
 :   
-    *   page\_key : (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#manage_pages_get_pages))
-    *   simple : true or false (optional, defaulting to true)
+    *   `page_key`: (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#manage_pages_get_pages))
+    *   `simple`: true or false (optional, defaulting to true)
 
     ``` title="Example request"
     /manage_pages/get_page_info?page_key=aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da&simple=true
@@ -1049,13 +1049,13 @@ Restricted access:
     
 Required Headers:
 :   
-    *   Content-Type : application/json
+    *   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   
-    *   page_key : (the page key for the page you wish to add files to)
-    *   file_ids : (selective, a list of numerical file ids)
-    *   hashes : (selective, a list of hexadecimal SHA256 hashes)
+    *   `page_key`: (the page key for the page you wish to add files to)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
 
     You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
 
@@ -1079,11 +1079,11 @@ Restricted access:
     
 Required Headers:
 :   
-    *   Content-Type : application/json
+    *   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   
-    *   page_key : (the page key for the page you wish to show)
+    *   `page_key`: (the page key for the page you wish to show)
 
     The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
 
@@ -1112,16 +1112,16 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   tags : (a list of tags you wish to search for)
-    *   file\_service\_name : (optional, selective, string, the file domain on which to search)
-    *   file\_service\_key : (optional, selective, hexadecimal, the file domain on which to search)
-    *   tag\_service\_name : (optional, selective, string, the tag domain on which to search)
-    *   tag\_service\_key : (optional, selective, hexadecimal, the tag domain on which to search)
-    *   file\_sort\_type : (optional, integer, the results sort method)
-    *   file\_sort\_asc : true or false (optional, the results sort order)
-    *   return_hashes : true or false (optional, default false, returns hex hashes instead of file ids)
-    *   _system_inbox : true or false (obsolete, use tags)_
-    *   _system_archive : true or false (obsolete, use tags)_
+    *   `tags`: (a list of tags you wish to search for)
+    *   `file_service_name`: (optional, selective, string, the file domain on which to search)
+    *   `file_service_key`: (optional, selective, hexadecimal, the file domain on which to search)
+    *   `tag_service_name`: (optional, selective, string, the tag domain on which to search)
+    *   `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
+    *   `file_sort_type`: (optional, integer, the results sort method)
+    *   `file_sort_asc`: true or false (optional, the results sort order)
+    *   `return_hashes`: true or false (optional, default false, returns hex hashes instead of file ids)
+    *   _`system_inbox`: true or false (obsolete, use tags)_
+    *   _`system_archive`: true or false (obsolete, use tags)_
 
     ``` title='Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "кино"'
     /get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D
@@ -1276,11 +1276,11 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   file_ids : (selective, a list of numerical file ids)
-    *   hashes : (selective, a list of hexadecimal SHA256 hashes)
-    *   only\_return\_identifiers : true or false (optional, defaulting to false)
-    *   detailed\_url\_information : true or false (optional, defaulting to false)
-    *   hide\_service\_names_tags : true or false (optional, defaulting to false)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   `only_return_identifiers`: true or false (optional, defaulting to false)
+    *   `detailed_url_information`: true or false (optional, defaulting to false)
+    *   `hide_service_names_tags`: true or false (optional, defaulting to false)
 
     You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
 
@@ -1478,8 +1478,8 @@ Required Headers: n/a
     
 Arguments :
 :   
-    *   file_id : (numerical file id for the file)
-    *   hash : (a hexadecimal SHA256 hash for the file)
+    *   `file_id`: (numerical file id for the file)
+    *   `hash`: (a hexadecimal SHA256 hash for the file)
 
     Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
@@ -1505,8 +1505,8 @@ Required Headers: n/a
     
 Arguments:
 :   
-    *   file_id : (numerical file id for the file)
-    *   hash : (a hexadecimal SHA256 hash for the file)
+    *   `file_id`: (numerical file id for the file)
+    *   `hash`: (a hexadecimal SHA256 hash for the file)
 
     Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
