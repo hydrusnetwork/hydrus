@@ -43,6 +43,24 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
 !!! info "For macOS users"
     The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.
 
+## anti-virus { id="anti_virus" }
+
+Hydrus is made by an Anon out of duct tape and string. It combines file parsing tech with lots of network and database code in unusual and powerful ways, and all through a hacked-together executable that isn't signed by any big official company.
+
+Unfortunately, we have been hit by anti-virus false positives throughout development. Every few months, one or more of the larger anti-virus programs sees some code that looks like something bad, or they run the program in a testbed and don't like something it does, and then they quarantine it. Every single instance of this so far has been a false positive. They usually go away the next week or two when the next set of definitions roll out. Some hydrus users are kind enough to report the program as a false positive to the anti-virus companies themselves, which also helps here.
+
+Some users have never had the problem, some get hit regularly. The situation is obviously worse on Windows. If you try to extract the zip and client.exe or the whole folder suddenly disappears, please check your anti-virus software.
+
+I am interested in reports about these false-positives, just so I know what is going on. Sometimes I have been able to reduce problems by changing something in the build (one of these was, no shit, an anti-virus testbed running the installer and then opening the help html at the end, which launched Edge browser, which then triggered Windows Update, which hit UAC and was considered suspicious. I took out the 'open help' checkbox from the installer as a result).
+
+You should be careful about random software online. For my part, the program is completely open source, and I have a long track record of designing it with privacy foremost. There is no intentional spyware of any sort--the program never connects to another computer unless you tell it to. Furthermore, the exe you download is now built on github's cloud, so there are very few worries about a trojan-infected build environment putting something I did not intend into the program (as there once were when I built the release on my home machine). That doesn't stop Windows Defender from sometimes calling it an ugly name like "Tedy.4675" and definitively declaring "This program is dangerous and executes commands from an attacker" but that's the modern anti-virus ecosystem.
+
+There aren't excellent solutions to this problem. I don't like to say 'just exclude the program directory from your anti-virus settings', but some users are comfortable with this and say it works fine. One thing I do know that helps (with other things too), if you are using the default Windows Defender, is going into the Windows Security shield icon on your taskbar, and 'virus and threat protection' and then 'virus and threat protection settings', and turning off 'Cloud-delivered protection' and 'Automatic sample submission'. It seems with these on, Windows will talk with a central server about executables you run and download early updates, and this gives a lot of false positives.
+
+If you are still concerned, please feel free to run from source, as above. You are controlling everything, then, and can change anything about the program you like. Or you can only run releases from four weeks ago, since you know the community would notice by then if there ever were a true positive. Or just run it in a sandbox and watch its network traffic.
+
+In 2022 I am going to explore a different build process to see if that reduces the false positives. We currently make the executable with PyInstaller, which has some odd environment set-up the anti-virus testbeds don't seem to like, and perhaps PyOxidizer will be better. We'll see.
+
 ## running
 
 To run the client:
@@ -63,7 +81,7 @@ To run the client:
 
 ## updating
 
-!!! danger
+!!! warning
     Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!
 
 **Hydrus does not auto-update. It will stay the same version unless you download and install a new one.**
@@ -113,7 +131,23 @@ If you narrow the gap down to just one version and still get an error, please le
 
 ## backing up
 
-**Maintaining a regular backup is important for hydrus.** The program stores a lot of complicated data that you will put hours and hours of work into, and if you only have one copy and your hard drive breaks, you could lose everything. This has happened before, and it sucks to go through. Don't let it be you.
+!!! danger "I am not joking around: if you end up liking hydrus, you should back up your database"
+
+**Maintaining a regular backup is important for hydrus.** The program stores a lot of complicated data that you will put hours and hours of work into, and if you only have one copy and your hard drive breaks, you could lose everything. This has happened before--to people who thought it would never happen to them--and it sucks big time to go through. **Don't let it be you.**
+
+Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cannot work in a faulty environment. Ways in which users of hydrus have damaged/lost their database:
+
+*   Hard drive hardware failure (age, bad ventilation, bad cables, etc...)
+*   Lightning strike on non-protected socket or rough power cut on non-UPS'd power supply
+*   RAM failure
+*   Motherboard/PSU power problems
+*   Accidental deletion
+*   Accidental overwrite (usually during a borked update)
+*   Encrypted partition auto-dismount/other borked settings
+*   Cloud backup interfering with ongoing writes
+*   Network drive location not guaranteeing accurate file locks
+
+Some of those you can mitigate (don't run the database over a network!) and some will always be a problem, but if you have a backup, none of them can kill you.
 
 If you do not already have a backup routine for your files, this is a great time to start. I now run a backup every week of all my data so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it felt awful. If you are new to saving a lot of media, I hope you can avoid what I felt. ;\_;
 
@@ -129,7 +163,7 @@ By default, hydrus stores all your user data in one location, so backing up is s
 
     Advanced users who have migrated their database across multiple locations will not have this option--use an external program in this case.
     
-#### the powerful way - using an external program
+#### the powerful (and best) way - using an external program
 :   
     If you would like to integrate hydrus into a broader backup scheme you already run, or you are an advanced user with a complicated hydrus install that you have migrated across multiple drives, then you need to backup two things: the client\*.db files and your client\_files directory(ies). By default, they are all stored in install\_dir/db. The .db files contain your settings and file metadata like inbox/archive and tags, while the client\_files subdirs store your actual media and its thumbnails. If everything is still under install\_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!
 
@@ -139,3 +173,9 @@ By default, hydrus stores all your user data in one location, so backing up is s
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
 
 I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
+
+## backing up with not much space { id="backing_up_small" }
+
+If you decide not to maintain a backup because you cannot afford drive space for all your files, please please at least back up your actual database files. Use FreeFileSync or a similar program to back up the four 'client*.db' files in install_dir/db when the client is not running. Just make sure you have a copy of those files, and then if your main install becomes damaged, we will have a reference to either roll back to or manually restore data from. Even if you lose a bunch of media files in this case, with an intact database we'll be able to schedule recovery of anything with a URL.
+
+It is best to have all four database files. It is generally easy and quick to fix problems if you have a backup of all four. If client.caches.db is missing, you can recover but it might take ten or more hours of CPU work to regenerate. If client.mappings.db is missing, you might be able to recover tags for your local files from a mirror in an intact client.caches.db. However, client.master.db and client.db are the most important. If you lose either of those, or they become too damaged to read and you have no backup, then your database is essentially dead and likely every single archive and view and tag and note and url record you made is lost. This has happened before, do not let it be you.
