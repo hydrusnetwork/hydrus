@@ -113,6 +113,10 @@ Again, you may want to set up a shortcut to a script to make it easy.
 
 I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.
 
+## Building the docs
+
+When running from source you will also need to [build the hydrus help docs](about_docs.md) yourself.
+
 ## my code { id="my_code" }
 
 My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.

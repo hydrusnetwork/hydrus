@@ -57,6 +57,7 @@ nav:
     - contact.md
     - support.md
     - changelog.md
+    - about_docs.md
 
 theme:
   name: material
