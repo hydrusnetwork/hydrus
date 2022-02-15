@@ -3,6 +3,196 @@
 !!! note
     This is the new changelog. For versions prior to 466 see the [old changelog](old_changelog.html).
 
+## [Version 473](https://github.com/hydrusnetwork/hydrus/releases/tag/v473)
+
+### misc
+* fixed the recent problem with drag and dropping thumbnails to a level below the top row of pages. sorry for the trouble!
+* fixed a bug where the client would not load results sorting by 'import time' when the search file domain was a single deleted file domain
+* fixed a list display bug in the edit page parser dialog when a subsidiary page parser has two complicated string-match based content parsers
+* collections now sort by modified time, using the largest known modified time in their collection
+* added sqlite3.exe console back into the windows build--sorry, it was missing since the github build changeover!
+* added a note to the help about backing up when tight on space, which I will repeat here: the sqlite database files are very compressible (70GB->17GB on default 7zip settings!), so if you need more space on your backup drive, this is a good way to reclaim it
+
+### command palette
+* a user has written a cool 'command palette' for the program! it brings up a type-and-search interface to navigate to pages or menu entries.
+* I have integrated his first version and set the default shortcut to Ctrl+P. users who update will get this shortcut if they have nothing else on Ctrl+P on 'main window' set. if you prefer Ctrl+K or anything else, you can change it under _file->shortcuts->the main window_
+* regular users will get a page list they can search and select, advanced users will also get the (potentially dangerous) full scan of the menubar and current thumbnail right-click menu. I will be polishing this latter feature in future to filter out big maintenance jobs and show checkbox status and similar, so if you are advanced, please be careful for now
+* try it out, and let me know how it goes. the underlying widget is neat, and I can change its behaviour and extend it significantly
+
+### (mostly advanced) deleted file improvements
+* files that have been deleted from a local file domain are now aware of their file deletion reason. this is visible in the right-click menu of thumb or media canvas
+* the advanced file deletion dialog now initialises using this stored reason. if all pending deletees have the same existing reason stored, it will display it, and if they are all set but differ, this will be noted and an option to not alter them is also available. this will come up later in niche advanced situations with mutiple file services
+* reversing a recent change, local file deletion reasons are no longer cleared on undelete or (re)import. they'll now hang around invisibly and initialise any future advanced file deletion dialog
+* updated the thumbnail and canvas undelete mechanism to handle multiple services. now, if the files are deleted in more than one domain, you will be asked to multiple-select which you wish to undelete for. if there is only one eligible undelete service, the process remains unchanged--you'll just get a yes/no confirmation if the 'confirm trash' option is set
+* misc multiple local file services code conversion work
+
+## [Version 472](https://github.com/hydrusnetwork/hydrus/releases/tag/v472b)
+
+### highlights
+* the file domain button of every autocomplete input now has a 'multiple locations' entry. this launches a checkboxlist of all possible search locations and allows you to search more than one domain at once. it works, too! in future, when we can have multiple 'my files' services, you'll be able to choose here unions of what to search. users in advanced mode will see repository updates, all local files, all known files, and the new deleted file domains on this list. I removed the deleted file domains from the front menu because I expect them to be rarely used
+* in _options->thumbnails_, there is now a 'thumbnail scaling' dropdown. you can set it so thumbs only ever scale down (which remains the default), scale to fit (i.e. very small images are also scaled up), or scale to fill. the 'animation' as thumbnails refit and delayed-regen themselves to 'scale to fill' is accidentally one of the coolest things I have done
+* removed the old 'EXPERIMENTAL: thumbnail fill' option. the new mode works essentially the same, but faster and higher quality
+* in the page tab menu, there is a new submenu 'pages', which shows all the pages at or below the current level. if you right-click on a page of pages tab, it will just show for that page of pages. click any of the entries, you will select that page. it is a web browser-like quick navigation menu, let me know what you think!
+* rejiggered the page tab menu a little, reordering groups a bit with nicer separators and putting 'select' navigation on the menu even if you click in greyspace
+* fixed a problem in page tab menu logic where if you right-clicked on greyspace, it would render the menu for the bottommost page of pages row rather than the one actually clicked
+* last week's update where a mouse release event will no longer fire in the shortcuts system if the mouse moved a decent distance between press and release should now work in the media viewer canvas when dragging is set to anchor the mouse in place. some advanced users may wish to try setting archive/delete to work on mouse release and use left click to drag
+
+### bug fixes
+* fixed pages force-refreshing file queries on session load. this has never been intentional, but it slipped through again and was happening for a month or two now. I have added an explicit test to my routine to make sure this doesn't happen again, sorry for the trouble!
+* fixed a problem in the recent fast shutdown code that was accidentally also shutting down some maintenance work like repository processing as soon as it started, even if 'exit and force work' was chosen
+* all images with a completely opaque alpha channel will now have that alpha channel dropped for the new pixel hash calculation, meaning they will now match with regular non-alpha images with the same colour pixel data. in fact, all images with an opaque alpha now have that channel dropped on load, which will save a little memory and CPU any time they are handled (issue #770)
+* if the 'durable' temporary database exists on boot, it is now deleted and a fresh one created rather than trying to re-use the old one (which would not have any useful information anyway), and a note is made to log. one user recently had a problem where an existing corrupt temp dir was stopping boot, which this fixes
+
+### misc
+* updated the windows build to use a newer version of mpv, moving from roughly 2021-02 to 2022-01. this replaces mpv-1.dll with mpv-2.dll, and I set the installer to delete the old '1'. if you extract, you can delete the old '1' yourself, but things seems fine with both. in any case, let me know if you have any trouble!
+* updated the windows build to use sqlite 3.37.2, the sqlite3 in the db dir is also updated
+* the deleted files system now neatly cleans up old file deletion reasons on file import and file undelete
+* cleared out some old thumbnail generation code, including deleting an old and now obselete optimisation where too-large thumbs were scaled down to make new thumbs rather than revisiting source. since our thumb situation is more complicated now, this is gone in favour of nicer quality thumbs and simpler code
+* fixed up some upcoming database maintenance code in my new modules
+* updated and cleaned the code in the old wx-converted checkboxlist and replaced some awkward old access routines
+* cleared out some old HTA archive code
+
+## [Version 471](https://github.com/hydrusnetwork/hydrus/releases/tag/v471)
+
+### times
+* if you have file viewing stats turned on (by default it is), the client will now track the 'last viewed time' of your files, both in preview and media viewers. a record is only made assuming they pass the viewtime checks under _options->file viewing statistics_ (so if you scroll through really quick but have it set to only record after five seconds of viewing, it will not save that as the last viewed time). this last viewed time is shown on the right-click menu with the normal file viewing statistics
+* sorting by 'import time' and 'modified time' are moved to a new 'time' subgroup in the sort button menu
+* also added to 'time' is 'last viewed time'. note that this has not been tracked until now, so you will have to look at a bunch of things for a few seconds each to get some data to sort with
+* to go with 'x time' pattern, 'time imported' is renamed to 'import time' across the program. both should work for system predicate parsing
+* system:'import time' and 'modified time' are now bundled into a new 'system:time' stub in the system predicates list. the window launched from here is an experimental new paged panel. I am not sure I really like it, but let's see how it works IRL
+* 'system:last view time' is added to search the new field! give it a go once you have some data
+* also note that the search and sort of last viewed time works on the 'media viewer' number. those users who use preview or combined numbers for stuff, let me know if and how you would like that to work here--sort/search for both media and preview, try to combine based on the logic in the options, or something else?
+
+### loading serialised pngs
+* the client can now load serialised downloader-pngs if they are a perfect RGB conversion of an original greyscale export.
+* the pngs don't technically have to be pngs anymore! if you drag and drop an image from firefox, the temporary bitmap exported and attached to the DnD _should_ work!
+* the lain easy downloader import now has a clipboard paste button. it can take regular json text, and now, bitmap data!
+* the 'import->from clipboard' button action in many multiple column lists across the program (e.g. manage parsers) (but not every list, a couple are working on older code) also now accepts bitmap data on the clipboard
+* the various load errors here are also improved
+
+### custom widget colors
+* (advanced users only for now)
+* after banging my head against it, I finally figured out an ok way to send colors from a QSS style file to python code. this means I can convert my custom widgets to inherit colours from the current QSS. I expect to migrate pretty much everything currently fixed over to this, except tag colours and maybe some thumbnail border stuff, and retire the old darkmode
+* if you are a QSS lad, please check out the new entries at the bottom of default_hydrus.qss and play around with them in your own QSSes. please do not send me any updates to be folded in to the install yet as I still have a bunch of other colours to add. this week is just a test--please let me know how it works for you
+
+### misc
+* mouse release events no longer trigger a command in the shortcuts system if the release happens more than about 20 pixels from the original mouse down. this is tricky, so if you are into clever shortcuts, let me know how it works for you
+* the file maintenance manager (which has been getting a lot of work recently with icc profiles, pixel dupes, some thumb regen, and new audio channel checks), now saves its work and publishes updates faster to the UI, at least once every ten seconds
+* the sort entries in the page sort control are now always sorted according to their full (type, name) string, and the mouse-wheel-to-navigate is now fixed to always mirror this
+* improved some 'delete file reason' handling. currently, a file deletion reason should only be applied when a file is entering trash. there was a bug that force-physical-deleting files from trash would overwrite their original deletion reason. this is now fixed. the advanced delete files dialog now disables the whole reason panel better when needed, never sends a file reason down to the database when there should be no reason, disables the panel if all the files are in the trash, and at the database level when file deletion reasons are being set, all files are filtered for status beforehand to ensure none are accidentally set by other means. I am about to make trash more intelligent as part of multiple local file services, so I expect to revisit this soon
+* the new ICC Profile conversion no longer occurs on I or F mode files. there are weird 32/64 bit monochrome files, and mode/ICC conversion goes whack with current PIL code
+* replaced the critical hamming test in the duplicate files system with a different bit-counting strategy that works about 9% faster. hamming test is used in all duplicate file searching, so this should help out a tiny bit in a lot of places
+
+### boring cleanup
+* cleaned up how media viewer canvas type is stored and tested in many places
+* all across the program, file viewing statistics are now tracked by type rather than a hardcoded double of preview & media viewer. it will take a moment to update the database to reflect this this week
+* cleaned up a ton of file viewing stats code
+* cleared out the last twenty or so uses of the old 'execute many select' database access routine in favour of the new lower-overhead and more query-optimisable temporary integer tables method
+
+## [Version 470](https://github.com/hydrusnetwork/hydrus/releases/tag/v470b)
+
+### multiple file services
+* I finished the conversion of all UI search to the new multiple location object. everything from back- to frontend now supports cleverer search. since searching deleted files is simple to add, users in advanced mode will now see 'deleted from...' in a new list in the tag autocomplete dropdown file domain button
+* the next step is writing a widget that allows multiple selection, and then all this should work right out of the box, and we'll be an important step closer to allowing multiple local file services
+
+### misc
+* the video parsing routine is better at detecting when a present audio track is actually silent (and hence when it should mark a video as 'no audio'). all video with audio will be requeued for a metadata reparse in the files maintenance system on update
+* fixed an error from last week when trying to create a new page from the tags (e.g. middle-clicking them) in the active search list
+* added 'audio mkv' format to the client, to represent mkvs without a video track. I think most of the time this is going to be audio track webms from youtube-dl and similar
+* added 'file relationships: set files as potential duplicates' command to the 'media actions' shortcut set
+* I expanded the 'backing up' section in 'installing and updating' help
+* I wrote an 'anti-virus' section for 'installing and updating' help, since I kept writing the same basic spiel about false positives. please feel free to point people there in future to relieve their concerns
+* improved some shutdown tests, the client and server should exit faster in some cases (e.g. when a hydrus repository network job is hanging on reconnection attempts, holding up the 'synchronise_repository' daemon shutdown)
+* the 'file was xxx at (y timestamp), which was (z time units) before this check' line in file import notes now always puts 'z time units' as that, ignoring the 'always show ISO time' setting, which was just substituting it with 'y timestamp' again. let me know if you spot other bad grammar with this setting on, I'll fix it!
+* fingers crossed, images in the LAB colourspace _should_ now normalise to sRGB with the correct whitepoint. thanks to the user who provided example test tiff images here. this now uses the new PIL-based colourspace conversion I used to make ICC profiles work, just on LAB->sRGB. as far as I understand, OpenCV uses a fixed whitepoint of D65, resulting in yellow/warm conversions for some formats, but PIL may be able to figure out if D50 is needed??? if you have some crazy LUV or YPbPr or YIQ image that shows up wrong, please send it in and I'll see what I can do!
+
+### boring rewrites and cleanup while doing file service work
+* many more UI objects now store and do file service logic using a more complicated 'location context', which can store a mix of multiple services and 'deleted from service' data. all the search code that works on this can now propagate to display:
+* the management objects behind every page now store a multiple location object, not a single file service id
+* all media panels (the thumbnail grid on a page) are now instantiated by a multiple location object, and when they serve a highlighted downloader, they now inherit that from the file import options, which in future will dictate import destinations
+* all canvases are now the same, inheriting their new location context from their parents
+* all tag lists are the same. mostly they don't care much about file domain, but when you middle-click to create new pages from the autocomplete dropdown list or active search list, it can matter, so they now propagate it along
+* the underlying medialist objects are now the same, and various delete logic (e.g. 'should we remove this thumb we just deleted?') is updated to work on complex domains
+* some duplicate lookup code now works on location context
+* renamed 'location search context' object to 'location context' since it is used all over now and put it in its own file. also wrote it some neater initialisation and meta object code
+* mr bones now gives duplicate data based on the union of all non-trash local services sans update files (another case of now supporting n services but n is fixed for the moment at 1, 'my files')
+* a bunch of places across the program that used to default to 'my files' or 'all local files' (which is everything on disk, including trash and repository update files) now default to this new union of all non-trash local media services
+* when doing page-to-page file drag and drops, the location context is now preserved (previously, the new page would always be 'my files')
+* whole heap of other cleanup in these systems
+* when a thumbnail cannot be provided (for deleted files or many 'all known files' situations), the thumbnail cache now provides the hydrus icon stand-in instantly, no delayed waterfall
+* fixed an unusual situation where the file search could not provide a file in a tagless search when that file had no detailed file info row in the database. this seems to effect a legacy borked row or two in the new deleted file domain searches
+* removed some ancient dumper status code from thumbnail objects
+
+## [Version 469](https://github.com/hydrusnetwork/hydrus/releases/tag/v469)
+
+### misc
+* the 'search log' button and the window panel now let you delete log entries. you can delete by completion status from the menu or specifically by row in the panel (just like the file log)
+* fixed the new 'file is writable' checks for Linux/macOS, which were testing permissions overbroadly and messing with users with user-only permissions set. the code now hands off specific user/group negotiation to the OS. thanks to the maintainer of the AUR package for helping me out here (issue #1042)
+* the various places where a file's permission bits are set are also cleaned up--hydrus now makes a distinction between double-checking a file is set user-writable before deleting/overwriting vs making a file's permission bits (which were potentially messed up in the past) 'nice' for human use after export. in the latter case, which still defaults to 644 on linux/macOS, the user's umask is now applied, so it should be 600 if you prefer that
+* fixed a bug where the media viewer could have trouble initialising video when the player window instantiation was delayed (e.g. with embed button)
+
+### client api
+* added 'return_hashes' boolean parameter to GET /get_files/search_files, which makes the command return hashes instead of file ids. this is documented in the help and has a new unit test
+* client api version is now 25
+
+### multiple local file services work
+* I rewrote a lot of code this week, but it proved more complex than I expected. I also discovered I'll have to switch the pages and canvases over too before I can nicely switch the top level UI over to allow multiple search. rather than release a borked feature, I decided not to rush the final phase, so this remains boring for now! the good news is that it works well when I hack it in, so I just need to keep pushing
+* rewrote the caller side of tag autocomplete lookup to work on the new multiple file search domain
+* rewrote the main database level tag lookup code to work on the new multiple file search domain
+* certain types of complicated tag autocomplete lookup, particularly on all known tags and any client with lots of siblings, will be faster now
+* an unusual and complicated too-expansive sibling lookup on autocomplete lookups on 'all known tags' is now fixed
+
+### boring cleanup and refactoring
+* predicate counts are now managed by a new object. predicates also support 0 minimum count for x-y count ranges, which is now possible when fetching count results from non-cross-referenced file domains (for now this means searching deleted files)
+* cleaned up a ton of predicate instantiation code
+* updated autocomplete, predicate, and pred count unit tests to handle the new objects and bug fixes
+* wrote new classess to cover convenient multiple file search domain at the database level and updated a bunch of tag autocomplete search code to use it
+* misc cleanup and refactoring for file domain search code
+* purged more single file service inspection code from file search systems
+* refactored most duplicate files storage code (about 70KB) to a new client db module
+
+## [Version 468](https://github.com/hydrusnetwork/hydrus/releases/tag/v468)
+
+### misc
+* fixed an issue where the one pixel border on the new 'control bar' on the media viewer was annoyingly catching mouse events at the bottom of the screen when in borderless fullscreen mode (and hence dragging the video, not scanning video position). the animation scanbar now owns its own border and processes mouse events on it properly
+* fixed a typo bug in the new pixel hash system that meant new imports were not being added to the system correctly. on update, all files affected will be fixed of bad data and scheduled for a pixel hash regen. sorry for the trouble, and thank you for the quick reports here
+* added a 'fixed font size example' qss file to the install. I have passed this file to others as an example of a quick way to make the font (and essentially ui scale) larger. it has some help comments inside and is now always available. the default example font size is lmao
+* fixed another type checking problem for (mostly Arch/AUR) PyQt5 users (issue #1033)
+* wrote a new display mappings maintenance routine for the database menu that repopulates the display mappings cache for missing rows. this task will be radically faster than a full regen for some problems, but it only solves those problems
+* on boot, the program now explicitly checks if any of the database files are set as read-only and if so will dump out with an appropriate error
+* rewrote my various 'file size problem' exception hierarchy to clearly split 'the file import options disallow this big gif' vs 'this file is zero size/this file is malformed'. we've had several problems here recently, but file import options rule-breaking should set 'ignore' again, and import objects should be better about ignore vs fail state from now on
+* added more error handling for broken image files. some will report cleaner errors, some will now import
+* the new parsing system that discards source urls if they share a domain with a primary import url is now stricter--now discarding only if they share the same url class. the domain check was messing up saving post urls when they were parsed from an api url (issue #1036)
+* the network engine no longer sends a Range header if it is expecting to pull html/json, just files. this fixes fetching pages from nijie.info (and several other server engines, it seems), which has some unusual access rules regarding Range and Accept-Encoding
+* fixed a problem with no_daemons and the docker package server scripts (issue #1039)
+* if the server engine (serverside or client api) is running a request during program shutdown, it now politely says 'Application is shutting down!' with a 503 rather than going bananas and dumping to log with an uncaught 500
+* fixed some bad client db update error handling code
+
+### multiple local file services (system predicate edition)
+* system:file service now supports 'deleted' and 'petitioned' status
+* advanced 'all known files' search pages now show more system predicates
+* when inbox and archive are hidden because one has 0 count, and the search space is simple, system everything now says what they are, e.g. "system:everything (24) (all in inbox)"
+* file repos' 'system:local/not local' now sort at the top of the system predicate list, like inbox/archive
+
+### client api
+* the GET /get_files/file_metadata call now returns the file modified date and imported/deleted timestamps for each file service the file is currently in or deleted from. check the help for an example!
+* fixed client api file search with random sort (file_sort_type = 4)
+* client api version is now 24
+
+### boring multiple local file services work
+* the system predicates listed in a search page dropdown now support the new 'multiple location search context' object, which means in future I will be able to switch over to 'file domain is union of (A, deleted from B, and C)' and all the numbers will add up appropriately with ranged 'x-y' counts and deal with combinations of file repo and local service and current/deleted neatly
+* when fetching system preds in 'all known files', the system:everything 'num files' count will be stated if available in the cache
+* for the new system:file service search, refactored db level file filtering to support all status types
+* cleaned up how system preds are generated
+
+### boring refactoring work
+* moved GUGs from network domain code to their own file
+* moved URL Class from network domain code to its own file
+* moved the pure functions from network domain code to their own file
+* cleared up some file maintenance enum variable names
+* sped up random file sort for large result sets
+* misc client network code cleanup and type hints, and rejiggered cleaner imports after the refactoring
+
 ## [Version 467](https://github.com/hydrusnetwork/hydrus/releases/tag/v467)
 
 ### new scanbar cleanup
