@@ -1243,6 +1243,7 @@ Arguments (in percent-encoded JSON):
     *   14 - modified time (oldest first/newest first)
     *   15 - framerate (slowest first/fastest first)
     *   16 - number of frames (smallest first/largest first)
+    *   18 - last viewed time (oldest first/newest first)
 
 Response:
 :   The full list of numerical file ids that match the search.
