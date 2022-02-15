@@ -19,6 +19,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - 
+        name: Install mkdocs-material
+        run: python3 -m pip install mkdocs-material 
+      - 
+        name: Build docs to /help
+        run: mkdocs build -d help
+      - 
         name: Install PyOxidizer
         run: python3 -m pip install pyoxidizer
       - 
@@ -68,6 +74,12 @@ jobs:
         with:
           python-version: 3.8
           architecture: x64
+      - 
+        name: Install mkdocs-material
+        run: pip install mkdocs-material 
+      - 
+        name: Build docs to /help
+        run: mkdocs build -d help
       #- name: Cache Qt
       #  id: cache-qt
       #  uses: actions/cache@v1
@@ -126,7 +138,7 @@ jobs:
           retention-days: 2
 
   build-windows:
-    runs-on: [windows-latest]
+    runs-on: windows-latest
     steps:
       - 
         name: Checkout
@@ -145,6 +157,12 @@ jobs:
         with:
           python-version: 3.8
           architecture: x64
+      - 
+        name: Install mkdocs-material
+        run: pip install mkdocs-material 
+      - 
+        name: Build docs to /help
+        run: mkdocs build -d help
       - 
         name: Cache Qt
         id: cache_qt
