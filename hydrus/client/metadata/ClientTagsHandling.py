@@ -290,7 +290,7 @@ class TagDisplayMaintenanceManager( object ):
         self._controller.sub( self, 'NotifyNewDisplayData', 'notify_new_tag_display_application' )
         
     
-    def _GetAfterWorkWaitTime( self, service_key ):
+    def _GetAfterWorkWaitTime( self, service_key, expected_work_time, actual_work_time ):
         
         with self._lock:
             
@@ -311,7 +311,16 @@ class TagDisplayMaintenanceManager( object ):
             
         else:
             
-            return 30
+            if actual_work_time > expected_work_time * 5:
+                
+                # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
+                
+                return 1800
+                
+            else:
+                
+                return 30
+                
             
         
     
@@ -479,11 +488,17 @@ class TagDisplayMaintenanceManager( object ):
                     
                     work_time = self._GetWorkTime( service_key )
                     
+                    start_time = HydrusData.GetNowPrecise()
+                    
                     still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, work_time )
+                    
+                    finish_time = HydrusData.GetNowPrecise()
+                    
+                    total_time_took = finish_time - start_time
                     
                     self._service_keys_to_needs_work[ service_key ] = still_needs_work
                     
-                    wait_time = self._GetAfterWorkWaitTime( service_key )
+                    wait_time = self._GetAfterWorkWaitTime( service_key, work_time, total_time_took )
                     
                     self._last_loop_work_time = work_time
                     

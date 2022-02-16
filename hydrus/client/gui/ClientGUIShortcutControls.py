@@ -26,17 +26,23 @@ def ManageShortcuts( win: QW.QWidget ):
     
     shortcuts_manager = ClientGUIShortcuts.shortcuts_manager()
     
+    call_mouse_buttons_primary_secondary = HG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
+    
     all_shortcuts = shortcuts_manager.GetShortcutSets()
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'manage shortcuts' ) as dlg:
         
-        panel = EditShortcutsPanel( dlg, all_shortcuts )
+        panel = EditShortcutsPanel( dlg, call_mouse_buttons_primary_secondary, all_shortcuts )
         
         dlg.SetPanel( panel )
         
         if dlg.exec() == QW.QDialog.Accepted:
             
-            shortcut_sets = panel.GetValue()
+            ( call_mouse_buttons_primary_secondary, shortcut_sets ) = panel.GetValue()
+            
+            HG.client_controller.new_options.SetBoolean( 'call_mouse_buttons_primary_secondary', call_mouse_buttons_primary_secondary )
+            
+            ClientGUIShortcuts.SetMouseLabels( call_mouse_buttons_primary_secondary )
             
             dupe_shortcut_sets = [ shortcut_set.Duplicate() for shortcut_set in shortcut_sets ]
             
@@ -296,12 +302,15 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, all_shortcuts ):
+    def __init__( self, parent, call_mouse_buttons_primary_secondary, all_shortcuts ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( 'Show help regarding editing shortcuts.' )
+        
+        self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )
+        self._call_mouse_buttons_primary_secondary.setToolTip( 'Useful if you swap your buttons around.' )
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
@@ -329,6 +338,8 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._call_mouse_buttons_primary_secondary.setChecked( call_mouse_buttons_primary_secondary )
+        
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
@@ -346,6 +357,14 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._custom_shortcuts.Sort()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Replace "left/right"-click with "primary/secondary": ', self._call_mouse_buttons_primary_secondary ) )
+        
+        mouse_gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         #
         
@@ -379,10 +398,13 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, mouse_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        self._call_mouse_buttons_primary_secondary.clicked.connect( self._UpdateMouseLabels )
         
     
     def _Add( self ):
@@ -560,14 +582,23 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         QW.QMessageBox.information( self, 'Information', message )
         
     
+    def _UpdateMouseLabels( self ):
+        
+        swap_labels = self._call_mouse_buttons_primary_secondary.isChecked()
+        
+        ClientGUIShortcuts.SetMouseLabels( swap_labels )
+        
+    
     def GetValue( self ) -> typing.List[ ClientGUIShortcuts.ShortcutSet ]:
+        
+        call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
         
         shortcut_sets = []
         
         shortcut_sets.extend( self._reserved_shortcuts.GetData() )
         shortcut_sets.extend( self._custom_shortcuts.GetData() )
         
-        return shortcut_sets
+        return ( call_mouse_buttons_primary_secondary, shortcut_sets )
         
     
 class ShortcutWidget( QW.QWidget ):

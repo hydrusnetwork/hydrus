@@ -246,6 +246,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'force_animation_scanbar_show' ] = False
         
+        self._dictionary[ 'booleans' ][ 'call_mouse_buttons_primary_secondary' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()

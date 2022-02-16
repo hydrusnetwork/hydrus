@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
       - 
         name: Checkout
@@ -126,7 +126,7 @@ jobs:
           retention-days: 2
 
   build-windows:
-    runs-on: [windows-latest]
+    runs-on: [windows-2019]
     steps:
       - 
         name: Checkout
@@ -191,6 +191,8 @@ jobs:
           pyinstaller client-win.spec
           dir -r
       - 
+      # yo pretty sure we'll need to install this manually once we are on windows server 2022
+      # https://github.com/actions/virtual-environments/issues/4856
         name: InnoSetup
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss

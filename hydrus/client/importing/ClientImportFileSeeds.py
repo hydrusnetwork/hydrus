@@ -463,7 +463,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         file_seed_cache.AddFileSeeds( file_seeds )
                         
-                        status = CC.STATUS_SUCCESSFUL_AND_NEW
+                        status = CC.STATUS_SUCCESSFUL_AND_CHILD_FILES
                         
                         note = 'was redirected on file download to a post url, which has been queued in the parent file log'
                         
@@ -1267,7 +1267,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, file_seeds )
                         
-                        status = CC.STATUS_SUCCESSFUL_AND_NEW
+                        status = CC.STATUS_SUCCESSFUL_AND_CHILD_FILES
                         note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
                         
                         self.SetStatus( status, note = note )
@@ -1363,7 +1363,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                             
-                            status = CC.STATUS_SUCCESSFUL_AND_NEW
+                            status = CC.STATUS_SUCCESSFUL_AND_CHILD_FILES
                             note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
                             
                             self.SetStatus( status, note = note )

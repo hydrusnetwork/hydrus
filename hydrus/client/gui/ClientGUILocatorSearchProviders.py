@@ -101,11 +101,12 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     
                     selectable_media_page = widget
                     
-                    label = '{} - {}'.format( selectable_media_page.GetName(), selectable_media_page.GetPrettyStatus() )
+                    label = selectable_media_page.GetNameForMenu()
                     
                     if not query in label:
                         
                         continue
+                        
                     
                     primary_text = highlight_result_text( label, query )
                     secondary_text = 'top level page' if not parent_name else  "child of '" + escape( parent_name ) + "'"
@@ -215,11 +216,24 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     if not query in action.text() and not query in actionText:
                         
                         continue
+                        
                     
                     primary_text = highlight_result_text( actionText, query )
                     secondary_text = escape( parent_name )
                     
-                    result.append( QLocatorSearchResult( self.result_id_counter, 'lightning.png', 'lightning.png', True, [ primary_text, secondary_text ] ) )
+                    normal_png = 'lightning.png'
+                    toggled = False
+                    toggled_png = 'lightning.png'
+                    
+                    if action.isCheckable():
+                        
+                        toggled = action.isChecked()
+                        
+                        normal_png = 'lightning_unchecked.png'
+                        toggled_png = 'lightning_checked.png'
+                        
+                    
+                    result.append( QLocatorSearchResult( self.result_id_counter, normal_png, normal_png, True, [ primary_text, secondary_text ], toggled, toggled_png, toggled_png ) )
                     
                     self.result_ids_to_actions[ self.result_id_counter ] = action
                     

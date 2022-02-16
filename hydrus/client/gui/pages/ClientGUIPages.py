@@ -558,6 +558,8 @@ class Page( QW.QSplitter ):
         
         self._controller.pub( 'refresh_page_name', self._page_key )
         
+        self._controller.pub( 'notify_new_pages_count' )
+        
         def clean_up_old_panel():
             
             if CGC.core().MenuIsOpen():
@@ -682,6 +684,25 @@ class Page( QW.QSplitter ):
         return self._management_controller.GetPageName()
         
     
+    def GetNameForMenu( self ) -> str:
+        
+        name_for_menu = self.GetName()
+        
+        ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
+        
+        if num_files > 0:
+            
+            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusData.ToHumanInt( num_files ) )
+            
+        
+        if num_value != num_range:
+            
+            name_for_menu = '{} - {}'.format( name_for_menu, HydrusData.ConvertValueRangeToPrettyString( num_value, num_range ) )
+            
+        
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        
+    
     def GetNumFileSummary( self ):
         
         if self._initialised:
@@ -716,6 +737,11 @@ class Page( QW.QSplitter ):
     def GetParentNotebook( self ):
         
         return self._parent_notebook
+        
+    
+    def GetPrettyStatusForStatusBar( self ):
+        
+        return self._pretty_status
         
     
     def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
@@ -761,11 +787,6 @@ class Page( QW.QSplitter ):
         root[ 'focused' ] = is_selected
         
         return root
-        
-    
-    def GetPrettyStatus( self ):
-        
-        return self._pretty_status
         
     
     def GetSashPositions( self ):
@@ -1747,7 +1768,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             for selectable_media_page in selectable_media_pages:
                 
-                label = '{} - {}'.format( selectable_media_page.GetName(), selectable_media_page.GetPrettyStatus() )
+                label = selectable_media_page.GetNameForMenu()
                 
                 ClientGUIMenus.AppendMenuItem( select_menu, label, 'select this page', self.ShowPage, selectable_media_page )
                 
@@ -2224,6 +2245,25 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._name
         
     
+    def GetNameForMenu( self ) -> str:
+        
+        name_for_menu = self.GetName()
+        
+        ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
+        
+        if num_files > 0:
+            
+            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusData.ToHumanInt( num_files ) )
+            
+        
+        if num_value != num_range:
+            
+            name_for_menu = '{} - {}'.format( name_for_menu, HydrusData.ConvertValueRangeToPrettyString( num_value, num_range ) )
+            
+        
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        
+    
     def GetNumFileSummary( self ):
         
         total_num_files = 0
@@ -2418,6 +2458,25 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._parent_notebook
         
     
+    def GetPages( self ):
+        
+        return self._GetPages()
+        
+    
+    def GetPrettyStatusForStatusBar( self ):
+        
+        ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
+        
+        num_string = HydrusData.ToHumanInt( num_files )
+        
+        if num_range > 0 and num_value != num_range:
+            
+            num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
+            
+        
+        return HydrusData.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
+        
+    
     def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
         
         page_containers = []
@@ -2465,25 +2524,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         root[ 'pages' ] = my_pages_list
         
         return root
-        
-    
-    def GetPages( self ):
-        
-        return self._GetPages()
-        
-    
-    def GetPrettyStatus( self ):
-        
-        ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
-        
-        num_string = HydrusData.ToHumanInt( num_files )
-        
-        if num_range > 0 and num_value != num_range:
-            
-            num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
-            
-        
-        return HydrusData.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
         
     
     def GetTestAbleToCloseStatement( self ):

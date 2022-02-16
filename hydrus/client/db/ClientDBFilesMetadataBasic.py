@@ -3,6 +3,7 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 
@@ -32,6 +33,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
+        index_generation_dict[ 'main.archive_timestamps' ] = [
+            ( [ 'archived_timestamp' ], False, 474 )
+        ]
+        
         return index_generation_dict
         
     
@@ -40,7 +45,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return {
             'main.file_inbox' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
-            'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 )
+            'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
+            'main.archive_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, archived_timestamp INTEGER );', 474 )
         }
         
     
@@ -81,6 +87,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             self._ExecuteMany( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in archiveable_hash_ids ) )
             
             self.inbox_hash_ids.difference_update( archiveable_hash_ids )
+            
+            now = HydrusData.GetNow()
+            
+            self._ExecuteMany( 'REPLACE INTO archive_timestamps ( hash_id, archived_timestamp ) VALUES ( ?, ? );', ( ( hash_id, now ) for hash_id in archiveable_hash_ids ) )
             
         
         return archiveable_hash_ids
@@ -138,7 +148,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             return [
                 ( 'file_inbox', 'hash_id' ),
                 ( 'files_info', 'hash_id' ),
-                ( 'has_icc_profile', 'hash_id' )
+                ( 'has_icc_profile', 'hash_id' ),
+                ( 'archive_timestamps', 'hash_id' )
             ]
             
         

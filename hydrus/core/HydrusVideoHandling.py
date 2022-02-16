@@ -43,35 +43,58 @@ def CheckFFMPEGError( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'FFMPEG could not parse.' )
         
     
-def GetAPNGACTLChunk( file_header_bytes: bytes ):
+def GetAPNGChunks( file_header_bytes: bytes ):
     
+    # https://wiki.mozilla.org/APNG_Specification
+    # a chunk is:
+    # 4 bytes of data size, unsigned int
+    # 4 bytes of chunk name
+    # n bytes of data
+    # 4 bytes of CRC
+    
+    # lop off 8 bytes of 'this is a PNG' at the top
+    remaining_chunk_bytes = file_header_bytes[8:]
+    
+    chunks = []
+    
+    while len( remaining_chunk_bytes ) > 12:
+        
+        ( num_data_bytes, ) = struct.unpack( '>I', remaining_chunk_bytes[ : 4 ] )
+        
+        chunk_name = remaining_chunk_bytes[ 4 : 8 ]
+        
+        chunk_data = remaining_chunk_bytes[ 8 : 8 + num_data_bytes ]
+        
+        chunks.append( ( chunk_name, chunk_data ) )
+        
+        remaining_chunk_bytes = remaining_chunk_bytes[ 8 + num_data_bytes + 4 : ]
+        
+    
+    return chunks
+    
+def GetAPNGACTLChunkData( file_header_bytes: bytes ):
+    
+    # the acTL chunk can be in different places, but it has to be near the top
+    # although it is almost always in fixed position (I think byte 29), we have seen both pHYs and sRGB chunks appear before it
+    # so to be proper we need to parse chunks and find the right one
     apng_actl_chunk_header = b'acTL'
-    apng_phys_chunk_header = b'pHYs'
     
-    first_guess_header = file_header_bytes[ 37:128 ]
+    chunks = GetAPNGChunks( file_header_bytes )
     
-    if first_guess_header.startswith( apng_actl_chunk_header ):
-        
-        return first_guess_header
-        
-    elif first_guess_header.startswith( apng_phys_chunk_header ):
-        
-        # aha, some weird other png chunk
-        # https://wiki.mozilla.org/APNG_Specification
-        
-        if apng_actl_chunk_header in first_guess_header:
-            
-            i = first_guess_header.index( apng_actl_chunk_header )
-            
-            return first_guess_header[i:]
-            
-        
+    chunks = dict( chunks )
     
-    return None
+    if apng_actl_chunk_header in chunks:
+        
+        return chunks[ apng_actl_chunk_header ]
+        
+    else:
+        
+        return None
+        
     
 def GetAPNGNumFrames( apng_actl_bytes ):
     
-    ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ 4 : 8 ] )
+    ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ : 4 ] )
     
     return num_frames
     
@@ -257,7 +280,7 @@ def GetFFMPEGAPNGProperties( path ):
         file_header_bytes = f.read( 256 )
         
     
-    apng_actl_bytes = GetAPNGACTLChunk( file_header_bytes )
+    apng_actl_bytes = GetAPNGACTLChunkData( file_header_bytes )
     
     if apng_actl_bytes is None:
         
@@ -874,7 +897,14 @@ def ParseFFMPEGVideoResolution( lines, png_ok = False ):
         width = int( width_string )
         height = int( height_string )
         
-        sar_match = re.search( "[\\[\\s]SAR [0-9]*:[0-9]* ", line )
+        # if a vid has an SAR, this 'sample' aspect ratio basically just stretches it
+        # when you convert the width using SAR, the resulting resolution should match the DAR, 'display' aspect ratio, which is what we actually want in final product
+        # MPC-HC seems to agree with this calculation, Firefox does not
+        # examples:
+        # '  Stream #0:0: Video: hevc (Main), yuv420p(tv, bt709), 1280x720 [SAR 69:80 DAR 23:15], 30 fps, 30 tbr, 1k tbn (default)'
+        # '  Stream #0:0: Video: vp9 (Profile 0), yuv420p(tv, progressive), 1120x1080, SAR 10:11 DAR 280:297, 30 fps, 30 tbr, 1k tbn (default)'
+        
+        sar_match = re.search( "[\\[\\s]SAR [0-9]*:[0-9]*[,\\s]", line )
         
         if sar_match is not None:
             

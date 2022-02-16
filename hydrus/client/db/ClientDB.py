@@ -8110,6 +8110,15 @@ class DB( HydrusDB.HydrusDB ):
                 continue
                 
             
+            if len( with_tag_ids ) > 1:
+                
+                # ok, when we are using with_tag_ids_weight as a 'this is how long the hash_ids list is' in later weight calculations, it does not account for overlap
+                # in real world data, bad siblings tend to have a count of anywhere from 8% to 600% of the ideal (30-50% is common), but the overlap is significant, often 98%
+                # so just to fudge this number a bit better, let's multiply it by 0.75
+                
+                with_tag_ids_weight = int( with_tag_ids_weight * 0.75 )
+                
+            
             # ultimately here, we are doing "delete all display mappings with hash_ids that have a storage mapping for a removee tag and no storage mappings for a keep tag
             # in order to reduce overhead, we go full meme and do a bunch of different situations
             
@@ -13643,6 +13652,45 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'The new palette shortcut failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 473:
+            
+            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'archive_timestamps', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS archive_timestamps ( hash_id INTEGER PRIMARY KEY, archived_timestamp INTEGER );' )
+                self._CreateIndex( 'archive_timestamps', [ 'archived_timestamp' ] )
+                
+            
+            try:
+                
+                location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) )
+                
+                db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                
+                operator = '>'
+                num_relationships = 0
+                dupe_type = HC.DUPLICATE_POTENTIAL
+                
+                dupe_hash_ids = self.modules_files_duplicates.DuplicatesGetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
+                
+                with self._MakeTemporaryIntegerTable( dupe_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( ( HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_TIFF ) ) ), ) )
+                    
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some pixel hash regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

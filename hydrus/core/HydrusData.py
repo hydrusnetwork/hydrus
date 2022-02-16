@@ -1658,6 +1658,12 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
     
     suffix_index = 0
     
+    ctx = decimal.getcontext()
+    
+    # yo, ctx is actually a global, you set prec later, it'll hang around for the /= stuff here lmaaaaaoooooo
+    # 188213746 was flipping between 179MB/180MB because the prec = 10 was being triggered later on 180MB
+    ctx.prec = 28
+    
     d = decimal.Decimal( size )
     
     while d >= 1024:
@@ -1668,8 +1674,6 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
         
     
     suffix = suffixes[ suffix_index ]
-    
-    ctx = decimal.getcontext()
     
     # ok, if we have 237KB, we still want all 237, even if user said 2 sf
     while d.log10() >= sig_figs:

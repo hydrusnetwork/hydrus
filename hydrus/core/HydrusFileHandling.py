@@ -411,7 +411,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
 def IsPNGAnimated( file_header_bytes ):
     
-    apng_actl_bytes = HydrusVideoHandling.GetAPNGACTLChunk( file_header_bytes )
+    apng_actl_bytes = HydrusVideoHandling.GetAPNGACTLChunkData( file_header_bytes )
     
     if apng_actl_bytes is not None:
         

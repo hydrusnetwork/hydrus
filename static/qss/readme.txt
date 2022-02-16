@@ -1,6 +1,6 @@
 Place a .css or .qss Qt Stylesheet file in here, and hydrus will provide it as an UI stylesheet option.
 
-Don't edit any of the files in here--they'll just be overwritten the next time you install. Copy to your own custom filenames if you want to edit anything.
+Don't edit any of the files in here in place--they'll just be overwritten the next time you update. Copy to your own custom filenames if you want to edit anything.
 
 The default_hydrus.qss is used by the client to draw some custom widget colours. It is prepended to any custom stylesheet that is loaded, check it out for the class names you want want to override in your own custom QSS.
 
