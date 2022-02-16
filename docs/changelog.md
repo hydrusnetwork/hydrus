@@ -5,13 +5,13 @@
 
 ## [Version 474](https://github.com/hydrusnetwork/hydrus/releases/tag/v474)
 
-## command palette
+### command palette
 * the guy who put the command pallete together has fixed a 'show palette' bug some people encountered (issue #1060)
 * he also added mouse support!
 * he added support to show checkable menu items too, and I integrated this for the menubar (lightning bolt icon) items
 * I added a line to the default QSS that I think fixes the odd icon/text background colours some users saw in the command palette
 
-## misc
+### misc
 * file archive times are now recorded in the background. there's no load/search/sort yet, but this will be added in future
 * under 'manage shortcuts', there is a new checkbox to rename left- and right-click to primary- and secondary- in the shortcuts UI. if you have a flipped mouse or any other odd situation, try it out
 * if a file storage location does not have enough free disk space for a file, or if it just has <100MB generally, the client now throws up a popup to say what happened specifically with instructions to shut down and fix now and automatically pauses subscriptions, paged file import queues, and import folders. this test occurs before the attempt to copy the file into place. free space isn't actually checked over and over, it is cached for up to an hour depending on the last free space amount
@@ -28,7 +28,7 @@
 * after some user profiles and experimental testing, rebalanced some optimisations in sibling and parent calculation. fingers crossed, some larger sibling groups with worst-case numbers should calculate more efficiently
 * if sibling/parent calculation hits a heavy bump and takes a really long time to do a job during 'normal' time, the whole system now takes a much longer break (half an hour) before continuing
 
-## boring stuff
+### boring stuff
 * the delete dialog has basic multiple local file service support ready for that expansion. it no longer refers to the old static 'my files' service identifier. I think it will need some user-friendly more polish once that feature is in
 * the 'migrate tags' dialog's file service filtering now supports n local file services, and 'all local files'
 * updated the build scripts to force windows server 2019 (and macos-11). github is rolling out windows 2022 as the new latest, and there's a couple of things to iron out first on our end. this is probably going to happen this year though, along with Qt6 and python 3.9, which will all mean end of life for windows 7 in our built hydrus release
