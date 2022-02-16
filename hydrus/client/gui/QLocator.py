@@ -22,7 +22,6 @@ import math
 import re
 
 def elideRichText(richText: str, maxWidth: int, widget, elideFromLeft: bool):
-    
     doc = QG.QTextDocument()
     opt = QG.QTextOption()
     opt.setWrapMode(QG.QTextOption.NoWrap)
@@ -40,7 +39,7 @@ def elideRichText(richText: str, maxWidth: int, widget, elideFromLeft: bool):
         elidedPostfix = "…"
         metric = QG.QFontMetrics(widget.font())
         postfixWidth = metric.horizontalAdvance(elidedPostfix)
-        
+
         while doc.size().width() > maxWidth - postfixWidth:
             if elideFromLeft:
                 cursor.deleteChar()
@@ -65,12 +64,15 @@ class FocusEventFilter(QC.QObject):
         return False
 
 class QLocatorSearchResult:
-    def __init__(self, id: int, defaultIconPath: str, selectedIconPath: str, closeOnActivated: False, text: list):
+    def __init__(self, id: int, defaultIconPath: str, selectedIconPath: str, closeOnActivated: bool, text: list, toggled: bool = False, toggledIconPath: str = "", toggledSelectedIconPath: str = ""):
         self.id = id
         self.defaultIconPath = defaultIconPath
         self.selectedIconPath = selectedIconPath
         self.closeOnActivated = closeOnActivated
         self.text = text
+        self.toggled = toggled
+        self.toggledIconPath = toggledIconPath
+        self.toggledSelectedIconPath = toggledSelectedIconPath
 
 class QLocatorTitleWidget(QW.QWidget):
     def __init__(self, title: str, iconPath: str, height: int, shouldRemainHidden: bool, parent = None):
@@ -98,7 +100,7 @@ class QLocatorTitleWidget(QW.QWidget):
         self.titleLabel.setFont(titleFont)
         self.setFixedHeight(height)
         self.shouldRemainHidden = shouldRemainHidden
-        
+
     def updateData(self, count: int):
         self.countLabel.setText(str(count))
 
@@ -112,22 +114,25 @@ class QLocatorResultWidget(QW.QWidget):
     up = QC.Signal()
     down = QC.Signal()
     activated = QC.Signal(int, int, bool)
+    entered = QC.Signal()
     def __init__(self, keyEventTarget: QW.QWidget, height: int, primaryTextWidth: int, secondaryTextWidth: int, parent = None):
         super().__init__(parent)
         self.iconHeight = height - 2
         self.setObjectName("unselectedLocatorResult")
         self.keyEventTarget = keyEventTarget
         self.setLayout(QW.QHBoxLayout())
-        self.iconLabel = QW.QLabel( self )
+        self.iconLabel = QW.QLabel(self)
         self.iconLabel.setFixedHeight(self.iconHeight)
-        self.mainTextLabel = QW.QLabel( self )
+        self.mainTextLabel = QW.QLabel(self)
         self.primaryTextWidth = primaryTextWidth
         self.mainTextLabel.setMinimumWidth(primaryTextWidth)
         self.mainTextLabel.setTextFormat(QC.Qt.RichText)
-        self.secondaryTextLabel = QW.QLabel( self )
+        self.mainTextLabel.setTextInteractionFlags(QC.Qt.NoTextInteraction)
+        self.secondaryTextLabel = QW.QLabel(self)
         self.secondaryTextWidth = secondaryTextWidth
         self.secondaryTextLabel.setMaximumWidth(secondaryTextWidth)
         self.secondaryTextLabel.setTextFormat(QC.Qt.RichText)
+        self.secondaryTextLabel.setTextInteractionFlags(QC.Qt.NoTextInteraction)
         self.layout().setContentsMargins(4, 1, 4, 1)
         self.layout().addWidget(self.iconLabel)
         self.layout().addWidget(self.mainTextLabel)
@@ -150,19 +155,18 @@ class QLocatorResultWidget(QW.QWidget):
         self.selectedPalette = self.palette()
         self.selectedPalette.setColor(QG.QPalette.Window, QG.QPalette().color(QG.QPalette.WindowText))
         self.selectedPalette.setColor(QG.QPalette.WindowText, QG.QPalette().color(QG.QPalette.Window))
-        
+
         self.id = -1
         self.providerIndex = -1
         self.closeOnActivated = False
         self.selected = False
         self.defaultStylingEnabled = True
         self.currentIcon = QG.QIcon()
-    
-        def handleActivated():
-            self.activated.emit(self.providerIndex, self.id, self.closeOnActivated)
+        self.currentToggledIcon = QG.QIcon()
+        self.toggled = False
 
-        self.activateEnterShortcut.activated.connect(handleActivated)
-        self.activateReturnShortcut.activated.connect(handleActivated)
+        self.activateEnterShortcut.activated.connect(self.activate)
+        self.activateReturnShortcut.activated.connect(self.activate)
 
         self.upShortcut.activated.connect(self.up)
         self.downShortcut.activated.connect(self.down)
@@ -173,11 +177,32 @@ class QLocatorResultWidget(QW.QWidget):
         p = QG.QPainter(self)
         self.style().drawPrimitive(QW.QStyle.PE_Widget, opt, p, self)
 
+    def enterEvent(self, event):
+        self.entered.emit()
+
+    def mousePressEvent(self, event):
+        self.entered.emit()
+
+    def mouseReleaseEvent(self, event):
+        self.activate()
+
+    def activate(self):
+        if not self.closeOnActivated:
+            self.toggled = not self.toggled
+            iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
+            self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+        self.activated.emit(self.providerIndex, self.id, self.closeOnActivated)
+
     def updateData(self, providerIndex: int, data: QLocatorSearchResult):
+        self.toggled = data.toggled
         self.currentIcon = QG.QIcon()
         self.currentIcon.addFile(data.defaultIconPath, QC.QSize(), QG.QIcon.Normal)
         self.currentIcon.addFile(data.selectedIconPath, QC.QSize(), QG.QIcon.Selected)
-        self.iconLabel.setPixmap(self.currentIcon.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+        self.currentToggledIcon = QG.QIcon()
+        self.currentToggledIcon.addFile(data.toggledIconPath, QC.QSize(), QG.QIcon.Normal)
+        self.currentToggledIcon.addFile(data.toggledSelectedIconPath, QC.QSize(), QG.QIcon.Selected)
+        iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
+        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
         self.mainTextLabel.clear()
         self.secondaryTextLabel.clear()
         if len(data.text) > 0:
@@ -205,7 +230,8 @@ class QLocatorResultWidget(QW.QWidget):
             if self.defaultStylingEnabled: self.setPalette(QG.QPalette())
             self.style().unpolish(self)
             self.style().polish(self)
-        self.iconLabel.setPixmap(self.currentIcon.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+        iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
+        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
 
     def keyPressEvent(self, ev: QG.QKeyEvent):
         if ev.key() != QC.Qt.Key_Up and ev.key() != QC.Qt.Key_Down and ev.key() != QC.Qt.Key_Enter and ev.key() != QC.Qt.Key_Return:
@@ -231,7 +257,7 @@ class QExampleSearchProvider(QAbstractLocatorSearchProvider):
 
     def resultSelected(self, resultID: int):
         pass
-        
+
     def processQuery(self, query: str, context, jobID: int):
         resCount = random.randint(0, 50)
         results = []
@@ -242,15 +268,15 @@ class QExampleSearchProvider(QAbstractLocatorSearchProvider):
             txt = []
             txt.append("Result <b>text</b> #" + str(i) + randomStr)
             txt.append("Secondary result text")
-            results.append(QLocatorSearchResult(0, "icon.svg", "icon.svg", True, txt))
+            results.append(QLocatorSearchResult(0, "icon.svg", "icon.svg", True, txt, False, "icon.svg", "icon.svg"))
         self.resultsAvailable.emit(jobID, results)
 
     def stopJobs(self, jobs):
         pass
-        
+
     def hideTitle(self):
         return False
-        
+
     def titleIconPath(self):
         return "icon.svg"
 
@@ -296,7 +322,7 @@ class QCalculatorSearchProvider(QAbstractLocatorSearchProvider):
             'factorial': math.factorial
         }
         self.safePattern = re.compile("^("+"|".join(self.safeEnv.keys())+r"|[0-9.*+\-%/()]|\s" + ")+$")
-        
+
     def processQuery(self, query: str, context, jobID: int):
         try:
             if len(query.strip()) and self.safePattern.match(query):
@@ -305,7 +331,7 @@ class QCalculatorSearchProvider(QAbstractLocatorSearchProvider):
                     int(result)
                 except:
                     result = str(float(result))
-                self.resultsAvailable.emit(jobID, [QLocatorSearchResult(0, self.iconPath(), self.selectedIconPath(), False, [result,"Calculator"])])
+                self.resultsAvailable.emit(jobID, [QLocatorSearchResult(0, self.iconPath(), self.selectedIconPath(), False, [result,"Calculator"], False, self.iconPath(), self.selectedIconPath())])
         except:
             pass
 
@@ -320,16 +346,16 @@ class QCalculatorSearchProvider(QAbstractLocatorSearchProvider):
 
     def stopJobs(self, jobs):
         pass
-        
+
     def hideTitle(self):
         return True
-        
+
     def titleIconPath(self):
         return str()
-        
+
     def selectedIconPath(self):
         return str()
-        
+
     def iconPath(self):
         return str()
 
@@ -377,7 +403,7 @@ class QLocatorWidget(QW.QWidget):
         self.editorDownShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Down), self.searchEdit)
         self.editorDownShortcut.setContext(QC.Qt.WidgetShortcut)
         self.editorDownShortcut.activated.connect(self.handleEditorDown)
-        
+
         def handleTextEdited():
             for i in range(len(self.resultItems)):
                 for it in self.resultItems[i]: self.setResultVisible(it, False)
@@ -416,7 +442,7 @@ class QLocatorWidget(QW.QWidget):
         elif alignment == QC.Qt.AlignTop:
             self.alignment = alignment
             self.updateAlignment()
-            
+
     def updateAlignment( self ):
         widget = self
         while True:
@@ -425,7 +451,7 @@ class QLocatorWidget(QW.QWidget):
                 break
             else:
                 widget = parent
-        
+
         screenRect = QW.QApplication.primaryScreen().availableGeometry()
         if widget != self: # there is a parent
             screenRect = widget.geometry()
@@ -437,7 +463,7 @@ class QLocatorWidget(QW.QWidget):
         elif self.alignment == QC.Qt.AlignTop:
             rect = QW.QStyle.alignedRect(QC.Qt.LeftToRight, QC.Qt.AlignHCenter | QC.Qt.AlignTop, self.size(), screenRect)
             self.setGeometry(rect)
-            
+
     def paintEvent(self, event):
         opt = QW.QStyleOption()
         opt.initFrom(self)
@@ -473,10 +499,10 @@ class QLocatorWidget(QW.QWidget):
         if self.locator:
             self.locator.providerAdded.disconnect(self.providerAdded)
             self.locator.resultsAvailable.disconnect(self.handleResultsAvailable)
-            
+
         self.reset()
         self.locator = locator
-        
+
         if self.locator:
             for provider in self.locator.providers:
                 self.providerAdded(provider.title(), self.locator.iconBasePath + provider.titleIconPath(), provider.suggestedReservedItemCount(), provider.hideTitle())
@@ -601,7 +627,7 @@ class QLocatorWidget(QW.QWidget):
                     self.resultList.ensureVisible(0, widget.pos().y() + widget.height(), 0, 0)
                     break
             i = i + 1
-        
+
     def handleEditorDown(self):
         for i in range(self.resultLayout.count()):
             widget = self.resultLayout.itemAt(i).widget()
@@ -610,6 +636,19 @@ class QLocatorWidget(QW.QWidget):
                     self.selectedLayoutItemIndex = i
                     widget.setSelected(True)
                     break
+
+    def handleEntered(self):
+        resultWidget = self.sender()
+        i = 0
+        while i < self.resultLayout.count():
+            widget = self.resultLayout.itemAt(i).widget()
+            if widget and widget.isVisible() and isinstance(widget, QLocatorResultWidget):
+                if widget == resultWidget:
+                    self.selectedLayoutItemIndex = i
+                    widget.setSelected(True)
+                else:
+                    widget.setSelected(False)
+            i = i + 1
 
     def handleResultActivated(self, provider: int, id: int, closeOnSelected: bool):
         currJobIdsTmp = self.currentJobIds[:]
@@ -643,7 +682,7 @@ class QLocatorWidget(QW.QWidget):
                 j += 1
             k = self.reservedItemCounts[i]
             while k < resultItemCount:
-                self.resultLayout.takeAt(titleIndex + k).widget().deleteLater()
+                self.resultLayout.takeAt(titleIndex + self.reservedItemCounts[i] + 1).widget().deleteLater()
                 k += 1
             self.resultItems[i] = self.resultItems[i][:self.reservedItemCounts[i]]
 
@@ -691,6 +730,7 @@ class QLocatorWidget(QW.QWidget):
         widget.up.connect(self.handleResultUp)
         widget.down.connect(self.handleResultDown)
         widget.activated.connect(self.handleResultActivated)
+        widget.entered.connect(self.handleEntered)
         widget.setDefaultStylingEnabled(self.defaultStylingEnabled)
 
 class QLocator(QC.QObject):
@@ -748,6 +788,8 @@ class QLocator(QC.QObject):
             for dataItem in self.savedProviderData[jobID]:
                 dataItem.defaultIconPath = self.iconBasePath + dataItem.defaultIconPath
                 dataItem.selectedIconPath = self.iconBasePath + dataItem.selectedIconPath
+                dataItem.toggledIconPath = self.iconBasePath + dataItem.toggledIconPath
+                dataItem.toggledSelectedIconPath = self.iconBasePath + dataItem.toggledSelectedIconPath
             self.resultsAvailable.emit(providerIndex, jobID)
 
     def stopJobs(self, ids = []) -> None:

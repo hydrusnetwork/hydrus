@@ -1031,7 +1031,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source_file_filter = ClientGUICommon.BetterChoice( self._migration_panel )
         
-        for service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY ):
+        source_file_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        source_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        source_file_service_keys.append( CC.COMBINED_FILE_SERVICE_KEY )
+        
+        for service_key in source_file_service_keys:
             
             service = HG.client_controller.services_manager.GetService( service_key )
             

@@ -113,7 +113,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         ClientDBModule.ClientDBModule.__init__( self, 'client file locations', cursor )
         
-        self.temp_file_storage_table_name = None
+        self.temp_file_storage_table_name = 'mem.temp_file_storage_hash_id'
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
@@ -819,9 +819,9 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
             # maybe I should stick this guy in 'temp' to live through db connection resets, but we'll see I guess. it is generally ephemeral, not going to linger through weird vacuum maintenance or anything right?
             
-            if self.temp_file_storage_table_name is None:
-                
-                self.temp_file_storage_table_name = 'mem.temp_file_storage_hash_id'
+            result = self._Execute( 'SELECT 1 FROM mem.sqlite_master WHERE name = ?;', ( self.temp_file_storage_table_name, ) ).fetchone()
+            
+            if result is None:
                 
                 self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( self.temp_file_storage_table_name ) )
                 

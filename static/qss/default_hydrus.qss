@@ -131,6 +131,11 @@ QLocatorResultWidget#selectedLocatorResult
 	background-color: #006ffa
 }
 
+QLocatorResultWidget QWidget
+{
+	background: transparent
+}
+
 
 /*
 

@@ -605,7 +605,6 @@ class Frame( QW.QWidget ):
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_CLOSE( self.EventAboutToClose )
         self._widget_event_filter.EVT_MOVE( self.EventMove )
         
         HG.client_controller.ResetIdleTimer()
@@ -616,11 +615,9 @@ class Frame( QW.QWidget ):
         pass
         
     
-    def EventAboutToClose( self, event ):
+    def closeEvent( self, event ):
         
         self.CleanBeforeDestroy()
-        
-        return True # was: event.ignore()
         
     
     def EventMove( self, event ):
@@ -648,7 +645,6 @@ class MainFrame( QW.QMainWindow ):
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_CLOSE( self.EventAboutToClose )
         
         HG.client_controller.ResetIdleTimer()
         
@@ -658,11 +654,9 @@ class MainFrame( QW.QMainWindow ):
         pass
         
     
-    def EventAboutToClose( self, event ):
+    def closeEvent( self, event ):
         
         self.CleanBeforeDestroy()
-        
-        return True # was: event.ignore()
         
     
 class FrameThatResizes( Frame ):
@@ -675,8 +669,15 @@ class FrameThatResizes( Frame ):
         
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_CLOSE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        MainFrame.CleanBeforeDestroy( self )
+        
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
         
     
     def EventSizeAndPositionChanged( self, event ):
@@ -699,9 +700,17 @@ class MainFrameThatResizes( MainFrame ):
 
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_CLOSE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+        
 
+    def CleanBeforeDestroy( self ):
+        
+        MainFrame.CleanBeforeDestroy( self )
+        
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        
+    
     def EventSizeAndPositionChanged( self, event ):
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate

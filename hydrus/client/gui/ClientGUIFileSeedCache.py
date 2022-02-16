@@ -529,7 +529,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if num_successful > 0:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
             
         
         if num_deleted > 0:

@@ -307,7 +307,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _Delete( self, file_service_key = None, only_those_in_file_service_key = None ):
         
-        media_to_delete = self._selected_media
+        media_to_delete = ClientMedia.FlattenMedia( self._selected_media )
         
         if only_those_in_file_service_key is not None:
             
@@ -523,7 +523,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         return sum( [ media.GetNumFiles() for media in self._selected_media ] )
         
     
-    def _GetPrettyStatus( self ) -> str:
+    def _GetPrettyStatusForStatusBar( self ) -> str:
         
         num_files = len( self._hashes )
         
@@ -1171,7 +1171,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed )
             
-            self.statusTextChanged.emit( self._GetPrettyStatus() )
+            self.statusTextChanged.emit( self._GetPrettyStatusForStatusBar() )
             
             if tags_changed:
                 
@@ -1192,7 +1192,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             self.selectedMediaTagPresentationIncremented.emit( medias )
             
-            self.statusTextChanged.emit( self._GetPrettyStatus() )
+            self.statusTextChanged.emit( self._GetPrettyStatusForStatusBar() )
             
         else:
             
@@ -1446,6 +1446,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 flat_media = ClientMedia.FlattenMedia( media_group )
                 
             
+            num_files_str = HydrusData.ToHumanInt( len( flat_media ) )
+            
             if len( flat_media ) < 2:
                 
                 return False
@@ -1462,6 +1464,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 media_pairs = [ ( first_media, other_media ) for other_media in flat_media if other_media != first_media ]
                 
             
+        else:
+            
+            num_files_str = HydrusData.ToHumanInt( len( self._GetSelectedFlatMedia() ) )
+            
         
         if len( media_pairs ) == 0:
             
@@ -1477,7 +1483,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
                     
-                    message = 'False positive records are complicated, and setting that relationship for many files at once is likely a mistake.'
+                    message = 'False positive records are complicated, and setting that relationship for {} files at once is likely a mistake.'.format( num_files_str )
                     message += os.linesep * 2
                     message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
                     
@@ -1486,7 +1492,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                 elif duplicate_type == HC.DUPLICATE_ALTERNATE:
                     
-                    message = 'Are you certain all these files are alternates with every other member of the selection, and that none are duplicates?'
+                    message = 'Are you certain all these {} files are alternates with every other member of the selection, and that none are duplicates?'.format( num_files_str )
                     message += os.linesep * 2
                     message += 'If some of them may be duplicates, I recommend you either deselect the possible duplicates and try again, or just leave this group to be processed in the normal duplicate filter.'
                     
@@ -1496,7 +1502,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
             else:
                 
-                message = 'Are you sure you want to ' + yes_no_text + ' for the selected files?'
+                message = 'Are you sure you want to ' + yes_no_text + ' for the {} selected files?'.format( num_files_str )
                 
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = yes_label, no_label = no_label )
@@ -1589,9 +1595,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             worse_flat_media = [ media for media in flat_media if media.GetHash() != focused_hash ]
             
+            if len( worse_flat_media ) == 0:
+                
+                return
+                
+            
             media_pairs = [ ( better_media, worse_media ) for worse_media in worse_flat_media ]
             
-            self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs )
+            message = 'Are you sure you want to set the focused file as better than the {} other files in the selection?'.format( HydrusData.ToHumanInt( len( worse_flat_media ) ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs, silent = True )
+                
             
         else:
             
@@ -1782,6 +1800,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             result = ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
             
             self.newMediaAdded.emit()
+            
+            HG.client_controller.pub( 'notify_new_pages_count' )
             
             return result
             
@@ -2216,7 +2236,7 @@ class MediaPanelLoading( MediaPanel ):
         HG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
     
-    def _GetPrettyStatus( self ):
+    def _GetPrettyStatusForStatusBar( self ):
         
         s = 'Loading\u2026'
         
@@ -2865,6 +2885,8 @@ class MediaPanelThumbnails( MediaPanel ):
         self._PublishSelectionChange()
         
         HG.client_controller.pub( 'refresh_page_name', self._page_key )
+        
+        HG.client_controller.pub( 'notify_new_pages_count' )
         
         self.widget().update()
         

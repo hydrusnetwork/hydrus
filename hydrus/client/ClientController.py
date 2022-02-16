@@ -1238,6 +1238,8 @@ class Controller( HydrusController.HydrusController ):
             
             ClientGUIShortcuts.ShortcutsManager( shortcut_sets = shortcut_sets )
             
+            ClientGUIShortcuts.SetMouseLabels( self.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' ) )
+            
             ClientGUIStyle.InitialiseDefaults()
             
             qt_style_name = self.new_options.GetNoneableString( 'qt_style_name' )

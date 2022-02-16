@@ -41,7 +41,6 @@ from hydrus.client import ClientExporting
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
-from hydrus.client import ClientRendering
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -511,6 +510,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewImportFolders', 'notify_new_import_folders' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
+        self._controller.sub( self, 'NotifyNewPagesCount', 'notify_new_pages_count' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_account_sync_due' )
@@ -518,6 +518,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         self._controller.sub( self, 'NotifyPendingUploadFinished', 'notify_pending_upload_finished' )
+        self._controller.sub( self, 'NotifyRefreshNetworkMenu', 'notify_refresh_network_menu' )
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
@@ -645,15 +646,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'Pillow', PIL.__version__ ) )
         
-        if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
+        if ClientGUIMPV.MPV_IS_AVAILABLE:
             
-            library_versions.append( ( 'mpv: ', 'is not currently available on macOS' ) )
+            library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
             
         else:
             
-            if ClientGUIMPV.MPV_IS_AVAILABLE:
+            if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
                 
-                library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
+                library_versions.append( ( 'mpv: ', 'is not currently available on macOS' ) )
                 
             else:
                 
@@ -2129,6 +2130,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._menu_updater_services = self._InitialiseMenubarGetMenuUpdaterServices()
         self._menu_updater_undo = self._InitialiseMenubarGetMenuUpdaterUndo()
         
+        self._menu_updater_pages_count = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesCount )
+        
         self._boned_updater = self._InitialiseMenubarGetBonesUpdater()
         
         self.setMenuBar( self._menubar )
@@ -2371,6 +2374,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             self._menubar_network_subscriptions_paused.setChecked( HC.options[ 'pause_subs_sync' ] )
             
+            self._menubar_network_paged_import_queues_paused.setChecked( HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ) )
+            
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
         
@@ -2402,27 +2407,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def publish_callable( result ):
             
-            (
-                total_active_page_count,
-                total_active_num_hashes,
-                total_active_num_seeds,
-                total_closed_page_count,
-                total_closed_num_hashes,
-                total_closed_num_seeds
-            ) = self.GetTotalPageCounts()
-            
-            total_active_weight = ClientGUIPages.ConvertNumHashesAndSeedsToWeight( total_active_num_hashes, total_active_num_seeds )
-            
-            if total_active_weight > 10000000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
-                
-                self._have_shown_session_size_warning = True
-                
-                HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
-                
-            
-            ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ) )
-            
-            ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+            self._UpdateMenuPagesCount()
             
             #
             
@@ -2866,9 +2851,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
                         
-                        name = page.GetName()
+                        menu_name = page.GetNameForMenu()
                         
-                        args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
+                        args.append( ( i, menu_name ) )
                         
                     
                     args.reverse() # so that recently closed are at the top
@@ -3275,7 +3260,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
+        self._menubar_network_paged_import_queues_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
         
@@ -4791,7 +4776,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         else:
             
-            media_status = page.GetPrettyStatus()
+            media_status = page.GetPrettyStatusForStatusBar()
             
         
         if self._controller.CurrentlyIdle():
@@ -6393,6 +6378,31 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.CallToThread( THREADUploadPending, service_key )
         
     
+    def _UpdateMenuPagesCount( self ):
+        
+        (
+            total_active_page_count,
+            total_active_num_hashes,
+            total_active_num_seeds,
+            total_closed_page_count,
+            total_closed_num_hashes,
+            total_closed_num_seeds
+        ) = self.GetTotalPageCounts()
+        
+        total_active_weight = ClientGUIPages.ConvertNumHashesAndSeedsToWeight( total_active_num_hashes, total_active_num_seeds )
+        
+        if total_active_weight > 10000000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
+            
+            self._have_shown_session_size_warning = True
+            
+            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+            
+        
+        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ) )
+        
+        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+        
+    
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
         if not ClientGUISystemTray.SystemTrayAvailable() or ( not HC.PLATFORM_WINDOWS and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
@@ -7097,6 +7107,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_pages.update()
         
     
+    def NotifyRefreshNetworkMenu( self ):
+        
+        self._menu_updater_network.update()
+        
+    
     def NotifyNewExportFolders( self ):
         
         self._menu_updater_file.update()
@@ -7116,6 +7131,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def NotifyNewPages( self ):
         
         self._menu_updater_pages.update()
+        
+    
+    def NotifyNewPagesCount( self ):
+        
+        self._menu_updater_pages_count.Update()
         
     
     def NotifyNewPending( self ):

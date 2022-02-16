@@ -176,6 +176,19 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 
+def SetMouseLabels( call_mouse_buttons_primary_secondary ):
+    
+    if call_mouse_buttons_primary_secondary:
+        
+        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'primary-click'
+        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'secondary-click'
+        
+    else:
+        
+        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
+        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
+        
+    
 shortcut_names_to_pretty_names = {}
 
 shortcut_names_to_pretty_names[ 'global' ] = 'global'

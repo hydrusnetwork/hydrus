@@ -61,7 +61,7 @@ regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMB
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'regenerate file modified date'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 'determine if the file has an icc profile'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'calculate file pixel hash'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'regenerate pixel duplicate data'
 
 regen_file_enum_to_description_lookup = {}
 
@@ -181,12 +181,67 @@ class ClientFilesManager( object ):
         
         self._new_physical_file_deletes = threading.Event()
         
+        self._locations_to_free_space = {}
+        
         self._bad_error_occurred = False
         self._missing_locations = set()
         
         self._Reinit()
         
         self._controller.sub( self, 'shutdown', 'shutdown' )
+        
+    
+    def _GetFileStorageFreeSpace( self, hash: bytes ) -> int:
+        
+        hash_encoded = hash.hex()
+        
+        prefix = 'f' + hash_encoded[:2]
+        
+        location = self._prefixes_to_locations[ prefix ]
+        
+        if location in self._locations_to_free_space:
+            
+            ( free_space, time_fetched ) = self._locations_to_free_space[ location ]
+            
+            if free_space > 100 * ( 1024 ** 3 ):
+                
+                check_period = 3600
+                
+            elif free_space > 15 * ( 1024 ** 3 ):
+                
+                check_period = 600
+                
+            else:
+                
+                check_period = 60
+                
+            
+            if HydrusData.TimeHasPassed( time_fetched + check_period ):
+                
+                free_space = HydrusPaths.GetFreeSpace( location )
+                
+                self._locations_to_free_space[ location ] = ( free_space, HydrusData.GetNow() )
+                
+            
+        else:
+            
+            free_space = HydrusPaths.GetFreeSpace( location )
+            
+            self._locations_to_free_space[ location ] = ( free_space, HydrusData.GetNow() )
+            
+        
+        return free_space
+        
+    
+    def _HandleCriticalDriveError( self ):
+        
+        HC.options['pause_import_folders_sync'] = True
+        HC.options[ 'pause_subs_sync' ] = True
+        self._controller.new_options.SetBoolean( 'pause_all_file_queues', True )
+        
+        HydrusData.ShowText( 'All paged file import queues, subscriptions, and import folders have been paused. Resume them after restart under the file and network menus!' )
+        
+        self._controller.pub( 'notify_refresh_network_menu' )
         
     
     def _AddFile( self, hash, mime, source_path ):
@@ -198,9 +253,30 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Adding file to client file structure: from {} to {}'.format( source_path, dest_path ) )
             
         
+        file_size = os.path.getsize( source_path )
+        
+        dest_free_space = self._GetFileStorageFreeSpace( hash )
+        
+        if dest_free_space < 100 * 1048576 or dest_free_space < file_size:
+            
+            message = 'The disk for path "{}" is almost full and cannot take the file "{}", which is {}! Shut the client down now and fix this!'.format( dest_path, hash.hex(), HydrusData.ToHumanBytes( file_size ) )
+            
+            HydrusData.ShowText( message )
+            
+            self._HandleCriticalDriveError()
+            
+            raise Exception( message )
+            
+        
         successful = HydrusPaths.MirrorFile( source_path, dest_path )
         
         if not successful:
+            
+            message = 'Copying the file from "{}" to "{}" failed! Details should be shown and other import queues should be paused. You should shut the client down now and fix this!'.format( source_path, dest_path )
+            
+            HydrusData.ShowText( message )
+            
+            self._HandleCriticalDriveError()
             
             raise Exception( 'There was a problem copying the file from ' + source_path + ' to ' + dest_path + '!' )
             
