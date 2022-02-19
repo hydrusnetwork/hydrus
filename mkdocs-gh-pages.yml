@@ -46,5 +46,4 @@ plugins:
           'help/running_from_source.md': 'running_from_source.md'
           'help/server.md': 'server.md'
           'help/support.md': 'support.md'
-          'help/tagging_schema.md': 'tagging_schema.md'
           'help/wine.md': 'wine.md'
