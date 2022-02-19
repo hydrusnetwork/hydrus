@@ -4,7 +4,6 @@ site_url: https://hydrusnetwork.github.io/hydrus/
 
 plugins:
   - search
-  - git-revision-date
   - redirects:
       redirect_maps:
         'help/access_keys.md': 'access_keys.md'
