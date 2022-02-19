@@ -9,9 +9,6 @@ concurrency:
   group: publish-docs
   cancel-in-progress: true
 
-env:
-  HYDRUS_DOCS_SITE_URL: "https://hydrusnetwork.github.io/hydrus/"
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,4 +18,4 @@ jobs:
         with:
           python-version: 3.x
       - run: pip install mkdocs-material 
-      - run: mkdocs gh-deploy --force
+      - run: mkdocs gh-deploy --force --config-file mkdocs-gh-pages.yml

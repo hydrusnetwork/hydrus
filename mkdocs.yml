@@ -1,6 +1,6 @@
 site_name: hydrus network
 site_description: "A personal booru-style media tagger that can import files and tags from your hard drive and popular websites. Content can be shared with other users via user-run servers."
-site_url: !ENV [HYDRUS_DOCS_SITE_URL, '']
+site_url: ''
 repo_url: https://github.com/hydrusnetwork/hydrus
 repo_name: hydrusnetwork/hydrus
 use_directory_urls: false
@@ -145,4 +145,3 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
   - pymdownx.snippets
-  
