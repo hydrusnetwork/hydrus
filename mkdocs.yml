@@ -91,12 +91,13 @@ theme:
     - search.suggest
     - content.code.annotate
     #- navigation.indexes
-
   icon:
-    repo: fontawesome/brands/git-alt
+    repo: fontawesome/brands/github
     
 extra:
   social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hydrusnetwork/hydrus
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/hydrusnetwork
     - icon: fontawesome/brands/tumblr
