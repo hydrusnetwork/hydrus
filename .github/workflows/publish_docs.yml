@@ -5,6 +5,10 @@ on:
     branches:
       - master 
 
+concurrency: 
+  group: publish-docs
+  cancel-in-progress: true
+
 env:
   HYDRUS_DOCS_SITE_URL: "https://hydrusnetwork.github.io/hydrus/"
 
