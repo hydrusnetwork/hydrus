@@ -16,7 +16,7 @@ As of `v359` hydrus understands IPFS `nocopy`. And can be easily run with go-ipf
 Read [Hydrus IPFS help](https://hydrusnetwork.github.io/hydrus/help/ipfs.html). Mount `HOST_PATH_DB/client_files` to `/data/client_files` in ipfs. Go manage the ipfs service and set the path to `/data/client_files`, you'll know where to put it in.
 
 Example compose file:
-```yml
+```yaml
 version: '3.8'
 volumes:
   tor-config:
@@ -136,11 +136,12 @@ services:
       - tor-config:/var/lib/tor/hidden_service 
 ```
 Further containerized application of interest:
+
 - [Hybooru](https://github.com/funmaker/hybooru): [Hydrus](https://github.com/hydrusnetwork/hydrus)-based booru-styled imageboard in React, inspired by [hyve](https://github.com/mserajnik/hyve/).
 - [hydownloader](https://github.com/thatfuckingbird/hydownloader): Alternative way of downloading and importing files. Decoupled from hydrus logic and limitations.
 
 ## Building
-```
+```bash
 # Alpine (client)
 cd hydrus/
 docker build -t ghcr.io/hydrusnetwork/hydrus:latest -f static/build_files/docker/client/Dockerfile .

@@ -1,0 +1,22 @@
+:root {
+  --md-text-font: Roboto, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, sans-serif;
+  --md-code-font: "Roboto Mono", ui-monospace, Consolas, Menlo, monospace;
+}
+
+.spoiler:not(:hover) {
+  color: #000;
+  background-color: #000;
+}
+.hydrus-warning {
+  color: #d00;
+}
+.dealwithit { 
+  color: #ff0000; 
+  text-shadow:
+    1px 1px 0 #ff7f00,
+    2px 2px 0 #ffff00,
+    3px 3px 0 #00ff00,
+    4px 4px 0 #0000ff,
+    5px 5px 0 #6600ff,
+    6px 6px 0 #8b00ff; 
+}

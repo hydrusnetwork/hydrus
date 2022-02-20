@@ -1,0 +1,147 @@
+site_name: hydrus network
+site_description: "A personal booru-style media tagger that can import files and tags from your hard drive and popular websites. Content can be shared with other users via user-run servers."
+site_url: ''
+repo_url: https://github.com/hydrusnetwork/hydrus
+repo_name: hydrusnetwork/hydrus
+use_directory_urls: false
+nav:
+  - index.md
+  - Getting Started:
+    - introduction.md
+    - getting_started_installing.md
+    - getting_started_files.md
+    - getting_started_tags.md
+    - getting_started_downloading.md
+    - getting_started_ratings.md
+    - PTR: 
+      - access_keys.md
+      - PTR.md
+    - Next Steps:
+      - getting_started_more_files.md
+      - adding_new_downloaders.md
+      - getting_started_subscriptions.md
+      - filtering duplicates: duplicates.md
+  - Advanced:
+    - advanced_siblings.md
+    - advanced_parents.md
+    - advanced.md
+    - reducing_lag.md
+    - database_migration.md
+    - launch_arguments.md
+    - ipfs.md
+    - local_booru.md
+    - server.md
+    - Alternate Installations:
+      - docker.md
+      - wine.md
+      - running_from_source.md
+    - Downloader Creation:
+      - Introduction: downloader_intro.md
+      - downloader_gugs.md
+      - downloader_url_classes.md
+      - Parsers:
+        - Overview: downloader_parsers.md
+        - Components:
+          - Formulae: downloader_parsers_formulae.md
+          - downloader_parsers_content_parsers.md
+          - downloader_parsers_page_parsers.md
+        - Walkthroughs:
+          - downloader_parsers_full_example_gallery_page.md
+          - downloader_parsers_full_example_file_page.md
+          - downloader_parsers_full_example_api.md
+      - downloader_completion.md
+      - Sharing: downloader_sharing.md
+      - downloader_login.md
+  - API: client_api.md
+  - Misc:
+    - faq.md
+    - privacy.md
+    - contact.md
+    - support.md
+    - changelog.md
+    - about_docs.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)" 
+      scheme: default
+      primary: blue grey
+      accent: blue
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  logo: assets/hydrus-white.svg
+  favicon: assets/hydrus-black.svg
+  font: false
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.tabs
+    - content.tabs.link
+    - navigation.top
+    - search.suggest
+    - content.code.annotate
+    #- navigation.indexes
+  icon:
+    repo: fontawesome/brands/github
+    
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hydrusnetwork/hydrus
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/hydrusnetwork
+    - icon: fontawesome/brands/tumblr
+      link: https://hydrus.tumblr.com/
+    - icon: fontawesome/solid/envelope
+      link: mailto:hydrus.admin@gmail.com
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/wPHPCUZ
+    - icon: fontawesome/brands/patreon
+      link: https://www.patreon.com/hydrus_dev
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+markdown_extensions:
+
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+      separator: "_"
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets

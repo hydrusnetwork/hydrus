@@ -1,0 +1,21 @@
+name: Publish Docs 
+
+on:
+  push:
+    branches:
+      - master 
+
+concurrency: 
+  group: publish-docs
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - run: pip install mkdocs-material mkdocs-redirects
+      - run: mkdocs gh-deploy --force --config-file mkdocs-gh-pages.yml
