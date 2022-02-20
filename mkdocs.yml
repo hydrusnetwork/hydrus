@@ -52,7 +52,9 @@ nav:
       - downloader_completion.md
       - Sharing: downloader_sharing.md
       - downloader_login.md
-  - API: client_api.md
+  - API: 
+    - client_api.md
+    - developer_api.md
   - Misc:
     - faq.md
     - privacy.md
