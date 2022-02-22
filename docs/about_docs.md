@@ -1,34 +1,31 @@
 # About These Docs
 
-The Hydrus docs are built with [MkDocs](https://www.mkdocs.org/) using the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme.
+The Hydrus docs are built with [MkDocs](https://www.mkdocs.org/) using the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The .md files in the `docs` directory are converted into nice html in the `help` directory. This is done automatically in the built releases, but if you run from source, you will want to build your own.
 
 ## Local Setup
 
-To work on the docs locally, [install `mkdocs-material`](https://squidfunk.github.io/mkdocs-material/getting-started/):
+To see or work on the docs locally, [install `mkdocs-material`](https://squidfunk.github.io/mkdocs-material/getting-started/):
 
 The recommended installation method is `pip`:
 ```
 pip install mkdocs-material
 ```
 
+## Building
+
+To build the help, run:
+```
+mkdocs build -d help
+```
+In the base hydrus directory (same as the `mkdocs.yml` file), which will build it into the `help` directory. You will then be good!
+
+Repeat the command and MkDocs will clear out the old directory and update it, so you can fold this into any update script.
+
 ## Live Preview
 
-Once installed you can run the live preview development server with
+To edit the `docs` directory, you can run the live preview development server with:
 ```
 mkdocs serve 
 ```
 
-It will automatically rebuild the site when you save it and reload the page in your browser.
-
-## Building
-
-To build the docs site (for example if running from source), run:
-```
-mkdocs build
-```
-This by default builds the docs into the `site/` directory. To build to the traditional `help/` directory use
-```
-mkdocs build -d help
-```
-
-The docs are automatically deployed to GitHub Pages on every push to the `master` branch. They are also built automatically in the GitHub Actions workflows for each release and included in those builds.
+Again in the base hydrus directory. It will host the help site at [http://127.0.0.1:8000/](http://127.0.0.1:8000/), and when you change a file, it will automatically rebuild and reload the page in your browser.

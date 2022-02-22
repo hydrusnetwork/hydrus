@@ -635,7 +635,7 @@
 					<li>if you have autocomplete tag search typed, and results from thumbnails displayed, and you flip 'searching immediately' off, the search will now automatically update and give you full database numbers immediately</li>
 					<li>.</li>
 					<li>help:</li>
-					<li>I moved 'searching with wildcards' from the advanced help to the 'more getting started with files' help here: https://hydrusnetwork.github.io/hydrus/help/getting_started_more_files.html</li>
+					<li>I moved 'searching with wildcards' from the advanced help to the 'more getting started with files' help here: https://hydrusnetwork.github.io/hydrus/getting_started_more_files.html</li>
 					<li>I also wrote a more detailed description of what the autocomplete dropdown buttons do in that page</li>
 					<li>I also wrote a brief description of how a system:limit query will try to clip according to the current file sort, getting the n 'biggest files' and so on</li>
 					<li>.</li>
@@ -754,7 +754,7 @@
 					<li>consolidated and optimised the pre-work checks on all importers/downloaders in pages. pages with idling/finished/paused downloaders will consume just a little less CPU and need to talk to fewer important objects</li>
 					<li>renamed the shortcut sets for viewer/preview media windows and clarified that they are mouse only for now. the new seek command works with these, but you'd have to map ctrl+right-click or something</li>
 					<li>improved the system predicate unit tests to catch datatype problems like with last week's hotfix and system:time imported</li>
-					<li>advanced archive/delete stuff: wrote up a neat idea I had about using local parents applied to the PTR to make fast multi-tag processing workflows here: https://hydrusnetwork.github.io/hydrus/help/advanced_parents.html#parent_favourites</li>
+					<li>advanced archive/delete stuff: wrote up a neat idea I had about using local parents applied to the PTR to make fast multi-tag processing workflows here: https://hydrusnetwork.github.io/hydrus/advanced_parents.html#parent_favourites</li>
 					<li>.</li>
 					<li>bug fixes:</li>
 					<li>an important tag search bug is fixed. for some users, files that were imported before a service was added were not appearing in some of that service's search results, or their tag counts were not added in certain tag autocomplete results. this file miscount is fixed, and holes will be filled on database update. it should not take too long to fix, although different users will have different situations</li>
@@ -1633,7 +1633,7 @@
 					<li>fixed a bug in the 'add tags before import' dialog for local imports where deleting a 'quick namespace' was not updating the tag list above</li>
 					<li>.</li>
 					<li>windows clean install:</li>
-					<li>I moved to a new windows dev machine this week and a bunch of libraries were updated. I do not believe the update on Windows _needs_ a clean install this week, as a new dll conflict actually hits the coincidentally now-optional PyOpenSSL, but it is worth doing if you want to start using the Client API soon, and it has been a while, so let's be nice and clean. if you extract the release on Windows, please check out this guide: https://hydrusnetwork.github.io/hydrus/help/getting_started_installing.html#clean_installs</li>
+					<li>I moved to a new windows dev machine this week and a bunch of libraries were updated. I do not believe the update on Windows _needs_ a clean install this week, as a new dll conflict actually hits the coincidentally now-optional PyOpenSSL, but it is worth doing if you want to start using the Client API soon, and it has been a while, so let's be nice and clean. if you extract the release on Windows, please check out this guide: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs</li>
 					<li>the Windows installer has been updated to remove many old files. it should now do clever clean installs every week, you have nothing to worry about!™</li>
 					<li>.</li>
 					<li>boring db breakup:</li>
@@ -1896,7 +1896,7 @@
 					<li>misc cleanup for duplicates page</li>
 					<li>.</li>
 					<li>database modes:</li>
-					<li>a new 'program launch arguments' help page now talks about all the available command line switches, here: https://hydrusnetwork.github.io/hydrus/help/launch_arguments.html</li>
+					<li>a new 'program launch arguments' help page now talks about all the available command line switches, here: https://hydrusnetwork.github.io/hydrus/launch_arguments.html</li>
 					<li>added the '--db_journal_mode' launch switch to set the SQLite journal mode. default is WAL, permitted values are also TRUNCATE, PERSIST, and MEMORY</li>
 					<li>ensured --db_synchronous_override was hooked up correctly</li>
 					<li>the old disk cache options under _speed and memory_ are removed, along with various deprecated disk cache load calls and code</li>
@@ -8240,7 +8240,7 @@
 				</ul>
 				<li><h3 id="version_245"><a href="#version_245">version 245</a></h3></li>
 				<ul>
-					<li>fixed a v244 update problem for clients updating from <v238</li>
+					<li>fixed a v244 update problem for clients updating from < v238</li>
 					<li>some misc stuff:</li>
 					<li>if you start editing many subscriptions, cancelling a single dialog will break the chain of loading new dialogs</li>
 					<li>reduced some redundancy in regular client file import</li>

@@ -1,4 +1,4 @@
-# Changelog
+# changelog
 
 !!! note
     This is the new changelog. For versions prior to 466 see the [old changelog](old_changelog.html).
