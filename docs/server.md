@@ -5,7 +5,7 @@ title: running your own server
 !!! note
 	**You do not need the server to do anything with hydrus! It is only for advanced users to do very specific jobs!** The server is also hacked-together and quite technical. It requires a fair amount of experience with the client and its concepts, and it does not operate on a timescale that works well on a LAN. Only try running your own server once you have a bit of experience synchronising with something like the PTR and you think, 'Hey, I know exactly what that does, and I would like one!'
 
-	**[Here is a document put together by a user describing whether you want the server.](https://github.com/Zweibach/text/blob/master/Hydrus/youDontWantTheServer.md)**
+	**[Here is a document put together by a user describing whether you want the server.](youDontWantTheServer.md)**
 
 ## setting up a server { id="intro" }
 
