@@ -1,5 +1,5 @@
 ---
-title: Petition practives
+title: Petition practices
 ---
 # Petitions practices
 This document exists to give a rough idea what to do in regard to the PTR to avoid creating uncecessary work for the janitors.
