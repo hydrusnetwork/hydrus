@@ -16,6 +16,7 @@ nav:
     - PTR: 
       - access_keys.md
       - PTR.md
+      - petitionPractices.md
     - Next Steps:
       - getting_started_more_files.md
       - adding_new_downloaders.md
