@@ -8,15 +8,15 @@ or *Myths and facts about the Public Tag Repository*
 ## What is the PTR?  
 Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like `my tags`. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you don not see it in the tag list then it is not stored.
 
-Most of the things in this document also applies to [self-hosted servers](https://hydrusnetwork.github.io/hydrus/server.html), except for tag guidelines.
+Most of the things in this document also applies to [self-hosted servers](server.md), except for tag guidelines.
 
 ## Connecting to the PTR
 The easiest method is to use the built in function, found under `help -> add the public tag repository`. For adding it manually, if you so desire, read the Hydrus help document on [access keys](access_keys.md).  
-If you are starting out completely fresh you can also download a fully synced client [here](https://koto.reisen/quicksync/). Though possibly a bit (couple of days or so usually) out of date it will none the less save time. Some settings may differ from the defaults of an official installation.  
+~~If you are starting out completely fresh you can also download a fully synced client [here](https://koto.reisen/quicksync/)~~ After losing the processed client in a crash or something similar Koto has decided against maintaining a quicksync, you will have to download and process it yourself. Though possibly a bit (couple of days or so usually) out of date it will none the less save time. Some settings may differ from the defaults of an official installation.  
 Once you are connected Hydrus will proceed to download and then process the update files. The progress of this can be seen under `services -> review services -> remote -> tag repositories -> public tag repository`. Here you can view its status, your account (the default account is a shared public account. Currently only janitors and the administrator have personal accounts), tag status, and how synced you are. Being behind on the sync by a certain amount makes you unable to push tags and petitions until you are caught up again.
 
 ## How does it work?
-For something to end up on the PTR it has to be pushed there. Tags can either be entered into the tag service manually by the user through the `manage tags` window, or be routed there by a parser when downloading files. See [parsing tags](https://hydrusnetwork.github.io/hydrus/getting_started_downloading.html). Once tags have been entered into the PTR tag service they are pending until pushed. This is indicated by the `pending ()` that will appear between `tags` and `help` in the menu bar. Here you can chose to either push your changes to the PTR or discard them.
+For something to end up on the PTR it has to be pushed there. Tags can either be entered into the tag service manually by the user through the `manage tags` window, or be routed there by a parser when downloading files. See [parsing tags](getting_started_downloading.md). Once tags have been entered into the PTR tag service they are pending until pushed. This is indicated by the `pending ()` that will appear between `tags` and `help` in the menu bar. Here you can chose to either push your changes to the PTR or discard them.
 
 - Adding tags pass automatically.
 - Deleting (petitioning) tags requires janitor action.
