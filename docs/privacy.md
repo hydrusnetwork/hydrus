@@ -1,4 +1,4 @@
-# Privacy
+# privacy
 
 !!! tldr "tl;dr"
     Using a trustworthy VPN for all your remotely fun internet traffic is a good idea. It is cheap and easy these days, and it offers multiple levels of general protection.
