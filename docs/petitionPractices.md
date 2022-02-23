@@ -1,7 +1,14 @@
+---
+title: Petition practives
+---
+# Petitions practices
+This document exists to give a rough idea what to do in regard to the PTR to avoid creating uncecessary work for the janitors.
+
 ## General practice
 Kindly avoid creating unnecessary work.  
 Create siblings for underscore and non-namespaced/namespaced versions.  
-Petition for deletion if they are wrong. Providing a reason outside of the stock choices helps the petition getting accepted.
+Petition for deletion if they are wrong. Providing a reason outside of the stock choices helps the petition getting accepted.  
+If, for whatever reason, you have some mega job that needs doing it's often a good idea to talk to a janitor instead since we can just go ahead and do the job directly without having to deal with potentially tens of petitions because of how Hydrus splits them on the server. An example that we often come across is the removal of the awful Sankaku URLs that are almost everywhere these days due to people using a faulty parser. It's a pretty easy search and delete for a janitor, but a lot of annoying clicking if dealt with as a petition since one big petition can be split out to God-only-knows-how many.
 
 Eventually the PTR janitors will get tools to replace various bad but correct tags on the server itself. These include underscored, wrong or no namespace, common misspelling, wrong locale, and so on. Since we're going to have to do the job eventually anyway there's not much of a point making us do it twice by petitioning the existing bad but correct tags. Just sibling them and leave them be for now.
 

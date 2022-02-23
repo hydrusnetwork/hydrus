@@ -8,6 +8,7 @@ nav:
   - index.md
   - Getting Started:
     - introduction.md
+    - gettingStartedOverview.md
     - getting_started_installing.md
     - getting_started_files.md
     - getting_started_tags.md
