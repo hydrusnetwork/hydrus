@@ -19,3 +19,6 @@ It's also worth having a look at [siblings](advanced_siblings.md) for when you w
 
 ## Duplicates
 Have a lot of very similar looking pictures because of one reason or another? Have a look at [duplicates](duplicates.md), Hydrus' duplicates finder and filtering tool.
+
+## API
+Hydrus has an API that lets external tools connect to it. See [API](client_api.md) for how to turn it on and a list of some of these tools.
