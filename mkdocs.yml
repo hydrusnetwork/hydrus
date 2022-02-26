@@ -8,6 +8,7 @@ nav:
   - index.md
   - Getting Started:
     - introduction.md
+    - gettingStartedOverview.md
     - getting_started_installing.md
     - getting_started_files.md
     - getting_started_tags.md
@@ -16,6 +17,7 @@ nav:
     - PTR: 
       - access_keys.md
       - PTR.md
+      - petitionPractices.md
     - Next Steps:
       - getting_started_more_files.md
       - adding_new_downloaders.md
@@ -52,7 +54,9 @@ nav:
       - downloader_completion.md
       - Sharing: downloader_sharing.md
       - downloader_login.md
-  - API: client_api.md
+  - API: 
+    - client_api.md
+    - developer_api.md
   - Misc:
     - faq.md
     - privacy.md

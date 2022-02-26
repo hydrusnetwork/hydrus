@@ -20,7 +20,7 @@ If you typically use an IME to input Japanese or another non-english language, y
 
 ## tag display { id="tag_display" }
 
-If you do not like a particular tag or namespace, you can easily hide it with _services->manage tag display_:
+If you do not like a particular tag or namespace, you can easily hide it with _tags->manage tag display and search_:
 
 _This image is out of date, sorry!_
 
