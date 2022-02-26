@@ -1,5 +1,6 @@
 ---
 title: API documentation
+hide: navigation
 ---
 
 # API documentation
