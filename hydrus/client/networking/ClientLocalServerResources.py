@@ -25,6 +25,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSearchParseSystemPredicates
+from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -41,7 +42,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
-CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'file_service_name', 'tag_service_name' }
+CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
@@ -1464,8 +1465,122 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClie
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
+
+
+class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAPIRestrictedAddTags ):
+
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
-    
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
+
+
+    def _GetParsedAutocompleteText( self, search, tag_service_key ) -> ClientSearch.ParsedAutocompleteText:
+
+        tag_autocomplete_options = HG.client_controller.tag_display_manager.GetTagAutocompleteOptions( tag_service_key )
+
+        collapse_search_characters = True
+
+        parsed_autocomplete_text = ClientSearch.ParsedAutocompleteText( search, tag_autocomplete_options, collapse_search_characters )
+
+        parsed_autocomplete_text.SetInclusive( True )
+
+        return parsed_autocomplete_text
+
+
+    def _GetTagServiceKey( self, request: HydrusServerRequest.HydrusRequest ):
+
+        tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+
+        if 'tag_service_key' in request.parsed_request_args:
+
+            tag_service_key = request.parsed_request_args[ 'tag_service_key' ]
+
+        elif 'tag_service_name' in request.parsed_request_args:
+
+            tag_service_name = request.parsed_request_args[ 'tag_service_name' ]
+
+            try:
+
+                tag_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_TAG_SERVICES, tag_service_name )
+
+            except:
+
+                raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( tag_service_name ) )  
+
+        try:
+
+            service = HG.client_controller.services_manager.GetService( tag_service_key )
+
+        except:
+
+            raise HydrusExceptions.BadRequestException( 'Could not find that tag service!' )
+
+        if service.GetServiceType() not in HC.ALL_TAG_SERVICES:
+
+            raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a tag service!' )
+
+        return tag_service_key
+
+
+    def _GetTagMatches( self, tag_service_key, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> list[ClientSearch.Predicate]:
+
+        matches = []
+
+        if parsed_autocomplete_text.IsAcceptableForTagSearches():
+
+            tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+
+            autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
+
+            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+
+            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_search_context = tag_search_context )
+
+            job_key = ClientThreading.JobKey()
+
+            search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
+
+            predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+
+            display_tag_service_key = tag_search_context.display_service_key
+
+            matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
+
+        return matches
+
+
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+
+        search = request.parsed_request_args.GetValue( 'search', str )
+
+        tag_service_key = self._GetTagServiceKey( request )
+
+        parsed_autocomplete_text = self._GetParsedAutocompleteText( search, tag_service_key )
+
+        matches = self._GetTagMatches( tag_service_key, parsed_autocomplete_text )
+
+        body_dict = {}
+
+        tags = []
+
+        for match in matches:
+
+            tag = {
+                'value': match.GetValue(),
+                'count': match.GetCount().GetMinCount(),
+            }
+
+            tags.append( tag )
+
+        body_dict[ 'tags' ] = tags
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+
+
 class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPIRestrictedAddTags ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2415,8 +2530,6 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
                 
                 message = '{} ({} set)'.format( message, ', '.join( domains_set ) )
                 
-            
-            from hydrus.client import ClientThreading
             
             job_key = ClientThreading.JobKey()
             

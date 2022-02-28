@@ -451,7 +451,50 @@ Response:
 
     !!! note
         A user can rename their services. Don't assume the client's local tags service will be "my tags".
-    
+
+### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
+
+_Ask the client for tag suggestions._
+
+Restricted access:
+:   YES. Search for Files permission needed.
+
+Required Headers: n/a
+
+Arguments:
+:   
+* `search`: (the tag to search for)
+* `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
+* `tag_service_name`: (optional, selective, string, the tag domain on which to search)
+
+Example request:
+:   
+```http title="Example request"
+/add_tags/search_tags?search=kim
+```
+
+Response:
+:   Some JSON listing the client's suggested tags.
+
+:   
+```json title="Example response"
+{
+  "tags": [
+    {
+      "value": "kim possible", 
+      "count": 2
+    },
+    {
+      "value": "character:kim possible", 
+      "count": 1
+    },
+    {
+      "value": "series:kim possible", 
+      "count": 3
+    }
+  ]
+}
+```
 
 ### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
 
