@@ -2252,10 +2252,6 @@ class WidgetEventFilter ( QC.QObject ):
             
             event_killed = event_killed or self._ExecuteCallbacks( 'EVT_KEY_DOWN', event )
             
-        elif type == QC.QEvent.Close:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_CLOSE', event )
-            
         elif type == QC.QEvent.WindowStateChange:
             
             if isValid( self._parent_widget ):
@@ -2353,10 +2349,6 @@ class WidgetEventFilter ( QC.QObject ):
             self._parent_widget.setFocusPolicy( QC.Qt.StrongFocus )
             
         self._callback_map[ evt_name ].append( callback )
-
-    def EVT_CLOSE( self, callback ):
-        
-        self._AddCallback( 'EVT_CLOSE', callback )
 
     def EVT_ICONIZE( self, callback ):
         

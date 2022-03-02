@@ -42,91 +42,91 @@ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD = 15
 REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE = 16
 REGENERATE_FILE_DATA_JOB_PIXEL_HASH = 17
 
-regen_file_enum_to_str_lookup = {}
+regen_file_enum_to_str_lookup = {
+    REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'regenerate file metadata',
+    REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL : 'regenerate thumbnail',
+    REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : 'regenerate thumbnail if incorrect size',
+    REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 'regenerate non-standard hashes',
+    REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 'delete duplicate neighbours with incorrect file extension',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'if file is missing, remove record',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 'if file is missing, then if has URL try to redownload',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing, then if has URL try to redownload, else remove record',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 'if file is missing/incorrect, move file out and remove record',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 'if file is missing/incorrect, then move file out, and if has URL try to redownload',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing/incorrect, then move file out, and if has URL try to redownload, else remove record',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 'if file is incorrect, move file out',
+    REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 'fix file read/write permissions',
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'check for membership in the similar files search system',
+    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'regenerate similar files metadata',
+    REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'regenerate file modified date',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'determine if the file has an icc profile',
+    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'regenerate pixel duplicate data'
+}
 
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 'regenerate file metadata'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 'regenerate thumbnail'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 'regenerate thumbnail if incorrect size'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 'regenerate non-standard hashes'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 'delete duplicate neighbours with incorrect file extension'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ] = 'if file is missing, remove record'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ] = 'if file is missing, then if has URL try to redownload'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD ] = 'if file is missing, then if has URL try to redownload, else remove record'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ] = 'if file is missing/incorrect, move file out and remove record'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL ] = 'if file is missing/incorrect, then move file out, and if has URL try to redownload'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ] = 'if file is missing/incorrect, then move file out, and if has URL try to redownload, else remove record'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ] = 'if file is incorrect, move file out'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'fix file read/write permissions'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'check for membership in the similar files search system'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'regenerate file modified date'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 'determine if the file has an icc profile'
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'regenerate pixel duplicate data'
-
-regen_file_enum_to_description_lookup = {}
-
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 'This regenerates file metadata like resolution and duration, or even filetype (such as mkv->webm), which may have been misparsed in a previous version.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 'This forces a complete regeneration of the thumbnail from the source file.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 'This looks for the existing thumbnail, and if it is not the correct resolution or is missing, will regenerate a new one for the source file.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 'This regenerates hydrus\'s store of md5, sha1, and sha512 supplementary hashes, which it can use for various external (usually website) lookups.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 'Sometimes, a file metadata regeneration will mean a new filetype and thus a new file extension. If the existing, incorrectly named file is in use, it must be copied rather than renamed, and so there is a spare duplicate left over after the operation. This jobs cleans up the duplicate at a later time.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ] = 'This checks to see if the file is present in the file system as expected. If it is not, the internal file record in the database is removed, just as if the file were deleted. Use this if you have manually deleted or otherwise lost a number of files from your file structure and need hydrus to re-sync with what it actually has. Missing files will have their known URLs exported to your database directory.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ] = 'This checks to see if the file is present in the file system as expected. If it is not, and it has known post/file URLs, the URLs will be automatically added to a new URL downloader. Missing files will also have their known URLs exported to your database directory.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD ] = 'THIS IS THE EASY AND QUICK ONE-SHOT WAY TO FIX A DATABASE WITH MISSING FILES. This checks to see if the file is present in the file system as expected. If it is not, then if it has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Missing files will also have their known URLs exported to your database directory.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ] = 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with their known URLs, and the file record deleted.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL ] = 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. Incorrect files will also have their known URLs exported to your database directory.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ] = 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Incorrect files will also have their known URLs exported to your database directory.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ] = 'If the file is where it is expected, this ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with its known URLs. The client\'s file record will not be deleted. This is useful if you have a valid backup and need to clear out invalid files from your live db so you can fill in gaps from your backup with a program like FreeFileSync.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'This ensures that files in the file system are readable and writeable. For Linux/macOS users, it specifically sets 644. If you wish to run this job on Linux/macOS, ensure you are first the file owner of all your files.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'This rechecks the file\'s modified timestamp and saves it to the database.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 'This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.'
-regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 'This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.'
+regen_file_enum_to_description_lookup = {
+    REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'This regenerates file metadata like resolution and duration, or even filetype (such as mkv->webm), which may have been misparsed in a previous version.',
+    REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL : 'This forces a complete regeneration of the thumbnail from the source file.',
+    REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : 'This looks for the existing thumbnail, and if it is not the correct resolution or is missing, will regenerate a new one for the source file.',
+    REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 'This regenerates hydrus\'s store of md5, sha1, and sha512 supplementary hashes, which it can use for various external (usually website) lookups.',
+    REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 'Sometimes, a file metadata regeneration will mean a new filetype and thus a new file extension. If the existing, incorrectly named file is in use, it must be copied rather than renamed, and so there is a spare duplicate left over after the operation. This jobs cleans up the duplicate at a later time.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'This checks to see if the file is present in the file system as expected. If it is not, the internal file record in the database is removed, just as if the file were deleted. Use this if you have manually deleted or otherwise lost a number of files from your file structure and need hydrus to re-sync with what it actually has. Missing files will have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 'This checks to see if the file is present in the file system as expected. If it is not, and it has known post/file URLs, the URLs will be automatically added to a new URL downloader. Missing files will also have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 'THIS IS THE EASY AND QUICK ONE-SHOT WAY TO FIX A DATABASE WITH MISSING FILES. This checks to see if the file is present in the file system as expected. If it is not, then if it has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Missing files will also have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with their known URLs, and the file record deleted.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. Incorrect files will also have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Incorrect files will also have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 'If the file is where it is expected, this ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with its known URLs. The client\'s file record will not be deleted. This is useful if you have a valid backup and need to clear out invalid files from your live db so you can fill in gaps from your backup with a program like FreeFileSync.',
+    REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 'This ensures that files in the file system are readable and writeable. For Linux/macOS users, it specifically sets 644. If you wish to run this job on Linux/macOS, ensure you are first the file owner of all your files.',
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.',
+    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.',
+    REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'This rechecks the file\'s modified timestamp and saves it to the database.',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.',
+    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.'
+}
 
 NORMALISED_BIG_JOB_WEIGHT = 100
 
-regen_file_enum_to_job_weight_lookup = {}
+regen_file_enum_to_job_weight_lookup = {
+    REGENERATE_FILE_DATA_JOB_FILE_METADATA : 100,
+    REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL : 50,
+    REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : 25,
+    REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 100,
+    REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 25,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 5,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 50,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 55,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 100,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 100,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 100,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 100,
+    REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 25,
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 50,
+    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 100,
+    REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 100,
+    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 100
+}
 
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 50
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 25
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 25
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ] = 5
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ] = 50
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD ] = 55
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 25
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 50
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 10
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = 100
-regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = 100
-
-regen_file_enum_to_overruled_jobs = {}
-
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = [ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD ] = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ] = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL ] = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ] = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ]
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE ] = []
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_PIXEL_HASH ] = []
+regen_file_enum_to_overruled_jobs = {
+    REGENERATE_FILE_DATA_JOB_FILE_METADATA : [],
+    REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL : [ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ],
+    REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : [],
+    REGENERATE_FILE_DATA_JOB_OTHER_HASHES : [],
+    REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : [],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : [],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : [],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : [],
+    REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : [],
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : [],
+    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ],
+    REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : [],
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : [],
+    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : []
+}
 
 ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE, REGENERATE_FILE_DATA_JOB_PIXEL_HASH, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
@@ -149,7 +149,19 @@ def GetAllFilePaths( raw_paths, do_human_sort = True ):
             
             if os.path.isdir( path ):
                 
-                subpaths = [ os.path.join( path, filename ) for filename in os.listdir( path ) ]
+                try:
+                    
+                    # on Windows, some network file paths return True on isdir(). maybe something to do with path length or number of subdirs
+                    path_listdir = os.listdir( path )
+                    
+                except NotADirectoryError:
+                    
+                    file_paths.append( path )
+                    
+                    continue
+                    
+                
+                subpaths = [ os.path.join( path, filename ) for filename in path_listdir ]
                 
                 next_paths_to_process.extend( subpaths )
                 
@@ -1549,7 +1561,7 @@ class FilesMaintenanceManager( object ):
                     for url in urls:
                         
                         f.write( url )
-                        f.write( os.linesep )
+                        f.write( '\n' )
                         
                     
                 
@@ -1558,7 +1570,7 @@ class FilesMaintenanceManager( object ):
                     for url in urls:
                         
                         f.write( url )
-                        f.write( os.linesep )
+                        f.write( '\n' )
                         
                     
                 
@@ -1608,6 +1620,21 @@ class FilesMaintenanceManager( object ):
                 
             
             do_export = file_is_invalid and ( job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ) or ( job_type == REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL and try_redownload ) )
+            
+            if do_export or delete_record:
+                
+                pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._controller.GetBootTime() ) )
+                
+                missing_hashes_filename = '{} missing hashes.txt'.format( pretty_timestamp )
+                
+                missing_hashes_path = os.path.join( error_dir, missing_hashes_filename )
+                
+                with open( missing_hashes_path, 'a', encoding = 'utf-8' ) as f:
+                    
+                    f.write( hash.hex() )
+                    f.write( '\n' )
+                    
+                
             
             if do_export:
                 
@@ -1663,7 +1690,7 @@ class FilesMaintenanceManager( object ):
                     
                     self._pubbed_message_about_bad_file_record_delete = True
                     
-                    message = 'During file maintenance, a file was found to be missing or invalid. Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported). Any known URLs for the file have been written to "{}".'.format( error_dir )
+                    message = 'During file maintenance, a file was found to be missing or invalid. Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported). Its file hash and any known URLs have been written to "{}".'.format( error_dir )
                     message += os.linesep * 2
                     message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
                     

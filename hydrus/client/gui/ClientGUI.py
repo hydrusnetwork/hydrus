@@ -3067,11 +3067,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         menu = QW.QMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', self._OpenHelp )
         
         links = QW.QMenu( menu )
         
-        site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+        site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
         site = ClientGUIMenus.AppendMenuBitmapItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
         site = ClientGUIMenus.AppendMenuBitmapItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
         site = ClientGUIMenus.AppendMenuBitmapItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
@@ -4724,6 +4724,47 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         else:
             
             HydrusPaths.LaunchDirectory( export_path )
+            
+        
+    
+    def _OpenHelp( self ):
+        
+        help_path = os.path.join( HC.HELP_DIR, 'index.html' )
+        
+        if os.path.exists( help_path ):
+            
+            ClientPaths.LaunchPathInWebBrowser( help_path )
+            
+        else:
+            
+            message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
+            
+            yes_tuples = []
+            
+            yes_tuples.append( ( 'open online help', 0 ) )
+            yes_tuples.append( ( 'open how to build guide', 1 ) )
+            
+            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    value = dlg.GetValue()
+                    
+                    if value == 0:
+                        
+                        url = 'https://hydrusnetwork.github.io/hydrus/'
+                        
+                    elif value == 1:
+                        
+                        url = 'https://hydrusnetwork.github.io/hydrus/about_docs.html'
+                        
+                    else:
+                        
+                        return
+                        
+                    ClientPaths.LaunchURLInWebBrowser( url )
+                    
+                
             
         
     
@@ -7908,7 +7949,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             if HG.client_controller.IsFirstStart():
                                 
-                                text += 'Since this is your first session, this maintenance should should just be some quick initialisation work. It should only take a few seconds.'
+                                text += 'Since this is your first session, this maintenance should just be some quick initialisation work. It should only take a few seconds.'
                                 text += os.linesep * 2
                                 
                             

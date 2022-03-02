@@ -1804,6 +1804,7 @@ class CanvasPanel( Canvas ):
         self._page_key = page_key
         
         self._hidden_page_current_media = None
+        self._hidden_page_paused_status = False
         
         self._media_container.launchMediaViewer.connect( self.LaunchMediaViewer )
         
@@ -1833,11 +1834,16 @@ class CanvasPanel( Canvas ):
     
     def PageHidden( self ):
         
+        # TODO: ultimately, make an object for media/paused/position and have any media player able to give that and take it instead of setmedia
+        # then we'll be able to 'continue' playing state from preview to full view and other stuff like this, and simply
+        # also use that for all setmedia, and then if we have %-in-start options and paused/play-start options, we can initialise this object for that
         hidden_page_current_media = self._current_media
+        hidden_page_pause_status = self._media_container.IsPaused()
         
         self.ClearMedia()
         
         self._hidden_page_current_media = hidden_page_current_media
+        self._hidden_page_paused_status = hidden_page_pause_status
         
     
     def PageShown( self ):
@@ -1845,6 +1851,11 @@ class CanvasPanel( Canvas ):
         self.SetMedia( self._hidden_page_current_media )
         
         self._hidden_page_current_media = None
+        
+        if self._media_container.IsPaused() != self._hidden_page_paused_status:
+            
+            self._media_container.PausePlay()
+            
         
     
     def ShowMenu( self ):

@@ -408,7 +408,6 @@ def GetMime( path ):
         # a webm has at least vp8/vp9 video and optionally vorbis audio
         
         has_webm_video = False
-        has_webm_audio = False
         
         if has_video:
             
@@ -439,7 +438,7 @@ def GetMime( path ):
                 
                 return HC.VIDEO_MKV
                 
-            else:
+            elif has_audio:
                 
                 return HC.AUDIO_MKV
                 
@@ -467,13 +466,39 @@ def GetMime( path ):
         
     elif 'mp4' in mime_text:
         
-        if has_audio and ( not has_video or 'mjpeg' in video_format ):
+        container = ParseFFMPEGMetadataContainer( lines )
+        
+        if container == 'M4A':
             
             return HC.AUDIO_M4A
             
-        else:
+        elif container == 'qt':
+            
+            return HC.VIDEO_MOV
+            
+        elif container in ( 'isom', 'mp42' ): # mp42 is version 2 of mp4 standard
+            
+            if has_video:
+                
+                return HC.VIDEO_MP4
+                
+            elif has_audio:
+                
+                return HC.AUDIO_MP4
+                
+            
+        
+        if has_audio and 'mjpeg' in video_format:
+            
+            return HC.AUDIO_M4A
+            
+        elif has_video:
             
             return HC.VIDEO_MP4
+            
+        elif has_audio:
+            
+            return HC.AUDIO_MP4
             
         
     elif mime_text == 'ogg':
@@ -578,7 +603,7 @@ def ParseFFMPEGDuration( lines ):
         
         if 'start:' in line:
             
-            m = re.search( '(start\\: )' + '-?[0-9]+\\.[0-9]*', line )
+            m = re.search( r'(start: )-?[0-9]+\.[0-9]*', line )
             
             start_offset = float( line[ m.start() + 7 : m.end() ] )
             
@@ -590,6 +615,8 @@ def ParseFFMPEGDuration( lines ):
         match = re.search("[0-9]+:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
         hms = [ float( float_string ) for float_string in line[match.start():match.end()].split(':') ]
         
+        duration = 0
+        
         if len( hms ) == 1:
             
             duration = hms[0]
@@ -598,7 +625,7 @@ def ParseFFMPEGDuration( lines ):
             
             duration = 60 * hms[0] + hms[1]
             
-        elif len( hms ) ==3:
+        elif len( hms ) == 3:
             
             duration = 3600 * hms[0] + 60 * hms[1] + hms[2]
             
@@ -683,7 +710,7 @@ def ParseFFMPEGFPSFromFirstSecond( lines_for_first_second ):
             
             for possible_fps in possible_results:
                 
-                if num_frames_in_first_second - 1 <= possible_fps and possible_fps <= num_frames_in_first_second + 1:
+                if num_frames_in_first_second - 1 <= possible_fps <= num_frames_in_first_second + 1:
                     
                     fps = possible_fps
                     
@@ -772,7 +799,7 @@ def ParseFFMPEGHasVideo( lines ):
     
     try:
         
-        video_line = ParseFFMPEGVideoLine( lines )
+        ParseFFMPEGVideoLine( lines )
         
     except HydrusExceptions.UnsupportedFileException:
         
@@ -780,6 +807,44 @@ def ParseFFMPEGHasVideo( lines ):
         
     
     return True
+    
+def ParseFFMPEGMetadataContainer( lines ) -> str:
+    
+    #  Metadata:
+    #    major_brand     : isom
+    
+    match_metadata_line_re = r'\s*Metadata:\s*'
+    
+    metadata_line_index = None
+    
+    for ( i, line ) in enumerate( lines ):
+        
+        if re.match( match_metadata_line_re, line ) is not None:
+            
+            metadata_line_index = i
+            
+            break
+            
+        
+    
+    if metadata_line_index is None:
+        
+        return ''
+        
+    
+    match_major_brand_re = r'\s*major_brand\s*:.+'
+    
+    for line in lines[ metadata_line_index : ]:
+        
+        if re.match( match_major_brand_re, line ) is not None:
+            
+            container = line.split( ':', 1 )[1].strip()
+            
+            return container
+            
+        
+    
+    return ''
     
 def ParseFFMPEGMimeText( lines ):
     
@@ -802,7 +867,7 @@ def ParseFFMPEGMimeText( lines ):
     
 def ParseFFMPEGNumFramesManually( lines ):
     
-    frame_lines = [ l for l in lines if l.startswith( 'frame=' ) ]
+    frame_lines = [ line for line in lines if line.startswith( 'frame=' ) ]
     
     if len( frame_lines ) == 0:
         
@@ -811,18 +876,18 @@ def ParseFFMPEGNumFramesManually( lines ):
     
     final_line = frame_lines[-1] # there will be many progress rows, counting up as the file renders. we hence want the final one
     
-    l = final_line
+    line = final_line
     
-    l = l.replace( 'frame=', '' )
+    line = line.replace( 'frame=', '' )
     
-    while l.startswith( ' ' ):
+    while line.startswith( ' ' ):
         
-        l = l[1:]
+        line = line[1:]
         
     
     try:
         
-        frames_string = l.split( ' ' )[0]
+        frames_string = line.split( ' ' )[0]
         
         num_frames = int( frames_string )
         
@@ -846,7 +911,7 @@ def ParseFFMPEGVideoFormat( lines ):
     
     try:
         
-        match = re.search( r'(?<=Video\:\s).+?(?=,)', line )
+        match = re.search( r'(?<=Video:\s).+?(?=,)', line )
         
         video_format = match.group()
         
@@ -888,7 +953,7 @@ def ParseFFMPEGVideoResolution( lines, png_ok = False ):
         line = ParseFFMPEGVideoLine( lines, png_ok = png_ok )
         
         # get the size, of the form 460x320 (w x h)
-        match = re.search(" [0-9]*x[0-9]*(,| )", line)
+        match = re.search(" [0-9]*x[0-9]*([, ])", line)
         
         resolution_string = line[match.start():match.end()-1]
         
@@ -1108,7 +1173,7 @@ class VideoRendererFFMPEG( object ):
             '-vcodec', 'rawvideo',
             '-'
         ] )
-            
+        
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs()
         

@@ -859,7 +859,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         with open( txt_path, 'w', encoding = 'utf-8' ) as f:
                             
-                            f.write( os.linesep.join( tags ) )
+                            f.write( '\n'.join( tags ) )
                             
                         
                     

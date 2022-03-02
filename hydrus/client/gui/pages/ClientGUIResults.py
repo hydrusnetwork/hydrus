@@ -22,7 +22,6 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -54,6 +53,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     focusMediaChanged = QC.Signal( ClientMedia.Media )
     focusMediaCleared = QC.Signal()
+    focusMediaPaused = QC.Signal()
     refreshQuery = QC.Signal()
     
     newMediaAdded = QC.Signal()
@@ -3037,7 +3037,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         if result not in ( QC.Qt.IgnoreAction, ):
                             
-                            self.SetFocusedMedia( None )
+                            self.focusMediaPaused.emit()
                             
                         
                     

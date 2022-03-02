@@ -1,13 +1,11 @@
 import collections
 import hashlib
-import json
 import os
 import random
 import sqlite3
 import sys
 import time
 import traceback
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData

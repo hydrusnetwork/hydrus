@@ -45,13 +45,13 @@ headers_and_mime = [
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( ( ( 4, b'ftypmp4' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypisom' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypM4V' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypMSNV' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypavc1' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypFACE' ), ), HC.VIDEO_MP4 ),
-    ( ( ( 4, b'ftypdash' ), ), HC.VIDEO_MP4 ),
+    ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypM4V' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypMSNV' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypavc1' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypFACE' ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( 4, b'ftypdash' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypqt' ), ), HC.VIDEO_MOV ),
     ( ( ( 0, b'fLaC' ), ), HC.AUDIO_FLAC ),
     ( ( ( 0, b'RIFF' ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
@@ -330,14 +330,9 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         if it_passes:
             
-            if mime == HC.UNDETERMINED_WM:
+            if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
                 
-                if HydrusVideoHandling.HasVideoStream( path ):
-                    
-                    return HC.VIDEO_WMV
-                    
-                
-                # we'll catch and verify wma later
+                return HydrusVideoHandling.GetMime( path )
                 
             elif mime == HC.UNDETERMINED_PNG:
                 

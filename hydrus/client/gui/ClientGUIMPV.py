@@ -334,10 +334,10 @@ class mpvWidget( QW.QWidget ):
         
         return self._current_seek_to_start_count > 0
         
-
-    def IsPlaying( self ):
+    
+    def IsPaused( self ):
         
-        return not self._player.pause
+        return self._player.pause
         
     
     def Pause( self ):

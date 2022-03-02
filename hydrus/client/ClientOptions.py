@@ -149,6 +149,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
+        self._dictionary[ 'booleans' ][ 'show_number_namespaces' ] = True
         self._dictionary[ 'booleans' ][ 'replace_tag_underscores_with_spaces' ] = False
         
         self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True

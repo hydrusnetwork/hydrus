@@ -3,6 +3,45 @@
 !!! note
     This is the new changelog. For versions prior to 466 see the [old changelog](old_changelog.html).
 
+## [Version 475](https://github.com/hydrusnetwork/hydrus/releases/tag/v475)
+
+## new help docs
+* the hydrus help is now built from markup using MkDocs! it now looks nicer and has search and automatically generated tables of contents and so on. please check it out. a user converted _all_ my old handwritten html to markup and figured out a migration process. thank you very much to this user.
+* the help has pretty much the same structure, but online it has moved up a directory from https://hydrusnetwork.github.io/hydrus/help to https://hydrusnetwork.github.io/hydrus. all the old links should redirect in any case, so it isn't a big deal, but I have updated the various places in the program and my social media that have direct links. let me know if you have any trouble
+* if you run from source and want a local copy of the help, you can build your own as here: https://hydrusnetwork.github.io/hydrus/about_docs.html . it is super simple, it just takes one extra step. Or just download and extract one of the archive builds
+* if you run from source, hit _help->open help_, and don't have help built, the client now gives you a dialog to open the online help or see the guide to build your help
+* the help got another round of updates in the second week, some fixed URLs and things and the start of the integration of the 'simple help' written by a user
+* I added a screenshot and a bit more text to the 'backing up' help to show how to set up FreeFileSync for a good simple backup
+* I added a list of some quick links back in to the main index page of the help
+* I wrote an unlinked 'after_distaster' page for the help that collects my 'ok we finished recovering your broken database, now use your pain to maintain a backup in future' spiel, which I will point people to in future
+
+## misc
+* fixed a bug where changes to the search space in a duplicate filter page were not sticking after the first time they were changed. this was related to a recent 'does page have changes?' optimisation--it was giving a false negative for this page type (issue #1079)
+* fixed a bug when searching for both 'media' and 'preview' view count/viewtime simultaneously (issue #1089, issue #1090)
+* added support for audio-only mp4 files. these would previously generally fail, sometimes be read as m4a. all m4as are scheduled for a metadata regen scan
+* improved some mpeg-4 container parsing to better differentiate these types
+* now we have great apng detection, all pngs with apparent 'bitrate' over 0.85 bits/pixel will be scheduled for an 'is this actually an apng?' scan. this 0.85 isn't a perfect number and won't find extremely well-compressed pixel apngs, but it covers a good amount without causing a metadata regen for every png we own
+* system:hash now supports 'is' and 'is not', if you want to, say, exclude a list of hashes from a search
+* fixed some 'is not' parsing in the system predicate parser
+* when you drag and drop a thumbnail to export it from the program, the preview media viewer now pauses that file (just as the full media viewer does) rather than clears it
+* when you change the page away while previewing media with duration, the client now remembers if you were paused or playing and restores that state when you return to that page
+* folded in a new and improved Deviant Art page parser written by a user. it should be better about getting the highest quality image in unusual situations
+* running a search with a large file pool and multiple negated tags, negated namespaces, and/or negated wildcards should be significantly faster. an optimisation that was previously repeated for each negated tag search is now performed for all of them as a group with a little inter-job overhead added. should make '(big) system:inbox -character x, -character y, -character z' like lightning compared to before
+* added a 'unless namespace is a number' to 'tag presentation' options, which will show the full tag for tags like '16:9' when you have 'show namespaces' unticked
+* altered a path normalisation check when you add a file or thumbnail location in 'migrate database'--if it fails to normalise symlinks, it now just gives a warning and lets you continue. fingers crossed, this permits rclone mounts for file storage (issue #1084)
+* when a 'check for missing/invalid file' maintenance job runs, it now prints all the hashes of missing or invalid files to a nice simple newline-separated list .txt in the error directory. this is an easy to work with hash record, useful for later recovery
+* fixed numerous instances where logs and texts I was writing could create too many newline characters on Windows. it was confusing some reader software and showing as double-spaced taglists and similar for exported sidecar files and profile logs
+* I think I fixed a bug, when crawling for file paths, where on Windows some network file paths were being detected incorrectly as directories and causing parse errors
+* fixed a broken command in the release build so the windows installer executable should correctly get 'v475' as its version metadata (previously this was blank), which should help some software managers that use this info to decide to do updates (issue #1071)
+
+## some cleanup
+* replaced last instances of EVT_CLOSE wx wrapper with proper Qt code
+* did a heap of very minor code cleanup jobs all across the program, mostly just to get into pycharm
+* clarified the help text in _options->external programs_ regarding %path% variable
+
+## pycharm
+* as a side note, I finally moved from my jank old WingIDE IDE to PyCharm in this release. I am overall happy with it--it is clearly very powerful and customisable--but adjusting after about ten or twelve years of Wing was a bit awkward. I am very much a person of habit, and it will take me a little while to get fully used to the new shortcuts and UI and so on, but PyCharm does everything that is critical for me, supports many modern coding concepts, and will work well as we move to python 3.9 and beyond
+
 ## [Version 474](https://github.com/hydrusnetwork/hydrus/releases/tag/v474)
 
 ### command palette
@@ -258,42 +297,3 @@
 ### client api
 * added GET /manage_database/mr_bones to the Client API. it returns a JSON Object with the same numbers used in the _help->how boned am I?_ dialog
 * incremented Client API version to 23
-
-## [Version 466](https://github.com/hydrusnetwork/hydrus/releases/tag/v466)
-
-### video scanbar autohide
-* the scanbar that shows below audio and video is now embedded inside the video frame, and it show/hides based on how close your mouse is to it
-* I've wanted to do this for a long time, since it will allow you to watch 16:9 videos at true 100% in borderless fullscreen, but the hackery of how the media viewer works behind the scenes means this took more work than you'd think and is still a little jank. there's a small amount of flicker when it pops in and out, which I will work on in future. in any case, please have a play with it and let me know what you think. I expect to add some more options, like for the activation padding area around it, and I will be tidying up more layout stuff throughout the media viewer
-* if you are a mostly keyboard user, please check out the new 'global' shortcut to flip on/off a 'force the animation scanbar to show' mode
-* I don't really want to bring back the always-on hanging-below scanbar that just takes up space, but if you try this new embedded scanbar and really hate it, we'll see what we can do
-
-### more duplicate filter search options
-* the duplicates page now has a dropdown on the search for 'must be/can be/excludes pixel dupes'!
-* the duplicates page now has a number control on the search for what distance the pair was found at! I am not sure how accurate this thing is in all cases, but it seems I started tracking this data some time ago and forgot I even had it
-* these new options are remembered in your session and _should_ remain fast in most normal cases. I put time into some complicated database work this week to get this going, please let me know if you have any trouble with it
-
-### misc
-* when the export filename pattern in the export files dialog means many of the files share the same base and hence need to do 'filename (5)'-style suffixes to be unique, the number here is now calculated much more efficiently. opening this dialog on 10,000 files with an oft-duplicate pattern should now be a jolt of lag but not many minutes
-* when you choose to 'separate' a subscription with more than 100 queries, you are no longer forced to break it into half
-* when you do break a subscription in half, it now makes sure to sort the query texts before separating
-* if you are in advanced mode, the 'selection tags' list on the left of every page can now switch its tag display type between 'multiple media views', 'display', and 'storage'. this is experimental and a bunch of stuff like 'select files with this tag' won't work yet
-* janitors' petition pages now start with their tag list in 'storage' mode, so you can see the actual tags being changed rather than with siblings and parents calculated
-* rebalanced some janitor mapping petition weights. jannies _should_ see a smoother balance of 'lots of small petitions' vs 'a few larger petitions' amongst petitions all with the same reason and creator
-
-### boring cleanup and little fixes
-* when you set the checker options in the edit subscription dialog, the queries now recalculate their file velocity better. previously, they would just set 'unknown' and recalc on the next run, but now they will actually recalculate if the query container is loaded into memory or otherwise put a status that says 'will calculate on next run'
-* removed the 'should be namespaced' reason from the manage tags quick petition reasons. this is now all handled by siblings, tidying up storage tags manually is busywork
-* when you click 'copy traceback' on an error popup, it also copies the software version, your platform, and if you are on a frozen build or running from source
-* the logger now prints version number for every block, just before the timestamp
-* cleaned up a variety of media viewer UI code while working on the scanbar, fixing some misc display bugs
-* moved pixel hash storage responsibility from 'file metadata' to 'similar files' module
-* the similar files system now searches pixel hashes when it is called to do any similar files search. they count as 'exact match' distance
-* when a file gets a new pixel hash, it now sees if any other files have that same hash. if so, it now gets queued up again in the similar files search system, ensuring this match is not missed
-* misc nomenclature cleanup--since we now have both 'pixel hashes' and 'phashes', phashes are now referred to as 'perceptual hashes' everywhere
-* massively refactored the primary table join that drives potential duplicates search. it should work a bit faster now and it is much easier to work with
-* I added pixel dupe and distance search to the standard search results version of the join and the 'system:everything' version, which has several optimisations
-* silenced some shutdown handling in file maintenance that was being printed to log as an error
-* fixed some 'broken object load' error handling to print the timestamp of the specific bad object, not whatever timestamp was requested. this error handling now also prints the full dump name and version to the log, and version to the exported filename. I was working with a user who had broken subs this week, and lacking this full info made things just a little trickier to put back together
-* fixed some drag and drop handling where it was possible to drop thumbnails on a certain location of a page of pages that held an empty page of pages but it would not create a new child media page to hold them
-* misc serverside db code cleanup
-* fixed python 3.10 type bugs in window coordinate saving and Qt image generation from buffer (issue #1027)

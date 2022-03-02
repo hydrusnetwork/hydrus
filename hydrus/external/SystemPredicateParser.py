@@ -1,5 +1,5 @@
-#made by prkc for Hydrus Network
-#Licensed under the same terms as Hydrus Network
+# made by prkc for Hydrus Network
+# Licensed under the same terms as Hydrus Network
 # hydev has changed a couple things here and there, and changed how filetypes work
 
 # The basic idea here is to take a system predicate written as text and parse it into a (predicate type, operator, value, unit)
@@ -22,38 +22,36 @@ import re
 import datetime
 from enum import Enum, auto
 
-# This needs to be updated with all types that Hydrus supports.
-FILETYPES = {}
+# TODO: This needs to be updated with all types that Hydrus supports.
+FILETYPES = { }
+
 
 def InitialiseFiletypes( str_to_enum ):
-    
     for ( filetype_string, enum ) in str_to_enum.items():
         
         if isinstance( enum, int ):
             
-            enum_tuple = ( enum, )
-            
+            enum_tuple = (enum,)
+        
         else:
             
             enum_tuple = tuple( enum )
-            
         
         if '/' in filetype_string:
-            
-            ( filetype_class, specific_filetype ) = filetype_string.split( '/', 1 )
+            (filetype_class, specific_filetype) = filetype_string.split( '/', 1 )
             
             FILETYPES[ specific_filetype ] = enum_tuple
-            
         
         FILETYPES[ filetype_string ] = enum_tuple
-        
-    
+
+
 
 NAMESPACE_SEPARATOR = ':'
-SYSTEM_PREDICATE_PREFIX = 'system'+NAMESPACE_SEPARATOR
+SYSTEM_PREDICATE_PREFIX = 'system' + NAMESPACE_SEPARATOR
+
 
 # This enum lists all the recognized predicate types.
-class Predicate(Enum):
+class Predicate( Enum ):
     EVERYTHING = auto()
     INBOX = auto()
     ARCHIVE = auto()
@@ -100,40 +98,44 @@ class Predicate(Enum):
     NO_URL_CLASS = auto()
     TAG_AS_NUMBER = auto()
 
+
 # This enum lists the possible value formats a predicate can have (if it has a value).
 # Parsing for each of these options is implemented in parse_value
-class Value(Enum):
-    NATURAL = auto() #An int which holds a non-negative value
-    HASHLIST_WITH_DISTANCE = auto() #A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is a non-negative integer
-    HASHLIST_WITH_ALGORITHM = auto() #A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is one of 'sha256', 'md5', 'sha1', 'sha512'
-    FILETYPE_LIST = auto() #A set of file types using the enum set in InitialiseFiletypes as defined in FILETYPES
-    #Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
-    #a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
-    #dateutils has a function to try to guess and parse arbitrary date formats but I didn't use it here since it would be an additional dependency.
+class Value( Enum ):
+    NATURAL = auto()  # An int which holds a non-negative value
+    HASHLIST_WITH_DISTANCE = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is a non-negative integer
+    HASHLIST_WITH_ALGORITHM = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is one of 'sha256', 'md5', 'sha1', 'sha512'
+    FILETYPE_LIST = auto()  # A set of file types using the enum set in InitialiseFiletypes as defined in FILETYPES
+    # Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
+    # a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
+    # dateutils has a function to try to guess and parse arbitrary date formats but I didn't use it here since it would be an additional dependency.
     DATE_OR_TIME_INTERVAL = auto()
-    TIME_SEC_MSEC = auto() #A tuple of two non-negative integers: (seconds, milliseconds) where the latter is <1000
-    ANY_STRING = auto() #A string (accepts any string so can't use units after this since it consumes the entire remaining part of the input)
-    TIME_INTERVAL = auto() #A tuple of 4 non-negative integers: (days, hours, minutes, seconds) where hours < 24, minutes < 60, seconds < 60
-    INTEGER = auto() #An integer
-    RATIO = auto() #A tuple of 2 ints, both non-negative
+    TIME_SEC_MSEC = auto()  # A tuple of two non-negative integers: (seconds, milliseconds) where the latter is <1000
+    ANY_STRING = auto()  # A string (accepts any string so can't use units after this since it consumes the entire remaining part of the input)
+    TIME_INTERVAL = auto()  # A tuple of 4 non-negative integers: (days, hours, minutes, seconds) where hours < 24, minutes < 60, seconds < 60
+    INTEGER = auto()  # An integer
+    RATIO = auto()  # A tuple of 2 ints, both non-negative
+
 
 # Possible operator formats
 # Implemented in parse_operator
-class Operators(Enum):
-    RELATIONAL = auto() #One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
-    EQUAL = auto() #One of '=' or '!='
-    FILESERVICE_STATUS = auto() #One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
-    TAG_RELATIONAL = auto() #A tuple of a string (a potential tag name) and a relational operator (as a string)
-    ONLY_EQUAL = auto() #None (meaning =, since thats the only accepted operator)
-    RATIO_OPERATORS = auto() #One of '=', 'wider than','taller than', '\u2248' ('≈') (takes '~=' too)
+class Operators( Enum ):
+    RELATIONAL = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
+    EQUAL = auto()  # One of '=' or '!='
+    FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
+    TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
+    ONLY_EQUAL = auto()  # None (meaning =, since thats the only accepted operator)
+    RATIO_OPERATORS = auto()  # One of '=', 'wider than','taller than', '\u2248' ('≈') (takes '~=' too)
+
 
 # Possible unit formats
 # Implemented in parse_unit
-class Units(Enum):
-    FILESIZE = auto() #One of 'B', 'KB', 'MB', 'GB'
-    FILE_RELATIONSHIP_TYPE = auto() #One of 'not related/false positive', 'duplicates', 'alternates', 'potential duplicates'
-    PIXELS_OR_NONE = auto() #Always None (meaning pixels)
-    PIXELS = auto() #One of 'pixels', 'kilopixels', 'megapixels'
+class Units( Enum ):
+    FILESIZE = auto()  # One of 'B', 'KB', 'MB', 'GB'
+    FILE_RELATIONSHIP_TYPE = auto()  # One of 'not related/false positive', 'duplicates', 'alternates', 'potential duplicates'
+    PIXELS_OR_NONE = auto()  # Always None (meaning pixels)
+    PIXELS = auto()  # One of 'pixels', 'kilopixels', 'megapixels'
+
 
 # All system predicates
 # A predicate is described by a 4-tuple of (predicate type, operator format, value format, unit format) (use None if some are not applicable)
@@ -161,7 +163,7 @@ SYSTEM_PREDICATES = {
     'similar to': (Predicate.SIMILAR_TO, None, Value.HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
-    'hash': (Predicate.HASH, Operators.ONLY_EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
+    'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
     'modified date|date modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'last viewed time|last view time': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'time imported|import time': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
@@ -187,213 +189,218 @@ SYSTEM_PREDICATES = {
     'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None)
 }
 
+
 # Parsing is just finding a matching predicate name,
 # then trying to parse it by consuming the input string.
 # The parse_* functions consume some of the string and return a (remaining part of the string, parsed value) tuple.
-def parse_system_predicate(string):
+def parse_system_predicate( string: str ):
     string = string.lower().strip()
-    if string.startswith("-"):
-        raise ValueError("System predicate can't start with negation")
-    if not string.startswith(SYSTEM_PREDICATE_PREFIX):
-        raise ValueError("Not a system predicate!")
-    string = string[len(SYSTEM_PREDICATE_PREFIX):]
+    if string.startswith( "-" ):
+        raise ValueError( "System predicate can't start with negation" )
+    if not string.startswith( SYSTEM_PREDICATE_PREFIX ):
+        raise ValueError( "Not a system predicate!" )
+    string = string[ len( SYSTEM_PREDICATE_PREFIX ): ]
     for pred_regex in SYSTEM_PREDICATES:
-        match = re.match(pred_regex.replace(' ','([_ ]+)')+":?", string)
+        match = re.match( pred_regex.replace( ' ', '([_ ]+)' ) + ":?", string )
         if match:
-            pred = SYSTEM_PREDICATES[pred_regex]
-            string = string[len(match[0]):]
-            string, operator = parse_operator(string, pred[1])
-            string, value = parse_value(string, pred[2])
-            string, unit = parse_unit(string, pred[3])
-            if string: raise ValueError("Unrecognized characters at the end of the predicate: "+string)
-            return pred[0], operator, value, unit
-    raise ValueError("Unknown system predicate!")
+            pred = SYSTEM_PREDICATES[ pred_regex ]
+            string = string[ len( match[ 0 ] ): ]
+            string, operator = parse_operator( string, pred[ 1 ] )
+            string, value = parse_value( string, pred[ 2 ] )
+            string, unit = parse_unit( string, pred[ 3 ] )
+            if string: raise ValueError( "Unrecognized characters at the end of the predicate: " + string )
+            return pred[ 0 ], operator, value, unit
+    raise ValueError( "Unknown system predicate!" )
 
-def parse_unit(string, spec):
+
+def parse_unit( string: str, spec ):
     string = string.strip()
     if spec is None:
         return string, None
     elif spec == Units.FILESIZE:
-        match = re.match('b|byte|bytes', string)
-        if match: return string[len(match[0]):], 'B'
-        match = re.match('kb|kilobytes|kilobyte', string)
-        if match: return string[len(match[0]):], 'KB'
-        match = re.match('mb|megabytes|megabyte', string)
-        if match: return string[len(match[0]):], 'MB'
-        match = re.match('gb|gigabytes|gigabyte', string)
-        if match: return string[len(match[0]):], 'GB'
-        raise ValueError("Invalid unit, expected a filesize")
+        match = re.match( 'b|byte|bytes', string )
+        if match: return string[ len( match[ 0 ] ): ], 'B'
+        match = re.match( 'kb|kilobytes|kilobyte', string )
+        if match: return string[ len( match[ 0 ] ): ], 'KB'
+        match = re.match( 'mb|megabytes|megabyte', string )
+        if match: return string[ len( match[ 0 ] ): ], 'MB'
+        match = re.match( 'gb|gigabytes|gigabyte', string )
+        if match: return string[ len( match[ 0 ] ): ], 'GB'
+        raise ValueError( "Invalid unit, expected a filesize" )
     elif spec == Units.FILE_RELATIONSHIP_TYPE:
-        match = re.match('duplicates', string)
-        if match: return string[len(match[0]):], 'duplicates'
-        match = re.match('alternates', string)
-        if match: return string[len(match[0]):], 'alternates'
-        match = re.match('(not related/false positives?)|not related|(false positives?)', string)
-        if match: return string[len(match[0]):], 'not related/false positive'
-        match = re.match('potential duplicates', string)
-        if match: return string[len(match[0]):], 'potential duplicates'
-        raise ValueError("Invalid unit, expected a file relationship")
+        match = re.match( 'duplicates', string )
+        if match: return string[ len( match[ 0 ] ): ], 'duplicates'
+        match = re.match( 'alternates', string )
+        if match: return string[ len( match[ 0 ] ): ], 'alternates'
+        match = re.match( '(not related/false positives?)|not related|(false positives?)', string )
+        if match: return string[ len( match[ 0 ] ): ], 'not related/false positive'
+        match = re.match( 'potential duplicates', string )
+        if match: return string[ len( match[ 0 ] ): ], 'potential duplicates'
+        raise ValueError( "Invalid unit, expected a file relationship" )
     elif spec == Units.PIXELS_OR_NONE:
         if not string:
             return string, None
         else:
-            match = re.match('(pixels?)|px', string)
-            if match: return string[len(match[0]):], None
-        raise ValueError("Invalid unit, expected no unit or pixels")
+            match = re.match( '(pixels?)|px', string )
+            if match: return string[ len( match[ 0 ] ): ], None
+        raise ValueError( "Invalid unit, expected no unit or pixels" )
     elif spec == Units.PIXELS:
-        match = re.match('px|pixels|pixel', string)
-        if match: return string[len(match[0]):], 'pixels'
-        match = re.match('kpx|kilopixels|kilopixel', string)
-        if match: return string[len(match[0]):], 'kilopixels'
-        match = re.match('mpx|megapixels|megapixel', string)
-        if match: return string[len(match[0]):], 'megapixels'
-        raise ValueError("Invalid unit, expected pixels")
-    raise ValueError("Invalid unit specification")
+        match = re.match( 'px|pixels|pixel', string )
+        if match: return string[ len( match[ 0 ] ): ], 'pixels'
+        match = re.match( 'kpx|kilopixels|kilopixel', string )
+        if match: return string[ len( match[ 0 ] ): ], 'kilopixels'
+        match = re.match( 'mpx|megapixels|megapixel', string )
+        if match: return string[ len( match[ 0 ] ): ], 'megapixels'
+        raise ValueError( "Invalid unit, expected pixels" )
+    raise ValueError( "Invalid unit specification" )
 
-def parse_value(string, spec):
+
+def parse_value( string: str, spec ):
     string = string.strip()
     if spec is None:
         return string, None
     elif spec == Value.NATURAL:
-        match = re.match('0|([1-9][0-9]*)', string)
-        if match: return string[len(match[0]):], int(match[0])
-        raise ValueError("Invalid value, expected a natural number")
+        match = re.match( '0|([1-9][0-9]*)', string )
+        if match: return string[ len( match[ 0 ] ): ], int( match[ 0 ] )
+        raise ValueError( "Invalid value, expected a natural number" )
     elif spec == Value.HASHLIST_WITH_DISTANCE:
-        match = re.match('(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string)
+        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
         if match:
-            hashes = set(hsh.strip() for hsh in re.sub('\s', ' ', match['hashes'].replace(',', ' ')).split(' ') if len(hsh) > 0)
-            distance = int(match['distance'])
-            return string[len(match[0]):], (hashes, distance)
-        raise ValueError("Invalid value, expected a list of hashes with distance")
+            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            distance = int( match[ 'distance' ] )
+            return string[ len( match[ 0 ] ): ], (hashes, distance)
+        raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
-        match = re.match('(?P<hashes>[0-9a-f]+((\s|,)+[0-9a-f]+)*)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string)
+        match = re.match( '(?P<hashes>[0-9a-f]+((\s|,)+[0-9a-f]+)*)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
         if match:
-            hashes = set(hsh.strip() for hsh in re.sub('\s', ' ', match['hashes'].replace(',', ' ')).split(' ') if len(hsh) > 0)
-            algorithm = match['algorithm'] if len(match['algorithm']) > 0 else 'sha256'
-            return string[len(match[0]):], (hashes, algorithm)
-        raise ValueError("Invalid value, expected a list of hashes with algorithm")
+            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            algorithm = match[ 'algorithm' ] if len( match[ 'algorithm' ] ) > 0 else 'sha256'
+            return string[ len( match[ 0 ] ): ], (hashes, algorithm)
+        raise ValueError( "Invalid value, expected a list of hashes with algorithm" )
     elif spec == Value.FILETYPE_LIST:
         valid_values = sorted( FILETYPES.keys(), key = lambda k: len( k ), reverse = True )
-        ftype_regex = '('+'|'.join(['('+val+')' for val in valid_values])+')'
-        match = re.match('('+ftype_regex+'(\s|,)+)*'+ftype_regex, string)
+        ftype_regex = '(' + '|'.join( [ '(' + val + ')' for val in valid_values ] ) + ')'
+        match = re.match( '(' + ftype_regex + '(\s|,)+)*' + ftype_regex, string )
         if match:
-            found_ftypes_all = re.sub('\s', ' ', match[0].replace(',', ' ')).split(' ')
-            found_ftypes_good = []
+            found_ftypes_all = re.sub( '\s', ' ', match[ 0 ].replace( ',', ' ' ) ).split( ' ' )
+            found_ftypes_good = [ ]
             for ftype in found_ftypes_all:
-                if len(ftype) > 0 and ftype in FILETYPES:
+                if len( ftype ) > 0 and ftype in FILETYPES:
                     found_ftypes_good.extend( FILETYPES[ ftype ] )
-            return string[len(match[0]):], set(found_ftypes_good)
-        raise ValueError("Invalid value, expected a list of file types")
+            return string[ len( match[ 0 ] ): ], set( found_ftypes_good )
+        raise ValueError( "Invalid value, expected a list of file types" )
     elif spec == Value.DATE_OR_TIME_INTERVAL:
-        match = re.match('((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string)
-        if match and (match.group('year') or match.group('month') or match.group('day') or match.group('hour')):
-            years = int(match.group('year')) if match.group('year') else 0
-            months = int(match.group('month')) if match.group('month') else 0
-            days = int(match.group('day')) if match.group('day') else 0
-            hours = int(match.group('hour')) if match.group('hour') else 0
-            days += math.floor(hours/24)
+        match = re.match( '((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string )
+        if match and (match.group( 'year' ) or match.group( 'month' ) or match.group( 'day' ) or match.group( 'hour' )):
+            years = int( match.group( 'year' ) ) if match.group( 'year' ) else 0
+            months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
+            days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
+            hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
+            days += math.floor( hours / 24 )
             hours = hours % 24
-            return string[len(match[0]):], (years, months, days, hours)
-        match  = re.match('(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string)
+            return string[ len( match[ 0 ] ): ], (years, months, days, hours)
+        match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
         if match:
-            return string[len(match[0]):], datetime.date(int(match.group('year')), int(match.group('month')), int(match.group('day')))
-        raise ValueError("Invalid value, expected a date or a time interval")
+            return string[ len( match[ 0 ] ): ], datetime.date( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
+        raise ValueError( "Invalid value, expected a date or a time interval" )
     elif spec == Value.TIME_SEC_MSEC:
-        match = re.match('((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|milliseconds|msecs|msec|ms))?', string)
-        if match and (match.group('sec') or match.group('msec')):
-            seconds = int(match.group('sec')) if match.group('sec') else 0
-            mseconds = int(match.group('msec')) if match.group('msec') else 0
-            seconds += math.floor(mseconds/1000)
+        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|milliseconds|msecs|msec|ms))?', string )
+        if match and (match.group( 'sec' ) or match.group( 'msec' )):
+            seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
+            mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0
+            seconds += math.floor( mseconds / 1000 )
             mseconds = mseconds % 1000
-            return string[len(match[0]):], (seconds, mseconds)
-        raise ValueError("Invalid value, expected a duration")    
+            return string[ len( match[ 0 ] ): ], (seconds, mseconds)
+        raise ValueError( "Invalid value, expected a duration" )
     elif spec == Value.ANY_STRING:
         return "", string
     elif spec == Value.TIME_INTERVAL:
-        match = re.match('((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?\s*((?P<minute>0|([1-9][0-9]*))\s*(minutes|minute|mins|min))?\s*((?P<second>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?', string)
-        if match and (match.group('day') or match.group('hour') or match.group('minute') or match.group('second')):
-            days = int(match.group('day')) if match.group('day') else 0
-            hours = int(match.group('hour')) if match.group('hour') else 0
-            minutes = int(match.group('minute')) if match.group('minute') else 0
-            seconds = int(match.group('second')) if match.group('second') else 0
-            minutes += math.floor(seconds/60)
+        match = re.match( '((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?\s*((?P<minute>0|([1-9][0-9]*))\s*(minutes|minute|mins|min))?\s*((?P<second>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?', string )
+        if match and (match.group( 'day' ) or match.group( 'hour' ) or match.group( 'minute' ) or match.group( 'second' )):
+            days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
+            hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
+            minutes = int( match.group( 'minute' ) ) if match.group( 'minute' ) else 0
+            seconds = int( match.group( 'second' ) ) if match.group( 'second' ) else 0
+            minutes += math.floor( seconds / 60 )
             seconds = seconds % 60
-            hours += math.floor(minutes/60)
+            hours += math.floor( minutes / 60 )
             minutes = minutes % 60
-            days += math.floor(hours/24)
+            days += math.floor( hours / 24 )
             hours = hours % 24
-            return string[len(match[0]):], (days, hours, minutes, seconds)
-        raise ValueError("Invalid value, expected a time interval")
+            return string[ len( match[ 0 ] ): ], (days, hours, minutes, seconds)
+        raise ValueError( "Invalid value, expected a time interval" )
     elif spec == Value.INTEGER:
-        match = re.match('0|(-?[1-9][0-9]*)', string)
-        if match: return string[len(match[0]):], int(match[0])
-        raise ValueError("Invalid value, expected an integer")
+        match = re.match( '0|(-?[1-9][0-9]*)', string )
+        if match: return string[ len( match[ 0 ] ): ], int( match[ 0 ] )
+        raise ValueError( "Invalid value, expected an integer" )
     elif spec == Value.RATIO:
-        match = re.match('(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string)
-        if match: return string[len(match[0]):], (int(match['first']), int(match['second']))
-        raise ValueError("Invalid value, expected a ratio")
-    raise ValueError("Invalid value specification")
+        match = re.match( '(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
+        if match: return string[ len( match[ 0 ] ): ], (int( match[ 'first' ] ), int( match[ 'second' ] ))
+        raise ValueError( "Invalid value, expected a ratio" )
+    raise ValueError( "Invalid value specification" )
 
-def parse_operator(string, spec):
+
+def parse_operator( string: str, spec ):
     string = string.strip()
     if spec is None:
         return string, None
     elif spec == Operators.RELATIONAL:
-        ops = ['\u2248', '=', '<', '>', '\u2260']
-        if string.startswith('=='): return string[2:], '='
-        if string.startswith('!='): return string[2:], '\u2260'
-        if string.startswith('is not'): return string[6:], '\u2260'
-        if string.startswith('isn\'t'): return string[5:], '\u2260'
-        if string.startswith( '~=' ): return string[2:], '\u2248'
+        ops = [ '\u2248', '=', '<', '>', '\u2260' ]
+        if string.startswith( '==' ): return string[ 2: ], '='
+        if string.startswith( '!=' ): return string[ 2: ], '\u2260'
+        if string.startswith( 'is not' ): return string[ 6: ], '\u2260'
+        if string.startswith( 'isn\'t' ): return string[ 5: ], '\u2260'
+        if string.startswith( '~=' ): return string[ 2: ], '\u2248'
         for op in ops:
-            if string.startswith(op): return string[len(op):], op
-        if string.startswith('is'): return string[2:], '='
-        raise ValueError("Invalid relation operator")
+            if string.startswith( op ): return string[ len( op ): ], op
+        if string.startswith( 'is' ): return string[ 2: ], '='
+        raise ValueError( "Invalid relation operator" )
     elif spec == Operators.EQUAL:
-        if string.startswith('=='): return string[2:], '='
-        if string.startswith('='): return string[1:], '='
-        if string.startswith('is'): return string[2:], '='
-        if string.startswith( '\u2260' ): return string[1:], '!='
-        if string.startswith('!='): return string[2:], '!='
-        if string.startswith('is not'): return string[6:], '!='
-        if string.startswith('isn\'t'): return string[5:], '!='
-        raise ValueError("Invalid equality operator")
+        if string.startswith( '==' ): return string[ 2: ], '='
+        if string.startswith( '=' ): return string[ 1: ], '='
+        if string.startswith( '\u2260' ): return string[ 1: ], '!='
+        if string.startswith( '!=' ): return string[ 2: ], '!='
+        if string.startswith( 'is not' ): return string[ 6: ], '!='
+        if string.startswith( 'is' ): return string[ 2: ], '='
+        if string.startswith( 'isn\'t' ): return string[ 5: ], '!='
+        raise ValueError( "Invalid equality operator" )
     elif spec == Operators.FILESERVICE_STATUS:
-        match = re.match('(is )?currently in', string)
-        if match: return string[len(match[0]):], 'is currently in'
-        match = re.match('((is )?not currently in)|isn\'t currently in', string)
-        if match: return string[len(match[0]):], 'is not currently in'
-        match = re.match('(is )?pending to', string)
-        if match: return string[len(match[0]):], 'is pending to'
-        match = re.match('((is )?not pending to)|isn\'t pending to', string)
-        if match: return string[len(match[0]):], 'is not pending to'
-        raise ValueError("Invalid operator, expected a file service relationship")
+        match = re.match( '(is )?currently in', string )
+        if match: return string[ len( match[ 0 ] ): ], 'is currently in'
+        match = re.match( '((is )?not currently in)|isn\'t currently in', string )
+        if match: return string[ len( match[ 0 ] ): ], 'is not currently in'
+        match = re.match( '(is )?pending to', string )
+        if match: return string[ len( match[ 0 ] ): ], 'is pending to'
+        match = re.match( '((is )?not pending to)|isn\'t pending to', string )
+        if match: return string[ len( match[ 0 ] ): ], 'is not pending to'
+        raise ValueError( "Invalid operator, expected a file service relationship" )
     elif spec == Operators.TAG_RELATIONAL:
-        match = re.match('(?P<tag>.*)\s+(?P<op>(<|>|=|==|~=|\u2248|\u2260|is|is not))', string)
+        match = re.match( '(?P<tag>.*)\s+(?P<op>(<|>|=|==|~=|\u2248|\u2260|is|is not))', string )
         if re.match:
-            tag = match['tag']
-            op = match['op']
+            tag = match[ 'tag' ]
+            op = match[ 'op' ]
             if op == '==': op = '='
             if op == 'is': op = '='
-            return string[len(match[0]):], (tag, op)
-        raise ValueError("Invalid operator, expected a tag followed by a relational operator")
+            return string[ len( match[ 0 ] ): ], (tag, op)
+        raise ValueError( "Invalid operator, expected a tag followed by a relational operator" )
     elif spec == Operators.ONLY_EQUAL:
-        if string.startswith('=='): return string[2:], '='
-        if string.startswith('='): return string[1:], '='
-        if string.startswith('is'): return string[2:], '='
-        raise ValueError("Invalid equality operator")
+        if string.startswith( '==' ): return string[ 2: ], '='
+        if string.startswith( '=' ): return string[ 1: ], '='
+        if string.startswith( 'is' ): return string[ 2: ], '='
+        raise ValueError( "Invalid equality operator" )
     elif spec == Operators.RATIO_OPERATORS:
-        if string.startswith('wider than'): return string[10:], 'wider than'
-        if string.startswith('taller than'): return string[11:], 'taller than'
-        if string.startswith('is wider than'): return string[13:], 'wider than'
-        if string.startswith('is taller than'): return string[14:], 'taller than'
-        if string.startswith('=='): return string[2:], '='
-        if string.startswith('='): return string[1:], '='
-        if string.startswith('is'): return string[2:], '='
-        if string.startswith('~='): return string[2:], '\u2248'
-        if string.startswith('\u2248'): return string[1:], '\u2248'
-        raise ValueError("Invalid ratio operator")
-    raise ValueError("Invalid operator specification")
+        if string.startswith( 'wider than' ): return string[ 10: ], 'wider than'
+        if string.startswith( 'taller than' ): return string[ 11: ], 'taller than'
+        if string.startswith( 'is wider than' ): return string[ 13: ], 'wider than'
+        if string.startswith( 'is taller than' ): return string[ 14: ], 'taller than'
+        if string.startswith( '==' ): return string[ 2: ], '='
+        if string.startswith( '=' ): return string[ 1: ], '='
+        if string.startswith( 'is' ): return string[ 2: ], '='
+        if string.startswith( '~=' ): return string[ 2: ], '\u2248'
+        if string.startswith( '\u2248' ): return string[ 1: ], '\u2248'
+        raise ValueError( "Invalid ratio operator" )
+    raise ValueError( "Invalid operator specification" )
+
 
 examples = [
     "system:everything",
@@ -485,5 +492,5 @@ examples = [
 
 if __name__ == "__main__":
     for ex in examples:
-        print(ex)
-        print(parse_system_predicate(ex))
+        print( ex )
+        print( parse_system_predicate( ex ) )

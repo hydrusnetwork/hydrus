@@ -167,12 +167,24 @@ By default, hydrus stores all your user data in one location, so backing up is s
     
 #### the powerful (and best) way - using an external program
 :   
-    If you would like to integrate hydrus into a broader backup scheme you already run, or you are an advanced user with a complicated hydrus install that you have migrated across multiple drives, then you need to backup two things: the client\*.db files and your client\_files directory(ies). By default, they are all stored in install\_dir/db. The .db files contain your settings and file metadata like inbox/archive and tags, while the client\_files subdirs store your actual media and its thumbnails. If everything is still under install\_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!
+    Doing it yourself is best. If you are an advanced user with a complicated hydrus install migrated across multiple drives, then you will have to do it this way--the simple backup will be disabled.
+
+    You need to backup two things, which are both, by default, beneath install\_dir/db: the four client\*.db files and your client\_files directory(ies). The .db files contain absolutely everything about your client and files--your settings and file lists and metadata like inbox/archive and tags--while the client\_files subdirs store your actual media and its thumbnails.
+
+    If everything is still under install\_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!
+
+    An example FreeFileSync profile for backing up a database will look like this:
+
+    ![](images/freefilesync_example_backup.png)
+
+    Note it has 'file time and size' and 'mirror' as the main settings. This quickly ensures that changes to the left-hand side are copied to the right-hand side, adding new files and removing since-deleted files and overwriting modified files. You can save a backup profile like that and it should only take a few minutes every week to stay safely backed up, even if you have hundreds of thousands of files.
 
     Shut the client down while you run the backup, obviously.
-    
+
 !!! danger
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
+
+There is significantly more information about the database structure [here](database_migration.md).
 
 I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
 

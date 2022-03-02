@@ -171,7 +171,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsToHashes( self, hash_ids = None, hashes = None ) -> typing.Dict[ int, str ]:
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None ) -> typing.Dict[ int, bytes ]:
         
         if hash_ids is not None:
             

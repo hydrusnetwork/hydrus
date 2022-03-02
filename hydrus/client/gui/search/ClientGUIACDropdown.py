@@ -815,6 +815,22 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         return False
         
     
+class CloseACDropdownCatcher( QC.QObject ):
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.Close:
+            
+            HG.client_controller.gui.close()
+            
+            event.accept()
+            
+            return True
+            
+        
+        return False
+        
+    
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( QW.QWidget ):
     
@@ -884,8 +900,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, QC.QPoint( 0, 0 ) ) )
             
-            self._dropdown_window_widget_event_filter = QP.WidgetEventFilter( self._dropdown_window )
-            self._dropdown_window_widget_event_filter.EVT_CLOSE( self.EventCloseDropdown )
+            self._dropdown_window.installEventFilter( CloseACDropdownCatcher( self._dropdown_window ) )
             
             self._dropdown_hidden = True
             
@@ -1755,6 +1770,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
         
         self._page_key = page_key
+        
+        # make a dupe here so we know that any direct changes we make to this guy will not affect other copies around
+        file_search_context = file_search_context.Duplicate()
         
         self._under_construction_or_predicate = None
         

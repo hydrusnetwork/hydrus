@@ -30,7 +30,20 @@ And can be extended to download from more locations using easily shareable user-
 
 The program's emphasis is on your freedom. There is no DRM, no spying, no censorship. The program never phones home.
 
-If you would like to try it, I _**strongly**_ recommend you check out the [help and getting started guide](introduction.md). A copy is included with the release as well.'
+If you would like to try it, I _**strongly**_ recommend you check out the [help and getting started guide](introduction.md). A copy of all this help is included with the release as well.
+
+## links
+
+* [homepage](https://hydrusnetwork.github.io/hydrus/)
+* [github](https://github.com/hydrusnetwork/hydrus) ([latest build](https://github.com/hydrusnetwork/hydrus/releases/latest))
+* [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
+* [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
+* [tumblr](https://hydrus.tumblr.com)
+* [twitter](https://twitter.com/hydrusnetwork)
+* [discord](https://discord.gg/wPHPCUZ)
+* [patreon](https://www.patreon.com/hydrus_dev)
+* [user-run repository and wiki (including download presets for several non-default boorus)](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
+* [more links and contact info](contact.md)
 
 ## Screenshots
 

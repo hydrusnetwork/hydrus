@@ -57,7 +57,7 @@ def RenderTag( tag, render_for_user: bool ):
         
         if render_for_user:
             
-            if new_options.GetBoolean( 'show_namespaces' ):
+            if new_options.GetBoolean( 'show_namespaces' ) or ( new_options.GetBoolean( 'show_number_namespaces' ) and namespace.isdecimal() ):
                 
                 connector = new_options.GetString( 'namespace_connector' )
                 

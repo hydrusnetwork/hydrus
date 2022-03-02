@@ -265,9 +265,9 @@ class Animation( QW.QWidget ):
         return self._playthrough_count > 0
         
     
-    def IsPlaying( self ):
+    def IsPaused( self ):
         
-        return not self._paused
+        return self._paused
         
     
     def paintEvent( self, event ):
@@ -414,7 +414,7 @@ class Animation( QW.QWidget ):
     
     def SeekDelta( self, direction, duration_ms ):
         
-        if self._video_container is not None and self._video_container.IsInitialised():
+        if self._current_timestamp_ms is not None and self._video_container is not None and self._video_container.IsInitialised():
             
             new_ts = self._current_timestamp_ms + ( direction * duration_ms )
             
@@ -857,7 +857,7 @@ class AnimationBar( QW.QWidget ):
         
         CC.CAN_HIDE_MOUSE = False
         
-        self._it_was_playing_before_drag = self._media_window.IsPlaying()
+        self._it_was_playing_before_drag = not self._media_window.IsPaused()
         
         if self._it_was_playing_before_drag:
             
@@ -1332,6 +1332,16 @@ class MediaContainer( QW.QWidget ):
                     
                 
             
+        
+    
+    def IsPaused( self ):
+        
+        if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+            
+            return self._media_window.IsPaused()
+            
+        
+        return False
         
     
     def MouseIsNearAnimationBar( self ):

@@ -181,7 +181,16 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddPath( self, path, starting_weight = 1 ):
         
-        path = os.path.realpath( path )
+        try:
+            
+            path = os.path.realpath( path )
+            
+        except OSError as e:
+            
+            HydrusData.PrintException( e )
+            
+            QW.QMessageBox.warning( self, 'Warning', 'I tried to remove symlinks from this path, but that failed! If this path is a clever mount, this situation may be ok. I will let you continue, and if the path looks ok and you are confident you can read from and write to it, you can continue. I recommend you close the client and make a backup right now though. The full error has been printed to log.' )
+            
         
         if path in self._locations_to_ideal_weights:
             
@@ -805,7 +814,16 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = dlg.GetPath()
                 
-                path = os.path.realpath( path )
+                try:
+                    
+                    path = os.path.realpath( path )
+                    
+                except OSError as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    QW.QMessageBox.warning( self, 'Warning', 'I tried to remove symlinks from this path, but that failed! If this path is a clever mount, this situation may be ok. I will let you continue, and if the path looks ok and you are confident you can read from and write to it, you can continue. I recommend you close the client and make a backup right now though. The full error has been printed to log.' )
+                    
                 
                 if path in self._locations_to_ideal_weights:
                     

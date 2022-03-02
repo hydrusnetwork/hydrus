@@ -73,7 +73,6 @@ LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
 #
 
 import sqlite3
-import traceback
 import yaml
 
 options = {}
@@ -81,7 +80,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 474
+SOFTWARE_VERSION = 475
 CLIENT_API_VERSION = 25
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -550,12 +549,14 @@ APPLICATION_CLIP = 45
 AUDIO_WAVE = 46
 VIDEO_OGV = 47
 AUDIO_MKV = 48
+AUDIO_MP4 = 49
+UNDETERMINED_MP4 = 50
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
 GENERAL_FILETYPES = { GENERAL_APPLICATION, GENERAL_AUDIO, GENERAL_IMAGE, GENERAL_VIDEO, GENERAL_ANIMATION }
 
-SEARCHABLE_MIMES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG, APPLICATION_CLIP, APPLICATION_PSD, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z, AUDIO_M4A, AUDIO_MP3, AUDIO_REALMEDIA, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_TRUEAUDIO, AUDIO_WMA, VIDEO_WMV, AUDIO_MKV }
+SEARCHABLE_MIMES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG, APPLICATION_CLIP, APPLICATION_PSD, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z, AUDIO_M4A, AUDIO_MP3, AUDIO_REALMEDIA, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_TRUEAUDIO, AUDIO_WMA, VIDEO_WMV, AUDIO_MKV, AUDIO_MP4 }
 
 STORABLE_MIMES = set( SEARCHABLE_MIMES ).union( { APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS } )
 
@@ -567,19 +568,19 @@ IMAGES = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON 
 
 ANIMATIONS = { IMAGE_GIF, IMAGE_APNG }
 
-AUDIO = { AUDIO_M4A, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_WMA, AUDIO_REALMEDIA, AUDIO_TRUEAUDIO, AUDIO_MKV }
+AUDIO = { AUDIO_M4A, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WAVE, AUDIO_WMA, AUDIO_REALMEDIA, AUDIO_TRUEAUDIO, AUDIO_MKV, AUDIO_MP4 }
 
 VIDEO = { VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_REALMEDIA, VIDEO_WEBM, VIDEO_OGV, VIDEO_MPEG }
 
 APPLICATIONS = { APPLICATION_FLASH, APPLICATION_PSD, APPLICATION_CLIP, APPLICATION_PDF, APPLICATION_ZIP, APPLICATION_RAR, APPLICATION_7Z }
 
-general_mimetypes_to_mime_groups = {}
-
-general_mimetypes_to_mime_groups[ GENERAL_APPLICATION ] = APPLICATIONS
-general_mimetypes_to_mime_groups[ GENERAL_AUDIO ] = AUDIO
-general_mimetypes_to_mime_groups[ GENERAL_IMAGE ] = IMAGES
-general_mimetypes_to_mime_groups[ GENERAL_VIDEO ] = VIDEO
-general_mimetypes_to_mime_groups[ GENERAL_ANIMATION ] = ANIMATIONS
+general_mimetypes_to_mime_groups = {
+    GENERAL_APPLICATION : APPLICATIONS,
+    GENERAL_AUDIO : AUDIO,
+    GENERAL_IMAGE : IMAGES,
+    GENERAL_VIDEO : VIDEO,
+    GENERAL_ANIMATION : ANIMATIONS
+}
 
 mimes_to_general_mimetypes = {}
 
@@ -606,169 +607,176 @@ FILES_THAT_HAVE_PERCEPTUAL_HASH = set( IMAGES )
 
 HYDRUS_UPDATE_FILES = ( APPLICATION_HYDRUS_UPDATE_DEFINITIONS, APPLICATION_HYDRUS_UPDATE_CONTENT )
 
-mime_enum_lookup = {}
+mime_enum_lookup = {
+    'collection' : APPLICATION_HYDRUS_CLIENT_COLLECTION,
+    'image/jpe' : IMAGE_JPEG,
+    'image/jpeg' : IMAGE_JPEG,
+    'image/jpg' : IMAGE_JPEG,
+    'image/x-png' : IMAGE_PNG,
+    'image/png' : IMAGE_PNG,
+    'image/apng' : IMAGE_APNG,
+    'image/gif' : IMAGE_GIF,
+    'image/bmp' : IMAGE_BMP,
+    'image/webp' : IMAGE_WEBP,
+    'image/tiff' : IMAGE_TIFF,
+    'image/x-icon' : IMAGE_ICON,
+    'image/vnd.microsoft.icon' : IMAGE_ICON,
+    'image' : IMAGES,
+    'application/x-shockwave-flash' : APPLICATION_FLASH,
+    'application/x-photoshop' : APPLICATION_PSD,
+    'image/vnd.adobe.photoshop' : APPLICATION_PSD,
+    'application/clip' : APPLICATION_CLIP,
+    'application/octet-stream' : APPLICATION_OCTET_STREAM,
+    'application/x-yaml' : APPLICATION_YAML,
+    'PDF document' : APPLICATION_PDF,
+    'application/pdf' : APPLICATION_PDF,
+    'application/zip' : APPLICATION_ZIP,
+    'application/vnd.rar' : APPLICATION_RAR,
+    'application/x-7z-compressed' : APPLICATION_7Z,
+    'application/json' : APPLICATION_JSON,
+    'application/hydrus-encrypted-zip' : APPLICATION_HYDRUS_ENCRYPTED_ZIP,
+    'application/hydrus-update-content' : APPLICATION_HYDRUS_UPDATE_CONTENT,
+    'application/hydrus-update-definitions' : APPLICATION_HYDRUS_UPDATE_DEFINITIONS,
+    'application' : APPLICATIONS,
+    'audio/mp4' : AUDIO_M4A,
+    'audio/mp3' : AUDIO_MP3,
+    'audio/ogg' : AUDIO_OGG,
+    'audio/vnd.rn-realaudio' : AUDIO_REALMEDIA,
+    'audio/x-tta' : AUDIO_TRUEAUDIO,
+    'audio/flac' : AUDIO_FLAC,
+    'audio/x-wav' : AUDIO_WAVE,
+    'audio/wav' : AUDIO_WAVE,
+    'audio/wave' : AUDIO_WAVE,
+    'audio/x-ms-wma' : AUDIO_WMA,
+    'text/html' : TEXT_HTML,
+    'text/plain' : TEXT_PLAIN,
+    'video/x-msvideo' : VIDEO_AVI,
+    'video/x-flv' : VIDEO_FLV,
+    'video/quicktime' : VIDEO_MOV,
+    'video/mp4' : VIDEO_MP4,
+    'video/mpeg' : VIDEO_MPEG,
+    'video/x-ms-wmv' : VIDEO_WMV,
+    'video/x-matroska' : VIDEO_MKV,
+    'video/ogg' : VIDEO_OGV,
+    'video/vnd.rn-realvideo' : VIDEO_REALMEDIA,
+    'application/vnd.rn-realmedia' : VIDEO_REALMEDIA,
+    'video/webm' : VIDEO_WEBM,
+    'video' : VIDEO,
+    'unknown filetype' : APPLICATION_UNKNOWN
+}
 
-mime_enum_lookup[ 'collection' ] = APPLICATION_HYDRUS_CLIENT_COLLECTION
-mime_enum_lookup[ 'image/jpe' ] = IMAGE_JPEG
-mime_enum_lookup[ 'image/jpeg' ] = IMAGE_JPEG
-mime_enum_lookup[ 'image/jpg' ] = IMAGE_JPEG
-mime_enum_lookup[ 'image/x-png' ] = IMAGE_PNG
-mime_enum_lookup[ 'image/png' ] = IMAGE_PNG
-mime_enum_lookup[ 'image/apng' ] = IMAGE_APNG
-mime_enum_lookup[ 'image/gif' ] = IMAGE_GIF
-mime_enum_lookup[ 'image/bmp' ] = IMAGE_BMP
-mime_enum_lookup[ 'image/webp' ] = IMAGE_WEBP
-mime_enum_lookup[ 'image/tiff' ] = IMAGE_TIFF
-mime_enum_lookup[ 'image/x-icon' ] = IMAGE_ICON
-mime_enum_lookup[ 'image/vnd.microsoft.icon' ] = IMAGE_ICON
-mime_enum_lookup[ 'image' ] = IMAGES
-mime_enum_lookup[ 'application/x-shockwave-flash' ] = APPLICATION_FLASH
-mime_enum_lookup[ 'application/x-photoshop' ] = APPLICATION_PSD
-mime_enum_lookup[ 'image/vnd.adobe.photoshop' ] = APPLICATION_PSD
-mime_enum_lookup[ 'application/clip' ] = APPLICATION_CLIP
-mime_enum_lookup[ 'application/octet-stream' ] = APPLICATION_OCTET_STREAM
-mime_enum_lookup[ 'application/x-yaml' ] = APPLICATION_YAML
-mime_enum_lookup[ 'PDF document' ] = APPLICATION_PDF
-mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
-mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
-mime_enum_lookup[ 'application/vnd.rar' ] = APPLICATION_RAR
-mime_enum_lookup[ 'application/x-7z-compressed' ] = APPLICATION_7Z
-mime_enum_lookup[ 'application/json' ] = APPLICATION_JSON
-mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
-mime_enum_lookup[ 'application/hydrus-update-content' ] = APPLICATION_HYDRUS_UPDATE_CONTENT
-mime_enum_lookup[ 'application/hydrus-update-definitions' ] = APPLICATION_HYDRUS_UPDATE_DEFINITIONS
-mime_enum_lookup[ 'application' ] = APPLICATIONS
-mime_enum_lookup[ 'audio/mp4' ] = AUDIO_M4A
-mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
-mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
-mime_enum_lookup[ 'audio/vnd.rn-realaudio' ] = AUDIO_REALMEDIA
-mime_enum_lookup[ 'audio/x-tta' ] = AUDIO_TRUEAUDIO
-mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
-mime_enum_lookup[ 'audio/x-wav' ] = AUDIO_WAVE
-mime_enum_lookup[ 'audio/wav' ] = AUDIO_WAVE
-mime_enum_lookup[ 'audio/wave' ] = AUDIO_WAVE
-mime_enum_lookup[ 'audio/x-ms-wma' ] = AUDIO_WMA
-mime_enum_lookup[ 'text/html' ] = TEXT_HTML
-mime_enum_lookup[ 'text/plain' ] = TEXT_PLAIN
-mime_enum_lookup[ 'video/x-msvideo' ] = VIDEO_AVI
-mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
-mime_enum_lookup[ 'video/quicktime' ] = VIDEO_MOV
-mime_enum_lookup[ 'video/mp4' ] = VIDEO_MP4
-mime_enum_lookup[ 'video/mpeg' ] = VIDEO_MPEG
-mime_enum_lookup[ 'video/x-ms-wmv' ] = VIDEO_WMV
-mime_enum_lookup[ 'video/x-matroska' ] = VIDEO_MKV
-mime_enum_lookup[ 'video/ogg' ] = VIDEO_OGV
-mime_enum_lookup[ 'video/vnd.rn-realvideo' ] = VIDEO_REALMEDIA
-mime_enum_lookup[ 'application/vnd.rn-realmedia' ] = VIDEO_REALMEDIA
-mime_enum_lookup[ 'video/webm' ] = VIDEO_WEBM
-mime_enum_lookup[ 'video' ] = VIDEO
-mime_enum_lookup[ 'unknown filetype' ] = APPLICATION_UNKNOWN
+mime_string_lookup = {
+    APPLICATION_HYDRUS_CLIENT_COLLECTION : 'collection',
+    IMAGE_JPEG : 'jpeg',
+    IMAGE_PNG : 'png',
+    IMAGE_APNG : 'apng',
+    IMAGE_GIF : 'gif',
+    IMAGE_BMP : 'bmp',
+    IMAGE_WEBP : 'webp',
+    IMAGE_TIFF : 'tiff',
+    IMAGE_ICON : 'icon',
+    APPLICATION_FLASH : 'flash',
+    APPLICATION_OCTET_STREAM : 'application/octet-stream',
+    APPLICATION_YAML : 'yaml',
+    APPLICATION_JSON : 'json',
+    APPLICATION_PDF : 'pdf',
+    APPLICATION_PSD : 'photoshop psd',
+    APPLICATION_CLIP : 'clip',
+    APPLICATION_ZIP : 'zip',
+    APPLICATION_RAR : 'rar',
+    APPLICATION_7Z : '7z',
+    APPLICATION_HYDRUS_ENCRYPTED_ZIP : 'application/hydrus-encrypted-zip',
+    APPLICATION_HYDRUS_UPDATE_CONTENT : 'application/hydrus-update-content',
+    APPLICATION_HYDRUS_UPDATE_DEFINITIONS : 'application/hydrus-update-definitions',
+    AUDIO_M4A : 'm4a',
+    AUDIO_MP3 : 'mp3',
+    AUDIO_OGG : 'ogg',
+    AUDIO_FLAC : 'flac',
+    AUDIO_MKV : 'matroska audio',
+    AUDIO_MP4 : 'mp4 audio',
+    AUDIO_WAVE : 'wave',
+    AUDIO_REALMEDIA : 'realaudio',
+    AUDIO_TRUEAUDIO : 'tta',
+    AUDIO_WMA : 'wma',
+    TEXT_HTML : 'html',
+    TEXT_PLAIN : 'plaintext',
+    VIDEO_AVI : 'avi',
+    VIDEO_FLV : 'flv',
+    VIDEO_MOV : 'quicktime',
+    VIDEO_MP4 : 'mp4',
+    VIDEO_MPEG : 'mpeg',
+    VIDEO_WMV : 'wmv',
+    VIDEO_MKV : 'matroska',
+    VIDEO_OGV : 'ogv',
+    VIDEO_REALMEDIA : 'realvideo',
+    VIDEO_WEBM : 'webm',
+    UNDETERMINED_WM : 'wma or wmv',
+    UNDETERMINED_MP4 : 'mp4 with or without audio',
+    UNDETERMINED_PNG : 'png or apng',
+    APPLICATION_UNKNOWN : 'unknown filetype',
+    GENERAL_APPLICATION : 'application',
+    GENERAL_AUDIO : 'audio',
+    GENERAL_IMAGE : 'image',
+    GENERAL_VIDEO : 'video',
+    GENERAL_ANIMATION : 'animation'
+}
 
-mime_string_lookup = {}
+mime_mimetype_string_lookup = {
+    APPLICATION_HYDRUS_CLIENT_COLLECTION : 'collection',
+    IMAGE_JPEG : 'image/jpeg',
+    IMAGE_PNG : 'image/png',
+    IMAGE_APNG : 'image/apng',
+    IMAGE_GIF : 'image/gif',
+    IMAGE_BMP : 'image/bmp',
+    IMAGE_WEBP : 'image/webp',
+    IMAGE_TIFF : 'image/tiff',
+    IMAGE_ICON : 'image/x-icon',
+    APPLICATION_FLASH : 'application/x-shockwave-flash',
+    APPLICATION_OCTET_STREAM : 'application/octet-stream',
+    APPLICATION_YAML : 'application/x-yaml',
+    APPLICATION_JSON : 'application/json',
+    APPLICATION_PDF : 'application/pdf',
+    APPLICATION_PSD : 'application/x-photoshop',
+    APPLICATION_CLIP : 'application/clip',
+    APPLICATION_ZIP : 'application/zip',
+    APPLICATION_RAR : 'application/vnd.rar',
+    APPLICATION_7Z : 'application/x-7z-compressed',
+    APPLICATION_HYDRUS_ENCRYPTED_ZIP : 'application/hydrus-encrypted-zip',
+    APPLICATION_HYDRUS_UPDATE_CONTENT : 'application/hydrus-update-content',
+    APPLICATION_HYDRUS_UPDATE_DEFINITIONS : 'application/hydrus-update-definitions',
+    AUDIO_M4A : 'audio/mp4',
+    AUDIO_MP3 : 'audio/mp3',
+    AUDIO_OGG : 'audio/ogg',
+    AUDIO_FLAC : 'audio/flac',
+    AUDIO_MKV : 'audio/x-matroska',
+    AUDIO_MP4 : 'audio/mp4',
+    AUDIO_WAVE : 'audio/x-wav',
+    AUDIO_REALMEDIA : 'audio/vnd.rn-realaudio',
+    AUDIO_TRUEAUDIO : 'audio/x-tta',
+    AUDIO_WMA : 'audio/x-ms-wma',
+    TEXT_HTML : 'text/html',
+    TEXT_PLAIN : 'text/plain',
+    VIDEO_AVI : 'video/x-msvideo',
+    VIDEO_FLV : 'video/x-flv',
+    VIDEO_MOV : 'video/quicktime',
+    VIDEO_MP4 : 'video/mp4',
+    VIDEO_MPEG : 'video/mpeg',
+    VIDEO_WMV : 'video/x-ms-wmv',
+    VIDEO_MKV : 'video/x-matroska',
+    VIDEO_OGV : 'video/ogg',
+    VIDEO_REALMEDIA : 'video/vnd.rn-realvideo',
+    VIDEO_WEBM : 'video/webm',
+    APPLICATION_UNKNOWN : 'unknown filetype',
+    GENERAL_APPLICATION : 'application',
+    GENERAL_AUDIO : 'audio',
+    GENERAL_IMAGE : 'image',
+    GENERAL_VIDEO : 'video',
+    GENERAL_ANIMATION : 'animation'
+}
 
-mime_string_lookup[ APPLICATION_HYDRUS_CLIENT_COLLECTION ] = 'collection'
-mime_string_lookup[ IMAGE_JPEG ] = 'jpeg'
-mime_string_lookup[ IMAGE_PNG ] = 'png'
-mime_string_lookup[ IMAGE_APNG ] = 'apng'
-mime_string_lookup[ IMAGE_GIF ] = 'gif'
-mime_string_lookup[ IMAGE_BMP ] = 'bmp'
-mime_string_lookup[ IMAGE_WEBP ] = 'webp'
-mime_string_lookup[ IMAGE_TIFF ] = 'tiff'
-mime_string_lookup[ IMAGE_ICON ] = 'icon'
-mime_string_lookup[ APPLICATION_FLASH ] = 'flash'
-mime_string_lookup[ APPLICATION_OCTET_STREAM ] = 'application/octet-stream'
-mime_string_lookup[ APPLICATION_YAML ] = 'yaml'
-mime_string_lookup[ APPLICATION_JSON ] = 'json'
-mime_string_lookup[ APPLICATION_PDF ] = 'pdf'
-mime_string_lookup[ APPLICATION_PSD ] = 'photoshop psd'
-mime_string_lookup[ APPLICATION_CLIP ] = 'clip'
-mime_string_lookup[ APPLICATION_ZIP ] = 'zip'
-mime_string_lookup[ APPLICATION_RAR ] = 'rar'
-mime_string_lookup[ APPLICATION_7Z ] = '7z'
-mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
-mime_string_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = 'application/hydrus-update-content'
-mime_string_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = 'application/hydrus-update-definitions'
-mime_string_lookup[ AUDIO_M4A ] = 'm4a'
-mime_string_lookup[ AUDIO_MP3 ] = 'mp3'
-mime_string_lookup[ AUDIO_OGG ] = 'ogg'
-mime_string_lookup[ AUDIO_FLAC ] = 'flac'
-mime_string_lookup[ AUDIO_MKV ] = 'matroska audio'
-mime_string_lookup[ AUDIO_WAVE ] = 'wave'
-mime_string_lookup[ AUDIO_REALMEDIA ] = 'realaudio'
-mime_string_lookup[ AUDIO_TRUEAUDIO ] = 'tta'
-mime_string_lookup[ AUDIO_WMA ] = 'wma'
-mime_string_lookup[ TEXT_HTML ] = 'html'
-mime_string_lookup[ TEXT_PLAIN ] = 'plaintext'
-mime_string_lookup[ VIDEO_AVI ] = 'avi'
-mime_string_lookup[ VIDEO_FLV ] = 'flv'
-mime_string_lookup[ VIDEO_MOV ] = 'quicktime'
-mime_string_lookup[ VIDEO_MP4 ] = 'mp4'
-mime_string_lookup[ VIDEO_MPEG ] = 'mpeg'
-mime_string_lookup[ VIDEO_WMV ] = 'wmv'
-mime_string_lookup[ VIDEO_MKV ] = 'matroska video'
-mime_string_lookup[ VIDEO_OGV ] = 'ogv'
-mime_string_lookup[ VIDEO_REALMEDIA ] = 'realvideo'
-mime_string_lookup[ VIDEO_WEBM ] = 'webm'
-mime_string_lookup[ UNDETERMINED_WM ] = 'wma or wmv'
-mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown filetype'
-mime_string_lookup[ GENERAL_APPLICATION ] = 'application'
-mime_string_lookup[ GENERAL_AUDIO ] = 'audio'
-mime_string_lookup[ GENERAL_IMAGE ] = 'image'
-mime_string_lookup[ GENERAL_VIDEO ] = 'video'
-mime_string_lookup[ GENERAL_ANIMATION ] = 'animation'
-
-mime_mimetype_string_lookup = {}
-
-mime_mimetype_string_lookup[ APPLICATION_HYDRUS_CLIENT_COLLECTION ] = 'collection'
-mime_mimetype_string_lookup[ IMAGE_JPEG ] = 'image/jpeg'
-mime_mimetype_string_lookup[ IMAGE_PNG ] = 'image/png'
-mime_mimetype_string_lookup[ IMAGE_APNG ] = 'image/apng'
-mime_mimetype_string_lookup[ IMAGE_GIF ] = 'image/gif'
-mime_mimetype_string_lookup[ IMAGE_BMP ] = 'image/bmp'
-mime_mimetype_string_lookup[ IMAGE_WEBP ] = 'image/webp'
-mime_mimetype_string_lookup[ IMAGE_TIFF ] = 'image/tiff'
-mime_mimetype_string_lookup[ IMAGE_ICON ] = 'image/x-icon'
-mime_mimetype_string_lookup[ APPLICATION_FLASH ] = 'application/x-shockwave-flash'
-mime_mimetype_string_lookup[ APPLICATION_OCTET_STREAM ] = 'application/octet-stream'
-mime_mimetype_string_lookup[ APPLICATION_YAML ] = 'application/x-yaml'
-mime_mimetype_string_lookup[ APPLICATION_JSON ] = 'application/json'
-mime_mimetype_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
-mime_mimetype_string_lookup[ APPLICATION_PSD ] = 'application/x-photoshop'
-mime_mimetype_string_lookup[ APPLICATION_CLIP ] = 'application/clip'
-mime_mimetype_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
-mime_mimetype_string_lookup[ APPLICATION_RAR ] = 'application/vnd.rar'
-mime_mimetype_string_lookup[ APPLICATION_7Z ] = 'application/x-7z-compressed'
-mime_mimetype_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
-mime_mimetype_string_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = 'application/hydrus-update-content'
-mime_mimetype_string_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = 'application/hydrus-update-definitions'
-mime_mimetype_string_lookup[ AUDIO_M4A ] = 'audio/mp4'
-mime_mimetype_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
-mime_mimetype_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
-mime_mimetype_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
-mime_mimetype_string_lookup[ AUDIO_MKV ] = 'audio/x-matroska'
-mime_mimetype_string_lookup[ AUDIO_WAVE ] = 'audio/x-wav'
-mime_mimetype_string_lookup[ AUDIO_REALMEDIA ] = 'audio/vnd.rn-realaudio'
-mime_mimetype_string_lookup[ AUDIO_TRUEAUDIO ] = 'audio/x-tta'
-mime_mimetype_string_lookup[ AUDIO_WMA ] = 'audio/x-ms-wma'
-mime_mimetype_string_lookup[ TEXT_HTML ] = 'text/html'
-mime_mimetype_string_lookup[ TEXT_PLAIN ] = 'text/plain'
-mime_mimetype_string_lookup[ VIDEO_AVI ] = 'video/x-msvideo'
-mime_mimetype_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
-mime_mimetype_string_lookup[ VIDEO_MOV ] = 'video/quicktime'
-mime_mimetype_string_lookup[ VIDEO_MP4 ] = 'video/mp4'
-mime_mimetype_string_lookup[ VIDEO_MPEG ] = 'video/mpeg'
-mime_mimetype_string_lookup[ VIDEO_WMV ] = 'video/x-ms-wmv'
-mime_mimetype_string_lookup[ VIDEO_MKV ] = 'video/x-matroska'
-mime_mimetype_string_lookup[ VIDEO_OGV ] = 'video/ogg'
-mime_mimetype_string_lookup[ VIDEO_REALMEDIA ] = 'video/vnd.rn-realvideo'
-mime_mimetype_string_lookup[ VIDEO_WEBM ] = 'video/webm'
-mime_mimetype_string_lookup[ UNDETERMINED_WM ] = 'audio/x-ms-wma or video/x-ms-wmv'
-mime_mimetype_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown filetype'
-mime_mimetype_string_lookup[ GENERAL_APPLICATION ] = 'application'
-mime_mimetype_string_lookup[ GENERAL_AUDIO ] = 'audio'
-mime_mimetype_string_lookup[ GENERAL_IMAGE ] = 'image'
-mime_mimetype_string_lookup[ GENERAL_VIDEO ] = 'video'
-mime_mimetype_string_lookup[ GENERAL_ANIMATION ] = 'animation'
+mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_WMA ], mime_mimetype_string_lookup[ VIDEO_WMV ] )
+mime_mimetype_string_lookup[ UNDETERMINED_MP4 ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_MP4 ], mime_mimetype_string_lookup[ VIDEO_MP4 ] )
+mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ IMAGE_APNG ] )
 
 mime_ext_lookup = {}
 
@@ -797,6 +805,7 @@ mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ''
 mime_ext_lookup[ AUDIO_M4A ] = '.m4a'
 mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
 mime_ext_lookup[ AUDIO_MKV ] = '.mkv'
+mime_ext_lookup[ AUDIO_MP4 ] = '.mp4'
 mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_REALMEDIA ] = '.ra'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
@@ -816,7 +825,6 @@ mime_ext_lookup[ VIDEO_OGV ] = '.ogv'
 mime_ext_lookup[ VIDEO_REALMEDIA ] = '.rm'
 mime_ext_lookup[ VIDEO_WEBM ] = '.webm'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
-#mime_ext_lookup[ 'application/x-rar-compressed' ] = '.rar'
 
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
 

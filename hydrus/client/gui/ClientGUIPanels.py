@@ -37,7 +37,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         QP.AddToLayout( gridbox, self._check_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._nocopy_status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, self._enable_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, (20,20), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( gridbox, ( 20, 20 ), CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         

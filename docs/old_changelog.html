@@ -33,6 +33,45 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_475"><a href="#version_475">version 475</a></h3></li>
+				<ul>
+					<li>new help docs:</li>
+					<li>the hydrus help is now built from markup using MkDocs! it now looks nicer and has search and automatically generated tables of contents and so on. please check it out. a user converted _all_ my old handwritten html to markup and figured out a migration process. thank you very much to this user.</li>
+					<li>the help has pretty much the same structure, but online it has moved up a directory from https://hydrusnetwork.github.io/hydrus/help to https://hydrusnetwork.github.io/hydrus. all the old links should redirect in any case, so it isn't a big deal, but I have updated the various places in the program and my social media that have direct links. let me know if you have any trouble</li>
+					<li>if you run from source and want a local copy of the help, you can build your own as here: https://hydrusnetwork.github.io/hydrus/about_docs.html . it is super simple, it just takes one extra step. Or just download and extract one of the archive builds</li>
+					<li>if you run from source, hit _help->open help_, and don't have help built, the client now gives you a dialog to open the online help or see the guide to build your help</li>
+					<li>the help got another round of updates in the second week, some fixed URLs and things and the start of the integration of the 'simple help' written by a user</li>
+					<li>I added a screenshot and a bit more text to the 'backing up' help to show how to set up FreeFileSync for a good simple backup</li>
+					<li>I added a list of some quick links back in to the main index page of the help</li>
+					<li>I wrote an unlinked 'after_distaster' page for the help that collects my 'ok we finished recovering your broken database, now use your pain to maintain a backup in future' spiel, which I will point people to in future</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>fixed a bug where changes to the search space in a duplicate filter page were not sticking after the first time they were changed. this was related to a recent 'does page have changes?' optimisation--it was giving a false negative for this page type (issue #1079)</li>
+					<li>fixed a bug when searching for both 'media' and 'preview' view count/viewtime simultaneously (issue #1089, issue #1090)</li>
+					<li>added support for audio-only mp4 files. these would previously generally fail, sometimes be read as m4a. all m4as are scheduled for a metadata regen scan</li>
+					<li>improved some mpeg-4 container parsing to better differentiate these types</li>
+					<li>now we have great apng detection, all pngs with apparent 'bitrate' over 0.85 bits/pixel will be scheduled for an 'is this actually an apng?' scan. this 0.85 isn't a perfect number and won't find extremely well-compressed pixel apngs, but it covers a good amount without causing a metadata regen for every png we own</li>
+					<li>system:hash now supports 'is' and 'is not', if you want to, say, exclude a list of hashes from a search</li>
+					<li>fixed some 'is not' parsing in the system predicate parser</li>
+					<li>when you drag and drop a thumbnail to export it from the program, the preview media viewer now pauses that file (just as the full media viewer does) rather than clears it</li>
+					<li>when you change the page away while previewing media with duration, the client now remembers if you were paused or playing and restores that state when you return to that page</li>
+					<li>folded in a new and improved Deviant Art page parser written by a user. it should be better about getting the highest quality image in unusual situations</li>
+					<li>running a search with a large file pool and multiple negated tags, negated namespaces, and/or negated wildcards should be significantly faster. an optimisation that was previously repeated for each negated tag search is now performed for all of them as a group with a little inter-job overhead added. should make '(big) system:inbox -character x, -character y, -character z' like lightning compared to before</li>
+					<li>added a 'unless namespace is a number' to 'tag presentation' options, which will show the full tag for tags like '16:9' when you have 'show namespaces' unticked</li>
+					<li>altered a path normalisation check when you add a file or thumbnail location in 'migrate database'--if it fails to normalise symlinks, it now just gives a warning and lets you continue. fingers crossed, this permits rclone mounts for file storage (issue #1084)</li>
+					<li>when a 'check for missing/invalid file' maintenance job runs, it now prints all the hashes of missing or invalid files to a nice simple newline-separated list .txt in the error directory. this is an easy to work with hash record, useful for later recovery</li>
+					<li>fixed numerous instances where logs and texts I was writing could create too many newline characters on Windows. it was confusing some reader software and showing as double-spaced taglists and similar for exported sidecar files and profile logs</li>
+					<li>I think I fixed a bug, when crawling for file paths, where on Windows some network file paths were being detected incorrectly as directories and causing parse errors</li>
+					<li>fixed a broken command in the release build so the windows installer executable should correctly get 'v475' as its version metadata (previously this was blank), which should help some software managers that use this info to decide to do updates (issue #1071)</li>
+					<li>.</li>
+					<li>some cleanup:</li>
+					<li>replaced last instances of EVT_CLOSE wx wrapper with proper Qt code</li>
+					<li>did a heap of very minor code cleanup jobs all across the program, mostly just to get into pycharm</li>
+					<li>clarified the help text in _options->external programs_ regarding %path% variable</li>
+					<li>.</li>
+					<li>pycharm:</li>
+					<li>as a side note, I finally moved from my jank old WingIDE IDE to PyCharm in this release. I am overall happy with it--it is clearly very powerful and customisable--but adjusting after about ten or twelve years of Wing was a bit awkward. I am very much a person of habit, and it will take me a little while to get fully used to the new shortcuts and UI and so on, but PyCharm does everything that is critical for me, supports many modern coding concepts, and will work well as we move to python 3.9 and beyond</li>
+				</ul>
 				<li><h3 id="version_474"><a href="#version_474">version 474</a></h3></li>
 				<ul>
 					<li>command palette:</li>

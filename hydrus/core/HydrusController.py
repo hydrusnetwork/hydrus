@@ -631,7 +631,7 @@ class HydrusController( object ):
             
             if profile_text is not None:
                 
-                f.write( os.linesep * 2 )
+                f.write( '\n\n' )
                 f.write( profile_text )
                 
             
@@ -666,16 +666,16 @@ class HydrusController( object ):
                 
             
             f.write( prefix + first_word )
-            f.write( os.linesep )
+            f.write( '\n' )
             f.write( query )
             
             if len( plan_lines ) > 0:
                 
-                f.write( os.linesep )
-                f.write( os.linesep.join( ( str( p ) for p in plan_lines ) ) )
+                f.write( '\n' )
+                f.write( '\n'''.join( ( str( p ) for p in plan_lines ) ) )
                 
             
-            f.write( os.linesep * 2 )
+            f.write( '\n\n' )
             
         
     

@@ -912,23 +912,27 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._hashes = QW.QPlainTextEdit( self )
-        
-        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
-        
-        self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
+        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
         choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
         
         self._hash_type = QP.RadioBox( self, choices = choices, vertical = True )
         
+        self._hashes = QW.QPlainTextEdit( self )
+        
         self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
+        
+        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        
+        self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
         ( hashes, hash_type ) = predicate.GetValue()
+        
+        self._sign.SetValue( predicate.IsInclusive() )
         
         hashes_text = os.linesep.join( [ hash.hex() for hash in hashes ] )
         
@@ -940,7 +944,8 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash='), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hashes, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -959,13 +964,15 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
+        inclusive = self._sign.GetValue()
+        
         hash_type = self._hash_type.GetStringSelection()
         
         hex_hashes_raw = self._hashes.toPlainText()
         
         hashes = HydrusData.ParseHashesFromRawHexText( hash_type, hex_hashes_raw )
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ), inclusive = inclusive ), )
         
         return predicates
         

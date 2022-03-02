@@ -782,7 +782,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            text = 'Setting a specific web browser path here--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with the \'share->open->in web browser\' command, which is buggy working with OS defaults, particularly on Windows. It also fixes #anchors, which are dropped in some OSes using default means. Use the same %path% format for the \'open externally\' commands below.'
+            text = 'Setting a specific web browser launch command here that uses %path% for where the url should go--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with various "launch url" commands across the program, which can be buggy with OS defaults. It also fixes #anchors, which are dropped in some OSes using default means.'
+            text += os.linesep * 2
+            text += 'Use the same %path% format for the \'open externally\' commands below. Hydrus will put the file path in there when it launches the program from terminal. Most programs are "program_exe %path%", but more complicated ones may need a profile switch or "-o" open command or similar.'
             
             st = ClientGUICommon.BetterStaticText( mime_panel, text )
             st.setWordWrap( True )
@@ -791,7 +793,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Manual web browser launch path: ', self._web_browser_path ) )
+            rows.append( ( 'Manual web browser launch command: ', self._web_browser_path ) )
             
             gridbox = ClientGUICommon.WrapInGrid( mime_panel, rows )
             
@@ -3389,6 +3391,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             render_st = ClientGUICommon.BetterStaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
             
             self._show_namespaces = QW.QCheckBox( render_panel )
+            self._show_number_namespaces = QW.QCheckBox( render_panel )
+            self._show_number_namespaces.setToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' )
             self._namespace_connector = QW.QLineEdit( render_panel )
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
@@ -3408,6 +3412,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
+            self._show_number_namespaces.setChecked(( new_options.GetBoolean( 'show_number_namespaces' ) ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
             self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
             
@@ -3438,6 +3443,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
+            rows.append( ( 'Unless namespace is a number: ', self._show_number_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             
@@ -3454,7 +3460,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._NamespacesUpdated()
+            
+            self._show_namespaces.clicked.connect( self._NamespacesUpdated )
+            
             self.setLayout( vbox )
+            
+        
+        def _NamespacesUpdated( self ):
+            
+            self._show_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
             
         
         def EventEditNamespaceColour( self ):
@@ -3493,6 +3508,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
             
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.isChecked() )
+            self._new_options.SetBoolean( 'show_number_namespaces', self._show_number_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
             self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
             

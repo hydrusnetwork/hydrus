@@ -9,7 +9,6 @@ import pstats
 import psutil
 import random
 import re
-import sqlite3
 import struct
 import subprocess
 import sys
@@ -598,7 +597,7 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
-def DedupeList( xs ):
+def DedupeList( xs: typing.Iterable ):
     
     xs_seen = set()
     

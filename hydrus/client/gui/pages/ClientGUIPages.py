@@ -492,6 +492,7 @@ class Page( QW.QSplitter ):
         self._media_panel.refreshQuery.connect( self.RefreshQuery )
         self._media_panel.focusMediaChanged.connect( self._preview_canvas.SetMedia )
         self._media_panel.focusMediaCleared.connect( self._preview_canvas.ClearMedia )
+        self._media_panel.focusMediaPaused.connect( self._preview_canvas.PauseMedia )
         self._media_panel.statusTextChanged.connect( self._SetPrettyStatus )
         
         self._management_panel.ConnectMediaPanelSignals( self._media_panel )
@@ -2939,7 +2940,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        current_index = self.currentIndex()
         current_page = self.currentWidget()
         
         if isinstance( current_page, PagesNotebook ):
@@ -3422,4 +3422,3 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         pass
         
-    

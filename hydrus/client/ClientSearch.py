@@ -19,8 +19,6 @@ from hydrus.client import ClientLocation
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
-from hydrus.external import SystemPredicateParser
-
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
 PREDICATE_TYPE_PARENT = 2
@@ -288,7 +286,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class FileSystemPredicates( object ):
     
-    def __init__( self, system_predicates, apply_implicit_limit = True ):
+    def __init__( self, system_predicates: typing.Collection[ "Predicate" ], apply_implicit_limit = True ):
         
         self._has_system_everything = False
         
@@ -358,7 +356,7 @@ class FileSystemPredicates( object ):
                 
                 ( hashes, hash_type ) = value
                 
-                self._common_info[ 'hash' ] = ( hashes, hash_type )
+                self._common_info[ 'hash' ] = ( hashes, hash_type, predicate.IsInclusive() )
                 
             
             if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
@@ -1999,8 +1997,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ):
+    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ) -> str:
         
+        base = ''
         count_text = ''
         
         if with_count:
@@ -2347,13 +2346,22 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( hashes, hash_type ) = self._value
                     
-                    if len( hashes ) == 1:
+                    if self._inclusive:
                         
-                        base = '{} hash is {}'.format( hash_type, hashes[0].hex() )
+                        is_phrase = 'is'
                         
                     else:
                         
-                        base = '{} hash is in {} hashes'.format( hash_type, HydrusData.ToHumanInt( len( hashes ) ) )
+                        is_phrase = 'is not'
+                        
+                    
+                    if len( hashes ) == 1:
+                        
+                        base = '{} hash {} {}'.format( hash_type, is_phrase, hashes[0].hex() )
+                        
+                    else:
+                        
+                        base = '{} hash {} in {} hashes'.format( hash_type, is_phrase, HydrusData.ToHumanInt( len( hashes ) ) )
                         
                     
                 

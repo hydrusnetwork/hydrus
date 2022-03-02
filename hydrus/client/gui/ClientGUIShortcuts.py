@@ -10,7 +10,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -25,12 +24,12 @@ SHORTCUT_PRESS_TYPE_RELEASE = 1
 SHORTCUT_PRESS_TYPE_DOUBLE_CLICK = 2
 SHORTCUT_PRESS_TYPE_DRAG = 3
 
-shortcut_press_type_str_lookup = {}
-
-shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_PRESS ] = 'press'
-shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_RELEASE ] = 'release'
-shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_DOUBLE_CLICK ] = 'double'
-shortcut_press_type_str_lookup[ SHORTCUT_PRESS_TYPE_DRAG ] = 'drag'
+shortcut_press_type_str_lookup = {
+    SHORTCUT_PRESS_TYPE_PRESS: 'press',
+    SHORTCUT_PRESS_TYPE_RELEASE: 'release',
+    SHORTCUT_PRESS_TYPE_DOUBLE_CLICK: 'double',
+    SHORTCUT_PRESS_TYPE_DRAG: 'drag'
+}
 
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1
@@ -80,69 +79,69 @@ else:
     DELETE_KEYS_HYDRUS = ( SHORTCUT_KEY_SPECIAL_DELETE, )
     
 
-special_key_shortcut_enum_lookup = {}
+special_key_shortcut_enum_lookup = {
+    QC.Qt.Key_Space : SHORTCUT_KEY_SPECIAL_SPACE,
+    QC.Qt.Key_Backspace : SHORTCUT_KEY_SPECIAL_BACKSPACE,
+    QC.Qt.Key_Tab : SHORTCUT_KEY_SPECIAL_TAB,
+    QC.Qt.Key_Return : SHORTCUT_KEY_SPECIAL_RETURN,
+    QC.Qt.Key_Enter : SHORTCUT_KEY_SPECIAL_ENTER,
+    QC.Qt.Key_Pause : SHORTCUT_KEY_SPECIAL_PAUSE,
+    QC.Qt.Key_Escape : SHORTCUT_KEY_SPECIAL_ESCAPE,
+    QC.Qt.Key_Insert : SHORTCUT_KEY_SPECIAL_INSERT,
+    QC.Qt.Key_Delete : SHORTCUT_KEY_SPECIAL_DELETE,
+    QC.Qt.Key_Up : SHORTCUT_KEY_SPECIAL_UP,
+    QC.Qt.Key_Down : SHORTCUT_KEY_SPECIAL_DOWN,
+    QC.Qt.Key_Left : SHORTCUT_KEY_SPECIAL_LEFT,
+    QC.Qt.Key_Right : SHORTCUT_KEY_SPECIAL_RIGHT,
+    QC.Qt.Key_Home : SHORTCUT_KEY_SPECIAL_HOME,
+    QC.Qt.Key_End : SHORTCUT_KEY_SPECIAL_END,
+    QC.Qt.Key_PageUp : SHORTCUT_KEY_SPECIAL_PAGE_UP,
+    QC.Qt.Key_PageDown : SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+    QC.Qt.Key_F1 : SHORTCUT_KEY_SPECIAL_F1,
+    QC.Qt.Key_F2 : SHORTCUT_KEY_SPECIAL_F2,
+    QC.Qt.Key_F3 : SHORTCUT_KEY_SPECIAL_F3,
+    QC.Qt.Key_F4 : SHORTCUT_KEY_SPECIAL_F4,
+    QC.Qt.Key_F5 : SHORTCUT_KEY_SPECIAL_F5,
+    QC.Qt.Key_F6 : SHORTCUT_KEY_SPECIAL_F6,
+    QC.Qt.Key_F7 : SHORTCUT_KEY_SPECIAL_F7,
+    QC.Qt.Key_F8 : SHORTCUT_KEY_SPECIAL_F8,
+    QC.Qt.Key_F9 : SHORTCUT_KEY_SPECIAL_F9,
+    QC.Qt.Key_F10 : SHORTCUT_KEY_SPECIAL_F10,
+    QC.Qt.Key_F11 : SHORTCUT_KEY_SPECIAL_F11,
+    QC.Qt.Key_F12 : SHORTCUT_KEY_SPECIAL_F12
+}
 
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Space ] = SHORTCUT_KEY_SPECIAL_SPACE
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Backspace ] = SHORTCUT_KEY_SPECIAL_BACKSPACE
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Tab ] = SHORTCUT_KEY_SPECIAL_TAB
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Return ] = SHORTCUT_KEY_SPECIAL_RETURN
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Enter ] = SHORTCUT_KEY_SPECIAL_ENTER
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Pause ] = SHORTCUT_KEY_SPECIAL_PAUSE
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Escape ] = SHORTCUT_KEY_SPECIAL_ESCAPE
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Insert ] = SHORTCUT_KEY_SPECIAL_INSERT
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Delete ] = SHORTCUT_KEY_SPECIAL_DELETE
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Up ] = SHORTCUT_KEY_SPECIAL_UP
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Down ] = SHORTCUT_KEY_SPECIAL_DOWN
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Left ] = SHORTCUT_KEY_SPECIAL_LEFT
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Right ] = SHORTCUT_KEY_SPECIAL_RIGHT
-special_key_shortcut_enum_lookup[ QC.Qt.Key_Home ] = SHORTCUT_KEY_SPECIAL_HOME
-special_key_shortcut_enum_lookup[ QC.Qt.Key_End ] = SHORTCUT_KEY_SPECIAL_END
-special_key_shortcut_enum_lookup[ QC.Qt.Key_PageUp ] = SHORTCUT_KEY_SPECIAL_PAGE_UP
-special_key_shortcut_enum_lookup[ QC.Qt.Key_PageDown ] = SHORTCUT_KEY_SPECIAL_PAGE_DOWN
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F1 ] = SHORTCUT_KEY_SPECIAL_F1
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F2 ] = SHORTCUT_KEY_SPECIAL_F2
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F3 ] = SHORTCUT_KEY_SPECIAL_F3
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F4 ] = SHORTCUT_KEY_SPECIAL_F4
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F5 ] = SHORTCUT_KEY_SPECIAL_F5
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F6 ] = SHORTCUT_KEY_SPECIAL_F6
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F7 ] = SHORTCUT_KEY_SPECIAL_F7
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F8 ] = SHORTCUT_KEY_SPECIAL_F8
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F9 ] = SHORTCUT_KEY_SPECIAL_F9
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F10 ] = SHORTCUT_KEY_SPECIAL_F10
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F11 ] = SHORTCUT_KEY_SPECIAL_F11
-special_key_shortcut_enum_lookup[ QC.Qt.Key_F12 ] = SHORTCUT_KEY_SPECIAL_F12
-
-special_key_shortcut_str_lookup = {}
-
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_SPACE ] = 'space'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_BACKSPACE ] = 'backspace'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_TAB ] = 'tab'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RETURN ] = 'return'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ENTER ] = 'enter'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAUSE ] = 'pause'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ESCAPE ] = 'escape'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_INSERT ] = 'insert'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DELETE ] = 'delete'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_UP ] = 'up'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DOWN ] = 'down'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_LEFT ] = 'left'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RIGHT ] = 'right'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_HOME ] = 'home'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_END ] = 'end'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_DOWN ] = 'page down'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_UP ] = 'page up'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F1 ] = 'f1'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F2 ] = 'f2'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F3 ] = 'f3'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F4 ] = 'f4'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F5 ] = 'f5'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F6 ] = 'f6'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F7 ] = 'f7'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F8 ] = 'f8'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F9 ] = 'f9'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F10 ] = 'f10'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F11 ] = 'f11'
-special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F12 ] = 'f12'
+special_key_shortcut_str_lookup = {
+    SHORTCUT_KEY_SPECIAL_SPACE : 'space',
+    SHORTCUT_KEY_SPECIAL_BACKSPACE : 'backspace',
+    SHORTCUT_KEY_SPECIAL_TAB : 'tab',
+    SHORTCUT_KEY_SPECIAL_RETURN : 'return',
+    SHORTCUT_KEY_SPECIAL_ENTER : 'enter',
+    SHORTCUT_KEY_SPECIAL_PAUSE : 'pause',
+    SHORTCUT_KEY_SPECIAL_ESCAPE : 'escape',
+    SHORTCUT_KEY_SPECIAL_INSERT : 'insert',
+    SHORTCUT_KEY_SPECIAL_DELETE : 'delete',
+    SHORTCUT_KEY_SPECIAL_UP : 'up',
+    SHORTCUT_KEY_SPECIAL_DOWN : 'down',
+    SHORTCUT_KEY_SPECIAL_LEFT : 'left',
+    SHORTCUT_KEY_SPECIAL_RIGHT : 'right',
+    SHORTCUT_KEY_SPECIAL_HOME : 'home',
+    SHORTCUT_KEY_SPECIAL_END : 'end',
+    SHORTCUT_KEY_SPECIAL_PAGE_DOWN : 'page down',
+    SHORTCUT_KEY_SPECIAL_PAGE_UP : 'page up',
+    SHORTCUT_KEY_SPECIAL_F1 : 'f1',
+    SHORTCUT_KEY_SPECIAL_F2 : 'f2',
+    SHORTCUT_KEY_SPECIAL_F3 : 'f3',
+    SHORTCUT_KEY_SPECIAL_F4 : 'f4',
+    SHORTCUT_KEY_SPECIAL_F5 : 'f5',
+    SHORTCUT_KEY_SPECIAL_F6 : 'f6',
+    SHORTCUT_KEY_SPECIAL_F7 : 'f7',
+    SHORTCUT_KEY_SPECIAL_F8 : 'f8',
+    SHORTCUT_KEY_SPECIAL_F9 : 'f9',
+    SHORTCUT_KEY_SPECIAL_F10 : 'f10',
+    SHORTCUT_KEY_SPECIAL_F11 : 'f11',
+    SHORTCUT_KEY_SPECIAL_F12 : 'f12'
+}
 
 SHORTCUT_MOUSE_LEFT = 0
 SHORTCUT_MOUSE_RIGHT = 1
@@ -156,25 +155,25 @@ SHORTCUT_MOUSE_FORWARD = 8
 
 SHORTCUT_MOUSE_CLICKS = { SHORTCUT_MOUSE_LEFT, SHORTCUT_MOUSE_MIDDLE, SHORTCUT_MOUSE_RIGHT, SHORTCUT_MOUSE_BACK, SHORTCUT_MOUSE_FORWARD }
 
-qt_mouse_buttons_to_hydrus_mouse_buttons = {}
+qt_mouse_buttons_to_hydrus_mouse_buttons = {
+    QC.Qt.LeftButton : SHORTCUT_MOUSE_LEFT,
+    QC.Qt.MiddleButton : SHORTCUT_MOUSE_MIDDLE,
+    QC.Qt.RightButton : SHORTCUT_MOUSE_RIGHT,
+    QC.Qt.BackButton : SHORTCUT_MOUSE_BACK,
+    QC.Qt.ForwardButton : SHORTCUT_MOUSE_FORWARD
+}
 
-qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.LeftButton ] = SHORTCUT_MOUSE_LEFT
-qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.MiddleButton ] = SHORTCUT_MOUSE_MIDDLE
-qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.RightButton ] = SHORTCUT_MOUSE_RIGHT
-qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.BackButton ] = SHORTCUT_MOUSE_BACK
-qt_mouse_buttons_to_hydrus_mouse_buttons[ QC.Qt.ForwardButton ] = SHORTCUT_MOUSE_FORWARD
-
-shortcut_mouse_string_lookup = {}
-
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_MIDDLE ] = 'middle-click'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_BACK ] = 'back'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_FORWARD ] = 'forward'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
-shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
+shortcut_mouse_string_lookup = {
+    SHORTCUT_MOUSE_LEFT : 'left-click',
+    SHORTCUT_MOUSE_RIGHT : 'right-click',
+    SHORTCUT_MOUSE_MIDDLE : 'middle-click',
+    SHORTCUT_MOUSE_BACK : 'back',
+    SHORTCUT_MOUSE_FORWARD : 'forward',
+    SHORTCUT_MOUSE_SCROLL_UP : 'scroll up',
+    SHORTCUT_MOUSE_SCROLL_DOWN : 'scroll down',
+    SHORTCUT_MOUSE_SCROLL_LEFT : 'scroll left',
+    SHORTCUT_MOUSE_SCROLL_RIGHT : 'scroll right'
+}
 
 def SetMouseLabels( call_mouse_buttons_primary_secondary ):
     
@@ -189,18 +188,18 @@ def SetMouseLabels( call_mouse_buttons_primary_secondary ):
         shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
         
     
-shortcut_names_to_pretty_names = {}
-
-shortcut_names_to_pretty_names[ 'global' ] = 'global'
-shortcut_names_to_pretty_names[ 'main_gui' ] = 'the main window'
-shortcut_names_to_pretty_names[ 'tags_autocomplete' ] = 'tag autocomplete'
-shortcut_names_to_pretty_names[ 'media' ] = 'media actions, either thumbnails or the viewer'
-shortcut_names_to_pretty_names[ 'media_viewer' ] = 'media viewers - all'
-shortcut_names_to_pretty_names[ 'media_viewer_browser' ] = 'media viewers - \'normal\' browser'
-shortcut_names_to_pretty_names[ 'archive_delete_filter' ] = 'media viewers - archive/delete filter'
-shortcut_names_to_pretty_names[ 'duplicate_filter' ] = 'media viewers - duplicate filter'
-shortcut_names_to_pretty_names[ 'preview_media_window' ] = 'the actual media in a preview window (mouse only)'
-shortcut_names_to_pretty_names[ 'media_viewer_media_window' ] = 'the actual media in a media viewer (mouse only)'
+shortcut_names_to_pretty_names = {
+    'global' : 'global',
+    'main_gui' : 'the main window',
+    'tags_autocomplete' : 'tag autocomplete',
+    'media' : 'media actions, either thumbnails or the viewer',
+    'media_viewer' : 'media viewers - all',
+    'media_viewer_browser' : 'media viewers - \'normal\' browser',
+    'archive_delete_filter' : 'media viewers - archive/delete filter',
+    'duplicate_filter' : 'media viewers - duplicate filter',
+    'preview_media_window' : 'the actual media in a preview window (mouse only)',
+    'media_viewer_media_window' : 'the actual media in a media viewer (mouse only)'
+}
 
 shortcut_names_sorted = [
     'global',
@@ -215,18 +214,18 @@ shortcut_names_sorted = [
     'media_viewer_media_window'
 ]
 
-shortcut_names_to_descriptions = {}
-
-shortcut_names_to_descriptions[ 'global' ] = 'Actions for the whole program. Should work in the main gui or a media viewer.'
-shortcut_names_to_descriptions[ 'archive_delete_filter' ] = 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.'
-shortcut_names_to_descriptions[ 'duplicate_filter' ] = 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.'
-shortcut_names_to_descriptions[ 'media' ] = 'Actions to alter metadata for media in the media viewer or the thumbnail grid.'
-shortcut_names_to_descriptions[ 'main_gui' ] = 'Actions to control pages in the main window of the program.'
-shortcut_names_to_descriptions[ 'tags_autocomplete' ] = 'Actions to control tag autocomplete when its input text box is focused.'
-shortcut_names_to_descriptions[ 'media_viewer_browser' ] = 'Navigation actions for the regular browsable media viewer.'
-shortcut_names_to_descriptions[ 'media_viewer' ] = 'Zoom and pan and player actions for any media viewer.'
-shortcut_names_to_descriptions[ 'media_viewer_media_window' ] = 'Actions for any video or audio player in a media viewer window. Mouse only!'
-shortcut_names_to_descriptions[ 'preview_media_window' ] = 'Actions for any video or audio player in a preview window. Mouse only!'
+shortcut_names_to_descriptions = {
+    'global' : 'Actions for the whole program. Should work in the main gui or a media viewer.',
+    'archive_delete_filter' : 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.',
+    'duplicate_filter' : 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.',
+    'media' : 'Actions to alter metadata for media in the media viewer or the thumbnail grid.',
+    'main_gui' : 'Actions to control pages in the main window of the program.',
+    'tags_autocomplete' : 'Actions to control tag autocomplete when its input text box is focused.',
+    'media_viewer_browser' : 'Navigation actions for the regular browsable media viewer.',
+    'media_viewer' : 'Zoom and pan and player actions for any media viewer.',
+    'media_viewer_media_window' : 'Actions for any video or audio player in a media viewer window. Mouse only!',
+    'preview_media_window' : 'Actions for any video or audio player in a preview window. Mouse only!'
+}
 
 # shortcut commands
 
@@ -243,19 +242,19 @@ SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEE
 SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_MEDIA_SEEK_DELTA, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_CLOSE_MEDIA_VIEWER ]
 SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS = [ CAC.SIMPLE_PAUSE_MEDIA, CAC.SIMPLE_PAUSE_PLAY_MEDIA, CAC.SIMPLE_MEDIA_SEEK_DELTA, CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ]
 
-simple_shortcut_name_to_action_lookup = {}
-
-simple_shortcut_name_to_action_lookup[ 'global' ] = SHORTCUTS_GLOBAL_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'media' ] = SHORTCUTS_MEDIA_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'main_gui' ] = SHORTCUTS_MAIN_GUI_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'tags_autocomplete' ] = SHORTCUTS_TAGS_AUTOCOMPLETE_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'duplicate_filter' ] = SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'archive_delete_filter' ] = SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'media_viewer_media_window' ] = SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'preview_media_window' ] = SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS
-simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup = {
+    'global' : SHORTCUTS_GLOBAL_ACTIONS,
+    'media' : SHORTCUTS_MEDIA_ACTIONS,
+    'media_viewer' : SHORTCUTS_MEDIA_VIEWER_ACTIONS,
+    'media_viewer_browser' : SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS,
+    'main_gui' : SHORTCUTS_MAIN_GUI_ACTIONS,
+    'tags_autocomplete' : SHORTCUTS_TAGS_AUTOCOMPLETE_ACTIONS,
+    'duplicate_filter' : SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS,
+    'archive_delete_filter' : SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS,
+    'media_viewer_media_window' : SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS,
+    'preview_media_window' : SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS,
+    'custom' : SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+}
 
 CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
 
@@ -272,9 +271,9 @@ def ConvertQtKeyToShortcutKey( key_qt ):
         
     else:
         
+        key_ord = int( key_qt )
+        
         try:
-            
-            key_ord = int( key_qt )
             
             if key_ord == 0:
                 
@@ -354,12 +353,30 @@ def ConvertKeyEventToSimpleTuple( event ):
     
     modifier = QC.Qt.NoModifier
     
-    if event.modifiers() & QC.Qt.AltModifier: modifier = QC.Qt.AltModifier
-    elif event.modifiers() & QC.Qt.ControlModifier: modifier = QC.Qt.ControlModifier
-    elif event.modifiers() & QC.Qt.ShiftModifier: modifier = QC.Qt.ShiftModifier
-    elif event.modifiers() & QC.Qt.KeypadModifier: modifier = QC.Qt.KeypadModifier
-    elif event.modifiers() & QC.Qt.GroupSwitchModifier: modifier = QC.Qt.GroupSwitchModifier
-    elif event.modifiers() & QC.Qt.MetaModifier: modifier = QC.Qt.MetaModifier
+    if event.modifiers() & QC.Qt.AltModifier:
+        
+        modifier = QC.Qt.AltModifier
+        
+    elif event.modifiers() & QC.Qt.ControlModifier:
+        
+        modifier = QC.Qt.ControlModifier
+        
+    elif event.modifiers() & QC.Qt.ShiftModifier:
+        
+        modifier = QC.Qt.ShiftModifier
+        
+    elif event.modifiers() & QC.Qt.KeypadModifier:
+        
+        modifier = QC.Qt.KeypadModifier
+        
+    elif event.modifiers() & QC.Qt.GroupSwitchModifier:
+        
+        modifier = QC.Qt.GroupSwitchModifier
+        
+    elif event.modifiers() & QC.Qt.MetaModifier:
+        
+        modifier = QC.Qt.MetaModifier
+        
     
     key = event.key()
     
@@ -1218,11 +1235,11 @@ class ShortcutsHandler( QC.QObject ):
             
             if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
                 
+                global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
+                
                 if event.type() == QC.QEvent.MouseButtonPress:
                     
                     self._last_click_down_position = event.globalPos()
-                    
-                    global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
                     
                     CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
                     
@@ -1478,4 +1495,8 @@ class ShortcutsManager( QC.QObject ):
         
     
 shortcuts_manager = ShortcutsManager.instance
-shortcuts_manager_initialised = lambda: ShortcutsManager.my_instance is not None
+
+def shortcuts_manager_initialised():
+    
+    return ShortcutsManager.my_instance is not None
+    
