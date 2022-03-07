@@ -84,6 +84,13 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetFile( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( self._service, self._client_requests_domain ) )
         
+        add_notes = NoResource()
+        
+        root.putChild( b'add_notes', add_notes )
+        
+        add_notes.putChild( b'set_notes', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddNotesSetNotes( self._service, self._client_requests_domain ) )
+        add_notes.putChild( b'delete_notes', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( self._service, self._client_requests_domain ) )
+        
         manage_cookies = NoResource()
         
         root.putChild( b'manage_cookies', manage_cookies )

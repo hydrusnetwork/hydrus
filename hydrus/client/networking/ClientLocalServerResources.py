@@ -43,7 +43,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'include_notes', 'notes', 'note_names' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -1007,6 +1007,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             (
                 ClientAPI.CLIENT_API_PERMISSION_ADD_FILES,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
+                ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
                 ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
                 ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES
             )
@@ -1239,6 +1240,79 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddNotes( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES )
+        
+    
+class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPIRestrictedAddNotes ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+        
+        elif 'file_id' in request.parsed_request_args:
+            
+            hash_id = request.parsed_request_args.GetValue( 'file_id', int )
+            
+            hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
+            
+            hash = hash_ids_to_hashes[ hash_id ]
+        
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'There was no file identifier or hash given!' )
+        
+        notes = request.parsed_request_args.GetValue( 'notes', dict )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in notes.items() ]
+        
+        service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClientAPIRestrictedAddNotes ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args.GetValue( 'hash', bytes )
+        
+        elif 'file_id' in request.parsed_request_args:
+            
+            hash_id = request.parsed_request_args.GetValue( 'file_id', int )
+            
+            hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
+            
+            hash = hash_ids_to_hashes[ hash_id ]
+        
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'There was no file identifier or hash given!' )
+        
+        note_names = request.parsed_request_args.GetValue( 'note_names', list, expected_list_type = str )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in note_names ]
+        
+        service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -2132,6 +2206,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
         hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
+        include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
         
         try:
             
@@ -2216,6 +2291,10 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row[ 'num_frames' ] = file_info_manager.num_frames
                 metadata_row[ 'num_words' ] = file_info_manager.num_words
                 metadata_row[ 'has_audio' ] = file_info_manager.has_audio
+                
+                if include_notes:
+                    
+                    metadata_row[ 'notes' ] = media_result.GetNotesManager().GetNamesToNotes()
                 
                 locations_manager = media_result.GetLocationsManager()
                 
