@@ -7,6 +7,13 @@ import time
 import traceback
 import typing
 
+CBOR_AVAILABLE = False
+try:
+    import cbor2
+    CBOR_AVAILABLE = True
+except:
+    pass
+
 from twisted.web.static import File as FileResource
 
 from hydrus.core import HydrusConstants as HC
@@ -47,6 +54,17 @@ CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive'
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
+def Dumps( data, mime ):
+    
+    if CBOR_AVAILABLE and mime == HC.APPLICATION_CBOR:
+        
+        return cbor2.dumps( data )
+    
+    else:
+        
+        return json.dumps( data )
+        
+    
 def CheckHashLength( hashes, hash_type = 'sha256' ):
     
     hash_types_to_length = {
@@ -276,7 +294,17 @@ def ParseClientAPIPOSTArgs( request ):
             args = json.loads( json_string )
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
+        
+        elif mime == HC.APPLICATION_CBOR and CBOR_AVAILABLE:
             
+            cbor_bytes = request.content.read()
+            
+            total_bytes_read += len( cbor_bytes )
+            
+            args = cbor2.loads( cbor_bytes )
+            
+            parsed_request_args = ParseClientAPIPOSTByteArgs( args )
+        
         else:
             
             parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
@@ -297,7 +325,7 @@ def ParseClientAPIPOSTArgs( request ):
             
         
     
-    return ( parsed_request_args, total_bytes_read )
+    return ( parsed_request_args, total_bytes_read, mime )
     
 def ParseClientAPISearchPredicates( request ):
     
@@ -744,16 +772,20 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         
         request.parsed_request_args = parsed_request_args
         
+        request.preferred_mime = HC.APPLICATION_CBOR if CBOR_AVAILABLE and b'cbor' in request.args else HC.APPLICATION_JSON
+        
         return request
         
     
     def _callbackParsePOSTArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
-        ( parsed_request_args, total_bytes_read ) = ParseClientAPIPOSTArgs( request )
+        ( parsed_request_args, total_bytes_read, mime ) = ParseClientAPIPOSTArgs( request )
         
         self._reportDataUsed( request, total_bytes_read )
         
         request.parsed_request_args = parsed_request_args
+        
+        request.preferred_mime = mime
         
         return request
         
@@ -810,9 +842,9 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
         
         body_dict[ 'access_key' ] = access_key.hex()
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -826,9 +858,9 @@ class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
         body_dict[ 'version' ] = HC.CLIENT_API_VERSION
         body_dict[ 'hydrus_version' ] = HC.SOFTWARE_VERSION
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -971,9 +1003,9 @@ class HydrusResourceClientAPIRestrictedAccountSessionKey( HydrusResourceClientAP
         
         body_dict[ 'session_key' ] = new_session_key.hex()
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -992,9 +1024,9 @@ class HydrusResourceClientAPIRestrictedAccountVerify( HydrusResourceClientAPIRes
         body_dict[ 'basic_permissions' ] = list( basic_permissions ) # set->list for json
         body_dict[ 'human_description' ] = human_description
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1036,9 +1068,9 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             body_dict[ name ] = [ { 'name' : service.GetName(), 'service_key' : service.GetServiceKey().hex() } for service in services ]
             
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1091,9 +1123,9 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         body_dict[ 'hash' ] = HydrusData.BytesToNoneOrHex( file_import_status.hash )
         body_dict[ 'note' ] = file_import_status.note
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1534,9 +1566,9 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClie
         body_dict[ 'local_tags' ] = [ service.GetName() for service in local_tags ]
         body_dict[ 'tag_repositories' ] = [ service.GetName() for service in tag_repos ]
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
 
@@ -1648,9 +1680,9 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
 
         body_dict[ 'tags' ] = tags
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
 
@@ -1669,9 +1701,9 @@ class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPI
         
         body_dict[ 'tags' ] = tags
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1836,9 +1868,9 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         body_dict = { 'normalised_url' : normalised_url, 'url_file_statuses' : json_happy_url_statuses }
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1872,9 +1904,9 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
             body_dict[ 'cannot_parse_reason' ] = cannot_parse_reason
             
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -1981,9 +2013,9 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         body_dict = { 'human_result_text' : result_text, 'normalised_url' : normalised_url }
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -2138,9 +2170,9 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             body_dict = { 'file_ids' : list( hash_ids ) }
             
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -2440,8 +2472,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         
         body_dict[ 'metadata' ] = metadata
         
-        mime = HC.APPLICATION_JSON
-        body = json.dumps( body_dict )
+        mime = request.preferred_mime
+        body = Dumps( body_dict, mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
         
@@ -2539,9 +2571,9 @@ class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceCl
         
         body_dict = { 'cookies' : body_cookies_list }
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -2711,8 +2743,8 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
         
         body_dict = { 'boned_stats' : boned_stats }
         
-        mime = HC.APPLICATION_JSON
-        body = json.dumps( body_dict )
+        mime = request.preferred_mime
+        body = Dumps( body_dict, mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
         
@@ -2827,9 +2859,9 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
         
         body_dict = { 'pages' : page_info_dict }
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -2856,9 +2888,9 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceCli
         
         body_dict = { 'page_info' : page_info_dict }
         
-        body = json.dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         

@@ -551,6 +551,7 @@ VIDEO_OGV = 47
 AUDIO_MKV = 48
 AUDIO_MP4 = 49
 UNDETERMINED_MP4 = 50
+APPLICATION_CBOR = 51
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -634,6 +635,7 @@ mime_enum_lookup = {
     'application/vnd.rar' : APPLICATION_RAR,
     'application/x-7z-compressed' : APPLICATION_7Z,
     'application/json' : APPLICATION_JSON,
+    'application/cbor': APPLICATION_CBOR,
     'application/hydrus-encrypted-zip' : APPLICATION_HYDRUS_ENCRYPTED_ZIP,
     'application/hydrus-update-content' : APPLICATION_HYDRUS_UPDATE_CONTENT,
     'application/hydrus-update-definitions' : APPLICATION_HYDRUS_UPDATE_DEFINITIONS,
@@ -679,6 +681,7 @@ mime_string_lookup = {
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
     APPLICATION_YAML : 'yaml',
     APPLICATION_JSON : 'json',
+    APPLICATION_CBOR : 'cbor',
     APPLICATION_PDF : 'pdf',
     APPLICATION_PSD : 'photoshop psd',
     APPLICATION_CLIP : 'clip',
@@ -735,6 +738,7 @@ mime_mimetype_string_lookup = {
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
     APPLICATION_YAML : 'application/x-yaml',
     APPLICATION_JSON : 'application/json',
+    APPLICATION_CBOR : 'application/cbor',
     APPLICATION_PDF : 'application/pdf',
     APPLICATION_PSD : 'application/x-photoshop',
     APPLICATION_CLIP : 'application/clip',
