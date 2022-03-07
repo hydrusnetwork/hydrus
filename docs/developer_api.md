@@ -47,6 +47,11 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
 
 On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, which may be a raw traceback that I'd be interested in seeing. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
 
+!!! note
+    For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
+    Exceeding this limit will cause the request to fail. Make sure to use pagination if you are passing very large JSON arrays as parameters in a GET request.
+    
+
 ## Access and permissions
 
 The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.
