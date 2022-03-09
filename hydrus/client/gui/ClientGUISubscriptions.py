@@ -561,6 +561,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditQuery( self ):
         
+        edited_datas = []
+        
         selected_query_headers = self._query_headers.GetData( only_selected = True )
         
         for old_query_header in selected_query_headers:
@@ -610,6 +612,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._query_headers.AddDatas( ( edited_query_header, ) )
                     
+                    edited_datas.append( edited_query_header )
+                    
                     self._names_to_edited_query_log_containers[ query_log_container_name ] = edited_query_log_container
                     
                 else:
@@ -618,6 +622,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
+        
+        self._query_headers.SelectDatas( edited_datas )
         
         self._query_headers.Sort()
         
@@ -2356,6 +2362,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     def Edit( self ):
         
         subs_to_edit = self._subscriptions.GetData( only_selected = True )
+        edited_datas = []
         
         for subscription in subs_to_edit:
             
@@ -2379,6 +2386,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._subscriptions.AddDatas( ( edited_subscription, ) )
                     
+                    edited_datas.append( edited_subscription )
+                    
                     self._RegenDupeData()
                     
                 elif dlg.WasCancelled():
@@ -2387,6 +2396,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
+        
+        self._subscriptions.SelectDatas( edited_datas )
         
         self._subscriptions.Sort()
         
@@ -2436,6 +2447,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def Merge( self ):
+        
+        edited_datas = []
         
         message = 'Are you sure you want to merge the selected subscriptions? This will combine all selected subscriptions that share the same downloader, wrapping all their different queries into one subscription.'
         message += os.linesep * 2
@@ -2531,14 +2544,20 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._subscriptions.AddDatas( unmergeable_subs )
             
+            edited_datas.extend( unmergeable_subs )
+            
             for merged_sub in merged_subs:
                 
                 merged_sub.SetNonDupeName( self._GetExistingNames() )
                 
                 self._subscriptions.AddDatas( ( merged_sub, ) )
                 
+                edited_datas.append( merged_sub )
+                
             
             self._RegenDupeData()
+            
+            self._subscriptions.SelectDatas( edited_datas )
             
             self._subscriptions.Sort()
             
@@ -2596,6 +2615,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def Separate( self ):
+        
+        edited_datas = []
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
@@ -2768,8 +2789,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._subscriptions.AddDatas( ( final_subscription, ) )
             
+            edited_datas.append( final_subscription )
+            
         
         self._RegenDupeData()
+        
+        self._subscriptions.SelectDatas( edited_datas )
         
         self._subscriptions.Sort()
         

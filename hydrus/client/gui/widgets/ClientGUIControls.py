@@ -134,6 +134,8 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         selected_rules = self._listctrl.GetData( only_selected = True )
         
+        edited_datas = []
+        
         for rule in selected_rules:
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
@@ -150,12 +152,16 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                     
                     self._listctrl.AddDatas( ( edited_rule, ) )
                     
+                    edited_datas.append( edited_rule )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._listctrl.SelectDatas( edited_datas )
         
         self._listctrl.Sort()
         

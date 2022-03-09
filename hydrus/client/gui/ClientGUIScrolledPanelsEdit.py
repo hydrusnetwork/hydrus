@@ -2366,6 +2366,8 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         rows = self._regexes.GetData( only_selected = True )
         
         for row in rows:
@@ -2390,6 +2392,8 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                             
                             self._regexes.AddDatas( ( edited_row, ) )
                             
+                            edited_datas.append( edited_row )
+                            
                         
                     
                 else:
@@ -2398,6 +2402,8 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
+        
+        self._regexes.SelectDatas( edited_datas )
         
         self._regexes.Sort()
         
@@ -3114,4 +3120,3 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateAdditionalTagsButtonLabel()
         
-    

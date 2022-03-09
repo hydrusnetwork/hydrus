@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
+from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
 
 class DuplicatesManager( object ):
@@ -53,6 +54,18 @@ class FileInfoManager( object ):
             
             mime = HC.APPLICATION_UNKNOWN
             
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            if width is None or width <= 0:
+                
+                width = 1
+                
+            
+            if height is None or height <= 0:
+                
+                height = 1
+                
         
         self.hash_id = hash_id
         self.hash = hash
@@ -142,7 +155,7 @@ class FileViewingStatsManager( object ):
             
         
     
-    def GetPrettyViewsLine( self, canvas_types: int ) -> str:
+    def GetPrettyViewsLine( self, canvas_types: typing.Collection[ int ] ) -> str:
         
         if len( canvas_types ) == 2:
             
@@ -258,18 +271,147 @@ class FileViewingStatsManager( object ):
         return FileViewingStatsManager( [] )
         
     
+class TimestampManager( object ):
+    
+    DOMAIN_FILE_MODIFIED = 0
+    DOMAIN_ARCHIVED = 1
+    DOMAIN_AGGREGATE_MODIFIED = 2
+    
+    def __init__( self ):
+        
+        self._domains_to_timestamps = dict()
+        
+        self._aggregate_modified_is_generated = False
+        
+    
+    def _ClearAggregateModifiedTimestamp( self ):
+        
+        if self.DOMAIN_AGGREGATE_MODIFIED in self._domains_to_timestamps:
+            
+            del self._domains_to_timestamps[ self.DOMAIN_AGGREGATE_MODIFIED ]
+            
+        
+        self._aggregate_modified_is_generated = False
+        
+    
+    def _GenerateAggregateModifiedTimestamp( self ):
+        
+        all_timestamps = [ value for ( key, value ) in self._domains_to_timestamps.items() if isinstance( key, str ) or key == self.DOMAIN_FILE_MODIFIED ]
+        
+        if len( all_timestamps ) > 0:
+            
+            self._domains_to_timestamps[ self.DOMAIN_AGGREGATE_MODIFIED ] = min( all_timestamps )
+            
+        
+        # we can complete this task and not populate the dict, so we'll handle 'did we do it?' checks with a bool, otherwise we'll loop the non-generation over and over
+        self._aggregate_modified_is_generated = True
+        
+    
+    def _GetTimestamp( self, domain ):
+        
+        if domain in self._domains_to_timestamps:
+            
+            return self._domains_to_timestamps[ domain ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def ClearArchivedTimestamp( self ):
+        
+        if self.DOMAIN_ARCHIVED in self._domains_to_timestamps:
+            
+            del self._domains_to_timestamps[ self.DOMAIN_ARCHIVED ]
+            
+        
+    
+    def ClearDomainModifiedTimestamp( self, domain: str ):
+        
+        if domain in self._domains_to_timestamps:
+            
+            del self._domains_to_timestamps[ domain ]
+            
+            self._ClearAggregateModifiedTimestamp()
+            
+        
+    
+    def Duplicate( self ) -> "TimestampManager":
+        
+        timestamp_manager = TimestampManager()
+        
+        timestamp_manager._domains_to_timestamps = dict( self._domains_to_timestamps )
+        
+        return timestamp_manager
+        
+    
+    def GetAggregateModifiedTimestamp( self ):
+        
+        if not self._aggregate_modified_is_generated:
+            
+            self._GenerateAggregateModifiedTimestamp()
+            
+        
+        return self._GetTimestamp( self.DOMAIN_AGGREGATE_MODIFIED )
+        
+    
+    def GetArchivedTimestamp( self ) -> typing.Optional[ int ]:
+        
+        return self._GetTimestamp( self.DOMAIN_ARCHIVED )
+        
+    
+    def GetDomainModifiedTimestamp( self, domain: str ) -> typing.Optional[ int ]:
+        
+        return self._GetTimestamp( domain )
+        
+    
+    def GetFileModifiedTimestamp( self ) -> typing.Optional[ int ]:
+        
+        return self._GetTimestamp( self.DOMAIN_FILE_MODIFIED )
+        
+    
+    def SetArchivedTimestamp( self, timestamp: int ):
+        
+        self._domains_to_timestamps[ self.DOMAIN_ARCHIVED ] = timestamp
+        
+    
+    def SetDomainModifiedTimestamp( self, domain: str, timestamp: int ):
+        
+        self._domains_to_timestamps[ domain ] = timestamp
+        
+        self._ClearAggregateModifiedTimestamp()
+        
+    
+    def SetFileModifiedTimestamp( self, timestamp: int ):
+        
+        self._domains_to_timestamps[ self.DOMAIN_FILE_MODIFIED ] = timestamp
+        
+        self._ClearAggregateModifiedTimestamp()
+        
+    
+    def UpdateDomainModifiedTimestamp( self, domain: str, timestamp: int ):
+        
+        existing_timestamp = self._GetTimestamp( domain )
+        
+        if existing_timestamp is None or ClientTime.ShouldUpdateDomainModifiedTime( existing_timestamp, timestamp ):
+            
+            self.SetDomainModifiedTimestamp( domain, timestamp )
+            
+        
+    
 class LocationsManager( object ):
     
     def __init__(
         self,
         current_to_timestamps: typing.Dict[ bytes, typing.Optional[ int ] ],
-        deleted_to_timestamps: typing.Dict[ bytes, typing.Optional[ int ] ],
+        deleted_to_timestamps: typing.Dict[ bytes, typing.Tuple[ int, int ] ],
         pending: typing.Set[ bytes ],
         petitioned: typing.Set[ bytes ],
         inbox: bool = False,
         urls: typing.Optional[ typing.Set[ str ] ] = None,
         service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
-        file_modified_timestamp: typing.Optional[ int ] = None,
+        timestamp_manager: typing.Optional[ TimestampManager ] = None,
         local_file_deletion_reason: str = None
     ):
         
@@ -297,7 +439,12 @@ class LocationsManager( object ):
         
         self._service_keys_to_filenames = service_keys_to_filenames
         
-        self._file_modified_timestamp = file_modified_timestamp
+        if timestamp_manager is None:
+            
+            timestamp_manager = TimestampManager()
+            
+        
+        self._timestamp_manager = timestamp_manager
         self._local_file_deletion_reason = local_file_deletion_reason
         
     
@@ -315,8 +462,19 @@ class LocationsManager( object ):
         petitioned = set( self._petitioned )
         urls = set( self._urls )
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
+        timestamp_manager = self._timestamp_manager.Duplicate()
         
-        return LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, self.inbox, urls, service_keys_to_filenames, self._file_modified_timestamp, self._local_file_deletion_reason )
+        return LocationsManager(
+            current_to_timestamps,
+            deleted_to_timestamps,
+            pending,
+            petitioned,
+            inbox = self.inbox,
+            urls = urls,
+            service_keys_to_filenames = service_keys_to_filenames,
+            timestamp_manager = timestamp_manager,
+            local_file_deletion_reason = self._local_file_deletion_reason
+        )
         
     
     def GetCDPP( self ):
@@ -332,11 +490,6 @@ class LocationsManager( object ):
     def GetDeleted( self ):
         
         return self._deleted
-        
-    
-    def GetFileModifiedTimestamp( self ):
-        
-        return self._file_modified_timestamp
         
     
     def GetInbox( self ):
@@ -437,6 +590,11 @@ class LocationsManager( object ):
             
             return self._local_file_deletion_reason
             
+        
+    
+    def GetTimestampManager( self ) -> TimestampManager:
+        
+        return self._timestamp_manager
         
     
     def GetURLs( self ):
@@ -604,9 +762,13 @@ class LocationsManager( object ):
                 
                 self.inbox = False
                 
+                self._timestamp_manager.SetArchivedTimestamp( HydrusData.GetNow() )
+                
             elif action == HC.CONTENT_UPDATE_INBOX:
                 
                 self.inbox = True
+                
+                self._timestamp_manager.ClearArchivedTimestamp()
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
@@ -677,7 +839,31 @@ class LocationsManager( object ):
                 
                 
             
-        
+        elif data_type == HC.CONTENT_TYPE_TIMESTAMP:
+            
+            ( timestamp_type, hash, data ) = row
+            
+            if timestamp_type == 'domain':
+                
+                if action == HC.CONTENT_UPDATE_ADD:
+                    
+                    ( domain, timestamp ) = data
+                    
+                    self._timestamp_manager.UpdateDomainModifiedTimestamp( domain, timestamp )
+                    
+                elif action == HC.CONTENT_UPDATE_SET:
+                    
+                    ( domain, timestamp ) = data
+                    
+                    self._timestamp_manager.SetDomainModifiedTimestamp( domain, timestamp )
+                    
+                elif action == HC.CONTENT_UPDATE_DELETE:
+                    
+                    domain = row
+                    
+                    self._timestamp_manager.ClearDomainModifiedTimestamp( domain )
+                    
+            
     
     def ResetService( self, service_key ):
         

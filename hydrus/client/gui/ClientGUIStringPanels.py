@@ -511,6 +511,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditConversion( self ):
         
+        edited_datas = []
+        
         selected_data = self._conversions.GetData( only_selected = True )
         
         for enumerated_conversion in selected_data:
@@ -544,12 +546,16 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._conversions.AddDatas( ( enumerated_conversion, ) )
                     
+                    edited_datas.append( enumerated_conversion )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._conversions.SelectDatas( edited_datas )
         
         self._conversions.UpdateDatas()
         

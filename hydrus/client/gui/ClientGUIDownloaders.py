@@ -188,6 +188,8 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditGUGDisplay( self ):
         
+        edited_datas = []
+        
         for data in self._gug_display_list_ctrl.GetData( only_selected = True ):
             
             ( gug_key, display ) = data
@@ -208,16 +210,22 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._gug_display_list_ctrl.AddDatas( ( new_data, ) )
                 
+                edited_datas.append( new_data )
+                
             else:
                 
                 break
                 
             
         
+        self._gug_display_list_ctrl.SelectDatas( edited_datas )
+        
         self._gug_display_list_ctrl.Sort()
         
     
     def _EditURLDisplay( self ):
+        
+        edited_datas = []
         
         for data in self._url_display_list_ctrl.GetData( only_selected = True ):
             
@@ -239,11 +247,15 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._url_display_list_ctrl.AddDatas( ( new_data, ) )
                 
+                edited_datas.append( new_data )
+                
             else:
                 
                 break
                 
             
+        
+        self._url_display_list_ctrl.SelectDatas( edited_datas )
         
         self._url_display_list_ctrl.Sort()
         
@@ -801,6 +813,8 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditGUG( self ):
         
+        edited_datas = []
+        
         for gug in self._gug_list_ctrl.GetData( only_selected = True ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
@@ -819,6 +833,8 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._gug_list_ctrl.AddDatas( ( gug, ) )
                     
+                    edited_datas.append( gug )
+                    
                 else:
                     
                     break
@@ -826,12 +842,16 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        self._gug_list_ctrl.SelectDatas( edited_datas )
+        
         self._gug_list_ctrl.Sort()
         
     
     def _EditNGUG( self ):
         
         available_gugs = self._gug_list_ctrl.GetData()
+        
+        edited_datas = []
         
         for ngug in self._ngug_list_ctrl.GetData( only_selected = True ):
             
@@ -851,12 +871,16 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._ngug_list_ctrl.AddDatas( ( ngug, ) )
                     
+                    edited_datas.append( ngug )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._ngug_list_ctrl.SelectDatas( edited_datas )
         
         self._ngug_list_ctrl.Sort()
         
@@ -1404,6 +1428,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditParameters( self ):
         
+        edited_datas = []
+        
         selected_params = self._parameters.GetData( only_selected = True )
         
         for parameter in selected_params:
@@ -1486,6 +1512,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parameters.AddDatas( ( new_parameter, ) )
             
+            edited_datas.append( new_parameter )
+            
+        
+        self._parameters.SelectDatas( edited_datas )
         
         self._parameters.Sort()
         
@@ -2041,6 +2071,8 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         for url_class in self._list_ctrl.GetData( only_selected = True ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
@@ -2059,12 +2091,16 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._list_ctrl.AddDatas( ( url_class, ) )
                     
+                    edited_datas.append( url_class )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._list_ctrl.SelectDatas( edited_datas )
         
         self._list_ctrl.Sort()
         
@@ -2229,6 +2265,8 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if result == QW.QDialog.Accepted:
             
+            edited_datas = []
+            
             for data in self._parser_list_ctrl.GetData( only_selected = True ):
                 
                 self._parser_list_ctrl.DeleteDatas( ( data, ) )
@@ -2239,6 +2277,10 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._parser_list_ctrl.AddDatas( ( new_data, ) )
                 
+                edited_datas.append( new_data )
+                
+            
+            self._parser_list_ctrl.SelectDatas( edited_datas )
             
             self._parser_list_ctrl.Sort()
             
@@ -2302,6 +2344,8 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
+        edited_datas = []
+        
         for data in self._parser_list_ctrl.GetData( only_selected = True ):
             
             ( url_class_key, parser_key ) = data
@@ -2338,6 +2382,10 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parser_list_ctrl.AddDatas( ( new_data, ) )
             
+            edited_datas.append( new_data )
+            
+        
+        self._parser_list_ctrl.SelectDatas( edited_datas )
         
         self._parser_list_ctrl.Sort()
         
@@ -2376,7 +2424,11 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parser_list_ctrl.DeleteDatas( removees )
             
-            self._parser_list_ctrl.AddDatas( list(new_url_class_keys_to_parser_keys.items()) )
+            new_datas = list( new_url_class_keys_to_parser_keys.items() )
+            
+            self._parser_list_ctrl.AddDatas( new_datas )
+            
+            self._parser_list_ctrl_listctrl.SelectDatas( new_datas )
             
             self._parser_list_ctrl.Sort()
             

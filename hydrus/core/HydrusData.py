@@ -1886,6 +1886,12 @@ class ContentUpdate( object ):
             
             ( urls, hashes ) = self._row
             
+        elif self._data_type == HC.CONTENT_TYPE_TIMESTAMP:
+            
+            ( timestamp_type, hash, data ) = self._row
+            
+            hashes = { hash }
+            
         elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             
             if self._action == HC.CONTENT_UPDATE_ADVANCED:

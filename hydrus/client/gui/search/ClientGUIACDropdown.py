@@ -2114,6 +2114,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self.blockSignals( False )
         
+        self.locationChanged.emit( self._location_context )
+        self.tagServiceChanged.emit( self._tag_service_key )
         self._SignalNewSearchState()
         
     

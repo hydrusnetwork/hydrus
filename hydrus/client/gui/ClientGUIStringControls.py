@@ -283,6 +283,8 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         for data in self._listctrl.GetData( only_selected = True ):
             
             ( key_string_match, value_string_match ) = data
@@ -325,6 +327,10 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
             
             self._listctrl.AddDatas( ( edited_data, ) )
             
+            edited_datas.append( edited_data )
+            
+        
+        self._listctrl.SelectDatas( edited_datas )
         
         self._listctrl.Sort()
         
@@ -467,6 +473,8 @@ class StringToStringDictControl( QW.QWidget ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         for data in self._listctrl.GetData( only_selected = True ):
             
             ( key, value ) = data
@@ -515,6 +523,10 @@ class StringToStringDictControl( QW.QWidget ):
             
             self._listctrl.AddDatas( ( edited_data, ) )
             
+            edited_datas.append( edited_data )
+            
+        
+        self._listctrl.SelectDatas( edited_datas )
         
         self._listctrl.Sort()
         
@@ -616,6 +628,8 @@ class StringToStringMatchDictControl( QW.QWidget ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         for data in self._listctrl.GetData( only_selected = True ):
             
             ( key, string_match ) = data
@@ -663,6 +677,10 @@ class StringToStringMatchDictControl( QW.QWidget ):
             
             self._listctrl.AddDatas( ( edited_data, ) )
             
+            edited_datas.append( edited_data )
+            
+        
+        self._listctrl.SelectDatas( edited_datas )
         
         self._listctrl.Sort()
         

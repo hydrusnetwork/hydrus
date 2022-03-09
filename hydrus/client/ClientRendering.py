@@ -230,7 +230,7 @@ class ImageRenderer( object ):
                 
                 HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 
-                m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}. Maybe hydrus missed rotation data when the file first imported?'.format(
+                m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}.'.format(
                     self._hash.hex(),
                     my_resolution_size,
                     my_numpy_size

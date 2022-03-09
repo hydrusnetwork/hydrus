@@ -322,6 +322,7 @@ SORT_FILES_BY_FRAMERATE = 15
 SORT_FILES_BY_NUM_FRAMES = 16
 SORT_FILES_BY_NUM_COLLECTION_FILES = 17
 SORT_FILES_BY_LAST_VIEWED_TIME = 18
+SORT_FILES_BY_ARCHIVED_TIMESTAMP = 19
 
 SYSTEM_SORT_TYPES = {
     SORT_FILES_BY_NUM_COLLECTION_FILES,
@@ -342,7 +343,8 @@ SYSTEM_SORT_TYPES = {
     SORT_FILES_BY_MEDIA_VIEWTIME,
     SORT_FILES_BY_IMPORT_TIME,
     SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP,
-    SORT_FILES_BY_LAST_VIEWED_TIME
+    SORT_FILES_BY_LAST_VIEWED_TIME,
+    SORT_FILES_BY_ARCHIVED_TIMESTAMP
 }
 
 system_sort_type_submetatype_string_lookup = {}
@@ -363,6 +365,7 @@ system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RANDOM ] = None
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'tags'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'time'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'time'
+system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = 'time'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'time'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'views'
 system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views'
@@ -383,6 +386,7 @@ sort_type_basic_string_lookup[ SORT_FILES_BY_MIME ] = 'filetype'
 sort_type_basic_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'has audio'
 sort_type_basic_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'import time'
 sort_type_basic_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'modified time'
+sort_type_basic_string_lookup[ SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = 'archived time'
 sort_type_basic_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'last viewed time'
 sort_type_basic_string_lookup[ SORT_FILES_BY_RANDOM ] = 'random'
 sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'number of tags'

@@ -202,6 +202,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
+            edited_datas = []
+            
             for service in selected_services:
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
@@ -220,12 +222,16 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         self._listctrl.AddDatas( ( edited_service, ) )
                         
+                        edited_datas.append( edited_service )
+                        
                     else:
                         
                         return
                         
                     
                 
+            
+            self._listctrl.SelectDatas( edited_datas )
             
         finally:
             

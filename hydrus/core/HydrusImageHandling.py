@@ -609,6 +609,9 @@ def GetImageProperties( path, mime ):
             
         
     
+    width = max( width, 1 )
+    height = max( height, 1 )
+    
     return ( ( width, height ), duration, num_frames )
     
 # bigger number is worse quality

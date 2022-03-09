@@ -1,7 +1,31 @@
 # changelog
 
 !!! note
-    This is the new changelog. For versions prior to 466 see the [old changelog](old_changelog.html).
+    This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
+
+## [Version 476](https://github.com/hydrusnetwork/hydrus/releases/tag/v476)
+
+## domain modified times
+* the downloader now saves the 'source time' (or, if none was parsed, 'creation time') for each file import object to the database when a file import is completed. separate timestamps are tracked for every domain you download from, and a file's number can update to an earlier time if a new one comes in for that domain
+* I overhauled how hydrus stores timestamps in each media object and added these domain timestamps to it. now, when you see 'modified time', it is the minimum of the file modified time and all recorded domain modified times. this aggregated modfified time works for sort in UI and when sorting before applying system:limit, and it also works for system:modified time search. the search may be slow in some situations--let me know
+* I also added the very recent 'archived' timestamps into this new object and added sort for archived time too. 'archived 3 minutes ago' style text will appear in thumbnail right-click menus and the media viewer top status text
+* in future, I will add search for archive time; more display, search, and sort for modified time (for specific domains); and also figure out a dialog so you can manually edit these timestamps in case of problems
+* I also expect to write an optional 'fill in dummy data' routine for the archived timestamps for files archived before I started tracking these timestamps. something like 'for all archived files, put in an archive time 20% between import time and now', but maybe there is a better way of doing it, let me know if you have any ideas. we'll only get one shot at this, so maybe we can do a better estimate with closer analysis
+* in the longer future, I expect import/export support for this data and maintenance routines to retroactively populate the domain data based on hitting up known urls again, so all us long-time users can backfill in nicer post times for all our downloaded files
+
+## searching tags on client api
+* a user has helped me out by writing autocomplete tag search for the client api, under /add_tags/search_tags. I normally do not accept pull requests like this, but the guy did a great job and I have not been able to fit this in myself despite wanting it a lot
+* I added some bells and whistles--py 3.8 support, tag sorting, filtering results according to any api permissions, and some unit tests
+* at the moment, it searches the 'storage' domain that you see in a manage tags dialog, i.e. without siblings collapsed. I can and will expand it to support more options in future. please give it a go and let me know what you think
+* client api version is now 26
+
+## misc
+* when you edit something in a multi-column list, I think I have updated every single one so the selection is preserved through the edit. annoyingly and confusingly on most of the old lists, for instance subscriptions, the 'ghost' of the selection focus would bump up one position after an edit. now it should stay the same even if you rename etc... and if you have multiple selected/edited
+* I _think_ I fixed a bug in the selected files taglist where, in some combination of changing the tag service of the page and then loading up a favourite search, the taglist could get stuck on the previous tag domain. typically this would look as if the page's taglist had nothing in it no matter what files were selected
+* if you set some files as 'alternates' when they are already 'duplicates', this now works (previously it did nothing). the non-kings of the group will be extracted from the duplicate group and applied as new alts
+* added a 'BUGFIX' checkbox to 'gui pages' options page that forces a 'hide page' signal to the current page when creating a new page. we'll see if this patches a weird error or if more work is needed
+* added some protections against viewing files when the image/video file has (incorrectly) 0 width or height
+* added support for viewing non-image/video files in the duplicate filter. there are advanced ways to get unusual files in here, and until now a pdf or something would throw an error about having 0 width
 
 ## [Version 475](https://github.com/hydrusnetwork/hydrus/releases/tag/v475)
 
@@ -262,38 +286,3 @@
 * cleared up some file maintenance enum variable names
 * sped up random file sort for large result sets
 * misc client network code cleanup and type hints, and rejiggered cleaner imports after the refactoring
-
-## [Version 467](https://github.com/hydrusnetwork/hydrus/releases/tag/v467)
-
-### new scanbar cleanup
-* the media container's scanbar and volume control are now combined on the same widget, meaning they now show/hide in sync and faster. their layout calculation is also more sensible. the new controls bar also has a thin border to make it pop better against a background video
-* improved the way some auto-hide anti-flicker tech on the scanbar now works. it all hides a frame faster sometimes
-* figured out some new anti-flicker tech to reduce/eliminate a frame of stretch when flicking from a static image to an mpv video, particularly for the first or second time in a session
-* fixed a bug where clicking the global mute/unmute on an mpv player meant that certain shortcut keys (usually those with arrow keys) would not work on that player again. (it was a focus issue on the button, which then captured some form navigation keys but they had nowhere to go)
-* brushed up some mouse coordinate testing logic across the program. some linux clients had trouble with the new animation scanbar popping up over mpv, I think I improved it!
-* fixed another type problem with newer python/PyQt5 on Arch, also in scanbar coordinate testing
-* fixed some dodgy colours in the scanbar initialisation and volume control border
-* macOS users: I undid a long-time paint hack on the media container and the static image canvas. Qt is responsible for clearing the background again, which allows me to remove some jank anti-flicker tech. HOWEVER, the original reason for this hack was because without it, old macOS went to 100% CPU whenever the media viewer was showing something. therefore, to be safe, this option is still on for macOS users for now. you'll get a little flicker when browsing. please try hitting _help->debug->gui actions->macOS anti-flicker test_ and do some mixed video/image browsing. does your whole damn client lock up?
-
-### misc
-* the 'file log' and 'search log' buttons are now a new widget class that puts an arrow on the side that opens a menu. the secret right-click menus of these buttons is now exposed for all
-* fixed a bug affecting some greyscale pngs with ICC profiles--they were coming out pure white due to a colourspace conversion problem
-* fixed an import problem when PIL could not load a file (due to file malformation) but OpenCV could. this was causing a failed import from the new ICC profile detection code
-* when the downloader hits a broken image file that cannot be imported due to malformation, the status is now 'error' instead of the incorrect 'ignored'
-* fixed the duplicate file filesize comparison statement sometimes showing > in one direction and ≈ in the other. it happened when the larger file was between 20/19 and 21/20 times the size of the smaller, just a logic typo (issue #1028)
-* the trash maintenance daemon is moved from the old threaded daemon system to the new repeating job worker pool. this is the last daemon cleaned up, so I am retiring the old and mostly defunct 'no_daemons' launch argument. a variety of other daemon infrastructure for things like shutdown checks is similarly removed. the program also now waits for the newer daemon jobs to finish working on shutdown
-* moved most client daemon jobs like repository sync and dirty object save down so they start after the first session is loaded rather than right after boot
-* if a file is called to regen its thumbnail but currently has no dimension, this is now a no-op rather than an error. in the situation where users force thumb regen before metadata regen and encounter this, it is sorted out later when the metadata regen recognises new dimensions and reschedules the thumb regen
-* added an extensive user-written guide to the --db_synchronous_override launch argument to the launch arguments help page. it is possible and safe to run the program with synchronous=0 as long as certain caveats are obeyed. thanks to the user who figured this out and wrote it up
-* the downloader engine now discards source urls in an import job if they have the same domain as any existing primary url. this will ensure that if a booru has a link back to itself as a source url, when the 'source' is really an alternate rather than a dupe, it won't be added in hydrus as a known url for that imported file
-* misc cleanup in downloader system and file/search log UI
-* fixed a type bug in the file and search log 'import from png' action. if you have existing pngs previously exported from here, they will import ok now
-* refactored the various hydrus compression code to a new HydrusCompression file
-* exported serialisable data pngs such as from file or search log that hold simple Strings now always compress the data before embedding it in the png. existing pngs that hold uncompressed strings should still load ok
-* the payload in an exported png is now always compressed, and the payload description always states the uncompressed size
-* sped up client shutdown when network traffic has been paused the whole time and a repo sync job might have wanted to run. these jobs also do not hang on a thread worker if network traffic is paused, but they should wake immediately when it is unpaused
-* the hydrus login system is now resistant to connection failures; previously it was getting hung up and jamming the whole hydrus sync system when a server was down
-
-### client api
-* added GET /manage_database/mr_bones to the Client API. it returns a JSON Object with the same numbers used in the _help->how boned am I?_ dialog
-* incremented Client API version to 23

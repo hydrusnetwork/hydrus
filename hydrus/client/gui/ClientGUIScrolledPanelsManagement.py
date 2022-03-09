@@ -828,6 +828,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditMimeLaunch( self ):
             
+            edited_datas = []
+            
             for ( mime, launch_path ) in self._mime_launch_listctrl.GetData( only_selected = True ):
                 
                 message = 'Enter the new launch path for {}'.format( HC.mime_string_lookup[ mime ] )
@@ -860,7 +862,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             self._mime_launch_listctrl.DeleteDatas( [ ( mime, launch_path ) ] )
                             
-                            self._mime_launch_listctrl.AddDatas( [ ( mime, new_launch_path ) ] )
+                            edited_data = [ ( mime, new_launch_path ) ]
+                            
+                            self._mime_launch_listctrl.AddDatas( edited_data )
+                            
+                            edited_datas.append( edited_data )
                             
                         
                     else:
@@ -869,6 +875,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
+            
+            self._mime_launch_listctrl.SelectDatas( edited_datas )
             
             self._mime_launch_listctrl.Sort()
             
@@ -1406,6 +1414,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self._pages_panel )
             self._reverse_page_shift_drag_behaviour.setToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
+            self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._pages_panel )
+            
+            self._force_hide_page_signal_on_new_page.setToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' )
+            
             #
             
             self._page_names_panel = ClientGUICommon.StaticBox( self._pages_panel, 'page tab names' )
@@ -1475,9 +1487,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._import_page_progress_display.setChecked( self._new_options.GetBoolean( 'import_page_progress_display' ) )
             
+            self._reverse_page_shift_drag_behaviour.setChecked( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
+            
             self._total_pages_warning.setValue( self._new_options.GetInteger( 'total_pages_warning' ) )
             
-            self._reverse_page_shift_drag_behaviour.setChecked( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
+            self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
             
             self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
             
@@ -1503,6 +1517,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
+            rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._pages_panel, rows )
             
@@ -1577,6 +1592,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
             
             self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.value() )
+            
+            self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )
             
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.isChecked() )
             

@@ -207,129 +207,131 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_resolution = shown_media.GetResolution()
     c_resolution = comparison_media.GetResolution()
     
-    if s_resolution is not None and c_resolution is not None and s_resolution != c_resolution:
+    if s_resolution != c_resolution:
         
-        s_res = shown_media.GetResolution()
-        c_res = comparison_media.GetResolution()
+        ( s_w, s_h ) = s_resolution
+        ( c_w, c_h ) = c_resolution
         
-        ( s_w, s_h ) = s_res
-        ( c_w, c_h ) = c_res
+        all_measurements_are_good = None not in ( s_w, s_h, c_w, c_h ) and True not in ( d <= 0 for d in ( s_w, s_h, c_w, c_h ) )
         
-        resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
-        
-        if resolution_ratio == 1.0:
+        if all_measurements_are_good:
             
-            operator = '!='
-            score = 0
+            resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
             
-        elif resolution_ratio > 2.0:
-            
-            operator = '>>'
-            score = duplicate_comparison_score_much_higher_resolution
-            
-        elif resolution_ratio > 1.00:
-            
-            operator = '>'
-            score = duplicate_comparison_score_higher_resolution
-            
-        elif resolution_ratio < 0.5:
-            
-            operator = '<<'
-            score = -duplicate_comparison_score_much_higher_resolution
-            
-        else:
-            
-            operator = '<'
-            score = -duplicate_comparison_score_higher_resolution
-            
-        
-        if s_res in HC.NICE_RESOLUTIONS:
-            
-            s_string = HC.NICE_RESOLUTIONS[ s_res ]
-            
-        else:
-            
-            s_string = HydrusData.ConvertResolutionToPrettyString( s_resolution )
-            
-            if s_w % 2 == 1 or s_h % 2 == 1:
+            if resolution_ratio == 1.0:
                 
-                s_string += ' (unusual)'
-                
-            
-        
-        if c_res in HC.NICE_RESOLUTIONS:
-            
-            c_string = HC.NICE_RESOLUTIONS[ c_res ]
-            
-        else:
-            
-            c_string = HydrusData.ConvertResolutionToPrettyString( c_resolution )
-            
-            if c_w % 2 == 1 or c_h % 2 == 1:
-                
-                c_string += ' (unusual)'
-                
-            
-        
-        statement = '{} {} {}'.format( s_string, operator, c_string )
-        
-        statements_and_scores[ 'resolution' ] = ( statement, score )
-        
-        #
-        
-        s_ratio = s_w / s_h
-        c_ratio = c_w / c_h
-        
-        s_nice = s_ratio in HC.NICE_RATIOS
-        c_nice = c_ratio in HC.NICE_RATIOS
-        
-        if s_nice or c_nice:
-            
-            if s_nice:
-                
-                s_string = HC.NICE_RATIOS[ s_ratio ]
-                
-            else:
-                
-                s_string = 'unusual'
-                
-            
-            if c_nice:
-                
-                c_string = HC.NICE_RATIOS[ c_ratio ]
-                
-            else:
-                
-                c_string = 'unusual'
-                
-            
-            if s_nice and c_nice:
-                
-                operator = '-'
+                operator = '!='
                 score = 0
                 
-            elif s_nice:
+            elif resolution_ratio > 2.0:
+                
+                operator = '>>'
+                score = duplicate_comparison_score_much_higher_resolution
+                
+            elif resolution_ratio > 1.00:
                 
                 operator = '>'
-                score = duplicate_comparison_score_nicer_ratio
+                score = duplicate_comparison_score_higher_resolution
                 
-            elif c_nice:
+            elif resolution_ratio < 0.5:
                 
-                operator = '<'
-                score = -duplicate_comparison_score_nicer_ratio
-                
-            
-            if s_string == c_string:
-                
-                statement = 'both {}'.format( s_string )
+                operator = '<<'
+                score = -duplicate_comparison_score_much_higher_resolution
                 
             else:
                 
-                statement = '{} {} {}'.format( s_string, operator, c_string )
+                operator = '<'
+                score = -duplicate_comparison_score_higher_resolution
                 
             
-            statements_and_scores[ 'ratio' ] = ( statement, score )
+            if s_resolution in HC.NICE_RESOLUTIONS:
+                
+                s_string = HC.NICE_RESOLUTIONS[ s_resolution ]
+                
+            else:
+                
+                s_string = HydrusData.ConvertResolutionToPrettyString( s_resolution )
+                
+                if s_w % 2 == 1 or s_h % 2 == 1:
+                    
+                    s_string += ' (unusual)'
+                    
+                
             
+            if c_resolution in HC.NICE_RESOLUTIONS:
+                
+                c_string = HC.NICE_RESOLUTIONS[ c_resolution ]
+                
+            else:
+                
+                c_string = HydrusData.ConvertResolutionToPrettyString( c_resolution )
+                
+                if c_w % 2 == 1 or c_h % 2 == 1:
+                    
+                    c_string += ' (unusual)'
+                    
+                
+            
+            statement = '{} {} {}'.format( s_string, operator, c_string )
+            
+            statements_and_scores[ 'resolution' ] = ( statement, score )
+            
+            #
+            
+            s_ratio = s_w / s_h
+            c_ratio = c_w / c_h
+            
+            s_nice = s_ratio in HC.NICE_RATIOS
+            c_nice = c_ratio in HC.NICE_RATIOS
+            
+            if s_nice or c_nice:
+                
+                if s_nice:
+                    
+                    s_string = HC.NICE_RATIOS[ s_ratio ]
+                    
+                else:
+                    
+                    s_string = 'unusual'
+                    
+                
+                if c_nice:
+                    
+                    c_string = HC.NICE_RATIOS[ c_ratio ]
+                    
+                else:
+                    
+                    c_string = 'unusual'
+                    
+                
+                if s_nice and c_nice:
+                    
+                    operator = '-'
+                    score = 0
+                    
+                elif s_nice:
+                    
+                    operator = '>'
+                    score = duplicate_comparison_score_nicer_ratio
+                    
+                elif c_nice:
+                    
+                    operator = '<'
+                    score = -duplicate_comparison_score_nicer_ratio
+                    
+                
+                if s_string == c_string:
+                    
+                    statement = 'both {}'.format( s_string )
+                    
+                else:
+                    
+                    statement = '{} {} {}'.format( s_string, operator, c_string )
+                    
+                
+                statements_and_scores[ 'ratio' ] = ( statement, score )
+                
+                
             
         
     
@@ -2061,20 +2063,18 @@ class MediaCollection( MediaList, Media ):
         pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        modified_times = { locations_manager.GetFileModifiedTimestamp() for locations_manager in all_locations_managers }
+        modified_times = { locations_manager.GetTimestampManager().GetAggregateModifiedTimestamp() for locations_manager in all_locations_managers }
         
         modified_times.discard( None )
         
+        timestamp_manager = ClientMediaManagers.TimestampManager()
+        
         if len( modified_times ) > 0:
             
-            modified_time = max( modified_times )
-            
-        else:
-            
-            modified_time = None
+            timestamp_manager.SetFileModifiedTimestamp( max( modified_times ) )
             
         
-        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, file_modified_timestamp = modified_time )
+        self._locations_manager = ClientMediaManagers.LocationsManager( current_to_timestamps, deleted_to_timestamps, pending, petitioned, timestamp_manager = timestamp_manager )
         
     
     def _RecalcInternals( self ):
@@ -2533,11 +2533,23 @@ class MediaSingleton( Media ):
             lines.append( 'in the trash' )
             
         
-        file_modified_timestamp = locations_manager.GetFileModifiedTimestamp()
+        timestamp_manager = locations_manager.GetTimestampManager()
+        
+        file_modified_timestamp = timestamp_manager.GetAggregateModifiedTimestamp()
         
         if file_modified_timestamp is not None:
             
             lines.append( 'file modified: {}'.format( ClientData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) )
+            
+        
+        if not locations_manager.inbox:
+            
+            archive_timestamp = timestamp_manager.GetArchivedTimestamp()
+            
+            if archive_timestamp is not None:
+                
+                lines.append( 'file archived: {}'.format( ClientData.TimestampToPrettyTimeDelta( archive_timestamp ) ) )
+                
             
         
         for service_key in current_service_keys.intersection( HG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
@@ -2574,16 +2586,7 @@ class MediaSingleton( Media ):
     
     def GetResolution( self ):
         
-        ( width, height ) = self._media_result.GetResolution()
-        
-        if width is None:
-            
-            return ( 0, 0 )
-            
-        else:
-            
-            return ( width, height )
-            
+        return self._media_result.GetResolution()
         
     
     def GetSize( self ):
@@ -2912,13 +2915,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                                 
                                 ( width, height ) = x.GetResolution()
                                 
-                                num_pixels = width * height
-                                
-                                if size is None or size == 0 or num_pixels == 0:
+                                if size is None or size == 0 or width is None or width == 0 or height is None or height == 0:
                                     
                                     frame_bitrate = -1
                                     
                                 else:
+                                    
+                                    num_pixels = width * height
                                     
                                     frame_bitrate = size / num_pixels
                                     
@@ -3017,7 +3020,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetLocationsManager().GetFileModifiedTimestamp() )
+                    return deal_with_none( x.GetLocationsManager().GetTimestampManager().GetAggregateModifiedTimestamp() )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
@@ -3029,6 +3032,15 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
                     
                     return deal_with_none( fvsm.GetLastViewedTime( CC.CANVAS_MEDIA_VIEWER ) )
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP:
+                
+                def sort_key( x ):
+                    
+                    locations_manager = x.GetLocationsManager()
+                    
+                    return ( not locations_manager.inbox, deal_with_none( x.GetLocationsManager().GetTimestampManager().GetArchivedTimestamp() ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_HEIGHT:
@@ -3164,6 +3176,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_LAST_VIEWED_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )

@@ -3015,6 +3015,21 @@ class DB( HydrusDB.HydrusDB ):
                     
                 elif duplicate_type == HC.DUPLICATE_ALTERNATE:
                     
+                    if media_id_a == media_id_b:
+                        
+                        king_hash_id = self.modules_files_duplicates.DuplicatesGetKingHashId( media_id_a )
+                        
+                        hash_id_to_remove = hash_id_b if king_hash_id == hash_id_a else hash_id_a
+                        
+                        self.modules_files_duplicates.DuplicatesRemoveMediaIdMember( hash_id_to_remove )
+                        
+                        media_id_a = self.modules_files_duplicates.DuplicatesGetMediaId( hash_id_a )
+                        media_id_b = self.modules_files_duplicates.DuplicatesGetMediaId( hash_id_b )
+                        
+                        smaller_media_id = min( media_id_a, media_id_b )
+                        larger_media_id = max( media_id_a, media_id_b )
+                        
+                    
                     self.modules_files_duplicates.DuplicatesSetAlternates( media_id_a, media_id_b )
                     
                 
@@ -5090,14 +5105,19 @@ class DB( HydrusDB.HydrusDB ):
         
         modified_timestamp_predicates = []
         
-        if 'min_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'file_modified_timestamp >= ' + str( simple_preds[ 'min_modified_timestamp' ] ) )
-        if 'max_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'file_modified_timestamp <= ' + str( simple_preds[ 'max_modified_timestamp' ] ) )
+        if 'min_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) >= ' + str( simple_preds[ 'min_modified_timestamp' ] ) )
+        if 'max_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) <= ' + str( simple_preds[ 'max_modified_timestamp' ] ) )
         
         if len( modified_timestamp_predicates ) > 0:
             
             pred_string = ' AND '.join( modified_timestamp_predicates )
             
-            modified_timestamp_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM file_modified_timestamps WHERE {};'.format( pred_string ) ) )
+            q1 = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps'
+            q2 = 'SELECT hash_id, file_modified_timestamp FROM file_domain_modified_timestamps'
+            
+            query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
+            
+            modified_timestamp_hash_ids = self._STS( self._Execute( query ) )
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
             
@@ -6866,6 +6886,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_file_modified_timestamps = dict( self._Execute( 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'.format( temp_table_name ) ) )
                 
+                hash_ids_to_domain_modified_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( domain, timestamp ) ) for ( hash_id, domain, timestamp ) in self._Execute( 'SELECT hash_id, domain, file_modified_timestamp FROM {} CROSS JOIN file_domain_modified_timestamps USING ( hash_id ) CROSS JOIN url_domains USING ( domain_id );'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_archive_timestamps = dict( self._Execute( 'SELECT hash_id, archived_timestamp FROM {} CROSS JOIN archive_timestamps USING ( hash_id );'.format( temp_table_name ) ) )
+                
                 hash_ids_to_local_file_deletion_reasons = self.modules_files_storage.GetHashIdsToFileDeletionReasons( temp_table_name )
                 
                 hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in hash_ids_to_current_file_service_ids_and_timestamps.items() }
@@ -6901,13 +6925,24 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filenames for ( service_id, filenames ) in list(service_ids_to_filenames.items()) }
                 
+                timestamp_manager = ClientMediaManagers.TimestampManager()
+                
                 if hash_id in hash_ids_to_file_modified_timestamps:
                     
-                    file_modified_timestamp = hash_ids_to_file_modified_timestamps[ hash_id ]
+                    timestamp_manager.SetFileModifiedTimestamp( hash_ids_to_file_modified_timestamps[ hash_id ] )
                     
-                else:
+                
+                if hash_id in hash_ids_to_domain_modified_timestamps:
                     
-                    file_modified_timestamp = None
+                    for ( domain, modified_timestamp ) in hash_ids_to_domain_modified_timestamps[ hash_id ]:
+                        
+                        timestamp_manager.SetDomainModifiedTimestamp( domain, modified_timestamp )
+                        
+                    
+                
+                if hash_id in hash_ids_to_archive_timestamps:
+                    
+                    timestamp_manager.SetArchivedTimestamp( hash_ids_to_archive_timestamps[ hash_id ] )
                     
                 
                 if hash_id in hash_ids_to_local_file_deletion_reasons:
@@ -6919,7 +6954,17 @@ class DB( HydrusDB.HydrusDB ):
                     local_file_deletion_reason = None
                     
                 
-                locations_manager = ClientMediaManagers.LocationsManager( current_file_service_keys_to_timestamps, deleted_file_service_keys_to_timestamps, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, file_modified_timestamp = file_modified_timestamp, local_file_deletion_reason = local_file_deletion_reason )
+                locations_manager = ClientMediaManagers.LocationsManager(
+                    current_file_service_keys_to_timestamps,
+                    deleted_file_service_keys_to_timestamps,
+                    pending_file_service_keys,
+                    petitioned_file_service_keys,
+                    inbox = inbox,
+                    urls = urls,
+                    service_keys_to_filenames = service_keys_to_filenames,
+                    timestamp_manager = timestamp_manager,
+                    local_file_deletion_reason = local_file_deletion_reason
+                )
                 
                 #
                 
@@ -9310,6 +9355,41 @@ class DB( HydrusDB.HydrusDB ):
                             hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                             
                             self._ExecuteMany( 'DELETE FROM url_map WHERE hash_id = ? AND url_id = ?;', itertools.product( hash_ids, url_ids ) )
+                            
+                        
+                    elif data_type == HC.CONTENT_TYPE_TIMESTAMP:
+                        
+                        ( timestamp_type, hash, data ) = row
+                        
+                        if timestamp_type == 'domain':
+                            
+                            if action == HC.CONTENT_UPDATE_ADD:
+                                
+                                ( domain, timestamp ) = data
+                                
+                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                                domain_id = self.modules_urls.GetURLDomainId( domain )
+                                
+                                self.modules_files_metadata_basic.UpdateDomainModifiedTimestamp( hash_id, domain_id, timestamp )
+                                
+                            elif action == HC.CONTENT_UPDATE_SET:
+                                
+                                ( domain, timestamp ) = data
+                                
+                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                                domain_id = self.modules_urls.GetURLDomainId( domain )
+                                
+                                self.modules_files_metadata_basic.SetDomainModifiedTimestamp( hash_id, domain_id, timestamp )
+                                
+                            elif action == HC.CONTENT_UPDATE_DELETE:
+                                
+                                domain = data
+                                
+                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                                domain_id = self.modules_urls.GetURLDomainId( domain )
+                                
+                                self.modules_files_metadata_basic.ClearDomainModifiedTimestamp( hash_id, domain_id )
+                                
                             
                         
                     elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
@@ -11753,6 +11833,7 @@ class DB( HydrusDB.HydrusDB ):
             simple_sorts.append( CC.SORT_FILES_BY_APPROX_BITRATE )
             simple_sorts.append( CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP )
             simple_sorts.append( CC.SORT_FILES_BY_LAST_VIEWED_TIME )
+            simple_sorts.append( CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP )
             
             if sort_data in simple_sorts:
                 
@@ -11771,59 +11852,66 @@ class DB( HydrusDB.HydrusDB ):
                     
                     current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
                     
-                    query = 'SELECT hash_id, timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( '{}', current_files_table_name )
+                    query = 'SELECT hash_id, timestamp FROM {temp_table} CROSS JOIN {current_files_table} USING ( hash_id );'.format( temp_table = '{temp_table}', current_files_table = current_files_table_name )
                     
                 elif sort_data == CC.SORT_FILES_BY_FILESIZE:
                     
-                    query = 'SELECT hash_id, size FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, size FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_DURATION:
                     
-                    query = 'SELECT hash_id, duration FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, duration FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
                     
-                    query = 'SELECT hash_id, num_frames, duration FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, num_frames, duration FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_NUM_FRAMES:
                     
-                    query = 'SELECT hash_id, num_frames FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, num_frames FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_WIDTH:
                     
-                    query = 'SELECT hash_id, width FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, width FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_HEIGHT:
                     
-                    query = 'SELECT hash_id, height FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_RATIO:
                     
-                    query = 'SELECT hash_id, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_NUM_PIXELS:
                     
-                    query = 'SELECT hash_id, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
                     
-                    query = 'SELECT hash_id, views FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
+                    query = 'SELECT hash_id, views FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
                     
-                    query = 'SELECT hash_id, viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
+                    query = 'SELECT hash_id, viewtime FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
                     
-                    query = 'SELECT hash_id, duration, num_frames, size, width, height FROM {} CROSS JOIN files_info USING ( hash_id );'
+                    query = 'SELECT hash_id, duration, num_frames, size, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
                 elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
                     
-                    query = 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'
+                    q1 = 'SELECT hash_id, file_modified_timestamp FROM {temp_table} CROSS JOIN file_modified_timestamps USING ( hash_id )'
+                    q2 = 'SELECT hash_id, file_modified_timestamp FROM {temp_table} CROSS JOIN file_domain_modified_timestamps USING ( hash_id )'
+                    
+                    query = 'SELECT hash_id, MIN( file_modified_timestamp ) FROM ( {} UNION {} ) GROUP BY hash_id;'.format( q1, q2 )
                     
                 elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
                     
-                    query = 'SELECT hash_id, last_viewed_timestamp FROM {} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {};'.format( '{}', CC.CANVAS_MEDIA_VIEWER )
+                    query = 'SELECT hash_id, last_viewed_timestamp FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
+                    
+                elif sort_data == CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP:
+                    
+                    query = 'SELECT hash_id, archived_timestamp FROM {temp_table} CROSS JOIN archive_timestamps USING ( hash_id );'
                     
                 
                 if sort_data == CC.SORT_FILES_BY_RATIO:
@@ -11904,13 +11992,13 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                 else:
                                     
-                                    num_pixels = width * height
-                                    
-                                    if size is None or size == 0 or num_pixels == 0:
+                                    if size is None or size == 0 or width is None or width == 0 or height is None or height == 0:
                                         
                                         frame_bitrate = -1
                                         
                                     else:
+                                        
+                                        num_pixels = width * height
                                         
                                         frame_bitrate = size / num_pixels
                                         
@@ -11963,7 +12051,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                 
-                hash_ids_and_other_data = sorted( self._Execute( query.format( temp_hash_ids_table_name ) ), key = key, reverse = reverse )
+                hash_ids_and_other_data = sorted( self._Execute( query.format( temp_table = temp_hash_ids_table_name ) ), key = key, reverse = reverse )
                 
             
             original_hash_ids = set( hash_ids )
@@ -13876,6 +13964,17 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 475:
+            
+            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'file_domain_modified_timestamps', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS file_domain_modified_timestamps ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp INTEGER, PRIMARY KEY ( hash_id, domain_id ) );' )
+                self._CreateIndex( 'file_domain_modified_timestamps', [ 'file_modified_timestamp' ] )
                 
             
         

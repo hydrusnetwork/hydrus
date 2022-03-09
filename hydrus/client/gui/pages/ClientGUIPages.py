@@ -3052,6 +3052,16 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         # in some unusual circumstances, this gets out of whack
         insertion_index = min( insertion_index, self.count() )
         
+        if self._controller.new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ):
+            
+            current_gui_page = self._controller.gui.GetCurrentPage()
+            
+            if current_gui_page is not None:
+                
+                current_gui_page.PageHidden()
+                
+            
+        
         self.insertTab( insertion_index, page, page_name )
         
         if select_page:

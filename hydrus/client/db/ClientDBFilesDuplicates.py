@@ -1274,6 +1274,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def DuplicatesSetAlternates( self, media_id_a, media_id_b ):
         
+        if media_id_a == media_id_b:
+            
+            return
+            
+        
         # let's clear out any outstanding potentials. whether this is a valid or not connection, we don't want to see it again
         
         self.DuplicatesClearPotentialsBetweenMedias( ( media_id_a, ), ( media_id_b, ) )

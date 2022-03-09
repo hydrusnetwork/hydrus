@@ -785,6 +785,8 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditCredentials( self ):
         
+        edited_datas = []
+        
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
         for domain_and_login_info in domain_and_login_infos:
@@ -876,11 +878,17 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
             self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
             
+            edited_datas.append( edited_domain_and_login_info )
+            
+        
+        self._domains_and_login_info.SelectDatas( edited_datas )
         
         self._domains_and_login_info.Sort()
         
     
     def _EditLoginScript( self ):
+        
+        edited_datas = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1000,11 +1008,17 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
             self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
             
+            edited_datas.append( edited_domain_and_login_info )
+            
+        
+        self._domains_and_login_info.SelectDatas( edited_datas )
         
         self._domains_and_login_info.Sort()
         
     
     def _FlipActive( self ):
+        
+        edited_datas = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1019,6 +1033,10 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
             self._domains_and_login_info.AddDatas( ( flipped_domain_and_login_info, ) )
             
+            edited_datas.append( flipped_domain_and_login_info )
+            
+        
+        self._domains_and_login_info.SelectDatas( edited_datas )
         
         self._domains_and_login_info.Sort()
         
@@ -1048,6 +1066,8 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ScrubDelays( self ):
         
+        edited_datas = []
+        
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
         for domain_and_login_info in domain_and_login_infos:
@@ -1062,11 +1082,17 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
             self._domains_and_login_info.AddDatas( ( scrubbed_domain_and_login_info, ) )
             
+            edited_datas.append( scrubbed_domain_and_login_info )
+            
+        
+        self._domains_and_login_info.SelectDatas( edited_datas )
         
         self._domains_and_login_info.Sort()
         
     
     def _ScrubInvalidity( self ):
+        
+        edited_datas = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1108,6 +1134,10 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
             self._domains_and_login_info.AddDatas( ( scrubbed_domain_and_login_info, ) )
             
+            edited_datas.append( scrubbed_domain_and_login_info )
+            
+        
+        self._domains_and_login_info.SelectDatas( edited_datas )
         
         self._domains_and_login_info.Sort()
         
@@ -1546,6 +1576,8 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditCredentialDefinitions( self ):
         
+        edited_datas = []
+        
         credential_definitions = self._credential_definitions.GetData( only_selected = True )
         
         for credential_definition in credential_definitions:
@@ -1566,12 +1598,16 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._credential_definitions.AddDatas( ( edited_credential_definition, ) )
                     
+                    edited_datas.append( edited_credential_definition )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._credential_definitions.SelectDatas( edited_datas )
         
         self._credential_definitions.Sort()
         
@@ -1721,6 +1757,8 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditExampleDomainsInfo( self ):
         
+        edited_datas = []
+        
         selected_example_domains_info = self._example_domains_info.GetData( only_selected = True )
         
         for example_domain_info in selected_example_domains_info:
@@ -1786,6 +1824,10 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._example_domains_info.AddDatas( ( edited_example_domain_info, ) )
             
+            edited_datas.append( edited_example_domain_info )
+            
+        
+        self._example_domains_info.SelectDatas( edited_datas )
         
         self._example_domains_info.Sort()
         
@@ -1960,6 +2002,8 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         login_scripts = self._login_scripts.GetData( only_selected = True )
         
         for login_script in login_scripts:
@@ -1980,12 +2024,16 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._login_scripts.AddDatas( ( edited_login_script, ) )
                     
+                    edited_datas.append( edited_login_script )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._login_scripts.SelectDatas( edited_datas )
         
         self._login_scripts.Sort()
         

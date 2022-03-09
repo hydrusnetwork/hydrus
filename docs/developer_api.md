@@ -454,7 +454,7 @@ Response:
 
 ### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
 
-_Ask the client for tag suggestions._
+_Search the client for tags._
 
 Restricted access:
 :   YES. Search for Files permission needed.
@@ -463,7 +463,7 @@ Required Headers: n/a
 
 Arguments:
 :   
-* `search`: (the tag to search for)
+* `search`: (the tag text to search for, enter exactly what you would in the client UI)
 * `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
 * `tag_service_name`: (optional, selective, string, the tag domain on which to search)
 
@@ -474,27 +474,33 @@ Example request:
 ```
 
 Response:
-:   Some JSON listing the client's suggested tags.
+:   Some JSON listing the client's matching tags.
 
 :   
 ```json title="Example response"
 {
   "tags": [
     {
-      "value": "kim possible", 
+      "value": "series:kim possible", 
+      "count": 3
+    },
+    {
+      "value": "kimchee", 
       "count": 2
     },
     {
-      "value": "character:kim possible", 
+      "value": "character:kimberly ann possible", 
       "count": 1
-    },
-    {
-      "value": "series:kim possible", 
-      "count": 3
     }
   ]
 }
 ```
+
+The `tags` list will be sorted by descending count. If you do not specify a tag service, it will default to 'all known tags'. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
+
+Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
+
+Also, for now, it gives you the 'storage' tags, which are the 'raw' ones you see in the manage tags dialog, without collapsed siblings, but more options will be added in future.
 
 ### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
 

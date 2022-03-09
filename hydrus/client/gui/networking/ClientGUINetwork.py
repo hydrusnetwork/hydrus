@@ -405,6 +405,8 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         for data in self._list_ctrl.GetData( only_selected = True ):
             
             ( network_context, ( key, value ), approved, reason ) = data
@@ -425,12 +427,16 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._list_ctrl.AddDatas( ( new_data, ) )
                     
+                    edited_datas.append( new_data )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._list_ctrl.SelectDatas( edited_datas )
         
     
     def GetValue( self ):

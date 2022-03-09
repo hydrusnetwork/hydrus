@@ -1,10 +1,13 @@
 import threading
+import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+
+from hydrus.client import ClientSearch
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
 CLIENT_API_PERMISSION_ADD_FILES = 1
@@ -340,6 +343,19 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             self._search_results_timeout = HydrusData.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT
+            
+        
+    
+    def FilterTagPredicateResponse( self, predicates: typing.List[ ClientSearch.Predicate ] ):
+        
+        with self._lock:
+            
+            if self._search_tag_filter.AllowsEverything():
+                
+                return predicates
+                
+            
+            return [ predicate for predicate in predicates if self._search_tag_filter.TagOK( predicate.GetValue() ) ]
             
         
     

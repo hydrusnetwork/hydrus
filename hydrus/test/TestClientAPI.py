@@ -20,11 +20,9 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
-from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -1145,6 +1143,114 @@ class TestClientAPI( unittest.TestCase ):
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
     
+    def _test_add_tags_search_tags( self, connection, set_up_permissions ):
+        
+        predicates = [
+            ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'green', count = ClientSearch.PredicateCount( 2, 0, None, None ) ),
+            ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'green car', count = ClientSearch.PredicateCount( 5, 0, None, None ) )
+        ]
+        
+        HG.test_controller.SetRead( 'autocomplete_predicates', predicates )
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/add_tags/search_tags?search={}'.format( 'gre' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = {
+            'tags' : [
+                {
+                    'value' : 'green',
+                    'count' : 2
+                }
+            ]
+        }
+        
+        self.assertEqual( expected_answer, d )
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/add_tags/search_tags?search={}'.format( 'gre' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        # note this also tests sort
+        expected_answer = {
+            'tags' : [
+                {
+                    'value' : 'green car',
+                    'count' : 5
+                },
+                {
+                    'value' : 'green',
+                    'count' : 2
+                }
+            ]
+        }
+        
+        self.assertEqual( expected_answer, d )
+        
+        #
+        
+        # the db won't be asked in this case since default rule for all known tags is not to run this search
+        path = '/add_tags/search_tags?search={}'.format( urllib.parse.quote( '*' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        # note this also tests sort
+        expected_answer = {
+            'tags' : []
+        }
+        
+        self.assertEqual( expected_answer, d )
+        
     def _test_add_urls( self, connection, set_up_permissions ):
         
         # get url files
@@ -2414,7 +2520,19 @@ class TestClientAPI( unittest.TestCase ):
                 
                 tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
                 
-                locations_manager = ClientMediaManagers.LocationsManager( { random_file_service_hex_current : current_import_timestamp }, { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) }, set(), set(), inbox = False, urls = urls, file_modified_timestamp = file_modified_timestamp )
+                timestamp_manager = ClientMediaManagers.TimestampManager()
+                
+                timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
+                
+                locations_manager = ClientMediaManagers.LocationsManager(
+                    { random_file_service_hex_current : current_import_timestamp },
+                    { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) },
+                    set(),
+                    set(),
+                    inbox = False,
+                    urls = urls,
+                    timestamp_manager = timestamp_manager
+                )
                 ratings_manager = ClientMediaManagers.RatingsManager( {} )
                 notes_manager = ClientMediaManagers.NotesManager( {} )
                 file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
@@ -3065,6 +3183,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
+        self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )

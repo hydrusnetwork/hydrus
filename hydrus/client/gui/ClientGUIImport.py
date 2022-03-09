@@ -370,6 +370,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def EditQuickNamespaces( self ):
             
+            edited_datas = []
+            
             data_to_edit = self._quick_namespaces_list.GetData( only_selected = True )
             
             for old_data in data_to_edit:
@@ -390,9 +392,13 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                             
                             self._quick_namespaces_list.AddDatas( ( new_data, ) )
                             
+                            edited_datas.append( new_data )
+                            
                         
                     
                 
+            
+            self._quick_namespaces_list.SelectDatas( edited_datas )
             
         
         def AddRegex( self ):
@@ -899,6 +905,8 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         import_folders = self._import_folders.GetData( only_selected = True )
         
         for import_folder in import_folders:
@@ -919,12 +927,16 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._import_folders.AddDatas( ( edited_import_folder, ) )
                     
+                    edited_datas.append( edited_import_folder )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._import_folders.SelectDatas( edited_datas )
         
         self._import_folders.Sort()
         
@@ -1322,6 +1334,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditFilenameTaggingOptions( self ):
         
+        edited_datas = []
+        
         selected_data = self._filename_tagging_options.GetData( only_selected = True )
         
         for data in selected_data:
@@ -1340,7 +1354,11 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     filename_tagging_options = panel.GetValue()
                     
-                    self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
+                    new_data = ( service_key, filename_tagging_options )
+                    
+                    self._filename_tagging_options.AddDatas( [ new_data ] )
+                    
+                    edited_datas.append( new_data )
                     
                 else:
                     
@@ -1348,6 +1366,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
+        
+        self._filename_tagging_options.SelectDatas( edited_datas )
         
     
     def _UpdateCheckRegularly( self ):

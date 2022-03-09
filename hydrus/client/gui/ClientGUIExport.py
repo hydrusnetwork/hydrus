@@ -157,6 +157,8 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         export_folders = self._export_folders.GetData( only_selected = True )
         
+        edited_datas = []
+        
         for export_folder in export_folders:
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
@@ -175,12 +177,16 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._export_folders.AddDatas( ( edited_export_folder, ) )
                     
+                    edited_datas.append( edited_export_folder )
+                    
                 else:
                     
                     return
                     
                 
             
+        
+        self._export_folders.SelectDatas( edited_datas )
         
     
     def _GetExistingNames( self ):

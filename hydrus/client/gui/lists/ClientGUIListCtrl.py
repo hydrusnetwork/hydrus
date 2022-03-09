@@ -659,6 +659,8 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def SelectDatas( self, datas: typing.Iterable[ object ] ):
         
+        self.clearFocus()
+        
         for data in datas:
             
             if data in self._data_to_indices:

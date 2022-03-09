@@ -2259,6 +2259,8 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         content_parsers = self._content_parsers.GetData( only_selected = True )
         
         for content_parser in content_parsers:
@@ -2281,12 +2283,16 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
                     
                     self._content_parsers.AddDatas( ( edited_content_parser, ) )
                     
+                    edited_datas.append( edited_content_parser )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._content_parsers.SelectDatas( edited_datas )
         
         self._content_parsers.Sort()
         
@@ -3118,6 +3124,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditSubPageParser( self ):
         
+        edited_datas = []
+        
         selected_data = self._sub_page_parsers.GetData( only_selected = True )
         
         for sub_page_parser in selected_data:
@@ -3142,12 +3150,16 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
                     
+                    edited_datas.append( new_sub_page_parser )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._sub_page_parsers.SelectDatas( edited_datas )
         
         self._sub_page_parsers.Sort()
         
@@ -3370,6 +3382,8 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
+        edited_datas = []
+        
         parsers = self._parsers.GetData( only_selected = True )
         
         for parser in parsers:
@@ -3390,12 +3404,16 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._parsers.AddDatas( ( edited_parser, ) )
                     
+                    edited_datas.append( edited_parser )
+                    
                 else:
                     
                     break
                     
                 
             
+        
+        self._parsers.SelectDatas( edited_datas )
         
         self._parsers.Sort()
         
