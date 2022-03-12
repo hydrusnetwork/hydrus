@@ -174,6 +174,20 @@ By default, hydrus stores all your user data in one location, so backing up is s
 
     Shut the client down while you run the backup, obviously.
     
+##### A few options
+There are a host of other great alternatives out there, probably far too many to count. These are a couple that are often recommended and used by Hydrus users and are, in the spirit of Hydrus Network itself, free and open source.
+
+
+[FreeFileSync](https://freefilesync.org/)  
+Linux, MacOS, Windows.  
+Recommended and used by dev. Somewhat basic but does the job well enough.
+
+[Borg Backup](https://www.borgbackup.org/)  
+FreeBSD, Linux, MacOS.  
+More advanced and featureful backup tool.
+
+[Restic](https://restic.net/)  
+Almost every OS you can name.
 !!! danger
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
 
