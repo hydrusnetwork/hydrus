@@ -687,6 +687,18 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
             
+        CBOR_AVAILABLE = False
+        
+        try:
+            
+            import cbor2
+            CBOR_AVAILABLE = True
+            
+        except:
+            
+            pass
+        
+        library_versions.append( ( 'cbor2 present: ', str( CBOR_AVAILABLE ) ) )
         
         from hydrus.client.networking import ClientNetworkingJobs
         

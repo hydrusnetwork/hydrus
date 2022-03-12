@@ -97,6 +97,11 @@ class Predicate( Enum ):
     URL_CLASS = auto()
     NO_URL_CLASS = auto()
     TAG_AS_NUMBER = auto()
+    HAS_NOTES = auto()
+    NO_NOTES = auto()
+    NUM_NOTES = auto()
+    HAS_NOTE_NAME = auto()
+    NO_NOTE_NAME = auto()
 
 
 # This enum lists the possible value formats a predicate can have (if it has a value).
@@ -121,6 +126,7 @@ class Value( Enum ):
 # Implemented in parse_operator
 class Operators( Enum ):
     RELATIONAL = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
+    RELATIONAL_EXACT = auto() # Like RELATIONAL but without the approximately equal operator
     EQUAL = auto()  # One of '=' or '!='
     FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
@@ -186,7 +192,12 @@ SYSTEM_PREDICATES = {
     '(does not|doesn\'t) have (a )?(url with )?domain': (Predicate.NO_DOMAIN, None, Value.ANY_STRING, None),
     'has (a )?url with (url )?class': (Predicate.URL_CLASS, None, Value.ANY_STRING, None),
     '(does not|doesn\'t) have (a )?url with (url )?class': (Predicate.NO_URL_CLASS, None, Value.ANY_STRING, None),
-    'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None)
+    'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None),
+    'has notes?': (Predicate.HAS_NOTES, None, None, None),
+    '(no|does not have|doesn\'t have) notes': (Predicate.NO_NOTES, None, None, None),
+    'num(ber of)? notes': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
+    '(has (a )?)?note with name': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
+    '(no|does not have|doesn\'t have) note with name': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
 }
 
 
@@ -344,17 +355,21 @@ def parse_operator( string: str, spec ):
     string = string.strip()
     if spec is None:
         return string, None
-    elif spec == Operators.RELATIONAL:
-        ops = [ '\u2248', '=', '<', '>', '\u2260' ]
+    elif spec == Operators.RELATIONAL or spec == Operators.RELATIONAL_EXACT:
+        exact = spec == Operators.RELATIONAL_EXACT
+        ops = [ '=', '<', '>' ]
+        if not exact:
+            ops = ops + [ '\u2260', '\u2248' ]
         if string.startswith( '==' ): return string[ 2: ], '='
-        if string.startswith( '!=' ): return string[ 2: ], '\u2260'
-        if string.startswith( 'is not' ): return string[ 6: ], '\u2260'
-        if string.startswith( 'isn\'t' ): return string[ 5: ], '\u2260'
-        if string.startswith( '~=' ): return string[ 2: ], '\u2248'
+        if not exact:
+            if string.startswith( '!=' ): return string[ 2: ], '\u2260'
+            if string.startswith( 'is not' ): return string[ 6: ], '\u2260'
+            if string.startswith( 'isn\'t' ): return string[ 5: ], '\u2260'
+            if string.startswith( '~=' ): return string[ 2: ], '\u2248'
         for op in ops:
             if string.startswith( op ): return string[ len( op ): ], op
         if string.startswith( 'is' ): return string[ 2: ], '='
-        raise ValueError( "Invalid relation operator" )
+        raise ValueError( "Invalid relational operator" )
     elif spec == Operators.EQUAL:
         if string.startswith( '==' ): return string[ 2: ], '='
         if string.startswith( '=' ): return string[ 1: ], '='
@@ -436,8 +451,8 @@ examples = [
     "system:similar to abcdef distance 5",
     "system:limit is 5000",
     "system:limit = 100",
-    "system:filetype is jpeg",
-    "system:filetype =   image/jpg, image/png, apng",
+    #"system:filetype is jpeg",
+    #"system:filetype =   image/jpg, image/png, apng",
     "system:hash = abcdef1 abcdef2 abcdef3",
     "system:hash = abcdef1 abcdef, abcdef4 md5",
     "system:modified date < 7  years 45 days 70h",
@@ -487,7 +502,15 @@ examples = [
     "system:doesn't have domain test.com",
     "system:has a url with class safebooru file page",
     "system:doesn't have a url with url class safebooru file page ",
-    "system:tag as number page < 5"
+    "system:tag as number page < 5",
+    "system:has notes",
+    "system:no notes",
+    "system:does not have notes",
+    "system:num notes is 5",
+    "system:num notes > 1",
+    "system:has note with name note name",
+    "system:no note with name note name",
+    "system:does not have note with name note name"
 ]
 
 if __name__ == "__main__":

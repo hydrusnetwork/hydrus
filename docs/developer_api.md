@@ -47,6 +47,11 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
 
 On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, which may be a raw traceback that I'd be interested in seeing. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
 
+!!! note
+    For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
+    Exceeding this limit will cause the request to fail. Make sure to use pagination if you are passing very large JSON arrays as parameters in a GET request.
+    
+
 ## Access and permissions
 
 The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.
@@ -800,6 +805,67 @@ Response:
 :   200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.
     
 
+## Adding Notes
+
+### **POST `/add_notes/set_notes`** { id="add_notes_set_notes" }
+
+_Add or update notes associated with a file._
+
+Restricted access: 
+:   YES. Add Notes permission needed.
+    
+Required Headers:
+:       
+    *   `Content-Type`: `application/json`
+    
+Arguments (in percent-encoded JSON):
+:   
+*   `notes`: a dictionary mapping note names to note contents
+*   `hash`: the SHA256 of the target file
+*   `file_id`: the identifier of the target file (an integer)
+
+    You must provide one of `hash` or `file_id`. Existing notes will be overwritten.
+```json title="Example request body"
+{
+  "notes": {
+      "note name": "content of note",
+      "another note": "asdf"
+  },
+  "hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+}
+```
+
+Response: 
+:   200 with no content. This operation is idempotent.
+
+### **POST `/add_notes/delete_notes`** { id="add_notes_delete_notes" }
+
+_Remove notes associated with a file._
+
+Restricted access: 
+:   YES. Add Notes permission needed.
+    
+Required Headers:
+:       
+    *   `Content-Type`: `application/json`
+    
+Arguments (in percent-encoded JSON):
+:   
+*   `note_names`: a list of note names to delete
+*   `hash`: the SHA256 of the target file
+*   `file_id`: the identifier of the target file (an integer)
+
+    You must provide one of `hash` or `file_id`.
+```json title="Example request body"
+{
+  "note_names": ["note name", "another note"],
+  "hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+}
+```
+
+Response: 
+:   200 with no content. This operation is idempotent.
+
 ## Managing Cookies and HTTP Headers
 
 This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.
@@ -1228,6 +1294,14 @@ Arguments (in percent-encoded JSON):
         *   system:has a url with class safebooru file page
         *   system:does not have a url with url class safebooru file page
         *   system:tag as number page < 5
+        *   system:has notes
+        *   system:no notes
+        *   system:does not have notes
+        *   system:num notes is 5
+        *   system:num notes > 1
+        *   system:has note with name note name
+        *   system:no note with name note name
+        *   system:does not have note with name note name
 
     More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
 
@@ -1303,6 +1377,7 @@ Arguments (in percent-encoded JSON):
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
     *   `hide_service_names_tags`: true or false (optional, defaulting to false)
+    *   `include_notes`: true or false (optional, defaulting to false)
 
     You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
 

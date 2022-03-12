@@ -4,6 +4,14 @@ import traceback
 import typing
 import urllib
 
+CBOR_AVAILABLE = False
+try:
+    import cbor2
+    import base64
+    CBOR_AVAILABLE = True
+except:
+    pass
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -299,6 +307,8 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
     
     args = ParsedRequestArguments()
     
+    cbor_requested = b'cbor' in requests_args
+    
     for name_bytes in requests_args:
         
         values_bytes = requests_args[ name_bytes ]
@@ -365,7 +375,13 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
             
             try:
                 
-                args[ name ] = json.loads( urllib.parse.unquote( value ) )
+                if CBOR_AVAILABLE and cbor_requested:
+                    
+                    args[ name ] = cbor2.loads( base64.urlsafe_b64decode( value ) )
+                    
+                else:
+                    
+                    args[ name ] = json.loads( urllib.parse.unquote( value ) )
                 
             except Exception as e:
                 
@@ -376,7 +392,13 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
             
             try:
                 
-                list_of_hex_strings = json.loads( urllib.parse.unquote( value ) )
+                if CBOR_AVAILABLE and cbor_requested:
+                    
+                    list_of_hex_strings = cbor2.loads( base64.urlsafe_b64decode( value ) )
+                    
+                else:
+                    
+                    list_of_hex_strings = json.loads( urllib.parse.unquote( value ) )
                 
                 args[ name ] = [ bytes.fromhex( hex_string ) for hex_string in list_of_hex_strings ]
                 
