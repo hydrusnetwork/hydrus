@@ -175,7 +175,12 @@ pred_generators = {
     SystemPredicateParser.Predicate.LAST_VIEWED_TIME : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, o, v ),
     SystemPredicateParser.Predicate.TIME_IMPORTED : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, o, v ),
     SystemPredicateParser.Predicate.FILE_SERVICE : file_service_pred_generator,
-    SystemPredicateParser.Predicate.NUM_FILE_RELS : num_file_relationships_pred_generator
+    SystemPredicateParser.Predicate.NUM_FILE_RELS : num_file_relationships_pred_generator,
+    SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ),
+    SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( o, v ) ),
+    SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, v ) ),
+    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, v ) )
 }
 
 def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ] ) -> typing.List[ ClientSearch.Predicate ]:

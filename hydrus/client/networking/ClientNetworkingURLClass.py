@@ -738,7 +738,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         num_total_parameters = len( self._parameters )
         len_example_url = len( self.Normalise( self._example_url ) )
         
-        return ( num_required_parameters, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
+        return ( num_required_path_components, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
         
     
     def GetURLBooleans( self ):
@@ -927,7 +927,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif default is None:
                 
-                raise HydrusExceptions.URLClassException( url_path + ' did not have enough of the required path components!' )
+                if index + 1 == len( self._path_components ):
+                    
+                    message = '"{}" has {} path components, but I was expecting {}!'.format( url_path, len( url_path_components ), len( self._path_components ) )
+                    
+                else:
+                    
+                    message = '"{}" has {} path components, but I was expecting at least {} and maybe as many as {}!'.format( url_path, len( url_path_components ), index + 1, len( self._path_components ) )
+                    
+                
+                raise HydrusExceptions.URLClassException( message )
                 
             
         

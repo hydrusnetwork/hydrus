@@ -1,5 +1,6 @@
 from twisted.web.server import Request
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 
 class HydrusRequest( Request ):
@@ -13,6 +14,7 @@ class HydrusRequest( Request ):
         self.hydrus_response_context = None
         self.hydrus_account = None
         self.client_api_permissions = None
+        self.preferred_mime = HC.APPLICATION_JSON
         
     
     def IsGET( self ):
@@ -50,4 +52,3 @@ class HydrusRequestLogging( HydrusRequest ):
         
         HydrusData.Print( message )
         
-    

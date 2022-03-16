@@ -1,4 +1,5 @@
 import os
+import numpy
 import threading
 import time
 
@@ -53,6 +54,8 @@ def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
 def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
+    depth = 3
+    
     if pil_image.mode == 'RGBA':
         
         depth = 4
@@ -87,6 +90,11 @@ class ImageRenderer( object ):
         
     
     def _GetNumPyImage( self, clip_rect: QC.QRect, target_resolution: QC.QSize ):
+        
+        if self._numpy_image is None:
+            
+            return numpy.zeros( ( target_resolution.height(), target_resolution.width() ), dtype = 'uint8' )
+            
         
         clip_size = clip_rect.size()
         clip_width = clip_size.width()
@@ -223,23 +231,40 @@ class ImageRenderer( object ):
         
         if not self._this_is_for_metadata_alone:
             
-            my_resolution_size = QC.QSize( self._resolution[0], self._resolution[1] )
-            my_numpy_size = QC.QSize( self._numpy_image.shape[1], self._numpy_image.shape[0] )
-            
-            if my_resolution_size != my_numpy_size:
+            if self._numpy_image is None:
                 
-                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-                m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}.'.format(
-                    self._hash.hex(),
-                    my_resolution_size,
-                    my_numpy_size
+                m = 'There was a problem rendering the image with hash {}! It may be damaged.'.format(
+                    self._hash.hex()
                 )
                 
                 m += os.linesep * 2
-                m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck the image will fix itself soon.'
+                m += 'Jobs to check its integrity and metadata have been scheduled. If it is damaged, it may be redownloaded or removed from the client completely. If it is not damaged, it may be fixed automatically or further action may be required.'
                 
                 HydrusData.ShowText( m )
+                
+                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
+                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                
+            else:
+                
+                my_resolution_size = QC.QSize( self._resolution[0], self._resolution[1] )
+                my_numpy_size = QC.QSize( self._numpy_image.shape[1], self._numpy_image.shape[0] )
+                
+                if my_resolution_size != my_numpy_size:
+                    
+                    m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}.'.format(
+                        self._hash.hex(),
+                        my_resolution_size,
+                        my_numpy_size
+                    )
+                    
+                    m += os.linesep * 2
+                    m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck the image will fix itself soon.'
+                    
+                    HydrusData.ShowText( m )
+                    
+                    HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
                 
             
         

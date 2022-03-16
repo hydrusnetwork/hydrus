@@ -23,12 +23,13 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 ## Browsers and tools created by hydrus users
 
 * [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support
-*   [Hydrus Web](https://github.com/floogulinc/hydrus-web): a web client for hydrus (allows phone browsing of hydrus)
-*   [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
-*   [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
-*   [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
-*   [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): a userscript to simplify sending Iwara videos to Hydrus Network
-*   [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
-*   [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
-*   [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
-*   [dolphin-hydrus-actions](https://gitgud.io/prkc/dolphin-hydrus-actions): Adds Hydrus right-click context menu actions to Dolphin file manager.
+* [Hydrus Web](https://github.com/floogulinc/hydrus-web): a web client for hydrus (allows phone browsing of hydrus)
+* [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
+* [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
+* [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
+* [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): a userscript to simplify sending Iwara videos to Hydrus Network
+* [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
+* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
+* [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
+* [dolphin-hydrus-actions](https://gitgud.io/prkc/dolphin-hydrus-actions): Adds Hydrus right-click context menu actions to Dolphin file manager.
+* [more projects on github](https://github.com/stars/hydrusnetwork/lists/hydrus-related-projects)

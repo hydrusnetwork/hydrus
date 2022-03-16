@@ -3980,6 +3980,141 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
+    def _GetFileHistory( self, num_steps: int ):
+        
+        # get all sorts of stats and present them in ( timestamp, cumulative_num ) tuple pairs
+        
+        file_history = {}
+        
+        # first let's do current files. we increment when added, decrement when we know removed
+        
+        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        current_timestamps = self._STL( self._Execute( 'SELECT timestamp FROM {};'.format( current_files_table_name ) ) )
+        
+        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+        
+        since_deleted = self._STL( self._Execute( 'SELECT original_timestamp FROM {} WHERE original_timestamp IS NOT NULL;'.format( deleted_files_table_name ) ) )
+        
+        current_timestamps.extend( since_deleted )
+        
+        current_timestamps.sort()
+        
+        deleted_timestamps = self._STL( self._Execute( 'SELECT timestamp FROM {} WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;'.format( deleted_files_table_name ) ) )
+        
+        combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in current_timestamps ]
+        combined_timestamps_with_delta.extend( ( ( timestamp, -1 ) for timestamp in deleted_timestamps ) )
+        
+        combined_timestamps_with_delta.sort()
+        
+        current_file_history = []
+        
+        if len( combined_timestamps_with_delta ) > 0:
+            
+            if len( combined_timestamps_with_delta ) < 2:
+                
+                step_gap = 1
+                
+            else:
+                
+                step_gap = max( ( combined_timestamps_with_delta[-1][0] - combined_timestamps_with_delta[0][0] ) // num_steps, 1 )
+                
+            
+            total_current_files = 0
+            step_timestamp = combined_timestamps_with_delta[0][0]
+            
+            for ( timestamp, delta ) in combined_timestamps_with_delta:
+                
+                if timestamp > step_timestamp + step_gap:
+                    
+                    current_file_history.append( ( step_timestamp, total_current_files ) )
+                    
+                    step_timestamp = timestamp
+                    
+                
+                total_current_files += delta
+                
+            
+        
+        file_history[ 'current' ] = current_file_history
+        
+        # now deleted times. we will pre-populate total_num_files with non-timestamped records
+        
+        ( total_deleted_files, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE timestamp IS NULL;'.format( deleted_files_table_name ) ).fetchone()
+        
+        deleted_file_history = []
+        
+        if len( deleted_timestamps ) > 0:
+            
+            if len( deleted_timestamps ) < 2:
+                
+                step_gap = 1
+                
+            else:
+                
+                step_gap = max( ( deleted_timestamps[-1] - deleted_timestamps[0] ) // num_steps, 1 )
+                
+            
+            step_timestamp = deleted_timestamps[0]
+            
+            for deleted_timestamp in deleted_timestamps:
+                
+                if deleted_timestamp > step_timestamp + step_gap:
+                    
+                    deleted_file_history.append( ( step_timestamp, total_deleted_files ) )
+                    
+                    step_timestamp = deleted_timestamp
+                    
+                
+                total_deleted_files += 1
+                
+            
+        
+        file_history[ 'deleted' ] = deleted_file_history
+        
+        # and inbox, which will work backwards since we have numbers for archiving. several subtle differences here
+        
+        ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
+        
+        archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
+        
+        inbox_file_history = []
+        
+        if len( archive_timestamps ) > 0:
+            
+            if len( archive_timestamps ) < 2:
+                
+                step_gap = 1
+                
+            else:
+                
+                step_gap = max( ( archive_timestamps[-1] - archive_timestamps[0] ) // num_steps, 1 )
+                
+            
+            archive_timestamps.reverse()
+            
+            step_timestamp = archive_timestamps[0]
+            
+            for archived_timestamp in archive_timestamps:
+                
+                if archived_timestamp < step_timestamp - step_gap:
+                    
+                    inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
+                    
+                    step_timestamp = archived_timestamp
+                    
+                
+                total_inbox_files += 1
+                
+            
+            inbox_file_history.reverse()
+            
+        
+        file_history[ 'inbox' ] = inbox_file_history
+        
+        return file_history
+        
+    
     def _GetFileNotes( self, hash ):
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
@@ -10211,6 +10346,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_duplicate_hashes': result = self.modules_files_duplicates.DuplicatesGetFileHashesByDuplicateType( *args, **kwargs )
         elif action == 'file_duplicate_info': result = self.modules_files_duplicates.DuplicatesGetFileDuplicateInfo( *args, **kwargs )
         elif action == 'file_hashes': result = self.modules_hashes.GetFileHashes( *args, **kwargs )
+        elif action == 'file_history': result = self._GetFileHistory( *args, **kwargs )
         elif action == 'file_maintenance_get_job': result = self.modules_files_maintenance_queue.GetJob( *args, **kwargs )
         elif action == 'file_maintenance_get_job_counts': result = self.modules_files_maintenance_queue.GetJobCounts( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
@@ -13978,6 +14114,54 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 476:
+            
+            try:
+                
+                # fixed apng duration calculation
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_APNG, ) ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some apng regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'nitter tweet parser', 'nitter tweet parser (video from koto.reisen)' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
