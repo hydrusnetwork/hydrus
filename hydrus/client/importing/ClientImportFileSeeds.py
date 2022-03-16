@@ -23,6 +23,7 @@ from hydrus.core import HydrusTemp
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientParsing
+from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import FileImportOptions
@@ -473,6 +474,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
+            
+            last_modified_time = network_job.GetLastModifiedTime()
+            
+            self.source_time = ClientTime.MergeModifiedTimes( self.source_time, last_modified_time )
             
             status_hook( 'importing file' )
             

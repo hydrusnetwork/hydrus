@@ -1,5 +1,8 @@
+import calendar
 import io
 import os
+import typing
+
 import requests
 import threading
 import traceback
@@ -167,6 +170,8 @@ class NetworkJob( object ):
         self._actual_fetched_url = self._url
         self._temp_path = temp_path
         
+        self._response_last_modified = None
+        
         if self._temp_path is None:
             
             # 100MB HTML file lmao
@@ -251,6 +256,34 @@ class NetworkJob( object ):
             
         
         return self._current_connection_attempt_number <= max_attempts_allowed
+        
+    
+    def _GenerateModifiedDate( self, response: requests.Response ):
+    
+        if 'Last-Modified' in response.headers:
+            
+            # Thu, 20 May 2010 07:00:23 GMT
+            # these are always in GMT
+            last_modified_string = response.headers[ 'Last-Modified' ]
+            
+            if last_modified_string.endswith( ' GMT' ):
+                
+                last_modified_string = last_modified_string[:-4]
+                
+            
+            try:
+                
+                struct_time = time.strptime( last_modified_string, '%a, %d %b %Y %H:%M:%S' )
+            
+                # the given struct is in GMT, so calendar.timegm is appropriate here
+                
+                self._response_last_modified = int( calendar.timegm( struct_time ) )
+                
+            except:
+                
+                pass
+                
+            
         
     
     def _GenerateNetworkContexts( self ):
@@ -1044,6 +1077,14 @@ class NetworkJob( object ):
             
         
     
+    def GetLastModifiedTime( self ) -> typing.Optional[ int ]:
+        
+        with self._lock:
+            
+            return self._response_last_modified
+            
+        
+    
     def GetLoginNetworkContext( self ):
         
         with self._lock:
@@ -1381,6 +1422,10 @@ class NetworkJob( object ):
                             
                         
                         with self._lock:
+                            
+                            # we are complete here and worked ok
+                            
+                            self._GenerateModifiedDate( response )
                             
                             self._status_text = 'done!'
                             

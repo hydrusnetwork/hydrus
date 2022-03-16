@@ -921,7 +921,75 @@ class TestClientAPI( unittest.TestCase ):
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
-    
+    def _test_add_notes( self, connection, set_up_permissions ):
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        # set notes
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'new note' : 'hello test', 'new note 2' : 'hello test 2' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_notes_dict.items() ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # delete notes
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/delete_notes'
+        
+        delete_note_names = { 'new note 3', 'new note 4' }
+        
+        body_dict = { 'hash' : hash_hex, 'note_names' : list( delete_note_names ) }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in delete_note_names ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
     def _test_add_tags( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'everything' ]
@@ -2534,7 +2602,7 @@ class TestClientAPI( unittest.TestCase ):
                     timestamp_manager = timestamp_manager
                 )
                 ratings_manager = ClientMediaManagers.RatingsManager( {} )
-                notes_manager = ClientMediaManagers.NotesManager( {} )
+                notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
                 file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
                 
                 media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
@@ -2545,6 +2613,7 @@ class TestClientAPI( unittest.TestCase ):
             hide_service_names_tags_metadata = []
             metadata = []
             detailed_known_urls_metadata = []
+            with_notes_metadata = []
             
             services_manager = HG.client_controller.services_manager
             
@@ -2656,10 +2725,17 @@ class TestClientAPI( unittest.TestCase ):
                 
                 detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
                 
+                with_notes_metadata_row = dict( metadata_row )
+                
+                with_notes_metadata_row[ 'notes' ] = media_result.GetNotesManager().GetNamesToNotes()
+                
+                with_notes_metadata.append( with_notes_metadata_row )
+                
             
             expected_hide_service_names_tags_metadata_result = { 'metadata' : hide_service_names_tags_metadata }
             expected_metadata_result = { 'metadata' : metadata }
             expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
+            expected_notes_metadata_result = { 'metadata' : with_notes_metadata }
             
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
@@ -2819,6 +2895,24 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d, expected_detailed_known_urls_metadata_result )
+        
+        # metadata from hashes with notes info
+        
+        path = '/get_files/file_metadata?hashes={}&include_notes=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_notes_metadata_result )
         
         # failure on missing file_ids
         
@@ -3182,6 +3276,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_manage_database( connection, set_up_permissions )
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
+        self._test_add_notes( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )

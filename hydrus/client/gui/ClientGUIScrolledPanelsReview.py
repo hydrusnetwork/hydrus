@@ -34,10 +34,11 @@ from hydrus.client import ClientRendering
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
-from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -2285,6 +2286,32 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     def ImportFromDragDrop( self, paths ):
         
         self._ImportPaths( paths )
+        
+    
+class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, file_history ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        file_history_chart = ClientGUICharts.FileHistory( self, file_history )
+        
+        file_history_chart.setMinimumSize( 640, 480 )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
         
     
 class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):

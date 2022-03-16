@@ -1,4 +1,5 @@
 beautifulsoup4>=4.0.0
+cbor2
 chardet>=3.0.4
 cloudscraper>=1.2.33
 html5lib>=1.0.1

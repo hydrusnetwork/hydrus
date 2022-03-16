@@ -44,6 +44,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -2145,6 +2146,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._menu_updater_pages_count = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesCount )
         
         self._boned_updater = self._InitialiseMenubarGetBonesUpdater()
+        self._file_history_updater = self._InitialiseMenubarGetFileHistoryUpdater()
         
         self.setMenuBar( self._menubar )
         
@@ -2252,6 +2254,44 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review your fate' )
             
             panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+            
+            frame.SetPanel( panel )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _InitialiseMenubarGetFileHistoryUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def work_callable():
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_text_1', 'Loading File History\u2026' )
+            
+            HG.client_controller.pub( 'message', job_key )
+            
+            num_steps = 1000
+            
+            file_history = HG.client_controller.Read( 'file_history', num_steps )
+            
+            return ( job_key, file_history )
+            
+        
+        def publish_callable( result ):
+            
+            ( job_key, file_history ) = result
+            
+            job_key.Delete()
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'file history' )
+            
+            panel = ClientGUIScrolledPanelsReview.ReviewFileHistory( frame, file_history )
             
             frame.SetPanel( panel )
             
@@ -3105,6 +3145,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
+        ClientGUIMenus.AppendMenuItem( menu, 'view file history', 'See a chart of your file import history.', self._ShowFileHistory )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -6166,6 +6207,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
             
+        
+    
+    def _ShowFileHistory( self ):
+        
+        if not ClientGUICharts.QT_CHARTS_OK:
+            
+            message = 'Sorry, you do not have QtCharts available, so this chart cannot be shown!'
+            
+            QW.QMessageBox.warning( self, 'Warning', message )
+            
+            return
+            
+        
+        self._file_history_updater.update()
         
     
     def _ShowHideSplitters( self ):

@@ -326,6 +326,12 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
             
             seconds %= duration
             
+            # little rounding thing if you get 364th day with 30 day months
+            if time_string == 'month' and time_quantity > 11:
+                
+                time_quantity = 11
+                
+            
             if time_quantity > 0:
                 
                 s = ToHumanInt( time_quantity ) + ' ' + time_string

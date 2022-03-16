@@ -7,8 +7,9 @@ hide: navigation
 
 ## Library modules created by hydrus users
 
-*   [Hydrus API](https://gitlab.com/cryzed/hydrus-api): A python module that talks to the API.
-*   [hydrus.js](https://github.com/cravxx/hydrus.js): A node.js module that talks to the API.
+* [Hydrus API](https://gitlab.com/cryzed/hydrus-api): A python module that talks to the API.
+* [hydrus.js](https://github.com/cravxx/hydrus.js): A node.js module that talks to the API.
+* [more projects on github](https://github.com/stars/hydrusnetwork/lists/hydrus-related-projects)
 
 ## API
 
@@ -51,6 +52,26 @@ On 200 OK, the API returns JSON for everything except actual file/thumbnail requ
     For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
     Exceeding this limit will cause the request to fail. Make sure to use pagination if you are passing very large JSON arrays as parameters in a GET request.
     
+
+## CBOR
+
+The API now tentatively supports CBOR, which is basically 'byte JSON'. If you are in a lower level language or need to do a lot of heavy work quickly, try it out!
+
+To work in CBOR, use CBOR to encode any parameters that you would previously put in JSON, and put Content-Type `application/cbor` in your request header. For POST requests, just print the pure bytes in the body, like this:
+
+```py
+cbor2.dumps( arg_dict )
+```
+
+For GET, encode the parameter value in base64, like this:
+
+```py
+base64.urlsafe_b64encode( cbor2.dumps( argument ) )
+
+-or-
+
+str( base64.urlsafe_b64encode( cbor2.dumps( argument ) ), 'ascii' )
+```
 
 ## Access and permissions
 

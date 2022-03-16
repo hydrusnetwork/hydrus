@@ -760,9 +760,12 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_ARCHIVE:
                 
-                self.inbox = False
-                
-                self._timestamp_manager.SetArchivedTimestamp( HydrusData.GetNow() )
+                if self.inbox:
+                    
+                    self.inbox = False
+                    
+                    self._timestamp_manager.SetArchivedTimestamp( HydrusData.GetNow() )
+                    
                 
             elif action == HC.CONTENT_UPDATE_INBOX:
                 

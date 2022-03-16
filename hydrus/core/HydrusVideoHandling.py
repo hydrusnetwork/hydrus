@@ -92,7 +92,37 @@ def GetAPNGACTLChunkData( file_header_bytes: bytes ):
         return None
         
     
-def GetAPNGNumFrames( apng_actl_bytes ):
+def GetAPNGDuration( apng_bytes: bytes ):
+    
+    frame_control_chunk_name = b'fcTL'
+    
+    chunks = GetAPNGChunks( apng_bytes )
+    
+    total_duration = 0
+    
+    for ( chunk_name, chunk_data ) in chunks:
+        
+        if chunk_name == frame_control_chunk_name and len( chunk_data ) >= 24:
+    
+            ( delay_numerator, ) = struct.unpack( '>H', chunk_data[20:22] )
+            ( delay_denominator, ) = struct.unpack( '>H', chunk_data[22:24] )
+            
+            if delay_denominator == 0:
+                
+                duration = 0.1
+                
+            else:
+                
+                duration = delay_numerator / delay_denominator
+                
+            
+            total_duration += duration
+            
+        
+    
+    return total_duration
+    
+def GetAPNGNumFrames( apng_actl_bytes: bytes ):
     
     ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ : 4 ] )
     
@@ -289,18 +319,16 @@ def GetFFMPEGAPNGProperties( path ):
     
     num_frames = GetAPNGNumFrames( apng_actl_bytes )
     
+    with open( path, 'rb' ) as f:
+        
+        file_bytes = f.read()
+        
+    
+    duration = GetAPNGDuration( file_bytes )
+    
     lines = GetFFMPEGInfoLines( path )
     
     resolution = ParseFFMPEGVideoResolution( lines, png_ok = True )
-    
-    ( fps, confident_fps ) = ParseFFMPEGFPS( lines, png_ok = True )
-    
-    if not confident_fps:
-        
-        fps = 24
-        
-    
-    duration = num_frames / fps
     
     duration_in_ms = int( duration * 1000 )
     

@@ -256,6 +256,8 @@ def ParseClientAPIPOSTArgs( request ):
     
     if not request.requestHeaders.hasHeader( 'Content-Type' ):
         
+        request_mime = HC.APPLICATION_JSON
+        
         parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
         
         total_bytes_read = 0
@@ -274,7 +276,7 @@ def ParseClientAPIPOSTArgs( request ):
         
         try:
             
-            mime = HC.mime_enum_lookup[ content_type ]
+            request_mime = HC.mime_enum_lookup[ content_type ]
             
         except:
             
@@ -283,7 +285,7 @@ def ParseClientAPIPOSTArgs( request ):
         
         total_bytes_read = 0
         
-        if mime == HC.APPLICATION_JSON:
+        if request_mime == HC.APPLICATION_JSON:
             
             json_bytes = request.content.read()
             
@@ -295,7 +297,7 @@ def ParseClientAPIPOSTArgs( request ):
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
         
-        elif mime == HC.APPLICATION_CBOR and CBOR_AVAILABLE:
+        elif request_mime == HC.APPLICATION_CBOR and CBOR_AVAILABLE:
             
             cbor_bytes = request.content.read()
             
@@ -325,7 +327,7 @@ def ParseClientAPIPOSTArgs( request ):
             
         
     
-    return ( parsed_request_args, total_bytes_read, mime )
+    return ( parsed_request_args, total_bytes_read, request_mime )
     
 def ParseClientAPISearchPredicates( request ):
     
@@ -779,13 +781,13 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
     
     def _callbackParsePOSTArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
-        ( parsed_request_args, total_bytes_read, mime ) = ParseClientAPIPOSTArgs( request )
+        ( parsed_request_args, total_bytes_read, request_mime ) = ParseClientAPIPOSTArgs( request )
         
         self._reportDataUsed( request, total_bytes_read )
         
         request.parsed_request_args = parsed_request_args
         
-        request.preferred_mime = mime
+        request.preferred_mime = request_mime
         
         return request
         
@@ -1292,7 +1294,7 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
         if 'hash' in request.parsed_request_args:
             
             hash = request.parsed_request_args.GetValue( 'hash', bytes )
-        
+            
         elif 'file_id' in request.parsed_request_args:
             
             hash_id = request.parsed_request_args.GetValue( 'file_id', int )
@@ -1300,10 +1302,11 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
             hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
             
             hash = hash_ids_to_hashes[ hash_id ]
-        
+            
         else:
             
             raise HydrusExceptions.BadRequestException( 'There was no file identifier or hash given!' )
+            
         
         notes = request.parsed_request_args.GetValue( 'notes', dict )
         
@@ -2859,7 +2862,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
         
         body_dict = { 'pages' : page_info_dict }
         
-        body = Dumps( body_dict )
+        body = Dumps( body_dict, request.preferred_mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         

@@ -738,7 +738,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         num_total_parameters = len( self._parameters )
         len_example_url = len( self.Normalise( self._example_url ) )
         
-        return ( num_required_parameters, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
+        return ( num_required_path_components, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
         
     
     def GetURLBooleans( self ):
