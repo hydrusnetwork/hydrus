@@ -20,7 +20,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     *   If you want the easy solution, download the .exe installer. Run it, hit ok several times.
     *   If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time (it stores all its user data inside its own folder). You probably want something like D:\\hydrus.
     *   _Note if you run <Win10, you may need [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145), if you don't already have it for vidya. If you run Win7, you will need some/all core OS updates released before 2017._
-    *   If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check [here](https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions).
+    *   If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check [here](https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions).  
+    *   **Third parties (not maintained by Hydrus Developer)**:  
+    [Chocolatey](https://community.chocolatey.org/packages/hydrus-network), Scoop, and winget. If these cause problems or are out of date contact the package maintainers.
 
 === "macOS"
 
@@ -29,10 +31,11 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 === "Linux"
 
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
-    *   If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).
     *   If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.
     *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv library, not the player. Check help->about to see if it is available--if not, see if you can get it with _apt_.
     *   You can also try [running the Windows version in wine](wine.md).
+    *   **Third parties (not maintained by Hydrus Developer)**:  
+    If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).
 
 === "From Source"
 
@@ -180,6 +183,22 @@ By default, hydrus stores all your user data in one location, so backing up is s
     Note it has 'file time and size' and 'mirror' as the main settings. This quickly ensures that changes to the left-hand side are copied to the right-hand side, adding new files and removing since-deleted files and overwriting modified files. You can save a backup profile like that and it should only take a few minutes every week to stay safely backed up, even if you have hundreds of thousands of files.
 
     Shut the client down while you run the backup, obviously.
+
+    
+##### A few options
+There are a host of other great alternatives out there, probably far too many to count. These are a couple that are often recommended and used by Hydrus users and are, in the spirit of Hydrus Network itself, free and open source.
+
+
+[FreeFileSync](https://freefilesync.org/)  
+Linux, MacOS, Windows.  
+Recommended and used by dev. Somewhat basic but does the job well enough.
+
+[Borg Backup](https://www.borgbackup.org/)  
+FreeBSD, Linux, MacOS.  
+More advanced and featureful backup tool.
+
+[Restic](https://restic.net/)  
+Almost every OS you can name.
 
 !!! danger
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
