@@ -44,7 +44,7 @@ Q: Why is my database so big!? This can't be right.
 :   A: It is working as intended. The size is because you are literally downloading and processing the entire tag database and history of the PTR. It is done this way to ensure redundancy and privacy. Redundancy because anybody with an up-to-date PTR sync can just start their own. Privacy because nobody can tell what files you have since you are downloading the tags for everything the PTR has.
 
 Q: Does that mean I can't do anything about the size? 
-:   A: Correct. There are some plans to crunch the size through a few methods but there are a lot of other far more requested features being, well, requested. Speaking crassly if you are bothered by the size requirement of the PTR you probably don't have a big enough library to really benefit and would be better of just using the IQDB script.
+:   A: Correct. There are some plans to crunch the size through a few methods but there are a lot of other far more requested features being, well, requested. Speaking crassly if you are bothered by the size requirement of the PTR you probably don't have a big enough library to really benefit and would be better off just using the IQDB script.
 
 ---
 
