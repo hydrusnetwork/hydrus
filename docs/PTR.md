@@ -6,7 +6,7 @@ title: PTR Guide
 or *Myths and facts about the Public Tag Repository*
 
 ## What is the PTR?  
-Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like `my tags`. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you don not see it in the tag list then it is not stored.
+Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like `my tags`. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you do not see it in the tag list then it is not stored.
 
 Most of the things in this document also applies to [self-hosted servers](server.md), except for tag guidelines.
 
