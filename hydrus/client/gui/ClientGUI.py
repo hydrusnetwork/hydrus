@@ -2276,7 +2276,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             HG.client_controller.pub( 'message', job_key )
             
-            num_steps = 1000
+            num_steps = 2000
             
             file_history = HG.client_controller.Read( 'file_history', num_steps )
             
@@ -3213,7 +3213,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         gui_actions = QW.QMenu( debug )
         
-        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         def flip_macos_antiflicker():
             
@@ -3634,7 +3634,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 if load_a_blank_page:
                     
-                    default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+                    default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
                     
                     self._notebook.NewPageQuery( default_location_context, on_deepest_notebook = True )
                     
@@ -5717,7 +5717,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             t = 0.25
             
-            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             HG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.NewPageQuery, default_location_context, page_name = 'test', on_deepest_notebook = True )
             
@@ -5789,7 +5789,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         def qt_test_ac():
             
-            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             SYS_PRED_REFRESH = 1.0
             

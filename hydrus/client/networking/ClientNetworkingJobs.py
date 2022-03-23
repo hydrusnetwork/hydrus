@@ -759,22 +759,71 @@ class NetworkJob( object ):
             
             try:
                 
-                is_firewall = cloudscraper.CloudScraper.is_Firewall_Blocked( response )
+                # cloudscraper refactored a bit around 1.2.60, so we now have some different paths to what we want
                 
-                if hasattr( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' ):
+                possible_paths = [
+                    ( cloudscraper.CloudScraper, 'is_Firewall_Blocked' ),
+                    ( cloudscraper.cloudflare.Cloudflare, 'is_Firewall_Blocked' )
+                ]
+                
+                is_firewall = False
+                
+                for ( m, method_name ) in possible_paths:
                     
-                    is_captcha = getattr( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' )( response )
-                    
-                elif hasattr( cloudscraper.CloudScraper, 'is_Captcha_Challenge' ):
-                    
-                    is_captcha = getattr( cloudscraper.CloudScraper, 'is_Captcha_Challenge' )( response )
-                    
-                else:
-                    
-                    is_captcha = False
+                    if hasattr( m, method_name ):
+                        
+                        is_firewall = getattr( m, method_name )( response )
+                        
+                        if is_firewall:
+                            
+                            break
+                            
+                        
                     
                 
-                is_attemptable = is_captcha or cloudscraper.CloudScraper.is_IUAM_Challenge( response )
+                possible_paths = [
+                    ( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' ),
+                    ( cloudscraper.CloudScraper, 'is_Captcha_Challenge' ),
+                    ( cloudscraper.cloudflare.Cloudflare, 'is_Captcha_Challenge' )
+                ]
+                
+                is_captcha = False
+                
+                for ( m, method_name ) in possible_paths:
+                    
+                    if hasattr( m, method_name ):
+                        
+                        is_captcha = getattr( m, method_name )( response )
+                        
+                        if is_captcha:
+                            
+                            break
+                            
+                        
+                    
+                
+                possible_paths = [
+                    ( cloudscraper.CloudScraper, 'is_IUAM_Challenge' ),
+                    ( cloudscraper.cloudflare.Cloudflare, 'is_IUAM_Challenge' ),
+                    ( cloudscraper.cloudflare.Cloudflare, 'is_New_IUAM_Challenge' )
+                ]
+                
+                is_iuam = False
+                
+                for ( m, method_name ) in possible_paths:
+                    
+                    if hasattr( m, method_name ):
+                        
+                        is_iuam = getattr( m, method_name )( response )
+                        
+                        if is_iuam:
+                            
+                            break
+                            
+                        
+                    
+                
+                is_attemptable = is_captcha or is_iuam
                 
             except Exception as e:
                 

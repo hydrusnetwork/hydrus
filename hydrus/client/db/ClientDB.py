@@ -3285,20 +3285,23 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _FilterHashesByService( self, file_service_key: bytes, hashes: typing.Sequence[ bytes ] ) -> typing.List[ bytes ]:
+    def _FilterHashesByService( self, location_context: ClientLocation.LocationContext, hashes: typing.Sequence[ bytes ] ) -> typing.List[ bytes ]:
         
         # returns hashes in order, to be nice to UI
         
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+        if not location_context.SearchesAnything():
+            
+            return []
+            
+        
+        if location_context.IsAllKnownFiles():
             
             return list( hashes )
             
         
-        service_id = self.modules_services.GetServiceId( file_service_key )
-        
         hashes_to_hash_ids = { hash : self.modules_hashes_local_cache.GetHashId( hash ) for hash in hashes if self.modules_hashes.HasHash( hash ) }
         
-        valid_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( service_id, set( hashes_to_hash_ids.values() ), HC.CONTENT_STATUS_CURRENT )
+        valid_hash_ids = self.modules_files_storage.FilterHashIds( location_context, hashes_to_hash_ids.values() )
         
         return [ hash for hash in hashes if hash in hashes_to_hash_ids and hashes_to_hash_ids[ hash ] in valid_hash_ids ]
         
@@ -4073,41 +4076,56 @@ class DB( HydrusDB.HydrusDB ):
         file_history[ 'deleted' ] = deleted_file_history
         
         # and inbox, which will work backwards since we have numbers for archiving. several subtle differences here
-        
-        ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
-        
-        archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
+        # we know the inbox now and the recent history of archives and file changes
+        # working backwards in time (which reverses increment/decrement):
+            # an archive increments
+            # a file import decrements
+        # note that we archive right before we delete a file, so file deletes shouldn't change anything. all deletes are on archived files, so the increment will already be counted
         
         inbox_file_history = []
         
+        ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
+        
+        # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
+        archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
+        
         if len( archive_timestamps ) > 0:
             
-            if len( archive_timestamps ) < 2:
-                
-                step_gap = 1
-                
-            else:
-                
-                step_gap = max( ( archive_timestamps[-1] - archive_timestamps[0] ) // num_steps, 1 )
-                
+            first_archive_time = archive_timestamps[0]
             
-            archive_timestamps.reverse()
+            combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in archive_timestamps ]
+            combined_timestamps_with_delta.extend( ( ( timestamp, -1 ) for timestamp in current_timestamps if timestamp >= first_archive_time ) )
             
-            step_timestamp = archive_timestamps[0]
+            combined_timestamps_with_delta.sort( reverse = True )
             
-            for archived_timestamp in archive_timestamps:
+            if len( combined_timestamps_with_delta ) > 0:
                 
-                if archived_timestamp < step_timestamp - step_gap:
+                if len( combined_timestamps_with_delta ) < 2:
                     
-                    inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
+                    step_gap = 1
                     
-                    step_timestamp = archived_timestamp
+                else:
+                    
+                    # reversed, so first minus last
+                    step_gap = max( ( combined_timestamps_with_delta[0][0] - combined_timestamps_with_delta[-1][0] ) // num_steps, 1 )
                     
                 
-                total_inbox_files += 1
+                step_timestamp = combined_timestamps_with_delta[0][0]
                 
-            
-            inbox_file_history.reverse()
+                for ( archived_timestamp, delta ) in combined_timestamps_with_delta:
+                    
+                    if archived_timestamp < step_timestamp - step_gap:
+                        
+                        inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
+                        
+                        step_timestamp = archived_timestamp
+                        
+                    
+                    total_inbox_files += delta
+                    
+                
+                inbox_file_history.reverse()
+                
             
         
         file_history[ 'inbox' ] = inbox_file_history
@@ -12209,7 +12227,10 @@ class DB( HydrusDB.HydrusDB ):
         
         rows = self.modules_files_storage.GetUndeleteRows( service_id, hash_ids )
         
-        self._AddFiles( service_id, rows )
+        if len( rows ) > 0:
+            
+            self._AddFiles( service_id, rows )
+            
         
     
     def _UnloadModules( self ):

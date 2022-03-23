@@ -498,6 +498,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'predicate_types_to_recent_predicates' ] = HydrusSerialisable.SerialisableDictionary()
         
+        from hydrus.client import ClientLocation
+        
+        self._dictionary[ 'default_local_location_context' ] = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        
         #
         
         self._dictionary[ 'favourite_tag_filters' ] = HydrusSerialisable.SerialisableDictionary()
@@ -932,6 +936,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultLocalLocationContext( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_local_location_context' ]
+            
+        
+    
     def GetDefaultMediaViewOptions( self ):
         
         with self._lock:
@@ -1344,19 +1356,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultSort( self, media_sort ):
+    def SetDefaultLocalLocationContext( self, location_context ):
         
         with self._lock:
             
-            self._dictionary[ 'default_sort' ] = media_sort
-            
-        
-    
-    def SetDefaultSubscriptionCheckerOptions( self, checker_options ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = checker_options
+            self._dictionary[ 'default_local_location_context' ] = location_context
             
         
     
@@ -1380,6 +1384,22 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'default_tag_sort' ] = tag_sort
+            
+        
+    
+    def SetDefaultSort( self, media_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_sort' ] = media_sort
+            
+        
+    
+    def SetDefaultSubscriptionCheckerOptions( self, checker_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = checker_options
             
         
     

@@ -1593,6 +1593,7 @@ class UIActionSimulator:
         QW.QApplication.instance().postEvent( widget, ev2 )
         
 
+# TODO: rewrite this to be on my newer panel system so this can resize for lads on small screens etc..
 class AboutBox( QW.QDialog ):
     
     def __init__( self, parent, about_info ):

@@ -16,11 +16,11 @@ CANVAS_MEDIA_VIEWER_DUPLICATES = 2
 
 CANVAS_MEDIA_VIEWER_TYPES = { CANVAS_MEDIA_VIEWER, CANVAS_MEDIA_VIEWER_DUPLICATES }
 
-canvas_type_str_lookup = {}
-
-canvas_type_str_lookup[ CANVAS_MEDIA_VIEWER ] = 'media viewer'
-canvas_type_str_lookup[ CANVAS_PREVIEW ] = 'preview'
-canvas_type_str_lookup[ CANVAS_MEDIA_VIEWER_DUPLICATES ] = 'duplicates filter'
+canvas_type_str_lookup = {
+    CANVAS_MEDIA_VIEWER : 'media viewer',
+    CANVAS_PREVIEW : 'preview',
+    CANVAS_MEDIA_VIEWER_DUPLICATES : 'duplicates filter'
+}
 
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_LIGHT_SELECTED = QG.QColor( 235, 248, 255 )
@@ -56,12 +56,12 @@ DIRECTION_LEFT = 1
 DIRECTION_RIGHT = 2
 DIRECTION_DOWN = 3
 
-directions_alignment_string_lookup = {}
-
-directions_alignment_string_lookup[ DIRECTION_UP ] = 'top'
-directions_alignment_string_lookup[ DIRECTION_LEFT ] = 'left'
-directions_alignment_string_lookup[ DIRECTION_RIGHT ] = 'right'
-directions_alignment_string_lookup[ DIRECTION_DOWN ] = 'bottom'
+directions_alignment_string_lookup = {
+    DIRECTION_UP : 'top',
+    DIRECTION_LEFT : 'left',
+    DIRECTION_RIGHT : 'right',
+    DIRECTION_DOWN : 'bottom'
+}
 
 FIELD_VERIFICATION_RECAPTCHA = 0
 FIELD_COMMENT = 1
@@ -73,25 +73,25 @@ FIELD_PASSWORD = 6
 
 FIELDS = [ FIELD_VERIFICATION_RECAPTCHA, FIELD_COMMENT, FIELD_TEXT, FIELD_CHECKBOX, FIELD_FILE, FIELD_THREAD_ID, FIELD_PASSWORD ]
 
-field_enum_lookup = {}
+field_enum_lookup = {
+    'recaptcha' : FIELD_VERIFICATION_RECAPTCHA,
+    'comment' : FIELD_COMMENT,
+    'text' : FIELD_TEXT,
+    'checkbox' : FIELD_CHECKBOX,
+    'file' : FIELD_FILE,
+    'thread id': FIELD_THREAD_ID,
+    'password' : FIELD_PASSWORD
+}
 
-field_enum_lookup[ 'recaptcha' ] = FIELD_VERIFICATION_RECAPTCHA
-field_enum_lookup[ 'comment' ] = FIELD_COMMENT
-field_enum_lookup[ 'text' ] = FIELD_TEXT
-field_enum_lookup[ 'checkbox' ] = FIELD_CHECKBOX
-field_enum_lookup[ 'file' ] = FIELD_FILE
-field_enum_lookup[ 'thread id' ] = FIELD_THREAD_ID
-field_enum_lookup[ 'password' ] = FIELD_PASSWORD
-
-field_string_lookup = {}
-
-field_string_lookup[ FIELD_VERIFICATION_RECAPTCHA ] = 'recaptcha'
-field_string_lookup[ FIELD_COMMENT ] = 'comment'
-field_string_lookup[ FIELD_TEXT ] = 'text'
-field_string_lookup[ FIELD_CHECKBOX ] = 'checkbox'
-field_string_lookup[ FIELD_FILE ] = 'file'
-field_string_lookup[ FIELD_THREAD_ID ] = 'thread id'
-field_string_lookup[ FIELD_PASSWORD ] = 'password'
+field_string_lookup = {
+    FIELD_VERIFICATION_RECAPTCHA : 'recaptcha',
+    FIELD_COMMENT : 'comment',
+    FIELD_TEXT : 'text',
+    FIELD_CHECKBOX : 'checkbox',
+    FIELD_FILE : 'file',
+    FIELD_THREAD_ID : 'thread id',
+    FIELD_PASSWORD : 'password'
+}
 
 FILE_VIEWING_STATS_MENU_DISPLAY_NONE = 0
 FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY = 1
@@ -154,21 +154,21 @@ IDLE_NOT_ON_SHUTDOWN = 0
 IDLE_ON_SHUTDOWN = 1
 IDLE_ON_SHUTDOWN_ASK_FIRST = 2
 
-idle_string_lookup = {}
-
-idle_string_lookup[ IDLE_NOT_ON_SHUTDOWN ] = 'do not run jobs on shutdown'
-idle_string_lookup[ IDLE_ON_SHUTDOWN ] = 'run jobs on shutdown if needed'
-idle_string_lookup[ IDLE_ON_SHUTDOWN_ASK_FIRST ] = 'run jobs on shutdown if needed, but ask first'
+idle_string_lookup = {
+    IDLE_NOT_ON_SHUTDOWN : 'do not run jobs on shutdown',
+    IDLE_ON_SHUTDOWN : 'run jobs on shutdown if needed',
+    IDLE_ON_SHUTDOWN_ASK_FIRST : 'run jobs on shutdown if needed, but ask first'
+}
 
 IMPORT_FOLDER_DELETE = 0
 IMPORT_FOLDER_IGNORE = 1
 IMPORT_FOLDER_MOVE = 2
 
-import_folder_string_lookup = {}
-
-import_folder_string_lookup[ IMPORT_FOLDER_DELETE ] = 'delete the file'
-import_folder_string_lookup[ IMPORT_FOLDER_IGNORE ] = 'leave the file alone, do not reattempt it'
-import_folder_string_lookup[ IMPORT_FOLDER_MOVE ] = 'move the file'
+import_folder_string_lookup = {
+    IMPORT_FOLDER_DELETE : 'delete the file',
+    IMPORT_FOLDER_IGNORE : 'leave the file alone, do not reattempt it',
+    IMPORT_FOLDER_MOVE : 'move the file'
+}
 
 EXIT_SESSION_SESSION_NAME = 'exit session'
 LAST_SESSION_SESSION_NAME = 'last session'
@@ -182,16 +182,16 @@ MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY = 5
 MEDIA_VIEWER_ACTION_DO_NOT_SHOW = 6
 MEDIA_VIEWER_ACTION_SHOW_WITH_MPV = 7
 
-media_viewer_action_string_lookup = {}
-
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] = 'show with native hydrus viewer'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE_PAUSED ] = 'show as normal, but start paused -- obselete'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button -- obselete'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused -- obselete'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ] = 'show an \'open externally\' button'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY ] = 'do not show in the media viewer. on thumbnail activation, open externally'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_DO_NOT_SHOW ] = 'do not show at all'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ] = 'show using mpv'
+media_viewer_action_string_lookup = {
+    MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE : 'show with native hydrus viewer',
+    MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE_PAUSED : 'show as normal, but start paused -- obselete',
+    MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED : 'show, but initially behind an embed button -- obselete',
+    MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED : 'show, but initially behind an embed button, and start paused -- obselete',
+    MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON : 'show an \'open externally\' button',
+    MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY : 'do not show in the media viewer. on thumbnail activation, open externally',
+    MEDIA_VIEWER_ACTION_DO_NOT_SHOW : 'do not show at all',
+    MEDIA_VIEWER_ACTION_SHOW_WITH_MPV : 'show using mpv'
+}
 
 unsupported_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
 static_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
@@ -204,13 +204,13 @@ animated_full_support = ( animated_media_actions, True, True )
 audio_full_support = ( audio_media_actions, True, True )
 no_support = ( unsupported_media_actions, False, False )
 
-media_viewer_capabilities = {}
-
-media_viewer_capabilities[ HC.GENERAL_ANIMATION ] = animated_full_support
-media_viewer_capabilities[ HC.GENERAL_IMAGE ] = static_full_support
-media_viewer_capabilities[ HC.GENERAL_VIDEO ] = animated_full_support
-media_viewer_capabilities[ HC.GENERAL_AUDIO ] = audio_full_support
-media_viewer_capabilities[ HC.GENERAL_APPLICATION ] = no_support
+media_viewer_capabilities = {
+    HC.GENERAL_ANIMATION : animated_full_support,
+    HC.GENERAL_IMAGE : static_full_support,
+    HC.GENERAL_VIDEO : animated_full_support,
+    HC.GENERAL_AUDIO : audio_full_support,
+    HC.GENERAL_APPLICATION : no_support
+}
 
 for mime in HC.SEARCHABLE_MIMES:
     
@@ -243,23 +243,23 @@ MEDIA_VIEWER_SCALE_100 = 0
 MEDIA_VIEWER_SCALE_MAX_REGULAR = 1
 MEDIA_VIEWER_SCALE_TO_CANVAS = 2
 
-media_viewer_scale_string_lookup = {}
-
-media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_100 ] = 'show at 100%'
-media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_MAX_REGULAR ] = 'scale to the largest regular zoom that fits'
-media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_TO_CANVAS ] = 'scale to the canvas size'
+media_viewer_scale_string_lookup = {
+    MEDIA_VIEWER_SCALE_100 : 'show at 100%',
+    MEDIA_VIEWER_SCALE_MAX_REGULAR : 'scale to the largest regular zoom that fits',
+    MEDIA_VIEWER_SCALE_TO_CANVAS : 'scale to the canvas size'
+}
 
 NEW_PAGE_GOES_FAR_LEFT = 0
 NEW_PAGE_GOES_LEFT_OF_CURRENT = 1
 NEW_PAGE_GOES_RIGHT_OF_CURRENT = 2
 NEW_PAGE_GOES_FAR_RIGHT = 3
 
-new_page_goes_string_lookup = {}
-
-new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_LEFT ] = 'the far left'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'left of current page tab'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'right of current page tab'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_RIGHT ] = 'the far right'
+new_page_goes_string_lookup = {
+    NEW_PAGE_GOES_FAR_LEFT : 'the far left',
+    NEW_PAGE_GOES_LEFT_OF_CURRENT : 'left of current page tab',
+    NEW_PAGE_GOES_RIGHT_OF_CURRENT : 'right of current page tab',
+    NEW_PAGE_GOES_FAR_RIGHT : 'the far right'
+}
 
 NETWORK_CONTEXT_GLOBAL = 0
 NETWORK_CONTEXT_HYDRUS = 1
@@ -269,35 +269,35 @@ NETWORK_CONTEXT_DOWNLOADER_PAGE = 4
 NETWORK_CONTEXT_SUBSCRIPTION = 5
 NETWORK_CONTEXT_WATCHER_PAGE = 6
 
-network_context_type_string_lookup = {}
+network_context_type_string_lookup = {
+    NETWORK_CONTEXT_GLOBAL : 'global',
+    NETWORK_CONTEXT_HYDRUS : 'hydrus service',
+    NETWORK_CONTEXT_DOMAIN : 'web domain',
+    NETWORK_CONTEXT_DOWNLOADER : 'downloader',
+    NETWORK_CONTEXT_DOWNLOADER_PAGE : 'downloader page',
+    NETWORK_CONTEXT_SUBSCRIPTION : 'subscription',
+    NETWORK_CONTEXT_WATCHER_PAGE : 'watcher page'
+}
 
-network_context_type_string_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'global'
-network_context_type_string_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'hydrus service'
-network_context_type_string_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'web domain'
-network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'downloader'
-network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'downloader page'
-network_context_type_string_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'subscription'
-network_context_type_string_lookup[ NETWORK_CONTEXT_WATCHER_PAGE ] = 'watcher page'
-
-network_context_type_description_lookup = {}
-
-network_context_type_description_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'All network traffic, no matter the source or destination.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'Network traffic going to or from a hydrus service.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network traffic going to or from a web domain (or a subdomain).'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through a downloader. This is no longer used.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'Network traffic going through a single downloader page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual downloader pages so they give the db and other import pages time to do work.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through a subscription query. Each query gets its own network context, named \'[subscription name]: [query text]\'.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_WATCHER_PAGE ] = 'Network traffic going through a single watcher page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual watcher pages so they give the db and other import pages time to do work.'
+network_context_type_description_lookup = {
+    NETWORK_CONTEXT_GLOBAL : 'All network traffic, no matter the source or destination.',
+    NETWORK_CONTEXT_HYDRUS : 'Network traffic going to or from a hydrus service.',
+    NETWORK_CONTEXT_DOMAIN : 'Network traffic going to or from a web domain (or a subdomain).',
+    NETWORK_CONTEXT_DOWNLOADER : 'Network traffic going through a downloader. This is no longer used.',
+    NETWORK_CONTEXT_DOWNLOADER_PAGE : 'Network traffic going through a single downloader page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual downloader pages so they give the db and other import pages time to do work.',
+    NETWORK_CONTEXT_SUBSCRIPTION : 'Network traffic going through a subscription query. Each query gets its own network context, named \'[subscription name]: [query text]\'.',
+    NETWORK_CONTEXT_WATCHER_PAGE : 'Network traffic going through a single watcher page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual watcher pages so they give the db and other import pages time to do work.'
+}
 
 PAGE_FILE_COUNT_DISPLAY_ALL = 0
 PAGE_FILE_COUNT_DISPLAY_NONE = 1
 PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS = 2
 
-page_file_count_display_string_lookup = {}
-
-page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ALL ] = 'for all pages'
-page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS ] = 'for import pages'
-page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_NONE ] = 'for no pages'
+page_file_count_display_string_lookup = {
+    PAGE_FILE_COUNT_DISPLAY_ALL : 'for all pages',
+    PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS : 'for import pages',
+    PAGE_FILE_COUNT_DISPLAY_NONE : 'for no pages'
+}
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
@@ -347,51 +347,51 @@ SYSTEM_SORT_TYPES = {
     SORT_FILES_BY_ARCHIVED_TIMESTAMP
 }
 
-system_sort_type_submetatype_string_lookup = {}
+system_sort_type_submetatype_string_lookup = {
+    SORT_FILES_BY_NUM_COLLECTION_FILES : 'collections',
+    SORT_FILES_BY_HEIGHT : 'dimensions',
+    SORT_FILES_BY_NUM_PIXELS : 'dimensions',
+    SORT_FILES_BY_RATIO : 'dimensions',
+    SORT_FILES_BY_WIDTH : 'dimensions',
+    SORT_FILES_BY_DURATION : 'duration',
+    SORT_FILES_BY_FRAMERATE : 'duration',
+    SORT_FILES_BY_NUM_FRAMES : 'duration',
+    SORT_FILES_BY_APPROX_BITRATE : 'file',
+    SORT_FILES_BY_FILESIZE : 'file',
+    SORT_FILES_BY_MIME : 'file',
+    SORT_FILES_BY_HAS_AUDIO : 'file',
+    SORT_FILES_BY_RANDOM : None,
+    SORT_FILES_BY_NUM_TAGS : 'tags',
+    SORT_FILES_BY_IMPORT_TIME : 'time',
+    SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP : 'time',
+    SORT_FILES_BY_ARCHIVED_TIMESTAMP : 'time',
+    SORT_FILES_BY_LAST_VIEWED_TIME : 'time',
+    SORT_FILES_BY_MEDIA_VIEWS : 'views',
+    SORT_FILES_BY_MEDIA_VIEWTIME : 'views'
+}
 
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_COLLECTION_FILES ] = 'collections'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'dimensions'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'dimensions'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RATIO ] = 'dimensions'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_WIDTH ] = 'dimensions'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_DURATION ] = 'duration'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'duration'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_FRAMES ] = 'duration'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MIME ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'file'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_RANDOM ] = None
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'tags'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'time'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'time'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = 'time'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'time'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'views'
-system_sort_type_submetatype_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views'
-
-sort_type_basic_string_lookup = {}
-
-sort_type_basic_string_lookup[ SORT_FILES_BY_DURATION ] = 'duration'
-sort_type_basic_string_lookup[ SORT_FILES_BY_FRAMERATE ] = 'framerate'
-sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_FRAMES ] = 'number of frames'
-sort_type_basic_string_lookup[ SORT_FILES_BY_HEIGHT ] = 'height'
-sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_COLLECTION_FILES ] = 'number of files in collection'
-sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_PIXELS ] = 'number of pixels'
-sort_type_basic_string_lookup[ SORT_FILES_BY_RATIO ] = 'resolution ratio'
-sort_type_basic_string_lookup[ SORT_FILES_BY_WIDTH ] = 'width'
-sort_type_basic_string_lookup[ SORT_FILES_BY_APPROX_BITRATE ] = 'approximate bitrate'
-sort_type_basic_string_lookup[ SORT_FILES_BY_FILESIZE ] = 'filesize'
-sort_type_basic_string_lookup[ SORT_FILES_BY_MIME ] = 'filetype'
-sort_type_basic_string_lookup[ SORT_FILES_BY_HAS_AUDIO ] = 'has audio'
-sort_type_basic_string_lookup[ SORT_FILES_BY_IMPORT_TIME ] = 'import time'
-sort_type_basic_string_lookup[ SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'modified time'
-sort_type_basic_string_lookup[ SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = 'archived time'
-sort_type_basic_string_lookup[ SORT_FILES_BY_LAST_VIEWED_TIME ] = 'last viewed time'
-sort_type_basic_string_lookup[ SORT_FILES_BY_RANDOM ] = 'random'
-sort_type_basic_string_lookup[ SORT_FILES_BY_NUM_TAGS ] = 'number of tags'
-sort_type_basic_string_lookup[ SORT_FILES_BY_MEDIA_VIEWS ] = 'media views'
-sort_type_basic_string_lookup[ SORT_FILES_BY_MEDIA_VIEWTIME ] = 'media viewtime'
+sort_type_basic_string_lookup = {
+    SORT_FILES_BY_DURATION : 'duration',
+    SORT_FILES_BY_FRAMERATE : 'framerate',
+    SORT_FILES_BY_NUM_FRAMES : 'number of frames',
+    SORT_FILES_BY_HEIGHT : 'height',
+    SORT_FILES_BY_NUM_COLLECTION_FILES : 'number of files in collection',
+    SORT_FILES_BY_NUM_PIXELS : 'number of pixels',
+    SORT_FILES_BY_RATIO : 'resolution ratio',
+    SORT_FILES_BY_WIDTH : 'width',
+    SORT_FILES_BY_APPROX_BITRATE : 'approximate bitrate',
+    SORT_FILES_BY_FILESIZE : 'filesize',
+    SORT_FILES_BY_MIME : 'filetype',
+    SORT_FILES_BY_HAS_AUDIO : 'has audio',
+    SORT_FILES_BY_IMPORT_TIME : 'import time',
+    SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP : 'modified time',
+    SORT_FILES_BY_ARCHIVED_TIMESTAMP : 'archived time',
+    SORT_FILES_BY_LAST_VIEWED_TIME : 'last viewed time',
+    SORT_FILES_BY_RANDOM : 'random',
+    SORT_FILES_BY_NUM_TAGS : 'number of tags',
+    SORT_FILES_BY_MEDIA_VIEWS : 'media views',
+    SORT_FILES_BY_MEDIA_VIEWTIME : 'media viewtime'
+}
 
 sort_type_string_lookup = {}
 
@@ -424,18 +424,18 @@ STATUS_VETOED = 7
 STATUS_SKIPPED = 8
 STATUS_SUCCESSFUL_AND_CHILD_FILES = 9
 
-status_string_lookup = {}
-
-status_string_lookup[ STATUS_UNKNOWN ] = ''
-status_string_lookup[ STATUS_SUCCESSFUL_AND_NEW ] = 'successful'
-status_string_lookup[ STATUS_SUCCESSFUL_BUT_REDUNDANT ] = 'already in db'
-status_string_lookup[ STATUS_DELETED ] = 'deleted'
-status_string_lookup[ STATUS_ERROR ] = 'error'
-status_string_lookup[ STATUS_NEW ] = 'new'
-status_string_lookup[ STATUS_PAUSED ] = 'paused'
-status_string_lookup[ STATUS_VETOED ] = 'ignored'
-status_string_lookup[ STATUS_SKIPPED ] = 'skipped'
-status_string_lookup[ STATUS_SUCCESSFUL_AND_CHILD_FILES ] = 'completed'
+status_string_lookup = {
+    STATUS_UNKNOWN : '',
+    STATUS_SUCCESSFUL_AND_NEW : 'successful',
+    STATUS_SUCCESSFUL_BUT_REDUNDANT : 'already in db',
+    STATUS_DELETED : 'deleted',
+    STATUS_ERROR : 'error',
+    STATUS_NEW : 'new',
+    STATUS_PAUSED : 'paused',
+    STATUS_VETOED : 'ignored',
+    STATUS_SKIPPED : 'skipped',
+    STATUS_SUCCESSFUL_AND_CHILD_FILES : 'completed'
+}
 
 SUCCESSFUL_IMPORT_STATES = { STATUS_SUCCESSFUL_AND_NEW, STATUS_SUCCESSFUL_BUT_REDUNDANT, STATUS_SUCCESSFUL_AND_CHILD_FILES }
 UNSUCCESSFUL_IMPORT_STATES = { STATUS_DELETED, STATUS_ERROR, STATUS_VETOED }
@@ -450,13 +450,13 @@ ZOOM_AREA = 2 # for shrinking without moire
 ZOOM_CUBIC = 3 # for interpolating, pretty good
 ZOOM_LANCZOS4 = 4 # for interpolating, noice
 
-zoom_string_lookup = {}
-
-zoom_string_lookup[ ZOOM_NEAREST ] = 'nearest neighbour'
-zoom_string_lookup[ ZOOM_LINEAR ] = 'bilinear interpolation'
-zoom_string_lookup[ ZOOM_AREA ] = 'pixel area resampling'
-zoom_string_lookup[ ZOOM_CUBIC ] = '4x4 bilinear interpolation'
-zoom_string_lookup[ ZOOM_LANCZOS4 ] = '8x8 Lanczos interpolation'
+zoom_string_lookup = {
+    ZOOM_NEAREST : 'nearest neighbour',
+    ZOOM_LINEAR : 'bilinear interpolation',
+    ZOOM_AREA : 'pixel area resampling',
+    ZOOM_CUBIC : '4x4 bilinear interpolation',
+    ZOOM_LANCZOS4 : '8x8 Lanczos interpolation'
+}
 
 class GlobalPixmaps( object ):
     

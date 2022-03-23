@@ -1,6 +1,8 @@
 import os
+import sqlite3
 import sys
 import typing
+import yaml
 
 # old method of getting frozen dir, doesn't work for symlinks looks like:
 # BASE_DIR = getattr( sys, '_MEIPASS', None )
@@ -72,16 +74,13 @@ LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
 
 #
 
-import sqlite3
-import yaml
-
 options = {}
 
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 477
-CLIENT_API_VERSION = 27
+SOFTWARE_VERSION = 478
+CLIENT_API_VERSION = 28
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -101,32 +100,32 @@ noneable_str = typing.Optional[ str ]
 BANDWIDTH_TYPE_DATA = 0
 BANDWIDTH_TYPE_REQUESTS = 1
 
-bandwidth_type_string_lookup = {}
-
-bandwidth_type_string_lookup[ BANDWIDTH_TYPE_DATA ] = 'data'
-bandwidth_type_string_lookup[ BANDWIDTH_TYPE_REQUESTS ] = 'requests'
+bandwidth_type_string_lookup = {
+    BANDWIDTH_TYPE_DATA : 'data',
+    BANDWIDTH_TYPE_REQUESTS : 'requests'
+}
 
 CONTENT_MERGE_ACTION_COPY = 0
 CONTENT_MERGE_ACTION_MOVE = 1
 CONTENT_MERGE_ACTION_TWO_WAY_MERGE = 2
 
-content_merge_string_lookup = {}
-
-content_merge_string_lookup[ CONTENT_MERGE_ACTION_COPY ] = 'copy from worse to better'
-content_merge_string_lookup[ CONTENT_MERGE_ACTION_MOVE ] = 'move from worse to better'
-content_merge_string_lookup[ CONTENT_MERGE_ACTION_TWO_WAY_MERGE ] = 'copy in both directions'
+content_merge_string_lookup = {
+    CONTENT_MERGE_ACTION_COPY : 'copy from worse to better',
+    CONTENT_MERGE_ACTION_MOVE : 'move from worse to better',
+    CONTENT_MERGE_ACTION_TWO_WAY_MERGE : 'copy in both directions'
+}
 
 CONTENT_STATUS_CURRENT = 0
 CONTENT_STATUS_PENDING = 1
 CONTENT_STATUS_DELETED = 2
 CONTENT_STATUS_PETITIONED = 3
 
-content_status_string_lookup = {}
-
-content_status_string_lookup[ CONTENT_STATUS_CURRENT ] = 'current'
-content_status_string_lookup[ CONTENT_STATUS_PENDING ] = 'pending'
-content_status_string_lookup[ CONTENT_STATUS_DELETED ] = 'deleted'
-content_status_string_lookup[ CONTENT_STATUS_PETITIONED ] = 'petitioned'
+content_status_string_lookup = {
+    CONTENT_STATUS_CURRENT : 'current',
+    CONTENT_STATUS_PENDING : 'pending',
+    CONTENT_STATUS_DELETED : 'deleted',
+    CONTENT_STATUS_PETITIONED : 'petitioned'
+}
 
 CONTENT_TYPE_MAPPINGS = 0
 CONTENT_TYPE_TAG_SIBLINGS = 1
@@ -151,29 +150,29 @@ CONTENT_TYPE_FILE_VIEWING_STATS = 19
 CONTENT_TYPE_TAG = 20
 CONTENT_TYPE_DEFINITIONS = 21
 
-content_type_string_lookup = {}
-
-content_type_string_lookup[ CONTENT_TYPE_MAPPINGS ] = 'mappings'
-content_type_string_lookup[ CONTENT_TYPE_TAG_SIBLINGS ] = 'tag siblings'
-content_type_string_lookup[ CONTENT_TYPE_TAG_PARENTS ] = 'tag parents'
-content_type_string_lookup[ CONTENT_TYPE_FILES ] = 'files'
-content_type_string_lookup[ CONTENT_TYPE_RATINGS ] = 'ratings'
-content_type_string_lookup[ CONTENT_TYPE_MAPPING ] = 'mapping'
-content_type_string_lookup[ CONTENT_TYPE_DIRECTORIES ] = 'directories'
-content_type_string_lookup[ CONTENT_TYPE_URLS ] = 'urls'
-content_type_string_lookup[ CONTENT_TYPE_VETO ] = 'veto'
-content_type_string_lookup[ CONTENT_TYPE_ACCOUNTS ] = 'accounts'
-content_type_string_lookup[ CONTENT_TYPE_OPTIONS ] = 'options'
-content_type_string_lookup[ CONTENT_TYPE_SERVICES ] = 'services'
-content_type_string_lookup[ CONTENT_TYPE_UNKNOWN ] = 'unknown'
-content_type_string_lookup[ CONTENT_TYPE_ACCOUNT_TYPES ] = 'account types'
-content_type_string_lookup[ CONTENT_TYPE_VARIABLE ] = 'variable'
-content_type_string_lookup[ CONTENT_TYPE_HASH ] = 'hash'
-content_type_string_lookup[ CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
-content_type_string_lookup[ CONTENT_TYPE_TITLE ] = 'title'
-content_type_string_lookup[ CONTENT_TYPE_NOTES ] = 'notes'
-content_type_string_lookup[ CONTENT_TYPE_FILE_VIEWING_STATS ] = 'file viewing stats'
-content_type_string_lookup[ CONTENT_TYPE_DEFINITIONS ] = 'definitions'
+content_type_string_lookup = {
+    CONTENT_TYPE_MAPPINGS : 'mappings',
+    CONTENT_TYPE_TAG_SIBLINGS : 'tag siblings',
+    CONTENT_TYPE_TAG_PARENTS : 'tag parents',
+    CONTENT_TYPE_FILES : 'files',
+    CONTENT_TYPE_RATINGS : 'ratings',
+    CONTENT_TYPE_MAPPING : 'mapping',
+    CONTENT_TYPE_DIRECTORIES : 'directories',
+    CONTENT_TYPE_URLS : 'urls',
+    CONTENT_TYPE_VETO : 'veto',
+    CONTENT_TYPE_ACCOUNTS : 'accounts',
+    CONTENT_TYPE_OPTIONS : 'options',
+    CONTENT_TYPE_SERVICES : 'services',
+    CONTENT_TYPE_UNKNOWN : 'unknown',
+    CONTENT_TYPE_ACCOUNT_TYPES : 'account types',
+    CONTENT_TYPE_VARIABLE : 'variable',
+    CONTENT_TYPE_HASH : 'hash',
+    CONTENT_TYPE_TIMESTAMP : 'timestamp',
+    CONTENT_TYPE_TITLE : 'title',
+    CONTENT_TYPE_NOTES : 'notes',
+    CONTENT_TYPE_FILE_VIEWING_STATS : 'file viewing stats',
+    CONTENT_TYPE_DEFINITIONS : 'definitions'
+}
 
 CONTENT_UPDATE_ADD = 0
 CONTENT_UPDATE_DELETE = 1
@@ -195,26 +194,26 @@ CONTENT_UPDATE_CLEAR_DELETE_RECORD = 17
 CONTENT_UPDATE_INCREMENT = 18
 CONTENT_UPDATE_DECREMENT = 19
 
-content_update_string_lookup = {}
-
-content_update_string_lookup[ CONTENT_UPDATE_ADD ] = 'add'
-content_update_string_lookup[ CONTENT_UPDATE_DELETE ] = 'delete'
-content_update_string_lookup[ CONTENT_UPDATE_PEND ] = 'pending'
-content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PEND ] = 'rescind pending'
-content_update_string_lookup[ CONTENT_UPDATE_PETITION ] = 'petition'
-content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
-content_update_string_lookup[ CONTENT_UPDATE_EDIT_LOG ] = 'edit log'
-content_update_string_lookup[ CONTENT_UPDATE_ARCHIVE ] = 'archive'
-content_update_string_lookup[ CONTENT_UPDATE_INBOX ] = 'inbox'
-content_update_string_lookup[ CONTENT_UPDATE_RATING ] = 'rating'
-content_update_string_lookup[ CONTENT_UPDATE_DENY_PEND ] = 'deny pend'
-content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
-content_update_string_lookup[ CONTENT_UPDATE_UNDELETE ] = 'undelete'
-content_update_string_lookup[ CONTENT_UPDATE_SET ] = 'set'
-content_update_string_lookup[ CONTENT_UPDATE_FLIP ] = 'flip on/off'
-content_update_string_lookup[ CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record'
-content_update_string_lookup[ CONTENT_UPDATE_INCREMENT ] = 'increment'
-content_update_string_lookup[ CONTENT_UPDATE_DECREMENT ] = 'decrement'
+content_update_string_lookup = {
+    CONTENT_UPDATE_ADD : 'add',
+    CONTENT_UPDATE_DELETE : 'delete',
+    CONTENT_UPDATE_PEND : 'pending',
+    CONTENT_UPDATE_RESCIND_PEND : 'rescind pending',
+    CONTENT_UPDATE_PETITION : 'petition',
+    CONTENT_UPDATE_RESCIND_PETITION : 'rescind petition',
+    CONTENT_UPDATE_EDIT_LOG : 'edit log',
+    CONTENT_UPDATE_ARCHIVE : 'archive',
+    CONTENT_UPDATE_INBOX : 'inbox',
+    CONTENT_UPDATE_RATING : 'rating',
+    CONTENT_UPDATE_DENY_PEND : 'deny pend',
+    CONTENT_UPDATE_DENY_PETITION : 'deny petition',
+    CONTENT_UPDATE_UNDELETE : 'undelete',
+    CONTENT_UPDATE_SET : 'set',
+    CONTENT_UPDATE_FLIP : 'flip on/off',
+    CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'clear deletion record',
+    CONTENT_UPDATE_INCREMENT : 'increment',
+    CONTENT_UPDATE_DECREMENT : 'decrement'
+}
 
 DEFINITIONS_TYPE_HASHES = 0
 DEFINITIONS_TYPE_TAGS = 1
@@ -231,29 +230,29 @@ DUPLICATE_MEMBER = 8
 DUPLICATE_KING = 9
 DUPLICATE_CONFIRMED_ALTERNATE = 10
 
-duplicate_type_string_lookup = {}
-
-duplicate_type_string_lookup[ DUPLICATE_POTENTIAL ] = 'potential duplicates'
-duplicate_type_string_lookup[ DUPLICATE_FALSE_POSITIVE ] = 'not related/false positive'
-duplicate_type_string_lookup[ DUPLICATE_SAME_QUALITY ] = 'same quality'
-duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
-duplicate_type_string_lookup[ DUPLICATE_BETTER ] = 'this is better'
-duplicate_type_string_lookup[ DUPLICATE_SMALLER_BETTER ] = 'smaller hash_id is better'
-duplicate_type_string_lookup[ DUPLICATE_LARGER_BETTER ] = 'larger hash_id is better'
-duplicate_type_string_lookup[ DUPLICATE_WORSE ] = 'this is worse'
-duplicate_type_string_lookup[ DUPLICATE_MEMBER ] = 'duplicates'
-duplicate_type_string_lookup[ DUPLICATE_KING ] = 'the best quality duplicate'
-duplicate_type_string_lookup[ DUPLICATE_CONFIRMED_ALTERNATE ] = 'confirmed alternates'
+duplicate_type_string_lookup = {
+    DUPLICATE_POTENTIAL : 'potential duplicates',
+    DUPLICATE_FALSE_POSITIVE : 'not related/false positive',
+    DUPLICATE_SAME_QUALITY : 'same quality',
+    DUPLICATE_ALTERNATE : 'alternates',
+    DUPLICATE_BETTER : 'this is better',
+    DUPLICATE_SMALLER_BETTER : 'smaller hash_id is better',
+    DUPLICATE_LARGER_BETTER : 'larger hash_id is better',
+    DUPLICATE_WORSE : 'this is worse',
+    DUPLICATE_MEMBER : 'duplicates',
+    DUPLICATE_KING : 'the best quality duplicate',
+    DUPLICATE_CONFIRMED_ALTERNATE : 'confirmed alternates'
+}
 
 ENCODING_RAW = 0
 ENCODING_HEX = 1
 ENCODING_BASE64 = 2
 
-encoding_string_lookup = {}
-
-encoding_string_lookup[ ENCODING_RAW ] = 'raw bytes'
-encoding_string_lookup[ ENCODING_HEX ] = 'hexadecimal'
-encoding_string_lookup[ ENCODING_BASE64 ] = 'base64'
+encoding_string_lookup = {
+    ENCODING_RAW : 'raw bytes',
+    ENCODING_HEX : 'hexadecimal',
+    ENCODING_BASE64 : 'base64'
+}
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
@@ -273,27 +272,27 @@ MAINTENANCE_SHUTDOWN = 1
 MAINTENANCE_FORCED = 2
 MAINTENANCE_ACTIVE = 3
 
-NICE_RESOLUTIONS = {}
+NICE_RESOLUTIONS = {
+    ( 640, 480 ) : '480p',
+    ( 1280, 720 ) : '720p',
+    ( 1920, 1080 ) : '1080p',
+    ( 3840, 2160 ) : '4k',
+    ( 720, 1280 ) : 'vertical 720p',
+    ( 1080, 1920 ) : 'vertical 1080p',
+    ( 2160, 3840 ) : 'vertical 4k'
+}
 
-NICE_RESOLUTIONS[ ( 640, 480 ) ] = '480p'
-NICE_RESOLUTIONS[ ( 1280, 720 ) ] = '720p'
-NICE_RESOLUTIONS[ ( 1920, 1080 ) ] = '1080p'
-NICE_RESOLUTIONS[ ( 3840, 2160 ) ] = '4k'
-NICE_RESOLUTIONS[ ( 720, 1280 ) ] = 'vertical 720p'
-NICE_RESOLUTIONS[ ( 1080, 1920 ) ] = 'vertical 1080p'
-NICE_RESOLUTIONS[ ( 2160, 3840 ) ] = 'vertical 4k'
-
-NICE_RATIOS = {}
-
-NICE_RATIOS[ 1 ] = '1:1'
-NICE_RATIOS[ 4 / 3 ] = '4:3'
-NICE_RATIOS[ 5 / 4 ] = '5:4'
-NICE_RATIOS[ 16 / 9 ] = '16:9'
-NICE_RATIOS[ 21 / 9 ] = '21:9'
-NICE_RATIOS[ 47 / 20 ] = '2.35:1'
-NICE_RATIOS[ 9 / 16 ] = '9:16'
-NICE_RATIOS[ 2 / 3 ] = '2:3'
-NICE_RATIOS[ 4 / 5 ] = '4:5'
+NICE_RATIOS = {
+    1 : '1:1',
+    4 / 3 : '4:3',
+    5 / 4 : '5:4',
+    16 / 9 : '16:9',
+    21 / 9 : '21:9',
+    47 / 20 : '2.35:1',
+    9 / 16 : '9:16',
+    2 / 3 : '2:3',
+    4 / 5 : '4:5'
+}
 
 GET_DATA = 0
 POST_DATA = 1
@@ -307,16 +306,16 @@ UNKNOWN_PERMISSION = 7
 CREATABLE_PERMISSIONS = [ GET_DATA, POST_DATA, POST_PETITIONS, RESOLVE_PETITIONS, MANAGE_USERS, GENERAL_ADMIN ]
 ADMIN_PERMISSIONS = [ RESOLVE_PETITIONS, MANAGE_USERS, GENERAL_ADMIN, EDIT_SERVICES ]
 
-permissions_string_lookup = {}
-
-permissions_string_lookup[ GET_DATA ] = 'get data'
-permissions_string_lookup[ POST_DATA ] = 'post data'
-permissions_string_lookup[ POST_PETITIONS ] = 'post petitions'
-permissions_string_lookup[ RESOLVE_PETITIONS ] = 'resolve petitions'
-permissions_string_lookup[ MANAGE_USERS ] = 'manage users'
-permissions_string_lookup[ GENERAL_ADMIN ] = 'general administration'
-permissions_string_lookup[ EDIT_SERVICES ] = 'edit services'
-permissions_string_lookup[ UNKNOWN_PERMISSION ] = 'unknown'
+permissions_string_lookup = {
+    GET_DATA : 'get data',
+    POST_DATA : 'post data',
+    POST_PETITIONS : 'post petitions',
+    RESOLVE_PETITIONS : 'resolve petitions',
+    MANAGE_USERS : 'manage users',
+    GENERAL_ADMIN : 'general administration',
+    EDIT_SERVICES : 'edit services',
+    UNKNOWN_PERMISSION : 'unknown'
+}
 
 # new permissions
 
@@ -324,38 +323,31 @@ PERMISSION_ACTION_PETITION = 0
 PERMISSION_ACTION_CREATE = 1
 PERMISSION_ACTION_MODERATE = 2
 
-permission_pair_string_lookup = {}
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, None ) ] = 'cannot change accounts'
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_CREATE ) ] = 'can create accounts'
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_MODERATE ) ] = 'can manage accounts completely'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, None ) ] = 'cannot change account types'
-permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_MODERATE ) ] = 'can manage account types completely'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_OPTIONS, None ) ] = 'cannot change service options'
-permission_pair_string_lookup[ ( CONTENT_TYPE_OPTIONS, PERMISSION_ACTION_MODERATE ) ] = 'can manage service options completely'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, None ) ] = 'cannot change services'
-permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_MODERATE ) ] = 'can manage services completely'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, None ) ] = 'can only download files'
-permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing files'
-permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_CREATE ) ] = 'can upload new files and petition existing ones'
-permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete files and process petitions'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, None ) ] = 'can only download mappings'
-permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing mappings'
-permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_CREATE ) ] = 'can upload new mappings and petition existing ones'
-permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete mappings and process petitions'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, None ) ] = 'can only download tag parents'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag parents'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete tag parents and process petitions'
-
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, None ) ] = 'can only download tag siblings'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag siblings'
-permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_MODERATE ) ] = 'can upload and delete tag siblings and process petitions'
+permission_pair_string_lookup = {
+    ( CONTENT_TYPE_ACCOUNTS, None ) : 'cannot change accounts',
+    ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_CREATE ) : 'can create accounts',
+    ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_MODERATE ) : 'can manage accounts completely',
+    ( CONTENT_TYPE_ACCOUNT_TYPES, None ) : 'cannot change account types',
+    ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_MODERATE ) : 'can manage account types completely',
+    ( CONTENT_TYPE_OPTIONS, None ) : 'cannot change service options',
+    ( CONTENT_TYPE_OPTIONS, PERMISSION_ACTION_MODERATE ) : 'can manage service options completely',
+    ( CONTENT_TYPE_SERVICES, None ) : 'cannot change services',
+    ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_MODERATE ) : 'can manage services completely',
+    ( CONTENT_TYPE_FILES, None ) : 'can only download files',
+    ( CONTENT_TYPE_FILES, PERMISSION_ACTION_PETITION ) : 'can petition to remove existing files',
+    ( CONTENT_TYPE_FILES, PERMISSION_ACTION_CREATE ) : 'can upload new files and petition existing ones',
+    ( CONTENT_TYPE_FILES, PERMISSION_ACTION_MODERATE ) : 'can upload and delete files and process petitions',
+    ( CONTENT_TYPE_MAPPINGS, None ) : 'can only download mappings',
+    ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_PETITION ) : 'can petition to remove existing mappings',
+    ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_CREATE ) : 'can upload new mappings and petition existing ones',
+    ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_MODERATE ) : 'can upload and delete mappings and process petitions',
+    ( CONTENT_TYPE_TAG_PARENTS, None ) : 'can only download tag parents',
+    ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_PETITION ) : 'can petition to add or remove tag parents',
+    ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_MODERATE ) : 'can upload and delete tag parents and process petitions',
+    ( CONTENT_TYPE_TAG_SIBLINGS, None ) : 'can only download tag siblings',
+    ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_PETITION ) : 'can petition to add or remove tag siblings',
+    ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_MODERATE ) : 'can upload and delete tag siblings and process petitions'
+}
 
 TAG_REPOSITORY = 0
 FILE_REPOSITORY = 1
@@ -379,29 +371,29 @@ COMBINED_DELETED_FILE = 19
 SERVER_ADMIN = 99
 NULL_SERVICE = 100
 
-service_string_lookup = {}
-
-service_string_lookup[ TAG_REPOSITORY ] = 'hydrus tag repository'
-service_string_lookup[ FILE_REPOSITORY ] = 'hydrus file repository'
-service_string_lookup[ LOCAL_FILE_DOMAIN ] = 'local file domain'
-service_string_lookup[ LOCAL_FILE_TRASH_DOMAIN ] = 'local trash file domain'
-service_string_lookup[ COMBINED_LOCAL_FILE ] = 'virtual combined local file service'
-service_string_lookup[ MESSAGE_DEPOT ] = 'hydrus message depot'
-service_string_lookup[ LOCAL_TAG ] = 'local tag service'
-service_string_lookup[ LOCAL_RATING_NUMERICAL ] = 'local numerical rating service'
-service_string_lookup[ LOCAL_RATING_LIKE ] = 'local like/dislike rating service'
-service_string_lookup[ RATING_NUMERICAL_REPOSITORY ] = 'hydrus numerical rating repository'
-service_string_lookup[ RATING_LIKE_REPOSITORY ] = 'hydrus like/dislike rating repository'
-service_string_lookup[ COMBINED_TAG ] = 'virtual combined tag service'
-service_string_lookup[ COMBINED_FILE ] = 'virtual combined file service'
-service_string_lookup[ LOCAL_BOORU ] = 'client local booru'
-service_string_lookup[ CLIENT_API_SERVICE ] = 'client api'
-service_string_lookup[ IPFS ] = 'ipfs daemon'
-service_string_lookup[ TEST_SERVICE ] = 'test service'
-service_string_lookup[ LOCAL_NOTES ] = 'local file notes service'
-service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration service'
-service_string_lookup[ COMBINED_DELETED_FILE ] = 'virtual deleted file service'
-service_string_lookup[ NULL_SERVICE ] = 'null service'
+service_string_lookup = {
+    TAG_REPOSITORY : 'hydrus tag repository',
+    FILE_REPOSITORY : 'hydrus file repository',
+    LOCAL_FILE_DOMAIN : 'local file domain',
+    LOCAL_FILE_TRASH_DOMAIN : 'local trash file domain',
+    COMBINED_LOCAL_FILE : 'virtual combined local file service',
+    MESSAGE_DEPOT : 'hydrus message depot',
+    LOCAL_TAG : 'local tag service',
+    LOCAL_RATING_NUMERICAL : 'local numerical rating service',
+    LOCAL_RATING_LIKE : 'local like/dislike rating service',
+    RATING_NUMERICAL_REPOSITORY : 'hydrus numerical rating repository',
+    RATING_LIKE_REPOSITORY : 'hydrus like/dislike rating repository',
+    COMBINED_TAG : 'virtual combined tag service',
+    COMBINED_FILE : 'virtual combined file service',
+    LOCAL_BOORU : 'client local booru',
+    CLIENT_API_SERVICE : 'client api',
+    IPFS : 'ipfs daemon',
+    TEST_SERVICE : 'test service',
+    LOCAL_NOTES : 'local file notes service',
+    SERVER_ADMIN : 'hydrus server administration service',
+    COMBINED_DELETED_FILE : 'virtual deleted file service',
+    NULL_SERVICE : 'null service'
+}
 
 LOCAL_FILE_SERVICES = ( LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, COMBINED_LOCAL_FILE )
 LOCAL_TAG_SERVICES = ( LOCAL_TAG, )
@@ -494,11 +486,11 @@ GET = 0
 POST = 1
 OPTIONS = 2
 
-query_type_string_lookup = {}
-
-query_type_string_lookup[ GET ] = 'GET'
-query_type_string_lookup[ POST ] = 'POST'
-query_type_string_lookup[ OPTIONS ] = 'OPTIONS'
+query_type_string_lookup = {
+    GET : 'GET',
+    POST : 'POST',
+    OPTIONS : 'OPTIONS'
+}
 
 APPLICATION_HYDRUS_CLIENT_COLLECTION = 0
 IMAGE_JPEG = 1
@@ -782,53 +774,53 @@ mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetyp
 mime_mimetype_string_lookup[ UNDETERMINED_MP4 ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_MP4 ], mime_mimetype_string_lookup[ VIDEO_MP4 ] )
 mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ IMAGE_APNG ] )
 
-mime_ext_lookup = {}
-
-mime_ext_lookup[ APPLICATION_HYDRUS_CLIENT_COLLECTION ] = '.collection'
-mime_ext_lookup[ IMAGE_JPEG ] = '.jpg'
-mime_ext_lookup[ IMAGE_PNG ] = '.png'
-mime_ext_lookup[ IMAGE_APNG ] = '.png'
-mime_ext_lookup[ IMAGE_GIF ] = '.gif'
-mime_ext_lookup[ IMAGE_BMP ] = '.bmp'
-mime_ext_lookup[ IMAGE_WEBP ] = '.webp'
-mime_ext_lookup[ IMAGE_TIFF ] = '.tiff'
-mime_ext_lookup[ IMAGE_ICON ] = '.ico'
-mime_ext_lookup[ APPLICATION_FLASH ] = '.swf'
-mime_ext_lookup[ APPLICATION_OCTET_STREAM ] = '.bin'
-mime_ext_lookup[ APPLICATION_YAML ] = '.yaml'
-mime_ext_lookup[ APPLICATION_JSON ] = '.json'
-mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
-mime_ext_lookup[ APPLICATION_PSD ] = '.psd'
-mime_ext_lookup[ APPLICATION_CLIP ] = '.clip'
-mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
-mime_ext_lookup[ APPLICATION_RAR ] = '.rar'
-mime_ext_lookup[ APPLICATION_7Z ] = '.7z'
-mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
-mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = ''
-mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ''
-mime_ext_lookup[ AUDIO_M4A ] = '.m4a'
-mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
-mime_ext_lookup[ AUDIO_MKV ] = '.mkv'
-mime_ext_lookup[ AUDIO_MP4 ] = '.mp4'
-mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
-mime_ext_lookup[ AUDIO_REALMEDIA ] = '.ra'
-mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
-mime_ext_lookup[ AUDIO_WAVE ] = '.wav'
-mime_ext_lookup[ AUDIO_TRUEAUDIO ] = '.tta'
-mime_ext_lookup[ AUDIO_WMA ] = '.wma'
-mime_ext_lookup[ TEXT_HTML ] = '.html'
-mime_ext_lookup[ TEXT_PLAIN ] = '.txt'
-mime_ext_lookup[ VIDEO_AVI ] = '.avi'
-mime_ext_lookup[ VIDEO_FLV ] = '.flv'
-mime_ext_lookup[ VIDEO_MOV ] = '.mov'
-mime_ext_lookup[ VIDEO_MP4 ] = '.mp4'
-mime_ext_lookup[ VIDEO_MPEG ] = '.mpeg'
-mime_ext_lookup[ VIDEO_WMV ] = '.wmv'
-mime_ext_lookup[ VIDEO_MKV ] = '.mkv'
-mime_ext_lookup[ VIDEO_OGV ] = '.ogv'
-mime_ext_lookup[ VIDEO_REALMEDIA ] = '.rm'
-mime_ext_lookup[ VIDEO_WEBM ] = '.webm'
-mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
+mime_ext_lookup = {
+    APPLICATION_HYDRUS_CLIENT_COLLECTION : '.collection',
+    IMAGE_JPEG : '.jpg',
+    IMAGE_PNG : '.png',
+    IMAGE_APNG : '.png',
+    IMAGE_GIF : '.gif',
+    IMAGE_BMP : '.bmp',
+    IMAGE_WEBP : '.webp',
+    IMAGE_TIFF : '.tiff',
+    IMAGE_ICON : '.ico',
+    APPLICATION_FLASH : '.swf',
+    APPLICATION_OCTET_STREAM : '.bin',
+    APPLICATION_YAML : '.yaml',
+    APPLICATION_JSON : '.json',
+    APPLICATION_PDF : '.pdf',
+    APPLICATION_PSD : '.psd',
+    APPLICATION_CLIP : '.clip',
+    APPLICATION_ZIP : '.zip',
+    APPLICATION_RAR : '.rar',
+    APPLICATION_7Z : '.7z',
+    APPLICATION_HYDRUS_ENCRYPTED_ZIP : '.zip.encrypted',
+    APPLICATION_HYDRUS_UPDATE_CONTENT : '',
+    APPLICATION_HYDRUS_UPDATE_DEFINITIONS : '',
+    AUDIO_M4A : '.m4a',
+    AUDIO_MP3 : '.mp3',
+    AUDIO_MKV : '.mkv',
+    AUDIO_MP4 : '.mp4',
+    AUDIO_OGG : '.ogg',
+    AUDIO_REALMEDIA : '.ra',
+    AUDIO_FLAC : '.flac',
+    AUDIO_WAVE : '.wav',
+    AUDIO_TRUEAUDIO : '.tta',
+    AUDIO_WMA : '.wma',
+    TEXT_HTML : '.html',
+    TEXT_PLAIN : '.txt',
+    VIDEO_AVI : '.avi',
+    VIDEO_FLV : '.flv',
+    VIDEO_MOV : '.mov',
+    VIDEO_MP4 : '.mp4',
+    VIDEO_MPEG : '.mpeg',
+    VIDEO_WMV : '.wmv',
+    VIDEO_MKV : '.mkv',
+    VIDEO_OGV : '.ogv',
+    VIDEO_REALMEDIA : '.rm',
+    VIDEO_WEBM : '.webm',
+    APPLICATION_UNKNOWN : ''
+}
 
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
 
@@ -850,25 +842,25 @@ SITE_TYPE_PIXIV_TAG = 14
 SITE_TYPE_DEFAULT = 15
 SITE_TYPE_WATCHER = 16
 
-site_type_string_lookup = {}
-
-site_type_string_lookup[ SITE_TYPE_DEFAULT ] = 'default'
-site_type_string_lookup[ SITE_TYPE_BOORU ] = 'booru'
-site_type_string_lookup[ SITE_TYPE_DEVIANT_ART ] = 'deviant art'
-site_type_string_lookup[ SITE_TYPE_GIPHY ] = 'giphy'
-site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY ] = 'hentai foundry'
-site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST ] = 'hentai foundry artist'
-site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST_PICTURES ] = 'hentai foundry artist pictures'
-site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST_SCRAPS ] = 'hentai foundry artist scraps'
-site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_TAGS ] = 'hentai foundry tags'
-site_type_string_lookup[ SITE_TYPE_NEWGROUNDS ] = 'newgrounds'
-site_type_string_lookup[ SITE_TYPE_NEWGROUNDS_GAMES ] = 'newgrounds games'
-site_type_string_lookup[ SITE_TYPE_NEWGROUNDS_MOVIES ] = 'newgrounds movies'
-site_type_string_lookup[ SITE_TYPE_PIXIV ] = 'pixiv'
-site_type_string_lookup[ SITE_TYPE_PIXIV_ARTIST_ID ] = 'pixiv artist id'
-site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
-site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
-site_type_string_lookup[ SITE_TYPE_WATCHER ] = 'watcher'
+site_type_string_lookup = {
+    SITE_TYPE_DEFAULT : 'default',
+    SITE_TYPE_BOORU : 'booru',
+    SITE_TYPE_DEVIANT_ART : 'deviant art',
+    SITE_TYPE_GIPHY : 'giphy',
+    SITE_TYPE_HENTAI_FOUNDRY : 'hentai foundry',
+    SITE_TYPE_HENTAI_FOUNDRY_ARTIST : 'hentai foundry artist',
+    SITE_TYPE_HENTAI_FOUNDRY_ARTIST_PICTURES : 'hentai foundry artist pictures',
+    SITE_TYPE_HENTAI_FOUNDRY_ARTIST_SCRAPS : 'hentai foundry artist scraps',
+    SITE_TYPE_HENTAI_FOUNDRY_TAGS : 'hentai foundry tags',
+    SITE_TYPE_NEWGROUNDS : 'newgrounds',
+    SITE_TYPE_NEWGROUNDS_GAMES : 'newgrounds games',
+    SITE_TYPE_NEWGROUNDS_MOVIES : 'newgrounds movies',
+    SITE_TYPE_PIXIV : 'pixiv',
+    SITE_TYPE_PIXIV_ARTIST_ID : 'pixiv artist id',
+    SITE_TYPE_PIXIV_TAG : 'pixiv tag',
+    SITE_TYPE_TUMBLR : 'tumblr',
+    SITE_TYPE_WATCHER : 'watcher'
+}
 
 TIMESTAMP_TYPE_SOURCE = 0
 
@@ -887,18 +879,17 @@ URL_TYPE_DESIRED = 7
 URL_TYPE_SOURCE = 8
 URL_TYPE_SUB_GALLERY = 9
 
-url_type_string_lookup = {}
-
-url_type_string_lookup[ URL_TYPE_POST ] = 'post url'
-url_type_string_lookup[ URL_TYPE_API ] = 'api url'
-url_type_string_lookup[ URL_TYPE_FILE ] = 'file url'
-url_type_string_lookup[ URL_TYPE_GALLERY ] = 'gallery url'
-url_type_string_lookup[ URL_TYPE_WATCHABLE ] = 'watchable url'
-url_type_string_lookup[ URL_TYPE_UNKNOWN ] = 'unknown url'
-url_type_string_lookup[ URL_TYPE_NEXT ] = 'next page url'
-url_type_string_lookup[ URL_TYPE_DESIRED ] = 'downloadable/pursuable url'
-url_type_string_lookup[ URL_TYPE_SUB_GALLERY ] = 'sub-gallery url (is queued even if creator found no post/file urls)'
-
+url_type_string_lookup = {
+    URL_TYPE_POST : 'post url',
+    URL_TYPE_API : 'api url',
+    URL_TYPE_FILE : 'file url',
+    URL_TYPE_GALLERY : 'gallery url',
+    URL_TYPE_WATCHABLE : 'watchable url',
+    URL_TYPE_UNKNOWN : 'unknown url',
+    URL_TYPE_NEXT : 'next page url',
+    URL_TYPE_DESIRED : 'downloadable/pursuable url',
+    URL_TYPE_SUB_GALLERY : 'sub-gallery url (is queued even if creator found no post/file urls)'
+}
 
 # default options
 
@@ -907,15 +898,24 @@ DEFAULT_SERVICE_PORT = 45871
 
 SERVER_ADMIN_KEY = b'server admin'
 
-def construct_python_tuple( self, node ): return tuple( self.construct_sequence( node ) )
-def represent_python_tuple( self, data ): return self.represent_sequence( 'tag:yaml.org,2002:python/tuple', data )
+def construct_python_tuple( self, node ):
+    
+    return tuple( self.construct_sequence( node ) )
+    
+def represent_python_tuple( self, data ):
+    
+    return self.represent_sequence( 'tag:yaml.org,2002:python/tuple', data )
+    
 
 yaml.SafeLoader.add_constructor( 'tag:yaml.org,2002:python/tuple', construct_python_tuple )
 yaml.SafeDumper.add_representer( tuple, represent_python_tuple )
 
 # for some reason, sqlite doesn't parse to int before this, despite the column affinity
 # it gives the register_converter function a bytestring :/
-def integer_boolean_to_bool( integer_boolean ): return bool( int( integer_boolean ) )
+def integer_boolean_to_bool( integer_boolean ):
+    
+    return bool( int( integer_boolean ) )
+    
 
 # sqlite mod
 

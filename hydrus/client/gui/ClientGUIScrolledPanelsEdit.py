@@ -1628,13 +1628,21 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         control = QW.QPlainTextEdit( self._notebook )
         
-        control.setPlainText( note )
+        try:
+            
+            control.setPlainText( note )
+            
+        except:
+            
+            control.setPlainText( repr( note ) )
+            
         
         self._notebook.addTab( control, name )
         
         self._notebook.setCurrentWidget( control )
         
         ClientGUIFunctions.SetFocusLater( control )
+        
         HG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.End )
         
         self._UpdateButtons()

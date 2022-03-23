@@ -40,6 +40,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -120,7 +121,6 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         services_manager = HG.client_controller.services_manager
         
         all_real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
-        all_real_file_service_keys = services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.FILE_REPOSITORY ) )
         
         #
         
@@ -134,18 +134,13 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._write_autocomplete_tag_domain.addItem( services_manager.GetName( service_key ), service_key )
             
         
-        self._override_write_autocomplete_file_domain = QW.QCheckBox( self )
-        self._override_write_autocomplete_file_domain.setToolTip( 'If set, a manage tags dialog autocomplete will start with a different file domain than the one that launched the dialog.' )
+        self._override_write_autocomplete_location_context = QW.QCheckBox( self )
+        self._override_write_autocomplete_location_context.setToolTip( 'If set, a manage tags dialog autocomplete will start with a different file domain than the one that launched the dialog.' )
         
-        self._write_autocomplete_file_domain = ClientGUICommon.BetterChoice( self )
-        self._write_autocomplete_file_domain.setToolTip( 'A manage tags autocomplete will start with this domain. Normally only useful for "all known files" or "my files".' )
+        self._write_autocomplete_location_context = ClientGUILocation.LocationSearchContextButton( self, tag_autocomplete_options.GetWriteAutocompleteLocationContext() )
+        self._write_autocomplete_location_context.setToolTip( 'A manage tags autocomplete will start with this domain. Normally only useful for "all known files" or "my files".' )
         
-        self._write_autocomplete_file_domain.addItem( services_manager.GetName( CC.COMBINED_FILE_SERVICE_KEY ), CC.COMBINED_FILE_SERVICE_KEY )
-        
-        for service_key in all_real_file_service_keys:
-            
-            self._write_autocomplete_file_domain.addItem( services_manager.GetName( service_key ), service_key )
-            
+        self._write_autocomplete_location_context.SetAllKnownFilesAllowed( True, False )
         
         self._search_namespaces_into_full_tags = QW.QCheckBox( self )
         self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metrod". On large tag services, these searches are extremely slow.' )
@@ -168,8 +163,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._write_autocomplete_tag_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteTagDomain() )
-        self._override_write_autocomplete_file_domain.setChecked( tag_autocomplete_options.OverridesWriteAutocompleteFileDomain() )
-        self._write_autocomplete_file_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteFileDomain() )
+        self._override_write_autocomplete_location_context.setChecked( tag_autocomplete_options.OverridesWriteAutocompleteLocationContext() )
         self._search_namespaces_into_full_tags.setChecked( tag_autocomplete_options.SearchNamespacesIntoFullTags() )
         self._namespace_bare_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceBareFetchAllAllowed() )
         self._namespace_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceFetchAllAllowed() )
@@ -187,13 +181,13 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         if tag_autocomplete_options.GetServiceKey() == CC.COMBINED_TAG_SERVICE_KEY:
             
             self._write_autocomplete_tag_domain.setVisible( False )
-            self._override_write_autocomplete_file_domain.setVisible( False )
-            self._write_autocomplete_file_domain.setVisible( False )
+            self._override_write_autocomplete_location_context.setVisible( False )
+            self._write_autocomplete_location_context.setVisible( False )
             
         else:
             
-            rows.append( ( 'Override default autocomplete file domain in _manage tags_: ', self._override_write_autocomplete_file_domain ) )
-            rows.append( ( 'Default autocomplete file domain in _manage tags_: ', self._write_autocomplete_file_domain ) )
+            rows.append( ( 'Override default autocomplete file domain in _manage tags_: ', self._override_write_autocomplete_location_context ) )
+            rows.append( ( 'Default autocomplete location in _manage tags_: ', self._write_autocomplete_location_context ) )
             rows.append( ( 'Default autocomplete tag domain in _manage tags_: ', self._write_autocomplete_tag_domain ) )
             
         
@@ -218,14 +212,14 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateControls()
         
-        self._override_write_autocomplete_file_domain.stateChanged.connect( self._UpdateControls )
+        self._override_write_autocomplete_location_context.stateChanged.connect( self._UpdateControls )
         self._search_namespaces_into_full_tags.stateChanged.connect( self._UpdateControls )
         self._namespace_bare_fetch_all_allowed.stateChanged.connect( self._UpdateControls )
         
     
     def _UpdateControls( self ):
         
-        self._write_autocomplete_file_domain.setEnabled( self._override_write_autocomplete_file_domain.isChecked() )
+        self._write_autocomplete_location_context.setEnabled( self._override_write_autocomplete_location_context.isChecked() )
         
         if self._search_namespaces_into_full_tags.isChecked():
             
@@ -264,8 +258,8 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tag_autocomplete_options = ClientTagsHandling.TagAutocompleteOptions( self._original_tag_autocomplete_options.GetServiceKey() )
         
         write_autocomplete_tag_domain = self._write_autocomplete_tag_domain.GetValue()
-        override_write_autocomplete_file_domain = self._override_write_autocomplete_file_domain.isChecked()
-        write_autocomplete_file_domain = self._write_autocomplete_file_domain.GetValue()
+        override_write_autocomplete_location_context = self._override_write_autocomplete_location_context.isChecked()
+        write_autocomplete_location_context = self._write_autocomplete_location_context.GetValue()
         search_namespaces_into_full_tags = self._search_namespaces_into_full_tags.isChecked()
         namespace_bare_fetch_all_allowed = self._namespace_bare_fetch_all_allowed.isChecked()
         namespace_fetch_all_allowed = self._namespace_fetch_all_allowed.isChecked()
@@ -273,8 +267,8 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_autocomplete_options.SetTuple(
             write_autocomplete_tag_domain,
-            override_write_autocomplete_file_domain,
-            write_autocomplete_file_domain,
+            override_write_autocomplete_location_context,
+            write_autocomplete_location_context,
             search_namespaces_into_full_tags,
             namespace_bare_fetch_all_allowed,
             namespace_fetch_all_allowed,
@@ -2951,7 +2945,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children.setMinimumHeight( preview_height )
             self._parents.setMinimumHeight( preview_height )
             
-            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, default_location_context, service_key, show_paste_button = True )
             self._child_input.setEnabled( False )
@@ -3950,7 +3944,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._old_siblings.setMinimumHeight( preview_height )
             
-            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, default_location_context, service_key, show_paste_button = True )
             self._old_input.setEnabled( False )

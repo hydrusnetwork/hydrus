@@ -1,3 +1,4 @@
+import collections
 import os
 import time
 import traceback
@@ -74,7 +75,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
         delete_from_client_after_export = False
         
-        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
@@ -900,22 +901,35 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if delete_lock_for_archived_files:
                     
-                    deletee_hashes = { media.GetHash() for ( ordering_index, media, path ) in to_do if not media.HasArchive() }
+                    deletee_medias = { media for ( ordering_index, media, path ) in to_do if not media.HasArchive() }
                     
                 else:
                     
-                    deletee_hashes = { media.GetHash() for ( ordering_index, media, path ) in to_do }
+                    deletee_medias = { media for ( ordering_index, media, path ) in to_do }
                     
                 
-                chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                chunks_of_deletee_medias = HydrusData.SplitListIntoChunks( list( deletee_medias ), 64 )
                 
-                reason = 'Deleted after manual export to "{}".'.format( directory )
-                
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
-                
-                for content_update in content_updates:
+                for chunk_of_deletee_medias in chunks_of_deletee_medias:
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                    reason = 'Deleted after manual export to "{}".'.format( directory )
+                    
+                    service_keys_to_hashes = collections.defaultdict( set )
+                    
+                    for media in chunk_of_deletee_medias:
+                        
+                        for service_key in media.GetLocationsManager().GetCurrent():
+                            
+                            service_keys_to_hashes[ service_key ].add( hash )
+                            
+                        
+                    
+                    for service_key in ClientLocation.ValidLocalDomainsFilter( service_keys_to_hashes.keys() ):
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, service_keys_to_hashes[ service_key ], reason = reason )
+                        
+                        HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
+                        
                     
                 
             

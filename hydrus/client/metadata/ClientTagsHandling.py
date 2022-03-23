@@ -13,13 +13,12 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client.metadata import ClientTags
 
 class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
     SERIALISABLE_NAME = 'Tag Autocomplete Options'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, service_key: typing.Optional[ bytes ] = None ):
         
@@ -34,15 +33,15 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         
         self._write_autocomplete_tag_domain = self._service_key
         
-        self._override_write_autocomplete_file_domain = True
+        self._override_write_autocomplete_location_context = True
         
         if service_key == CC.DEFAULT_LOCAL_TAG_SERVICE_KEY:
             
-            self._write_autocomplete_file_domain = CC.LOCAL_FILE_SERVICE_KEY
+            self._write_autocomplete_location_context = HG.client_controller.services_manager.GetLocalMediaLocationContextUmbrella()
             
         else:
             
-            self._write_autocomplete_file_domain = CC.COMBINED_FILE_SERVICE_KEY
+            self._write_autocomplete_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
             
         
         self._search_namespaces_into_full_tags = False
@@ -58,13 +57,13 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_service_key = self._service_key.hex()
         
         serialisable_write_autocomplete_tag_domain = self._write_autocomplete_tag_domain.hex()
-        serialisable_write_autocomplete_file_domain = self._write_autocomplete_file_domain.hex()
+        serialisable_write_autocomplete_location_context = self._write_autocomplete_location_context.GetSerialisableTuple()
         
         serialisable_info = [
             serialisable_service_key,
             serialisable_write_autocomplete_tag_domain,
-            self._override_write_autocomplete_file_domain,
-            serialisable_write_autocomplete_file_domain,
+            self._override_write_autocomplete_location_context,
+            serialisable_write_autocomplete_location_context,
             self._search_namespaces_into_full_tags,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
@@ -81,8 +80,8 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         [
             serialisable_service_key,
             serialisable_write_autocomplete_tag_domain,
-            self._override_write_autocomplete_file_domain,
-            serialisable_write_autocomplete_file_domain,
+            self._override_write_autocomplete_location_context,
+            serialisable_write_autocomplete_location_context,
             self._search_namespaces_into_full_tags,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
@@ -93,7 +92,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         
         self._service_key = bytes.fromhex( serialisable_service_key )
         self._write_autocomplete_tag_domain = bytes.fromhex( serialisable_write_autocomplete_tag_domain )
-        self._write_autocomplete_file_domain = bytes.fromhex( serialisable_write_autocomplete_file_domain )
+        self._write_autocomplete_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_write_autocomplete_location_context )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -103,7 +102,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             [
                 serialisable_service_key,
                 serialisable_write_autocomplete_tag_domain,
-                override_write_autocomplete_file_domain,
+                override_write_autocomplete_location_context,
                 serialisable_write_autocomplete_file_domain,
                 search_namespaces_into_full_tags,
                 namespace_fetch_all_allowed,
@@ -115,7 +114,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = [
                 serialisable_service_key,
                 serialisable_write_autocomplete_tag_domain,
-                override_write_autocomplete_file_domain,
+                override_write_autocomplete_location_context,
                 serialisable_write_autocomplete_file_domain,
                 search_namespaces_into_full_tags,
                 namespace_bare_fetch_all_allowed,
@@ -132,7 +131,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             [
                 serialisable_service_key,
                 serialisable_write_autocomplete_tag_domain,
-                override_write_autocomplete_file_domain,
+                override_write_autocomplete_location_context,
                 serialisable_write_autocomplete_file_domain,
                 search_namespaces_into_full_tags,
                 namespace_bare_fetch_all_allowed,
@@ -146,7 +145,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = [
                 serialisable_service_key,
                 serialisable_write_autocomplete_tag_domain,
-                override_write_autocomplete_file_domain,
+                override_write_autocomplete_location_context,
                 serialisable_write_autocomplete_file_domain,
                 search_namespaces_into_full_tags,
                 namespace_bare_fetch_all_allowed,
@@ -157,6 +156,42 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             ]
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_location_context,
+                serialisable_write_autocomplete_file_domain,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed,
+                fetch_results_automatically,
+                exact_match_character_threshold
+            ] = old_serialisable_info
+            
+            file_service_key = bytes.fromhex( serialisable_write_autocomplete_file_domain )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
+            
+            serialisable_write_autocomplete_location_context = location_context.GetSerialisableTuple()
+            
+            new_serialisable_info = [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_location_context,
+                serialisable_write_autocomplete_location_context,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed,
+                fetch_results_automatically,
+                exact_match_character_threshold
+            ]
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -180,20 +215,20 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._service_key
         
     
-    def GetWriteAutocompleteFileDomain( self ):
+    def GetWriteAutocompleteLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self._write_autocomplete_file_domain
+        return self._write_autocomplete_location_context
         
     
-    def GetWriteAutocompleteDomain( self, location_context: ClientLocation.LocationContext ):
+    def GetWriteAutocompleteSearchDomain( self, location_context: ClientLocation.LocationContext ):
         
         tag_service_key = self._service_key
         
         if self._service_key != CC.COMBINED_TAG_SERVICE_KEY:
             
-            if self._override_write_autocomplete_file_domain:
+            if self._override_write_autocomplete_location_context:
                 
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( self._write_autocomplete_file_domain )
+                location_context = self._write_autocomplete_location_context.Duplicate()
                 
             
             tag_service_key = self._write_autocomplete_tag_domain
@@ -222,9 +257,9 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._namespace_fetch_all_allowed
         
     
-    def OverridesWriteAutocompleteFileDomain( self ):
+    def OverridesWriteAutocompleteLocationContext( self ):
         
-        return self._override_write_autocomplete_file_domain
+        return self._override_write_autocomplete_location_context
         
     
     def SearchNamespacesIntoFullTags( self ):
@@ -244,8 +279,8 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
     def SetTuple( self,
         write_autocomplete_tag_domain: bytes,
-        override_write_autocomplete_file_domain: bool,
-        write_autocomplete_file_domain: bytes,
+        override_write_autocomplete_location_context: bool,
+        write_autocomplete_location_context: ClientLocation.LocationContext,
         search_namespaces_into_full_tags: bool,
         namespace_bare_fetch_all_allowed: bool,
         namespace_fetch_all_allowed: bool,
@@ -253,8 +288,8 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     ):
         
         self._write_autocomplete_tag_domain = write_autocomplete_tag_domain
-        self._override_write_autocomplete_file_domain = override_write_autocomplete_file_domain
-        self._write_autocomplete_file_domain = write_autocomplete_file_domain
+        self._override_write_autocomplete_location_context = override_write_autocomplete_location_context
+        self._write_autocomplete_location_context = write_autocomplete_location_context
         self._search_namespaces_into_full_tags = search_namespaces_into_full_tags
         self._namespace_bare_fetch_all_allowed = namespace_bare_fetch_all_allowed
         self._namespace_fetch_all_allowed = namespace_fetch_all_allowed

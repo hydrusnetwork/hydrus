@@ -3,6 +3,41 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 478](https://github.com/hydrusnetwork/hydrus/releases/tag/v478)
+
+### misc
+* if a file note text is crazy and can't be displayed, this is now handled and the best visual approximation is displayed (and saved back on ok) instead
+* fixed an error in the cloudflare problem detection calls for the newer versions of cloudscraper (>=1.2.60) while maintaining support for the older versions. fingers crossed, we also shouldn't repeat this specific error if they refactor again
+
+### file history chart updates
+* fixed the 'inbox' line in file history, which has to be calculated in an odd way and was not counting on file imports adding to the inbox
+* the file history chart now expands its y axis range to show all data even if deleted_files is huge. we'll see how nice this actually is IRL
+* bumped the file history resolution up from 1,000 to 2,000 steps
+* the y axis _should_ now show localised numbers, 5,000 instead of 5000, but the method by which this occurs involves fox tongues and the breath of a slighted widow, so it may just not work for some machines
+
+### cleanup, mostly file location stuff
+* I believe I have replaced all the remaining surplus static 'my files' references with code compatible with multiple local file services. when I add the capability to create new local file services, there now won't be a problem trying to display thumbnails or generate menu actions etc... if they aren't in 'my files'
+* pulled the autocomplete dropdown file domain button code out to its own class and refactored it and the multiple location context panel to their own file
+* added a 'default file location' option to 'files and trash' page, and a bunch of dialogs (e.g. the search panel when you make a new export folder) and similar now pull it to initialise. for most users this will stay 'my files' forever, but when we hit multiple local file services, it may want to change
+* the file domain override options in 'manage tag display and search' now work on the new location system and support multple file services
+* in downloaders, when highlighting, a database job that does the 'show files' filter (e.g. to include those in trash or not) now works on the new location context system and will handle files that will be imported to places other than my files
+* refactored client api file service parsing
+* refactored client api hashes parsing
+* cleaned a whole heap of misc location code
+* cleaned misc basic code across hydrus and client constant files
+* gave 'you don't want the server' help page a very quick pass
+
+### client api
+* in prep for multiple local file services, delete_files now takes an optional file_service_key or file_service_name. by default, it now deletes from all appropriate local services, so behaviour is unchanged from before without the parameter if you just want to delete m8
+* undelete files is the same. when we have multiple local file services, an undelete without a file service will undelete to all locations that have a delete record
+* delete_files also now takes an optional 'reason' parameter
+* the 'set_notes' command now checks the type of the notes Object. it obviously has to be string-to-string
+* the 'get_thumbnail' command should now never 404. if you ask for a pdf thumb, it gives the pdf default thumb, and if there is no thumb for whatever reason, you get the hydrus fallback thumbnail. just like in the client itself
+* updated client api help to talk about these
+* updated the unit tests to handle them too
+* did a pass over the client api help to unify indent style and fix other small formatting issues
+* client api version is now 28
+
 ## [Version 477](https://github.com/hydrusnetwork/hydrus/releases/tag/v477)
 
 ### misc
@@ -272,45 +307,3 @@
 * misc cleanup and refactoring for file domain search code
 * purged more single file service inspection code from file search systems
 * refactored most duplicate files storage code (about 70KB) to a new client db module
-
-## [Version 468](https://github.com/hydrusnetwork/hydrus/releases/tag/v468)
-
-### misc
-* fixed an issue where the one pixel border on the new 'control bar' on the media viewer was annoyingly catching mouse events at the bottom of the screen when in borderless fullscreen mode (and hence dragging the video, not scanning video position). the animation scanbar now owns its own border and processes mouse events on it properly
-* fixed a typo bug in the new pixel hash system that meant new imports were not being added to the system correctly. on update, all files affected will be fixed of bad data and scheduled for a pixel hash regen. sorry for the trouble, and thank you for the quick reports here
-* added a 'fixed font size example' qss file to the install. I have passed this file to others as an example of a quick way to make the font (and essentially ui scale) larger. it has some help comments inside and is now always available. the default example font size is lmao
-* fixed another type checking problem for (mostly Arch/AUR) PyQt5 users (issue #1033)
-* wrote a new display mappings maintenance routine for the database menu that repopulates the display mappings cache for missing rows. this task will be radically faster than a full regen for some problems, but it only solves those problems
-* on boot, the program now explicitly checks if any of the database files are set as read-only and if so will dump out with an appropriate error
-* rewrote my various 'file size problem' exception hierarchy to clearly split 'the file import options disallow this big gif' vs 'this file is zero size/this file is malformed'. we've had several problems here recently, but file import options rule-breaking should set 'ignore' again, and import objects should be better about ignore vs fail state from now on
-* added more error handling for broken image files. some will report cleaner errors, some will now import
-* the new parsing system that discards source urls if they share a domain with a primary import url is now stricter--now discarding only if they share the same url class. the domain check was messing up saving post urls when they were parsed from an api url (issue #1036)
-* the network engine no longer sends a Range header if it is expecting to pull html/json, just files. this fixes fetching pages from nijie.info (and several other server engines, it seems), which has some unusual access rules regarding Range and Accept-Encoding
-* fixed a problem with no_daemons and the docker package server scripts (issue #1039)
-* if the server engine (serverside or client api) is running a request during program shutdown, it now politely says 'Application is shutting down!' with a 503 rather than going bananas and dumping to log with an uncaught 500
-* fixed some bad client db update error handling code
-
-### multiple local file services (system predicate edition)
-* system:file service now supports 'deleted' and 'petitioned' status
-* advanced 'all known files' search pages now show more system predicates
-* when inbox and archive are hidden because one has 0 count, and the search space is simple, system everything now says what they are, e.g. "system:everything (24) (all in inbox)"
-* file repos' 'system:local/not local' now sort at the top of the system predicate list, like inbox/archive
-
-### client api
-* the GET /get_files/file_metadata call now returns the file modified date and imported/deleted timestamps for each file service the file is currently in or deleted from. check the help for an example!
-* fixed client api file search with random sort (file_sort_type = 4)
-* client api version is now 24
-
-### boring multiple local file services work
-* the system predicates listed in a search page dropdown now support the new 'multiple location search context' object, which means in future I will be able to switch over to 'file domain is union of (A, deleted from B, and C)' and all the numbers will add up appropriately with ranged 'x-y' counts and deal with combinations of file repo and local service and current/deleted neatly
-* when fetching system preds in 'all known files', the system:everything 'num files' count will be stated if available in the cache
-* for the new system:file service search, refactored db level file filtering to support all status types
-* cleaned up how system preds are generated
-
-### boring refactoring work
-* moved GUGs from network domain code to their own file
-* moved URL Class from network domain code to its own file
-* moved the pure functions from network domain code to their own file
-* cleared up some file maintenance enum variable names
-* sped up random file sort for large result sets
-* misc client network code cleanup and type hints, and rejiggered cleaner imports after the refactoring

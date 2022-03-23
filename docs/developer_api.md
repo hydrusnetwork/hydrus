@@ -110,14 +110,13 @@ Arguments: n/a
     
 Response:
 :   Some simple JSON describing the current api version (and hydrus client version, if you are interested).
-    
-    ```json title="Example response"
-    {
-      "version": 17,
-      "hydrus_version": 441
-    }
-    ```
-        
+
+```json title="Example response"
+{
+  "version": 17,
+  "hydrus_version": 441
+}
+```
 
 ### **GET `/request_new_permissions`** { id="request_new_permissions" }
 
@@ -278,9 +277,9 @@ Required Headers:
 Arguments (in JSON):
 :   - `path`: (the path you want to import)
 
-    ```json title="Example request body"
-    {"path": "E:\\to_import\\ayanami.jpg"}
-    ```
+```json title="Example request body"
+{"path": "E:\\to_import\\ayanami.jpg"}
+```
 
 Arguments (as bytes): 
 :   You can alternately just send the file's bytes as the POST body.
@@ -323,18 +322,20 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_service_name`: (optional, selective, string, the local file domain from which to delete, or all local files)
+*   `file_service_key`: (optional, selective, hexadecimal, the local file domain from which to delete, or all local files)
+*   `reason`: (optional, string, the reason attached to the delete action)
 
-    ```json title="Example request body"
-    {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
-    ```
+```json title="Example request body"
+{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+```
     
 Response:
 :   200 and no content.
-    
+
 You can use hash or hashes, whichever is more convenient.
-    
-At the moment, this is only able to send files from 'my files' to the trash, and so it cannot perform physical deletes. There is no error if any files do not currently exist in 'my files'. In future, it will take some sort of file service parameter to do more.
-    
+
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), but if you specific 'all local files', you should be able to trigger a physical delete if you wish. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
@@ -351,17 +352,19 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_service_name`: (optional, selective, string, the local file domain to which to undelete)
+*   `file_service_key`: (optional, selective, hexadecimal, the local file domain to which to undelete)
 
-    ```json title="Example request body"
-    {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
-    ```
-    
+```json title="Example request body"
+{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+```
+
 Response: 
 :   200 and no content.
     
 You can use hash or hashes, whichever is more convenient.
     
-This is just the reverse of a delete_files--removing files from trash and putting them back in 'my files'. There is no error if any files do not currently exist in 'trash'.
+This is the reverse of a delete_files--removing files from trash and putting them back where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). If you do not specify a file service, they will be undeleted to all local file services for which there are deletion records. There is no error if any files do not currently exist in 'trash'.
     
 
 ### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
@@ -380,9 +383,9 @@ Arguments (in JSON):
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
 
-    ```json title="Example request body"
-    {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
-    ```
+```json title="Example request body"
+{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+```
     
 Response: 
 :   200 and no content.
@@ -408,9 +411,9 @@ Arguments (in JSON):
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
 
-    ```json title="Example request body"
-    {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
-    ```
+```json title="Example request body"
+{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+```
     
 Response: 
 :   200 and no content.
@@ -725,62 +728,62 @@ Arguments (in JSON):
     *   `filterable_tags`: (optional tags to be filtered by any tag import options that applies to the URL)
     *   _`service_names_to_tags`: (obsolete, legacy synonym for service\_names\_to\_additional_tags)_
 
-    If you specify a `destination_page_name` and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
+If you specify a `destination_page_name` and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
 
-    Alternately, `destination_page_key` defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.
+Alternately, `destination_page_key` defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.
 
-    `show_destination_page` defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
+`show_destination_page` defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
 
-    `service_names_to_additional_tags` and `service_keys_to_additional_tags` use the same data structure as in /add\_tags/add\_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
+`service_names_to_additional_tags` and `service_keys_to_additional_tags` use the same data structure as in /add\_tags/add\_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
 
-    filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a _tag import options_, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.
+filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a _tag import options_, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.
 
-    ```json title="Example request body"
-    {
-      "url": "https://8ch.net/tv/res/1846574.html",
-      "destination_page_name": "kino zone",
-      "service_names_to_additional_tags": {
-        "my tags": ["as seen on /tv/"]
-      }
-    }
-    ```
-    ```json title="Example request body"
-    {
-      "url": "https://safebooru.org/index.php?page=post&s=view&id=3195917",
-      "filterable_tags": [
-        "1girl",
-        "artist name",
-        "creator:azto dio",
-        "blonde hair",
-        "blue eyes",
-        "breasts",
-        "character name",
-        "commentary",
-        "english commentary",
-        "formal",
-        "full body",
-        "glasses",
-        "gloves",
-        "hair between eyes",
-        "high heels",
-        "highres",
-        "large breasts",
-        "long hair",
-        "long sleeves",
-        "looking at viewer",
-        "series:metroid",
-        "mole",
-        "mole under mouth",
-        "patreon username",
-        "ponytail",
-        "character:samus aran",
-        "solo",
-        "standing",
-        "suit",
-        "watermark"
-      ]
-    }
-    ```
+```json title="Example request body"
+{
+  "url": "https://8ch.net/tv/res/1846574.html",
+  "destination_page_name": "kino zone",
+  "service_names_to_additional_tags": {
+    "my tags": ["as seen on /tv/"]
+  }
+}
+```
+```json title="Example request body"
+{
+  "url": "https://safebooru.org/index.php?page=post&s=view&id=3195917",
+  "filterable_tags": [
+    "1girl",
+    "artist name",
+    "creator:azto dio",
+    "blonde hair",
+    "blue eyes",
+    "breasts",
+    "character name",
+    "commentary",
+    "english commentary",
+    "formal",
+    "full body",
+    "glasses",
+    "gloves",
+    "hair between eyes",
+    "high heels",
+    "highres",
+    "large breasts",
+    "long hair",
+    "long sleeves",
+    "looking at viewer",
+    "series:metroid",
+    "mole",
+    "mole under mouth",
+    "patreon username",
+    "ponytail",
+    "character:samus aran",
+    "solo",
+    "standing",
+    "suit",
+    "watermark"
+  ]
+}
+```
         
 Response:
 :   Some JSON with info on the URL added.
@@ -841,11 +844,11 @@ Required Headers:
     
 Arguments (in percent-encoded JSON):
 :   
-*   `notes`: a dictionary mapping note names to note contents
-*   `hash`: the SHA256 of the target file
-*   `file_id`: the identifier of the target file (an integer)
+*   `notes`: (an Object mapping string note names to string note contents)
+*   `hash`: (selective, an SHA256 hash for the file in 64 characters of hexadecimal)
+*   `file_id`: (selective, the integer numerical identifier for the file)
 
-    You must provide one of `hash` or `file_id`. Existing notes will be overwritten.
+Existing notes will be overwritten.
 ```json title="Example request body"
 {
   "notes": {
@@ -872,11 +875,10 @@ Required Headers:
     
 Arguments (in percent-encoded JSON):
 :   
-*   `note_names`: a list of note names to delete
-*   `hash`: the SHA256 of the target file
-*   `file_id`: the identifier of the target file (an integer)
+*   `note_names`: (a list of string note names to delete)
+*   `hash`: (selective, an SHA256 hash for the file in 64 characters of hexadecimal)
+*   `file_id`: (selective, the integer numerical identifier for the file)
 
-    You must provide one of `hash` or `file_id`.
 ```json title="Example request body"
 {
   "note_names": ["note name", "another note"],
@@ -939,18 +941,18 @@ Arguments (in JSON):
 :   
     *   `cookies`: (a list of cookie rows in the same format as the GET request above)
 
-    ```json title="Example request body"
-    {
-      "cookies": [
-        ["PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719],
-        ["tag_filter", "1", ".somesite.com", "/", 1627327719]
-      ]
-    }
-    ```
-        
-    You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).
+```json title="Example request body"
+{
+  "cookies": [
+    ["PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719],
+    ["tag_filter", "1", ".somesite.com", "/", 1627327719]
+  ]
+}
+```
 
-    Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
+You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).
+
+Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
 
 ### **POST `/manage_headers/set_user_agent`** { id="manage_headers_set_user_agent" }
 
@@ -967,13 +969,13 @@ Arguments (in JSON):
 :       
     *   `user-agent`: (a string)
 
-    ```json title="Example request body"
-    {
-      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
-    }
-    ```
-        
-    Send an empty string to reset the client back to the default User-Agent, which should be `Mozilla/5.0 (compatible; Hydrus Client)`.
+```json title="Example request body"
+{
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
+}
+```
+
+Send an empty string to reset the client back to the default User-Agent, which should be `Mozilla/5.0 (compatible; Hydrus Client)`.
 
 ## Managing Pages
 
@@ -1165,18 +1167,17 @@ Arguments (in JSON):
     *   `file_ids`: (selective, a list of numerical file ids)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
 
-    You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
+You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
 
-    ```json title="Example request body"
-    {
-      "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
-      "file_ids": [123, 124, 125]
-    }
-    ```
-        
+```json title="Example request body"
+{
+  "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
+  "file_ids": [123, 124, 125]
+}
+```
+
 Response:
 :   200 with no content. If the page key is not found, this will 404.
-    
 
 ### **POST `/manage_pages/focus_page`** { id="manage_pages_focus_page" }
 
@@ -1193,13 +1194,13 @@ Arguments (in JSON):
 :   
     *   `page_key`: (the page key for the page you wish to show)
 
-    The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
+The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
 
-    ```json title="Example request body"
-    {
-      "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
-    }
-    ```
+```json title="Example request body"
+{
+  "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}
+```
 
 Response:
 :   200 with no content. If the page key is not found, this will 404.
@@ -1231,135 +1232,135 @@ Arguments (in percent-encoded JSON):
     *   _`system_inbox`: true or false (obsolete, use tags)_
     *   _`system_archive`: true or false (obsolete, use tags)_
 
-    ``` title='Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "кино"'
-    /get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D
-    ```
-        
+``` title='Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "кино"'
+/get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D
+```
+    
 
-    If the access key's permissions only permit search for certain tags, at least one positive whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.
+If the access key's permissions only permit search for certain tags, at least one positive whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.
 
-    Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
+Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
 
-    Many system predicates are also supported using a text parser! The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). Here's a big list of current formats supported:
+Many system predicates are also supported using a text parser! The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). Here's a big list of current formats supported:
 
-    ??? example "System Predicates" 
-        *   system:everything
-        *   system:inbox
-        *   system:archive
-        *   system:has duration
-        *   system:no duration
-        *   system:is the best quality file of its duplicate group
-        *   system:is not the best quality file of its duplicate group
-        *   system:has audio
-        *   system:no audio
-        *   system:has icc profile
-        *   system:no icc profile
-        *   system:has tags
-        *   system:no tags
-        *   system:untagged
-        *   system:number of tags > 5
-        *   system:number of tags ~= 10
-        *   system:number of tags > 0
-        *   system:number of words < 2
-        *   system:height = 600
-        *   system:height > 900
-        *   system:width < 200
-        *   system:width > 1000
-        *   system:filesize ~= 50 kilobytes
-        *   system:filesize > 10megabytes
-        *   system:filesize < 1 GB
-        *   system:filesize > 0 B
-        *   system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3
-        *   system:similar to abcdef distance 5
-        *   system:limit = 100
-        *   system:filetype = image/jpg, image/png, apng
-        *   system:hash = abcdef01 abcdef02 abcdef03 _(this does sha256)_
-        *   system:hash = abcdef01 abcdef02 md5
-        *   system:modified date < 7 years 45 days 7h
-        *   system:modified date > 2011-06-04
-        *   system:date modified > 7 years 2 months
-        *   system:date modified < 0 years 1 month 1 day 1 hour
-        *   system:time imported < 7 years 45 days 7h
-        *   system:time imported > 2011-06-04
-        *   system:time imported > 7 years 2 months
-        *   system:time imported < 0 years 1 month 1 day 1 hour
-        *   system:time imported ~= 2011-1-3
-        *   system:time imported ~= 1996-05-2
-        *   system:duration < 5 seconds
-        *   system:duration ~= 600 msecs
-        *   system:duration > 3 milliseconds
-        *   system:file service is pending to my files
-        *   system:file service currently in my files
-        *   system:file service is not currently in my files
-        *   system:file service is not pending to my files
-        *   system:num file relationships < 3 alternates
-        *   system:number of file relationships > 3 false positives
-        *   system:ratio is wider than 16:9
-        *   system:ratio is 16:9
-        *   system:ratio taller than 1:1
-        *   system:num pixels > 50 px
-        *   system:num pixels < 1 megapixels
-        *   system:num pixels ~= 5 kilopixel
-        *   system:media views ~= 10
-        *   system:all views > 0
-        *   system:preview views < 10
-        *   system:media viewtime < 1 days 1 hour 0 minutes
-        *   system:all viewtime > 1 hours 100 seconds
-        *   system:preview viewtime ~= 1 day 30 hours 100 minutes 90s
-        *   system:has url matching regex index\\.php
-        *   system:does not have a url matching regex index\\.php
-        *   system:has url https://safebooru.donmai.us/posts/4695284
-        *   system:does not have url https://safebooru.donmai.us/posts/4695284
-        *   system:has domain safebooru.com
-        *   system:does not have domain safebooru.com
-        *   system:has a url with class safebooru file page
-        *   system:does not have a url with url class safebooru file page
-        *   system:tag as number page < 5
-        *   system:has notes
-        *   system:no notes
-        *   system:does not have notes
-        *   system:num notes is 5
-        *   system:num notes > 1
-        *   system:has note with name note name
-        *   system:no note with name note name
-        *   system:does not have note with name note name
+??? example "System Predicates" 
+    *   system:everything
+    *   system:inbox
+    *   system:archive
+    *   system:has duration
+    *   system:no duration
+    *   system:is the best quality file of its duplicate group
+    *   system:is not the best quality file of its duplicate group
+    *   system:has audio
+    *   system:no audio
+    *   system:has icc profile
+    *   system:no icc profile
+    *   system:has tags
+    *   system:no tags
+    *   system:untagged
+    *   system:number of tags > 5
+    *   system:number of tags ~= 10
+    *   system:number of tags > 0
+    *   system:number of words < 2
+    *   system:height = 600
+    *   system:height > 900
+    *   system:width < 200
+    *   system:width > 1000
+    *   system:filesize ~= 50 kilobytes
+    *   system:filesize > 10megabytes
+    *   system:filesize < 1 GB
+    *   system:filesize > 0 B
+    *   system:similar to abcdef01 abcdef02 abcdef03, abcdef04 with distance 3
+    *   system:similar to abcdef distance 5
+    *   system:limit = 100
+    *   system:filetype = image/jpg, image/png, apng
+    *   system:hash = abcdef01 abcdef02 abcdef03 _(this does sha256)_
+    *   system:hash = abcdef01 abcdef02 md5
+    *   system:modified date < 7 years 45 days 7h
+    *   system:modified date > 2011-06-04
+    *   system:date modified > 7 years 2 months
+    *   system:date modified < 0 years 1 month 1 day 1 hour
+    *   system:time imported < 7 years 45 days 7h
+    *   system:time imported > 2011-06-04
+    *   system:time imported > 7 years 2 months
+    *   system:time imported < 0 years 1 month 1 day 1 hour
+    *   system:time imported ~= 2011-1-3
+    *   system:time imported ~= 1996-05-2
+    *   system:duration < 5 seconds
+    *   system:duration ~= 600 msecs
+    *   system:duration > 3 milliseconds
+    *   system:file service is pending to my files
+    *   system:file service currently in my files
+    *   system:file service is not currently in my files
+    *   system:file service is not pending to my files
+    *   system:num file relationships < 3 alternates
+    *   system:number of file relationships > 3 false positives
+    *   system:ratio is wider than 16:9
+    *   system:ratio is 16:9
+    *   system:ratio taller than 1:1
+    *   system:num pixels > 50 px
+    *   system:num pixels < 1 megapixels
+    *   system:num pixels ~= 5 kilopixel
+    *   system:media views ~= 10
+    *   system:all views > 0
+    *   system:preview views < 10
+    *   system:media viewtime < 1 days 1 hour 0 minutes
+    *   system:all viewtime > 1 hours 100 seconds
+    *   system:preview viewtime ~= 1 day 30 hours 100 minutes 90s
+    *   system:has url matching regex index\\.php
+    *   system:does not have a url matching regex index\\.php
+    *   system:has url https://safebooru.donmai.us/posts/4695284
+    *   system:does not have url https://safebooru.donmai.us/posts/4695284
+    *   system:has domain safebooru.com
+    *   system:does not have domain safebooru.com
+    *   system:has a url with class safebooru file page
+    *   system:does not have a url with url class safebooru file page
+    *   system:tag as number page < 5
+    *   system:has notes
+    *   system:no notes
+    *   system:does not have notes
+    *   system:num notes is 5
+    *   system:num notes > 1
+    *   system:has note with name note name
+    *   system:no note with name note name
+    *   system:does not have note with name note name
 
-    More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
+More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
 
-    Also, OR predicates are now supported! Just nest within the tag list, and it'll be treated like an OR. For instance:
+Also, OR predicates are now supported! Just nest within the tag list, and it'll be treated like an OR. For instance:
 
-    *   `#!json [ "skirt", [ "samus aran", "lara croft" ], "system:height > 1000" ]`
-        
-        Makes:
-        
-        *   skirt
-        *   samus aran OR lara croft
-        *   system:height > 1000
+*   `#!json [ "skirt", [ "samus aran", "lara croft" ], "system:height > 1000" ]`
 
-    The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'my files' and 'all known tags', and you can use either key or name as in [GET /get_services](#get_services), whichever is easiest for your situation.
+Makes:
 
-    file\_sort\_asc is 'true' for ascending, and 'false' for descending. The default is descending.
+*   skirt
+*   samus aran OR lara croft
+*   system:height > 1000
 
-    file\_sort\_type is by default _import time_. It is an integer according to the following enum, and I have written the semantic (asc/desc) meaning for each type after:
+The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'my files' and 'all known tags', and you can use either key or name as in [GET /get_services](#get_services), whichever is easiest for your situation.
 
-    *   0 - file size (smallest first/largest first)
-    *   1 - duration (shortest first/longest first)
-    *   2 - import time (oldest first/newest first)
-    *   3 - filetype (N/A)
-    *   4 - random (N/A)
-    *   5 - width (slimmest first/widest first)
-    *   6 - height (shortest first/tallest first)
-    *   7 - ratio (tallest first/widest first)
-    *   8 - number of pixels (ascending/descending)
-    *   9 - number of tags (on the current tag domain) (ascending/descending)
-    *   10 - number of media views (ascending/descending)
-    *   11 - total media viewtime (ascending/descending)
-    *   12 - approximate bitrate (smallest first/largest first)
-    *   13 - has audio (audio first/silent first)
-    *   14 - modified time (oldest first/newest first)
-    *   15 - framerate (slowest first/fastest first)
-    *   16 - number of frames (smallest first/largest first)
-    *   18 - last viewed time (oldest first/newest first)
+file\_sort\_asc is 'true' for ascending, and 'false' for descending. The default is descending.
+
+file\_sort\_type is by default _import time_. It is an integer according to the following enum, and I have written the semantic (asc/desc) meaning for each type after:
+
+*   0 - file size (smallest first/largest first)
+*   1 - duration (shortest first/longest first)
+*   2 - import time (oldest first/newest first)
+*   3 - filetype (N/A)
+*   4 - random (N/A)
+*   5 - width (slimmest first/widest first)
+*   6 - height (shortest first/tallest first)
+*   7 - ratio (tallest first/widest first)
+*   8 - number of pixels (ascending/descending)
+*   9 - number of tags (on the current tag domain) (ascending/descending)
+*   10 - number of media views (ascending/descending)
+*   11 - total media viewtime (ascending/descending)
+*   12 - approximate bitrate (smallest first/largest first)
+*   13 - has audio (audio first/silent first)
+*   14 - modified time (oldest first/newest first)
+*   15 - framerate (slowest first/fastest first)
+*   16 - number of frames (smallest first/largest first)
+*   18 - last viewed time (oldest first/newest first)
 
 Response:
 :   The full list of numerical file ids that match the search.
@@ -1400,21 +1401,21 @@ Arguments (in percent-encoded JSON):
     *   `hide_service_names_tags`: true or false (optional, defaulting to false)
     *   `include_notes`: true or false (optional, defaulting to false)
 
-    You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
+You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
 
-    ``` title="Example request for two files with ids 123 and 4567"
-    /get_files/file_metadata?file_ids=%5B123%2C%204567%5D
-    ```
-        
-    ``` title="The same, but only wants hashes back"
-    /get_files/file_metadata?file_ids=%5B123%2C%204567%5D&only_return_identifiers=true
-    ```
-        
-    ``` title="And one that fetches two hashes"
-    /get_files/file_metadata?hashes=%5B%224c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2%22%2C%20%223e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82%22%5D
-    ```
+``` title="Example request for two files with ids 123 and 4567"
+/get_files/file_metadata?file_ids=%5B123%2C%204567%5D
+```
+    
+``` title="The same, but only wants hashes back"
+/get_files/file_metadata?file_ids=%5B123%2C%204567%5D&only_return_identifiers=true
+```
+    
+``` title="And one that fetches two hashes"
+/get_files/file_metadata?hashes=%5B%224c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2%22%2C%20%223e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82%22%5D
+```
 
-    This request string can obviously get pretty ridiculously long. It also takes a bit of time to fetch metadata from the database. In its normal searches, the client usually fetches file metadata in batches of 256.
+This request string can obviously get pretty ridiculously long. It also takes a bit of time to fetch metadata from the database. In its normal searches, the client usually fetches file metadata in batches of 256.
 
 Response:
 :   A list of JSON Objects that store a variety of file metadata.
@@ -1542,47 +1543,46 @@ Response:
 }
 ```
 
-    Size is in bytes. Duration is in milliseconds, and may be an int or a float.
+Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
-    file_services stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
+file_services stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
 
-    The `service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags` structures are similar to the `/add_tags/add_tags` scheme, excepting that the status numbers are:
+The `service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags` structures are similar to the `/add_tags/add_tags` scheme, excepting that the status numbers are:
 
-    *   0 - current
-    *   1 - pending
-    *   2 - deleted
-    *   3 - petitioned
+*   0 - current
+*   1 - pending
+*   2 - deleted
+*   3 - petitioned
 
-    The tag structure is duplicated for both `name` and `key`. The use of `name` is an increasingly legacy issue--a hack when the Client API was young--and 'service\_names\_to...' lookups are likely to be deleted in future in favour of `service_key`. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the [/get_services](#get_services) call (and cache the response--it doesn't change much!).
+The tag structure is duplicated for both `name` and `key`. The use of `name` is an increasingly legacy issue--a hack when the Client API was young--and 'service\_names\_to...' lookups are likely to be deleted in future in favour of `service_key`. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the [/get_services](#get_services) call (and cache the response--it doesn't change much!).
 
-    !!! note
-        Since JSON Object keys must be strings, these status numbers are strings, not ints.
+!!! note
+    Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-    While `service_XXX_to_statuses_to_tags` represent the actual tags stored on the database for a file, the <code>service_XXX_to_statuses_to_<i>display</i>_tags</code> structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with `service_keys_to_statuses_to_tags`. If you want to render to the user, use `service_keys_to_statuses_to_displayed_tags`.
+While `service_XXX_to_statuses_to_tags` represent the actual tags stored on the database for a file, the <code>service_XXX_to_statuses_to_<i>display</i>_tags</code> structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with `service_keys_to_statuses_to_tags`. If you want to render to the user, use `service_keys_to_statuses_to_displayed_tags`.
 
-    If you add `hide_service_names_tags=true`, the `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects will not be included. Use this to save data/CPU on large queries.
+If you add `hide_service_names_tags=true`, the `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects will not be included. Use this to save data/CPU on large queries.
 
-    If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
+If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
 
-
-    ```json title="For example"
-    "detailed_known_urls" : [
-      {
-        "normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
-        "url_type": 0,
-        "url_type_string": "post url",
-        "match_name": "gelbooru file page",
-        "can_parse": true
-      },
-      {
-        "normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
-        "url_type": 5,
-        "url_type_string": "unknown url",
-        "match_name": "unknown url",
-        "can_parse": false
-      }
-    ]
-    ```
+```json title="For example"
+"detailed_known_urls" : [
+  {
+    "normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
+    "url_type": 0,
+    "url_type_string": "post url",
+    "match_name": "gelbooru file page",
+    "can_parse": true
+  },
+  {
+    "normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+    "url_type": 5,
+    "url_type_string": "unknown url",
+    "match_name": "unknown url",
+    "can_parse": false
+  }
+]
+```
 
 
 ### **GET `/get_files/file`** { id="get_files_file" }
@@ -1610,7 +1610,7 @@ Arguments :
    
 Response:
 :   The file itself. You should get the correct mime type as the Content-Type header.
-    
+
 
 ### **GET `/get_files/thumbnail`** { id="get_files_thumbnail" }
 
@@ -1628,15 +1628,21 @@ Arguments:
 
     Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
-    ``` title="Example request"
-    /get_files/thumbnail?file_id=452158
-    ```
-    ``` title="Example request"
-    /get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
-    ```
+``` title="Example request"
+/get_files/thumbnail?file_id=452158
+```
+``` title="Example request"
+/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
+```
 
 Response:
 :   The thumbnail for the file. It will give application/octet-stream as the mime type. Some hydrus thumbs are jpegs, some are pngs.
+
+    If hydrus keeps no thumbnail for the filetype, for instance with pdfs, then you will get the same default 'pdf' icon you see in the client. If the file does not exist in the client, or the thumbnail was expected but is missing from storage, you will get the fallback 'hydrus' icon, again just as you would in the client itself. This request should never give a 404.
+
+!!! note
+    If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
+
     
 
 ## Managing the Database

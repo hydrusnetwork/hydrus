@@ -1,3 +1,4 @@
+import collections
 import os
 import psutil
 import re
@@ -13,6 +14,33 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
+
+mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
+
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = os.path.join( HC.STATIC_DIR, 'clip.png' )
+
+for mime in HC.AUDIO:
+    
+    path = os.path.join( HC.STATIC_DIR, 'audio.png' )
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    
+
+for mime in HC.VIDEO:
+    
+    path = os.path.join( HC.STATIC_DIR, 'video.png' )
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    
+
+for mime in HC.ARCHIVES:
+    
+    path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    
 
 def AppendPathUntilNoConflicts( path ):
     

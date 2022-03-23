@@ -514,7 +514,7 @@ class DialogInputTags( Dialog ):
         
         self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key, tag_display_type )
         
-        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, default_location_context, service_key, null_entry_callable = self.OK, show_paste_button = True )
         

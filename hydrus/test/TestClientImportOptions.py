@@ -12,16 +12,15 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
-from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
-from hydrus.client.metadata import ClientTags
 
 class TestCheckerOptions( unittest.TestCase ):
     
@@ -581,7 +580,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -619,7 +618,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -672,7 +671,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -723,7 +722,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -756,7 +755,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -802,7 +801,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         
@@ -850,7 +849,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( CC.LOCAL_FILE_SERVICE_KEY, pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         

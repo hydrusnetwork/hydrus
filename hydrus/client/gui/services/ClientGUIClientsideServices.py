@@ -3953,7 +3953,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if lb.count() == 0:
             
-            previous_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            previous_service_key = None
             
         else:
             

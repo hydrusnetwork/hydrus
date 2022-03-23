@@ -1,3 +1,4 @@
+import collections
 import json
 import os
 import traceback
@@ -418,14 +419,14 @@ class ParsedRequestArguments( dict ):
         raise HydrusExceptions.BadRequestException( 'It looks like the parameter "{}" was missing!'.format( key ) )
         
     
-    def GetValue( self, key, expected_type, expected_list_type = None, default_value = None ):
+    def GetValue( self, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None ):
         
         # not None because in JSON sometimes people put 'null' to mean 'did not enter this optional parameter'
         if key in self and self[ key ] is not None:
             
             value = self[ key ]
             
-            error_text_lookup = {}
+            error_text_lookup = collections.defaultdict( lambda: 'unknown!' )
             
             error_text_lookup[ int ] = 'integer'
             error_text_lookup[ str ] = 'string'
@@ -454,16 +455,25 @@ class ParsedRequestArguments( dict ):
                     
                     if not isinstance( item, expected_list_type ):
                         
-                        if expected_list_type in error_text_lookup:
-                            
-                            type_error_text = error_text_lookup[ expected_list_type ]
-                            
-                        else:
-                            
-                            type_error_text = 'unknown!'
-                            
+                        raise HydrusExceptions.BadRequestException( 'The list parameter "{}" held an item, "{}" that was {} and not the expected type: {}!'.format( key, item, type( item ), error_text_lookup[ expected_list_type ] ) )
                         
-                        raise HydrusExceptions.BadRequestException( 'The list parameter "{}" held an item that was not the expected type: {}!'.format( key, type_error_text ) )
+                    
+                
+            
+            if expected_type is dict and expected_dict_types is not None:
+                
+                ( expected_key_type, expected_value_type ) = expected_dict_types
+                
+                for ( dict_key, dict_value ) in value.items():
+                    
+                    if not isinstance( dict_key, expected_key_type ):
+                        
+                        raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a key, "{}" that was {} and not the expected type: {}!'.format( key, dict_key, type( dict_key ), error_text_lookup[ expected_key_type ] ) )
+                        
+                    
+                    if not isinstance( dict_value, expected_value_type ):
+                        
+                        raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a value, "{}" that was {} and not the expected type: {}!'.format( key, dict_value, type( dict_value ), error_text_lookup[ expected_value_type ] ) )
                         
                     
                 

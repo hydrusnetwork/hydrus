@@ -316,7 +316,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             media_to_delete = [ m for m in media_to_delete if only_those_in_file_service_key in m.GetLocationsManager().GetCurrent() ]
             
         
-        if file_service_key is None or file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
+        if file_service_key is None or HG.client_controller.services_manager.GetServiceType( file_service_key ) in HC.LOCAL_FILE_SERVICES:
             
             default_reason = 'Deleted from Media Page.'
             
@@ -3264,7 +3264,7 @@ class MediaPanelThumbnails( MediaPanel ):
         selected_locations_managers = [ media.GetLocationsManager() for media in flat_selected_medias ]
         
         selection_has_local = True in ( locations_manager.IsLocal() for locations_manager in selected_locations_managers )
-        selection_has_local_file_domain = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
+        selection_has_local_file_domain = True in ( locations_manager.IsLocal() and not locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
@@ -3704,7 +3704,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if HG.client_controller.DBCurrentlyDoingJob():
                 
-                file_duplicate_info = None
+                file_duplicate_info = {}
                 
             else:
                 
@@ -3712,7 +3712,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if self._location_context.current_service_keys.isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) ):
                     
-                    all_local_files_file_duplicate_info = None
+                    all_local_files_file_duplicate_info = {}
                     
                 else:
                     
@@ -3726,7 +3726,7 @@ class MediaPanelThumbnails( MediaPanel ):
             focus_has_potentials = False
             focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
             
-            if file_duplicate_info is None:
+            if len( file_duplicate_info ) == 0:
                 
                 ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch file\'s duplicates (db currently locked)' )
                 
@@ -3739,7 +3739,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     view_duplicate_relations_jobs.append( ( self._location_context, file_duplicate_info ) )
                     
                 
-                if all_local_files_file_duplicate_info is not None and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
+                if len( all_local_files_file_duplicate_info ) > 0 and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
                     
                     view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
                     
@@ -3807,7 +3807,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
-            focus_is_definitely_king = file_duplicate_info is not None and file_duplicate_info[ 'is_king' ]
+            focus_is_definitely_king = len( file_duplicate_info ) > 0 and file_duplicate_info[ 'is_king' ]
             
             dissolution_actions_available = focus_can_be_searched or focus_is_in_duplicate_group or focus_is_in_alternate_group or focus_has_fps
             
@@ -3817,7 +3817,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 duplicates_action_submenu = QW.QMenu( duplicates_menu )
                 
-                if file_duplicate_info is None:
+                if len( file_duplicate_info ) == 0:
                     
                     ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
                     
@@ -4557,10 +4557,15 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
                 all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
                 
             
-            if CC.LOCAL_FILE_SERVICE_KEY in all_specific_file_domains:
+            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
                 
-                all_specific_file_domains.remove( CC.LOCAL_FILE_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.LOCAL_FILE_SERVICE_KEY )
+                service_key = service.GetServiceKey()
+                
+                if service_key in all_specific_file_domains:
+                    
+                    all_specific_file_domains.remove( service_key )
+                    all_specific_file_domains.insert( 0, service_key )
+                    
                 
             
             for file_service_key in all_specific_file_domains:
@@ -4642,10 +4647,15 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
                 all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
                 
             
-            if CC.LOCAL_FILE_SERVICE_KEY in all_specific_file_domains:
+            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
                 
-                all_specific_file_domains.remove( CC.LOCAL_FILE_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.LOCAL_FILE_SERVICE_KEY )
+                service_key = service.GetServiceKey()
+                
+                if service_key in all_specific_file_domains:
+                    
+                    all_specific_file_domains.remove( service_key )
+                    all_specific_file_domains.insert( 0, service_key )
+                    
                 
             
             for file_service_key in all_specific_file_domains:

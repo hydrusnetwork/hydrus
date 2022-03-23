@@ -2356,7 +2356,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         

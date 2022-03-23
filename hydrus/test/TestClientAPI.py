@@ -749,7 +749,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ] }
+        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] }
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
@@ -773,9 +773,57 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] }
+        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] }
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # now with a reason
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/delete_files'
+        
+        reason = 'yo'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'reason' : reason }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # now test it not working
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_name' : 'not existing service' }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertIn( 'not existing service', text ) # error message should be complaining about it
         
         #
         
@@ -824,6 +872,28 @@ class TestClientAPI( unittest.TestCase ):
         expected_service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] }
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/undelete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_name' : 'not existing service' }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertIn( 'not existing service', text ) # error message should be complaining about it
         
         #
         
@@ -1646,7 +1716,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], [ hash ] ) ) ]
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ]
         
         expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
         
@@ -1675,7 +1745,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], [ hash ] ) ) ]
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ]
         
         expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
         
@@ -1704,7 +1774,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], [ hash ] ) ) ]
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ]
         
         expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
         
@@ -1733,7 +1803,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], [ hash ] ) ) ]
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ]
         
         expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
         
@@ -3238,7 +3308,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 404 )
         
-        #
+        # this no longer 404s, it should give the hydrus thumb
         
         path = '/get_files/thumbnail?hash={}'.format( hash_404.hex() )
         
@@ -3248,7 +3318,14 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( response.status, 404 )
+        with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+            
+            expected_data = f.read()
+            
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( data, expected_data )
         
         #
         

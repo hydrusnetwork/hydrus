@@ -150,7 +150,7 @@ def CreateManagementController( page_name, management_type, location_context = N
     
 def CreateManagementControllerDuplicateFilter():
     
-    default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+    default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
     
     management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, location_context = default_location_context )
     

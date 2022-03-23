@@ -122,9 +122,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self.setMinimumWidth( width )
         self.setMinimumHeight( height )
         
-        self._services = HG.client_controller.services_manager.GetServices()
-        
-        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
+        self._petition_service_keys = [ service.GetServiceKey() for service in HG.client_controller.services_manager.GetServices( HC.REPOSITORIES ) if True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
         
         self._InitButtons( 'home' )
         
@@ -280,20 +278,26 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
         elif menu_keyword == 'files':
             
-            entries.append( ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) )
+            for service_key in self._controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                
+                if service_key == CC.LOCAL_UPDATE_SERVICE_KEY:
+                    
+                    continue
+                    
+                
+                entries.append( ( 'page_query', service_key ) )
+                
+            
             entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )
             
-            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
                 
                 entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
                 
             
-            for service in self._services:
+            for service_key in self._controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ):
                 
-                if service.GetServiceType() == HC.FILE_REPOSITORY:
-                    
-                    entries.append( ( 'page_query', service.GetServiceKey() ) )
-                    
+                entries.append( ( 'page_query', service_key ) )
                 
             
         elif menu_keyword == 'download':
@@ -3222,7 +3226,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if give_it_a_blank_page:
             
-            default_location_context = HG.client_controller.services_manager.GetDefaultLocationContext()
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             page.NewPageQuery( default_location_context )
             

@@ -3,6 +3,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 
 PRESENTATION_LOCATION_IN_LOCAL_FILES = 0
 PRESENTATION_LOCATION_IN_TRASH_TOO = 1
@@ -302,14 +303,16 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( presented_hashes ) > 0 and should_check_location:
             
-            file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-            
             if self._presentation_location == PRESENTATION_LOCATION_IN_TRASH_TOO:
                 
-                file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                
+            else:
+                
+                location_context = HG.client_controller.services_manager.GetLocalMediaLocationContextUmbrella()
                 
             
-            presented_hashes = HG.client_controller.Read( 'filter_hashes', file_service_key, presented_hashes )
+            presented_hashes = HG.client_controller.Read( 'filter_hashes', location_context, presented_hashes )
             
         
         return presented_hashes

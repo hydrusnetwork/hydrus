@@ -939,9 +939,11 @@ class ThumbnailCache( object ):
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
             
+            # it would be ideal to replace this with mimes_to_default_thumbnail_paths at a convenient point
+            
             for name in names:
                 
-                path = os.path.join( HC.STATIC_DIR, name + '.png' )
+                path = os.path.join( HC.STATIC_DIR, '{}.png'.format( name ) )
                 
                 numpy_image = ClientImageHandling.GenerateNumPyImage( path, HC.IMAGE_PNG )
                 

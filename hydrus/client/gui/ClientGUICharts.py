@@ -1,3 +1,5 @@
+import itertools
+
 from qtpy import QtCore as QC
 
 try:
@@ -81,9 +83,13 @@ try:
             
             current_files_series.setName( 'files in storage' )
             
+            max_num_files = 0
+            
             for ( timestamp, num_files ) in file_history[ 'current' ]:
                 
                 current_files_series.append( timestamp * 1000.0, num_files )
+                
+                max_num_files = max( max_num_files, num_files )
                 
             
             deleted_files_series = QCh.QtCharts.QLineSeries()
@@ -94,6 +100,8 @@ try:
                 
                 deleted_files_series.append( timestamp * 1000.0, num_files )
                 
+                max_num_files = max( max_num_files, num_files )
+                
             
             inbox_files_series = QCh.QtCharts.QLineSeries()
             
@@ -102,6 +110,8 @@ try:
             for ( timestamp, num_files ) in file_history[ 'inbox' ]:
                 
                 inbox_files_series.append( timestamp * 1000.0, num_files )
+                
+                max_num_files = max( max_num_files, num_files )
                 
             
             # takes ms since epoch
@@ -114,7 +124,7 @@ try:
             
             y_value_axis = QCh.QtCharts.QValueAxis()
             
-            y_value_axis.setLabelFormat( '%i' )
+            y_value_axis.setLabelFormat( '%\'i' )
             
             chart = QCh.QtCharts.QChart()
             
@@ -134,7 +144,7 @@ try:
             inbox_files_series.attachAxis( x_datetime_axis )
             inbox_files_series.attachAxis( y_value_axis )
             
-            y_value_axis.setMin( 0 )
+            y_value_axis.setRange( 0, max_num_files )
             
             y_value_axis.applyNiceNumbers()
             

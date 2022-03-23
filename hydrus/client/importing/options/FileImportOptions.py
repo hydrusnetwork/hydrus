@@ -7,15 +7,13 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
-from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 
 class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self ):
         
@@ -34,11 +32,14 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._associate_primary_urls = True
         self._associate_source_urls = True
         self._presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        self._import_destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
     
     def _GetSerialisableInfo( self ):
         
-        pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        serialisable_import_destination_location_context = self._import_destination_location_context.GetSerialisableTuple()
+        
+        pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
         post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls )
         serialisable_presentation_import_options = self._presentation_import_options.GetSerialisableTuple()
         
@@ -49,9 +50,11 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         ( pre_import_options, post_import_options, serialisable_presentation_import_options ) = serialisable_info
         
-        ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
+        ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
         ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls ) = post_import_options
         self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
+        
+        self._import_destination_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_destination_location_context )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -160,6 +163,23 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 6, new_serialisable_info )
             
         
+        if version == 6:
+            
+            ( pre_import_options, post_import_options, serialisable_presentation_import_options ) = old_serialisable_info
+            
+            ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = pre_import_options
+            
+            import_destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            serialisable_import_destination_location_context = import_destination_location_context.GetSerialisableTuple()
+            
+            pre_import_options = ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options )
+            
+            return ( 7, new_serialisable_info )
+            
+        
     
     def AllowsDecompressionBombs( self ):
         
@@ -255,9 +275,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetDestinationLocationContext( self ) -> ClientLocation.LocationContext:
         
-        # for now this is static, but obviously we'll have a control to handle this (with 'needs at least one service m8' handling/errors) and then import code to make it happen
-        
-        return ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        return self._import_destination_location_context
         
     
     def GetPresentationImportOptions( self ):
@@ -331,6 +349,11 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         summary = os.linesep.join( statements )
         
         return summary
+        
+    
+    def SetDestinationLocationContext( self, location_context: ClientLocation.LocationContext ):
+        
+        self._import_destination_location_context = location_context.Duplicate()
         
     
     def SetPostImportOptions( self, automatic_archive: bool, associate_primary_urls: bool, associate_source_urls: bool ):

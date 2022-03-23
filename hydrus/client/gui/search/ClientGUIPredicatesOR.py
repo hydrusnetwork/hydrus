@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -32,7 +33,7 @@ class ORPredicateControl( QW.QWidget ):
         
         page_key = HydrusData.GenerateKey()
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
         

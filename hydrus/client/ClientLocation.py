@@ -75,23 +75,24 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = frozenset( { bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys } )
         
     
-    def ClearAllLocalFilesServices( self, filter_func: typing.Callable ):
+    def ClearSurplusLocalFilesServices( self, service_type_func: typing.Callable ):
+        # if we have combined local files, then we don't need specific local domains
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys:
             
-            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if filter_func( service_key ) ) )
+            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) )
             
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.deleted_service_keys:
             
-            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if filter_func( service_key ) ) )
+            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) )
             
         
     
-    def FixMissingServices( self, filter_method: typing.Callable ):
+    def FixMissingServices( self, services_exist_func: typing.Callable ):
         
-        self.current_service_keys = frozenset( filter_method( self.current_service_keys ) )
-        self.deleted_service_keys = frozenset( filter_method( self.deleted_service_keys ) )
+        self.current_service_keys = frozenset( services_exist_func( self.current_service_keys ) )
+        self.deleted_service_keys = frozenset( services_exist_func( self.deleted_service_keys ) )
         
     
     def GetCoveringCurrentFileServiceKeys( self ):
@@ -106,6 +107,14 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             
         
         return ( file_service_keys, file_location_is_cross_referenced )
+        
+    
+    def GetStatusesAndServiceKeysList( self ):
+        
+        statuses_and_service_keys = [ ( HC.CONTENT_STATUS_CURRENT, service_key ) for service_key in self.current_service_keys ]
+        statuses_and_service_keys.extend( [ ( HC.CONTENT_STATUS_DELETED, service_key ) for service_key in self.deleted_service_keys ] )
+        
+        return statuses_and_service_keys
         
     
     def IncludesCurrent( self ):
@@ -131,6 +140,13 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     def IsOneDomain( self ):
         
         return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
+        
+    
+    def LimitToServiceTypes( self, service_type_func: typing.Callable, service_types ):
+        
+        self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) in service_types ) )
+        
+        self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) in service_types ) )
         
     
     def SearchesAnything( self ):

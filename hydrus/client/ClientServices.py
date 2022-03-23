@@ -3323,17 +3323,19 @@ class ServicesManager( object ):
             
         
     
-    def GetDefaultLocationContext( self ) -> bytes:
-        
-        return ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
-        
-    
     def GetLocalMediaFileServices( self ):
         
         with self._lock:
             
             return [ service for service in self._services_sorted if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN and service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
             
+        
+    
+    def GetLocalMediaLocationContextUmbrella( self ) -> ClientLocation.LocationContext:
+        
+        service_keys = [ service.GetServiceKey() for service in self.GetLocalMediaFileServices() ]
+        
+        return ClientLocation.LocationContext( current_service_keys = service_keys )
         
     
     def GetName( self, service_key: bytes ):
