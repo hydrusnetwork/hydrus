@@ -6,7 +6,7 @@ title: PTR Guide
 or *Myths and facts about the Public Tag Repository*
 
 ## What is the PTR?  
-Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like `my tags`. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you don not see it in the tag list then it is not stored.
+Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like `my tags`. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you do not see it in the tag list then it is not stored.
 
 Most of the things in this document also applies to [self-hosted servers](server.md), except for tag guidelines.
 
@@ -44,7 +44,7 @@ Q: Why is my database so big!? This can't be right.
 :   A: It is working as intended. The size is because you are literally downloading and processing the entire tag database and history of the PTR. It is done this way to ensure redundancy and privacy. Redundancy because anybody with an up-to-date PTR sync can just start their own. Privacy because nobody can tell what files you have since you are downloading the tags for everything the PTR has.
 
 Q: Does that mean I can't do anything about the size? 
-:   A: Correct. There are some plans to crunch the size through a few methods but there are a lot of other far more requested features being, well, requested. Speaking crassly if you are bothered by the size requirement of the PTR you probably don't have a big enough library to really benefit and would be better of just using the IQDB script.
+:   A: Correct. There are some plans to crunch the size through a few methods but there are a lot of other far more requested features being, well, requested. Speaking crassly if you are bothered by the size requirement of the PTR you probably don't have a big enough library to really benefit and would be better off just using the IQDB script.
 
 ---
 
