@@ -1228,7 +1228,7 @@ Arguments (in percent-encoded JSON):
     *   `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
     *   `file_sort_type`: (optional, integer, the results sort method)
     *   `file_sort_asc`: true or false (optional, the results sort order)
-    *   `return_hashes`: true or false (optional, default false, returns hex hashes instead of file ids)
+    *   `return_hashes`: true or false (optional, default false, returns hex hashes in addition to file ids, hashes and file ids are in the same order)
     *   _`system_inbox`: true or false (obsolete, use tags)_
     *   _`system_archive`: true or false (obsolete, use tags)_
 
@@ -1375,7 +1375,8 @@ Response:
     "1b04c4df7accd5a61c5d02b36658295686b0abfebdc863110e7d7249bba3f9ad",
     "fe416723c731d679aa4d20e9fd36727f4a38cd0ac6d035431f0f452fad54563f",
     "b53505929c502848375fbc4dab2f40ad4ae649d34ef72802319a348f81b52bad"
-  ]
+  ],
+  "file_ids": [125462, 4852415, 123]
 }
 ```
 
