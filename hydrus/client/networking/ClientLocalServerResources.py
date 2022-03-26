@@ -446,6 +446,24 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
         hashes.update( more_hashes )
         
     
+    if 'file_id' in request.parsed_request_args:
+        
+        hash_id = request.parsed_request_args.GetValue( 'file_id', int )
+        
+        hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
+        
+        hashes.update( hash_ids_to_hashes.values() )
+        
+    
+    if 'file_ids' in request.parsed_request_args:
+        
+        hash_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+        
+        hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = hash_ids )
+        
+        hashes.update( hash_ids_to_hashes.values() )
+        
+    
     CheckHashLength( hashes )
     
     return hashes
@@ -2099,7 +2117,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = hash_ids )
             
             # maintain sort
-            body_dict = { 'hashes' : [ hash_ids_to_hashes[ hash_id ].hex() for hash_id in hash_ids ] }
+            body_dict = { 'hashes' : [ hash_ids_to_hashes[ hash_id ].hex() for hash_id in hash_ids ], 'file_ids' : list( hash_ids ) }
             
         else:
             
@@ -2178,9 +2196,15 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         
         try:
             
-            if 'file_ids' in request.parsed_request_args:
+            if 'file_ids' in request.parsed_request_args or 'file_id' in request.parsed_request_args:
                 
-                file_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+                if 'file_ids' in request.parsed_request_args:
+                    
+                    file_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+                
+                else:
+                    
+                    file_ids = [ request.parsed_request_args.GetValue( 'file_id', int ) ]
                 
                 request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
                 
@@ -2193,11 +2217,17 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids, sorted = True )
                     
                 
-            elif 'hashes' in request.parsed_request_args:
+            elif 'hashes' in request.parsed_request_args or 'hash' in request.parsed_request_args:
                 
                 request.client_api_permissions.CheckCanSeeAllFiles()
                 
-                hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+                if 'hashes' in request.parsed_request_args:
+                    
+                    hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+                
+                else:
+                    
+                    hashes = [ request.parsed_request_args.GetValue( 'hash', bytes ) ]
                 
                 CheckHashLength( hashes )
                 
@@ -2724,13 +2754,27 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
         
         page_key = request.parsed_request_args.GetValue( 'page_key', bytes )
         
-        if 'hashes' in request.parsed_request_args:
+        if 'hash' in request.parsed_request_args:
+            
+            hashes = [ request.parsed_request_args.GetValue( 'hash', bytes ) ]
+            
+            CheckHashLength( hashes )
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
+            
+        elif 'hashes' in request.parsed_request_args:
             
             hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
             
             CheckHashLength( hashes )
             
             media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
+            
+        elif 'file_id' in request.parsed_request_args:
+            
+            hash_ids = [ request.parsed_request_args.GetValue( 'file_id', int ) ]
+            
+            media_results = HG.client_controller.Read( 'media_results_from_ids', hash_ids, sorted = True )
             
         elif 'file_ids' in request.parsed_request_args:
             

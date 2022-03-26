@@ -322,6 +322,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `file_service_name`: (optional, selective, string, the local file domain from which to delete, or all local files)
 *   `file_service_key`: (optional, selective, hexadecimal, the local file domain from which to delete, or all local files)
 *   `reason`: (optional, string, the reason attached to the delete action)
@@ -352,6 +354,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `file_service_name`: (optional, selective, string, the local file domain to which to undelete)
 *   `file_service_key`: (optional, selective, hexadecimal, the local file domain to which to undelete)
 
@@ -382,6 +386,8 @@ Arguments (in JSON):
 :  
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
 {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -410,6 +416,8 @@ Arguments (in JSON):
 :  
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
 {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -544,6 +552,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (selective A, a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
 *   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
 *   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
@@ -816,6 +826,8 @@ Arguments (in JSON):
     *   `urls_to_delete`: (a list of urls you want to disassociate from the file(s))
     *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
     *   `hashes`: (a list of SHA256 hashes)
+    *   `file_id`: (a numerical file id)
+    *   `file_ids`: (a list of numerical file ids)
 
     All of these are optional, but you obviously need to have at least one of `url` arguments and one of the `hash` arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
 ```json title="Example request body"
@@ -1164,7 +1176,9 @@ Required Headers:
 Arguments (in JSON):
 :   
     *   `page_key`: (the page key for the page you wish to add files to)
+    *   `file_id`: (selective, a numerical file id)
     *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
 
 You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
@@ -1228,7 +1242,7 @@ Arguments (in percent-encoded JSON):
     *   `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
     *   `file_sort_type`: (optional, integer, the results sort method)
     *   `file_sort_asc`: true or false (optional, the results sort order)
-    *   `return_hashes`: true or false (optional, default false, returns hex hashes instead of file ids)
+    *   `return_hashes`: true or false (optional, default false, returns hex hashes in addition to file ids, hashes and file ids are in the same order)
     *   _`system_inbox`: true or false (obsolete, use tags)_
     *   _`system_archive`: true or false (obsolete, use tags)_
 
@@ -1375,7 +1389,8 @@ Response:
     "1b04c4df7accd5a61c5d02b36658295686b0abfebdc863110e7d7249bba3f9ad",
     "fe416723c731d679aa4d20e9fd36727f4a38cd0ac6d035431f0f452fad54563f",
     "b53505929c502848375fbc4dab2f40ad4ae649d34ef72802319a348f81b52bad"
-  ]
+  ],
+  "file_ids": [125462, 4852415, 123]
 }
 ```
 
@@ -1394,7 +1409,9 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
+    *   `file_id`: (selective, a numerical file id)
     *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
