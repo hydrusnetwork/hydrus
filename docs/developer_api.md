@@ -322,6 +322,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `file_service_name`: (optional, selective, string, the local file domain from which to delete, or all local files)
 *   `file_service_key`: (optional, selective, hexadecimal, the local file domain from which to delete, or all local files)
 *   `reason`: (optional, string, the reason attached to the delete action)
@@ -352,6 +354,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `file_service_name`: (optional, selective, string, the local file domain to which to undelete)
 *   `file_service_key`: (optional, selective, hexadecimal, the local file domain to which to undelete)
 
@@ -382,6 +386,8 @@ Arguments (in JSON):
 :  
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
 {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -410,6 +416,8 @@ Arguments (in JSON):
 :  
 *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
 {"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -544,6 +552,8 @@ Arguments (in JSON):
 :   
 *   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
 *   `hashes`: (selective A, a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
 *   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
 *   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
 *   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
@@ -816,6 +826,8 @@ Arguments (in JSON):
     *   `urls_to_delete`: (a list of urls you want to disassociate from the file(s))
     *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
     *   `hashes`: (a list of SHA256 hashes)
+    *   `file_id`: (a numerical file id)
+    *   `file_ids`: (a list of numerical file ids)
 
     All of these are optional, but you obviously need to have at least one of `url` arguments and one of the `hash` arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
 ```json title="Example request body"

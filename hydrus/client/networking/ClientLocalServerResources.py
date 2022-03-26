@@ -446,6 +446,24 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
         hashes.update( more_hashes )
         
     
+    if 'file_id' in request.parsed_request_args:
+        
+        hash_id = request.parsed_request_args.GetValue( 'file_id', int )
+        
+        hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
+        
+        hashes.update( hash_ids_to_hashes.values() )
+        
+    
+    if 'file_ids' in request.parsed_request_args:
+        
+        hash_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+        
+        hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = hash_ids )
+        
+        hashes.update( hash_ids_to_hashes.values() )
+        
+    
     CheckHashLength( hashes )
     
     return hashes
