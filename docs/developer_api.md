@@ -1176,7 +1176,9 @@ Required Headers:
 Arguments (in JSON):
 :   
     *   `page_key`: (the page key for the page you wish to add files to)
+    *   `file_id`: (selective, a numerical file id)
     *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
 
 You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
@@ -1407,7 +1409,9 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
+    *   `file_id`: (selective, a numerical file id)
     *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
