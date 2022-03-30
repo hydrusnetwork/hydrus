@@ -76,79 +76,140 @@ try:
             
             QCh.QtCharts.QChartView.__init__( self, parent )
             
+            self._file_history = file_history
+            self._show_deleted = True
+            
             # this lad takes ms timestamp, not s, so * 1000
             # note you have to give this floats for the ms or it throws a type problem of big number to C long
             
-            current_files_series = QCh.QtCharts.QLineSeries()
+            self._current_files_series = QCh.QtCharts.QLineSeries()
             
-            current_files_series.setName( 'files in storage' )
+            self._current_files_series.setName( 'files in storage' )
             
-            max_num_files = 0
+            self._max_num_files_current = 0
             
-            for ( timestamp, num_files ) in file_history[ 'current' ]:
+            for ( timestamp, num_files ) in self._file_history[ 'current' ]:
                 
-                current_files_series.append( timestamp * 1000.0, num_files )
+                self._current_files_series.append( timestamp * 1000.0, num_files )
                 
-                max_num_files = max( max_num_files, num_files )
-                
-            
-            deleted_files_series = QCh.QtCharts.QLineSeries()
-            
-            deleted_files_series.setName( 'deleted' )
-            
-            for ( timestamp, num_files ) in file_history[ 'deleted' ]:
-                
-                deleted_files_series.append( timestamp * 1000.0, num_files )
-                
-                max_num_files = max( max_num_files, num_files )
+                self._max_num_files_current = max( self._max_num_files_current, num_files )
                 
             
-            inbox_files_series = QCh.QtCharts.QLineSeries()
+            #
             
-            inbox_files_series.setName( 'inbox' )
+            self._deleted_files_series = QCh.QtCharts.QLineSeries()
             
-            for ( timestamp, num_files ) in file_history[ 'inbox' ]:
+            self._deleted_files_series.setName( 'deleted' )
+            
+            self._max_num_files_deleted = 0
+            
+            for ( timestamp, num_files ) in self._file_history[ 'deleted' ]:
                 
-                inbox_files_series.append( timestamp * 1000.0, num_files )
+                self._deleted_files_series.append( timestamp * 1000.0, num_files )
                 
-                max_num_files = max( max_num_files, num_files )
+                self._max_num_files_deleted = max( self._max_num_files_deleted, num_files )
+                
+            
+            #
+            
+            self._inbox_files_series = QCh.QtCharts.QLineSeries()
+            
+            self._inbox_files_series.setName( 'inbox' )
+            
+            self._max_num_files_inbox = 0
+            
+            for ( timestamp, num_files ) in self._file_history[ 'inbox' ]:
+                
+                self._inbox_files_series.append( timestamp * 1000.0, num_files )
+                
+                self._max_num_files_inbox = max( self._max_num_files_inbox, num_files )
+                
+            
+            #
+            
+            self._archive_files_series = QCh.QtCharts.QLineSeries()
+            
+            self._archive_files_series.setName( 'archive' )
+            
+            self._max_num_files_archive = 0
+            
+            for ( timestamp, num_files ) in self._file_history[ 'archive' ]:
+                
+                self._archive_files_series.append( timestamp * 1000.0, num_files )
+                
+                self._max_num_files_archive = max( self._max_num_files_archive, num_files )
                 
             
             # takes ms since epoch
-            x_datetime_axis = QCh.QtCharts.QDateTimeAxis()
+            self._x_datetime_axis = QCh.QtCharts.QDateTimeAxis()
             
-            x_datetime_axis.setTickCount( 25 )
-            x_datetime_axis.setLabelsAngle( 90 )
+            self._x_datetime_axis.setTickCount( 25 )
+            self._x_datetime_axis.setLabelsAngle( 90 )
             
-            x_datetime_axis.setFormat( 'yyyy-MM-dd' )
+            self._x_datetime_axis.setFormat( 'yyyy-MM-dd' )
             
-            y_value_axis = QCh.QtCharts.QValueAxis()
+            self._y_value_axis = QCh.QtCharts.QValueAxis()
             
-            y_value_axis.setLabelFormat( '%\'i' )
+            self._y_value_axis.setLabelFormat( '%\'i' )
             
-            chart = QCh.QtCharts.QChart()
+            self._chart = QCh.QtCharts.QChart()
             
-            chart.addSeries( current_files_series )
-            chart.addSeries( inbox_files_series )
-            chart.addSeries( deleted_files_series )
+            self._chart.addSeries( self._current_files_series )
+            self._chart.addSeries( self._inbox_files_series )
+            self._chart.addSeries( self._archive_files_series )
+            self._chart.addSeries( self._deleted_files_series )
             
-            chart.addAxis( x_datetime_axis, QC.Qt.AlignBottom )
-            chart.addAxis( y_value_axis, QC.Qt.AlignLeft )
+            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignBottom )
+            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignLeft )
             
-            current_files_series.attachAxis( x_datetime_axis )
-            current_files_series.attachAxis( y_value_axis )
+            self._current_files_series.attachAxis( self._x_datetime_axis )
+            self._current_files_series.attachAxis( self._y_value_axis )
             
-            deleted_files_series.attachAxis( x_datetime_axis )
-            deleted_files_series.attachAxis( y_value_axis )
+            self._deleted_files_series.attachAxis( self._x_datetime_axis )
+            self._deleted_files_series.attachAxis( self._y_value_axis )
             
-            inbox_files_series.attachAxis( x_datetime_axis )
-            inbox_files_series.attachAxis( y_value_axis )
+            self._inbox_files_series.attachAxis( self._x_datetime_axis )
+            self._inbox_files_series.attachAxis( self._y_value_axis )
             
-            y_value_axis.setRange( 0, max_num_files )
+            self._archive_files_series.attachAxis( self._x_datetime_axis )
+            self._archive_files_series.attachAxis( self._y_value_axis )
             
-            y_value_axis.applyNiceNumbers()
+            self._CalculateYRange()
             
-            self.setChart( chart )
+            self.setChart( self._chart )
+            
+        
+        def _CalculateYRange( self ):
+            
+            max_num_files = max( self._max_num_files_current, self._max_num_files_inbox, self._max_num_files_archive )
+            
+            if self._show_deleted:
+                
+                max_num_files = max( self._max_num_files_deleted, max_num_files )
+                
+            
+            self._y_value_axis.setRange( 0, max_num_files )
+            
+            self._y_value_axis.applyNiceNumbers()
+            
+        
+        def FlipDeletedVisible( self ):
+            
+            self._show_deleted = not self._show_deleted
+            
+            if self._show_deleted:
+                
+                self._chart.addSeries( self._deleted_files_series )
+                
+                self._deleted_files_series.attachAxis( self._x_datetime_axis )
+                self._deleted_files_series.attachAxis( self._y_value_axis )
+                
+            else:
+                
+                self._chart.removeSeries( self._deleted_files_series )
+                
+            
+            self._CalculateYRange()
             
         
     

@@ -30,7 +30,7 @@ def AddCookieToSession( session, name, value, domain, path, expires, secure = Fa
 def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
     
     # is an ip address or localhost, possibly with a port
-    if '.' not in domain or re.search( r'^[\d\.:]+$', domain ) is not None:
+    if '.' not in domain or re.search( r'^[\d.:]+$', domain ) is not None:
         
         return [ domain ]
         
@@ -420,6 +420,7 @@ def ParseURL( url: str ) -> urllib.parse.ParseResult:
     
     return urllib.parse.urlparse( url )
     
+
 OH_NO_NO_NETLOC_CHARACTERS = '?#'
 OH_NO_NO_NETLOC_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : '_' for char in OH_NO_NO_NETLOC_CHARACTERS }
 
@@ -476,4 +477,3 @@ def UnicodeNormaliseURL( url: str ):
         
     
     return url
-    

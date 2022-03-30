@@ -1021,7 +1021,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = -65536, max = 65535 )
         self._tag_index.setToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' )
         
-        self._tag_depth = QP.MakeQSpinBox( self, min=1, max=255 )
+        self._tag_depth = ClientGUICommon.BetterSpinBox( self, min=1, max=255 )
         
         self._should_test_tag_string = QW.QCheckBox( self )
         
@@ -1452,7 +1452,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
         
-        self._index = QP.MakeQSpinBox( self, min=-65536, max=65535 )
+        self._index = ClientGUICommon.BetterSpinBox( self, min=-65536, max=65535 )
         self._index.setToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' )
         
         #
@@ -1825,7 +1825,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._url_type.addItem( 'GALLERY parsers only: next gallery page (not queued if no post/file urls found)', HC.URL_TYPE_NEXT )
         self._url_type.addItem( 'GALLERY parsers only: sub-gallery page (is queued even if no post/file urls found--be careful, only use if you know you need it)', HC.URL_TYPE_SUB_GALLERY )
         
-        self._file_priority = QP.MakeQSpinBox( self._urls_panel, min=0, max=100 )
+        self._file_priority = ClientGUICommon.BetterSpinBox( self._urls_panel, min=0, max=100 )
         self._file_priority.setValue( 50 )
         
         self._mappings_panel = QW.QWidget( self._content_panel )
@@ -1856,7 +1856,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._title_panel = QW.QWidget( self._content_panel )
         
-        self._title_priority = QP.MakeQSpinBox( self._title_panel, min=0, max=100 )
+        self._title_priority = ClientGUICommon.BetterSpinBox( self._title_panel, min=0, max=100 )
         self._title_priority.setValue( 50 )
         
         self._veto_panel = QW.QWidget( self._content_panel )

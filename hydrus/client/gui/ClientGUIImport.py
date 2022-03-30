@@ -267,11 +267,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._num_panel = ClientGUICommon.StaticBox( self, '#' )
             
-            self._num_base = QP.MakeQSpinBox( self._num_panel, min=-10000000, max=10000000, width = 60 )
+            self._num_base = ClientGUICommon.BetterSpinBox( self._num_panel, min=-10000000, max=10000000, width = 60 )
             self._num_base.setValue( 1 )
             self._num_base.valueChanged.connect( self.tagsChanged )
             
-            self._num_step = QP.MakeQSpinBox( self._num_panel, min=-1000000, max=1000000, width = 60 )
+            self._num_step = ClientGUICommon.BetterSpinBox( self._num_panel, min=-1000000, max=1000000, width = 60 )
             self._num_step.setValue( 1 )
             self._num_step.valueChanged.connect( self.tagsChanged )
             
@@ -1112,7 +1112,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'mimes to import: ', self._mimes ) )
+        rows.append( ( 'file types to import: ', self._mimes ) )
         
         mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
         

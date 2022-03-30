@@ -1282,7 +1282,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         # repo strings
         
-        self._file_repos = QP.MakeQLabelWithAlignment( '', self, QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+        self._file_repos = ClientGUICommon.BetterStaticText( self, '' )
+        
+        self._file_repos.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
         
         # urls
         

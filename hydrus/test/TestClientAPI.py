@@ -2237,6 +2237,69 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( set( d[ 'hashes' ] ), expected_hashes_set )
         
+        self.assertIn( 'file_ids', d )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.LOCAL_FILE_SERVICE_KEY } )
+        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
+        
+        self.assertIn( 'sort_by', kwargs )
+        
+        sort_by = kwargs[ 'sort_by' ]
+        
+        self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
+        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        
+        self.assertIn( 'apply_implicit_limit', kwargs )
+        
+        self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'hash_ids_to_hashes' )
+        
+        hash_ids = kwargs[ 'hash_ids' ]
+        
+        self.assertEqual( set( hash_ids ), sample_hash_ids )
+        
+        self.assertEqual( set( hash_ids ), set( d[ 'file_ids' ] ) )
+        
+        # search files and only get hashes
+        
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&return_hashes=true&return_file_ids=false'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_hashes_set = { hash.hex() for hash in hash_ids_to_hashes.values() }
+        
+        self.assertEqual( set( d[ 'hashes' ] ), expected_hashes_set )
+        
+        self.assertNotIn( 'file_ids', d )
+        
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
@@ -2629,6 +2692,7 @@ class TestClientAPI( unittest.TestCase ):
             expected_identifier_result = { 'metadata' : metadata }
             
             media_results = []
+            file_info_managers = []
             
             urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
             
@@ -2652,6 +2716,8 @@ class TestClientAPI( unittest.TestCase ):
                 has_audio = random.choice( [ True, False ] )
                 
                 file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+                
+                file_info_managers.append( file_info_manager )
                 
                 service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
                 service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
@@ -2684,6 +2750,7 @@ class TestClientAPI( unittest.TestCase ):
             metadata = []
             detailed_known_urls_metadata = []
             with_notes_metadata = []
+            only_return_basic_information_metadata = []
             
             services_manager = HG.client_controller.services_manager
             
@@ -2704,7 +2771,12 @@ class TestClientAPI( unittest.TestCase ):
                     'duration' : file_info_manager.duration,
                     'has_audio' : file_info_manager.has_audio,
                     'num_frames' : file_info_manager.num_frames,
-                    'num_words' : file_info_manager.num_words,
+                    'num_words' : file_info_manager.num_words
+                }
+                
+                only_return_basic_information_metadata.append( dict( metadata_row ) )
+                
+                metadata_row.update( {
                     'file_services' : {
                         'current' : {
                             random_file_service_hex_current.hex() : {
@@ -2723,7 +2795,7 @@ class TestClientAPI( unittest.TestCase ):
                     'is_local' : False,
                     'is_trashed' : False,
                     'known_urls' : list( sorted_urls )
-                }
+                } )
                 
                 tags_manager = media_result.GetTagsManager()
                 
@@ -2806,11 +2878,14 @@ class TestClientAPI( unittest.TestCase ):
             expected_metadata_result = { 'metadata' : metadata }
             expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
             expected_notes_metadata_result = { 'metadata' : with_notes_metadata }
+            expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata }
             
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
         HG.test_controller.SetRead( 'media_results_from_ids', media_results )
+        HG.test_controller.SetRead( 'file_info_managers', file_info_managers )
+        HG.test_controller.SetRead( 'file_info_managers_from_ids', file_info_managers )
         
         api_permissions.SetLastSearchResults( [ 1, 2, 3, 4, 5, 6 ] )
         
@@ -2856,6 +2931,24 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_identifier_result )
         
+        # basic metadata from file_ids
+        
+        path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_only_return_basic_information_result )
+        
         # metadata from file_ids
         
         path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
@@ -2899,6 +2992,24 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d, expected_identifier_result )
+        
+        # basic metadata from hashes
+        
+        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_only_return_basic_information_result )
         
         # metadata from hashes
         

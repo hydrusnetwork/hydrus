@@ -160,7 +160,9 @@ class NetworkJob( object ):
         self._method = method
         self._url = url
         
+        self._current_connection_attempt_number = 1
         self._max_connection_attempts_allowed = 5
+        self._we_tried_cloudflare_once = False
         
         self._domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self._url )
         self._second_level_domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( self._url )
@@ -184,9 +186,6 @@ class NetworkJob( object ):
         
         self._files = None
         self._for_login = False
-        
-        self._current_connection_attempt_number = 1
-        self._we_tried_cloudflare_once = False
         
         self._additional_headers = {}
         
@@ -288,9 +287,7 @@ class NetworkJob( object ):
     
     def _GenerateNetworkContexts( self ):
         
-        network_contexts = []
-        
-        network_contexts.append( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
+        network_contexts = [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
         
         domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( self._domain )
         
@@ -761,14 +758,37 @@ class NetworkJob( object ):
                 
                 # cloudscraper refactored a bit around 1.2.60, so we now have some different paths to what we want
                 
+                old_module = None
+                new_module = None
+                
+                if hasattr( cloudscraper, 'CloudScraper' ):
+                    
+                    old_module = getattr( cloudscraper, 'CloudScraper' )
+                    
+                
+                if hasattr( cloudscraper, 'cloudflare' ):
+                    
+                    m = getattr( cloudscraper, 'cloudflare' )
+                    
+                    if hasattr( m, 'Cloudflare' ):
+                        
+                        new_module = getattr( m, 'Cloudflare' )
+                        
+                    
+                
                 possible_paths = [
-                    ( cloudscraper.CloudScraper, 'is_Firewall_Blocked' ),
-                    ( cloudscraper.cloudflare.Cloudflare, 'is_Firewall_Blocked' )
+                    ( old_module, 'is_Firewall_Blocked' ),
+                    ( new_module, 'is_Firewall_Blocked' )
                 ]
                 
                 is_firewall = False
                 
                 for ( m, method_name ) in possible_paths:
+                    
+                    if m is None:
+                        
+                        continue
+                        
                     
                     if hasattr( m, method_name ):
                         
@@ -782,14 +802,19 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( cloudscraper.CloudScraper, 'is_reCaptcha_Challenge' ),
-                    ( cloudscraper.CloudScraper, 'is_Captcha_Challenge' ),
-                    ( cloudscraper.cloudflare.Cloudflare, 'is_Captcha_Challenge' )
+                    ( old_module, 'is_reCaptcha_Challenge' ),
+                    ( old_module, 'is_Captcha_Challenge' ),
+                    ( new_module, 'is_Captcha_Challenge' )
                 ]
                 
                 is_captcha = False
                 
                 for ( m, method_name ) in possible_paths:
+                    
+                    if m is None:
+                        
+                        continue
+                        
                     
                     if hasattr( m, method_name ):
                         
@@ -803,14 +828,19 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( cloudscraper.CloudScraper, 'is_IUAM_Challenge' ),
-                    ( cloudscraper.cloudflare.Cloudflare, 'is_IUAM_Challenge' ),
-                    ( cloudscraper.cloudflare.Cloudflare, 'is_New_IUAM_Challenge' )
+                    ( old_module, 'is_IUAM_Challenge' ),
+                    ( new_module, 'is_IUAM_Challenge' ),
+                    ( new_module, 'is_New_IUAM_Challenge' )
                 ]
                 
                 is_iuam = False
                 
                 for ( m, method_name ) in possible_paths:
+                    
+                    if m is None:
+                        
+                        continue
+                        
                     
                     if hasattr( m, method_name ):
                         
@@ -892,7 +922,7 @@ class NetworkJob( object ):
             
         
     
-    def _WaitOnConnectionError( self, status_text ):
+    def _WaitOnConnectionError( self, status_text: str ):
         
         connection_error_wait_time = HG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
         
@@ -902,7 +932,22 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = status_text + ' - retrying in {}'.format( ClientData.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
+                self._status_text = '{} - retrying in {}'.format( status_text, ClientData.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
+                
+            
+            time.sleep( 1 )
+            
+        
+        self._WaitOnNetworkTrafficPaused( status_text )
+        
+    
+    def _WaitOnNetworkTrafficPaused( self, status_text: str ):
+        
+        while HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) and not self._IsCancelled():
+            
+            with self._lock:
+                
+                self._status_text = '{} - now waiting because all network traffic is paused'.format( status_text )
                 
             
             time.sleep( 1 )
@@ -917,7 +962,7 @@ class NetworkJob( object ):
             
         
     
-    def _WaitOnServersideBandwidth( self, status_text ):
+    def _WaitOnServersideBandwidth( self, status_text: str ):
         
         # 429 or 509 response from server. basically means 'I'm under big load mate'
         # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
@@ -930,11 +975,13 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = status_text + ' - retrying in {}'.format( ClientData.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
+                self._status_text = '{} - retrying in {}'.format( status_text, ClientData.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
                 
             
             time.sleep( 1 )
             
+        
+        self._WaitOnNetworkTrafficPaused( status_text )
         
     
     def AddAdditionalHeader( self, key, value ):
@@ -1884,6 +1931,43 @@ class NetworkJobSubscription( NetworkJob ):
         return network_contexts
         
     
+def CheckHydrusVersion( service_type, response ):
+    
+    service_string = HC.service_string_lookup[ service_type ]
+    
+    headers = response.headers
+    
+    if 'server' in headers and service_string in headers[ 'server' ]:
+        
+        server_header = headers[ 'server' ]
+        
+    elif 'hydrus-server' in headers and service_string in headers[ 'hydrus-server' ]:
+        
+        server_header = headers[ 'hydrus-server' ]
+        
+    else:
+        
+        raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
+        
+    
+    ( service_string_gumpf, network_version ) = server_header.split( '/' )
+    
+    network_version = int( network_version )
+    
+    if network_version != HC.NETWORK_VERSION:
+        
+        if network_version > HC.NETWORK_VERSION:
+            
+            message = 'Your client is out of date; please download the latest release.'
+            
+        else:
+            
+            message = 'The server is out of date; please ask its admin to update to the latest release.'
+            
+        
+        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
+        
+    
 class NetworkJobHydrus( NetworkJob ):
     
     WILLING_TO_WAIT_ON_INVALID_LOGIN = False
@@ -1896,50 +1980,12 @@ class NetworkJobHydrus( NetworkJob ):
         NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
-    def _CheckHydrusVersion( self, service_type, response ):
-        
-        service_string = HC.service_string_lookup[ service_type ]
-        
-        headers = response.headers
-        
-        if 'server' in headers and service_string in headers[ 'server' ]:
-            
-            server_header = headers[ 'server' ]
-            
-        elif 'hydrus-server' in headers and service_string in headers[ 'hydrus-server' ]:
-            
-            server_header = headers[ 'hydrus-server' ]
-            
-        else:
-            
-            raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
-            
-        
-        ( service_string_gumpf, network_version ) = server_header.split( '/' )
-        
-        network_version = int( network_version )
-        
-        if network_version != HC.NETWORK_VERSION:
-            
-            if network_version > HC.NETWORK_VERSION:
-                
-                message = 'Your client is out of date; please download the latest release.'
-                
-            else:
-                
-                message = 'The server is out of date; please ask its admin to update to the latest release.'
-                
-            
-            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
-            
-        
-    
     def _GenerateNetworkContexts( self ):
         
-        network_contexts = []
-        
-        network_contexts.append( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
-        network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key ) )
+        network_contexts = [
+            ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT,
+            ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
+        ]
         
         return network_contexts
         
@@ -1987,7 +2033,7 @@ class NetworkJobHydrus( NetworkJob ):
         
         if response.ok and service_type in HC.RESTRICTED_SERVICES:
             
-            self._CheckHydrusVersion( service_type, response )
+            CheckHydrusVersion( service_type, response )
             
         
         return response

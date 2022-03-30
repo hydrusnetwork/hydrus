@@ -626,6 +626,10 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 delay = HG.client_controller.new_options.GetInteger( 'watcher_page_wait_period' )
                 
+            else:
+                
+                raise NotImplementedError( 'Unknown query type' )
+                
             
             next_timestamp = timestamps_dict[ second_level_domain ] + delay
             
@@ -639,8 +643,6 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 return ( False, next_timestamp )
                 
-            
-            raise NotImplementedError( 'Unknown query type' )
             
         
     

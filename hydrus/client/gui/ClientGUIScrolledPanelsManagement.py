@@ -303,19 +303,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 max_network_jobs_per_domain_max = 5
                 
             
-            self._network_timeout = QP.MakeQSpinBox( general, min = network_timeout_min, max = network_timeout_max )
+            self._network_timeout = ClientGUICommon.BetterSpinBox( general, min = network_timeout_min, max = network_timeout_max )
             self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
             
-            self._connection_error_wait_time = QP.MakeQSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
+            self._connection_error_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._connection_error_wait_time.setToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' )
             
-            self._serverside_bandwidth_wait_time = QP.MakeQSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
+            self._serverside_bandwidth_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._serverside_bandwidth_wait_time.setToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' )
             
             self._domain_network_infrastructure_error_velocity = ClientGUITime.VelocityCtrl( general, 0, 100, 30, hours = True, minutes = True, seconds = True, per_phrase = 'within', unit = 'errors' )
             
-            self._max_network_jobs = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_max )
-            self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
+            self._max_network_jobs = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_max )
+            self._max_network_jobs_per_domain = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
             
             #
             
@@ -453,7 +453,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gug = ClientGUIImport.GUGKeyAndNameSelector( gallery_downloader, gug_key_and_name )
             
-            self._gallery_page_wait_period_pages = QP.MakeQSpinBox( gallery_downloader, min=1, max=120 )
+            self._gallery_page_wait_period_pages = ClientGUICommon.BetterSpinBox( gallery_downloader, min=1, max=120 )
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, none_phrase = 'no limit', min = 1, max = 1000000 )
             
             self._highlight_new_query = QW.QCheckBox( gallery_downloader )
@@ -462,8 +462,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
             
-            self._gallery_page_wait_period_subscriptions = QP.MakeQSpinBox( subscriptions, min=1, max=30 )
-            self._max_simultaneous_subscriptions = QP.MakeQSpinBox( subscriptions, min=1, max=100 )
+            self._gallery_page_wait_period_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=30 )
+            self._max_simultaneous_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=100 )
             
             self._subscription_file_error_cancel_threshold = ClientGUICommon.NoneableSpinCtrl( subscriptions, min = 1, max = 1000000, unit = 'errors' )
             self._subscription_file_error_cancel_threshold.setToolTip( 'This is a simple patch and will be replaced with a better "retry network errors later" system at some point, but is useful to increase if you have subs to unreliable websites.' )
@@ -479,7 +479,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
             
-            self._watcher_page_wait_period = QP.MakeQSpinBox( watchers, min=1, max=120 )
+            self._watcher_page_wait_period = ClientGUICommon.BetterSpinBox( watchers, min=1, max=120 )
             self._highlight_new_watcher = QW.QCheckBox( watchers )
             
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
@@ -659,19 +659,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             weights_panel = ClientGUICommon.StaticBox( self, 'duplicate filter comparison score weights' )
             
-            self._duplicate_comparison_score_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_much_higher_jpeg_quality = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_higher_filesize = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_much_higher_filesize = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_higher_resolution = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_much_higher_resolution = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_more_tags = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_older = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
-            self._duplicate_comparison_score_nicer_ratio = QP.MakeQSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_higher_jpeg_quality = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_jpeg_quality = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_higher_filesize = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_filesize = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_higher_resolution = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_much_higher_resolution = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_more_tags = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_older = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
+            self._duplicate_comparison_score_nicer_ratio = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
             
             self._duplicate_comparison_score_nicer_ratio.setToolTip( 'For instance, 16:9 vs 640:357.')
             
-            self._duplicate_filter_max_batch_size = QP.MakeQSpinBox( self, min = 10, max = 1024 )
+            self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( self, min = 10, max = 1024 )
             
             #
             
@@ -1200,7 +1200,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
             self._always_show_iso_time.setToolTip( tt )
             
-            self._human_bytes_sig_figs = QP.MakeQSpinBox( self._misc_panel, min = 1, max = 6 )
+            self._human_bytes_sig_figs = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 1, max = 6 )
             self._human_bytes_sig_figs.setToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.')
             
             self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
@@ -1384,13 +1384,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gui_session = QW.QComboBox( self._sessions_panel )
             
-            self._last_session_save_period_minutes = QP.MakeQSpinBox( self._sessions_panel, min = 1, max = 1440 )
+            self._last_session_save_period_minutes = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 1440 )
             
             self._only_save_last_session_during_idle = QW.QCheckBox( self._sessions_panel )
             
             self._only_save_last_session_during_idle.setToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
             
-            self._number_of_gui_session_backups = QP.MakeQSpinBox( self._sessions_panel, min = 1, max = 32 )
+            self._number_of_gui_session_backups = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 32 )
             
             self._number_of_gui_session_backups.setToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' )
             
@@ -1416,7 +1416,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._notebook_tab_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
                 
             
-            self._total_pages_warning = QP.MakeQSpinBox( self._pages_panel, min=5, max=65565 )
+            self._total_pages_warning = ClientGUICommon.BetterSpinBox( self._pages_panel, min=5, max=65565 )
             
             tt = 'If you have a gigantic session, or you have very page-spammy subscriptions, you can try boosting this, but be warned it may lead to resource limit crashes. The best solution to a large session is to make it smaller!'
             
@@ -1433,7 +1433,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_names_panel = ClientGUICommon.StaticBox( self._pages_panel, 'page tab names' )
             
-            self._max_page_name_chars = QP.MakeQSpinBox( self._page_names_panel, min=1, max=256 )
+            self._max_page_name_chars = ClientGUICommon.BetterSpinBox( self._page_names_panel, min=1, max=256 )
             self._elide_page_tab_names = QW.QCheckBox( self._page_names_panel )
             
             self._page_file_count_display = ClientGUICommon.BetterChoice( self._page_names_panel )
@@ -1686,7 +1686,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
             self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
             self._idle_mode_client_api_timeout = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore client api' )
-            self._system_busy_cpu_percent = QP.MakeQSpinBox( self._idle_panel, min = 5, max = 99 )
+            self._system_busy_cpu_percent = ClientGUICommon.BetterSpinBox( self._idle_panel, min = 5, max = 99 )
             self._system_busy_cpu_count = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, min = 1, max = 64, unit = 'cores', none_phrase = 'ignore cpu usage' )
             
             #
@@ -1700,7 +1700,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._idle_shutdown.currentIndexChanged.connect( self._EnableDisableIdleShutdown )
             
-            self._idle_shutdown_max_minutes = QP.MakeQSpinBox( self._shutdown_panel, min=1, max=1440 )
+            self._idle_shutdown_max_minutes = ClientGUICommon.BetterSpinBox( self._shutdown_panel, min=1, max=1440 )
             self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 60, days = True, hours = True, minutes = True )
             
             #
@@ -1921,7 +1921,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = HG.client_controller.new_options
             
-            self._animation_start_position = QP.MakeQSpinBox( self, min=0, max=100 )
+            self._animation_start_position = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
             
             self._disable_cv_for_gifs = QW.QCheckBox( self )
             self._disable_cv_for_gifs.setToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
@@ -1958,8 +1958,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._mpv_conf_path = QP.FilePickerCtrl( self, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
             
-            self._animated_scanbar_height = QP.MakeQSpinBox( self, min=1, max=255 )
-            self._animated_scanbar_nub_width = QP.MakeQSpinBox( self, min=1, max=63 )
+            self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( self, min=1, max=255 )
+            self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( self, min=1, max=63 )
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer filetype handling' )
             
@@ -2320,7 +2320,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_panel = ClientGUICommon.StaticBox( self, 'popup window toaster' )
             
-            self._popup_message_character_width = QP.MakeQSpinBox( self._popup_panel, min = 16, max = 256 )
+            self._popup_message_character_width = ClientGUICommon.BetterSpinBox( self._popup_panel, min = 16, max = 256 )
             
             self._popup_message_force_min_width = QW.QCheckBox( self._popup_panel )
             
@@ -2442,11 +2442,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'The autocomplete dropdown can either \'float\' on top of dialogs like _manage tags_, or if that does not work well for you (it can sometimes annoyingly overlap the ok/cancel buttons), it can embed into the parent dialog panel.'
             self._autocomplete_float_frames.setToolTip( tt )
             
-            self._ac_read_list_height_num_chars = QP.MakeQSpinBox( self._autocomplete_panel, min = 1, max = 128 )
+            self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._autocomplete_panel, min = 1, max = 128 )
             tt = 'Read autocompletes are those in search pages, where you are looking through existing tags to find your files.'
             self._ac_read_list_height_num_chars.setToolTip( tt )
             
-            self._ac_write_list_height_num_chars = QP.MakeQSpinBox( self._autocomplete_panel, min = 1, max = 128 )
+            self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._autocomplete_panel, min = 1, max = 128 )
             tt = 'Write autocompletes are those in most dialogs, where you are adding new tags to files.'
             self._ac_write_list_height_num_chars.setToolTip( tt )
             
@@ -2664,7 +2664,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache' )
             
-            self._thumbnail_cache_size = QP.MakeQSpinBox( thumbnail_cache_panel, min=5, max=3000 )
+            self._thumbnail_cache_size = ClientGUICommon.BetterSpinBox( thumbnail_cache_panel, min=5, max=3000 )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
             
             self._estimated_number_thumbnails = QW.QLabel( '', thumbnail_cache_panel )
@@ -2674,7 +2674,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
             
-            self._fullscreen_cache_size = QP.MakeQSpinBox( image_cache_panel, min=25, max=8192 )
+            self._fullscreen_cache_size = ClientGUICommon.BetterSpinBox( image_cache_panel, min=25, max=8192 )
             self._fullscreen_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
             
             self._estimated_number_fullscreens = QW.QLabel( '', image_cache_panel )
@@ -2682,18 +2682,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_cache_timeout = ClientGUITime.TimeDeltaButton( image_cache_panel, min = 300, days = True, hours = True, minutes = True )
             self._image_cache_timeout.setToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
             
-            self._media_viewer_prefetch_delay_base_ms = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 2000 )
+            self._media_viewer_prefetch_delay_base_ms = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 2000 )
             tt = 'How long to wait, after the current image is rendered, to start rendering neighbours. Does not matter so much any more, but if you have CPU lag, you can try boosting it a bit.'
             self._media_viewer_prefetch_delay_base_ms.setToolTip( tt )
             
-            self._media_viewer_prefetch_num_previous = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 5 )
-            self._media_viewer_prefetch_num_next = QP.MakeQSpinBox( image_cache_panel, min = 0, max = 5 )
+            self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
+            self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
             
-            self._image_cache_storage_limit_percentage = QP.MakeQSpinBox( image_cache_panel, min = 20, max = 50 )
+            self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 20, max = 50 )
             
             self._image_cache_storage_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
             
-            self._image_cache_prefetch_limit_percentage = QP.MakeQSpinBox( image_cache_panel, min = 5, max = 20 )
+            self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 5, max = 20 )
             
             self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
             
@@ -2707,14 +2707,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( image_tile_cache_panel, min = 300, hours = True, minutes = True )
             self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
             
-            self._ideal_tile_dimension = QP.MakeQSpinBox( image_tile_cache_panel, min = 256, max = 4096 )
+            self._ideal_tile_dimension = ClientGUICommon.BetterSpinBox( image_tile_cache_panel, min = 256, max = 4096 )
             self._ideal_tile_dimension.setToolTip( 'This is the square size the system will aim for. Smaller tiles are more memory efficient but prone to warping and other artifacts. Extreme values may waste CPU.' )
             
             #
             
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
             
-            self._video_buffer_size_mb = QP.MakeQSpinBox( buffer_panel, min=48, max=16*1024 )
+            self._video_buffer_size_mb = ClientGUICommon.BetterSpinBox( buffer_panel, min=48, max= 16 * 1024 )
             self._video_buffer_size_mb.valueChanged.connect( self.EventVideoBufferUpdate )
             
             self._estimated_number_video_frames = QW.QLabel( '', buffer_panel )
@@ -3138,7 +3138,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             sleep_panel = ClientGUICommon.StaticBox( self, 'system sleep' )
             
-            self._wake_delay_period = QP.MakeQSpinBox( sleep_panel, min = 0, max = 60 )
+            self._wake_delay_period = ClientGUICommon.BetterSpinBox( sleep_panel, min = 0, max = 60 )
             
             tt = 'It sometimes takes a few seconds for your network adapter to reconnect after a wake. This adds a grace period after a detected wake-from-sleep to allow your OS to sort that out before Hydrus starts making requests.'
             
@@ -3554,7 +3554,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
-            self._suggested_tags_width = QP.MakeQSpinBox( suggested_tags_panel, min=20, max=65535 )
+            self._suggested_tags_width = ClientGUICommon.BetterSpinBox( suggested_tags_panel, min=20, max=65535 )
             
             self._suggested_tags_layout = ClientGUICommon.BetterChoice( suggested_tags_panel )
             
@@ -3594,9 +3594,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_related_tags = QW.QCheckBox( suggested_tags_related_panel )
             
-            self._related_tags_search_1_duration_ms = QP.MakeQSpinBox( suggested_tags_related_panel, min=50, max=60000 )
-            self._related_tags_search_2_duration_ms = QP.MakeQSpinBox( suggested_tags_related_panel, min=50, max=60000 )
-            self._related_tags_search_3_duration_ms = QP.MakeQSpinBox( suggested_tags_related_panel, min=50, max=60000 )
+            self._related_tags_search_1_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
+            self._related_tags_search_2_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
+            self._related_tags_search_3_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
             
             #
             
@@ -3793,15 +3793,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._thumbnail_width = QP.MakeQSpinBox( self, min=20, max=2048 )
-            self._thumbnail_height = QP.MakeQSpinBox( self, min=20, max=2048 )
+            self._thumbnail_width = ClientGUICommon.BetterSpinBox( self, min=20, max=2048 )
+            self._thumbnail_height = ClientGUICommon.BetterSpinBox( self, min=20, max=2048 )
             
-            self._thumbnail_border = QP.MakeQSpinBox( self, min=0, max=20 )
-            self._thumbnail_margin = QP.MakeQSpinBox( self, min=0, max=20 )
+            self._thumbnail_border = ClientGUICommon.BetterSpinBox( self, min=0, max=20 )
+            self._thumbnail_margin = ClientGUICommon.BetterSpinBox( self, min=0, max=20 )
             
             self._thumbnail_scale_type = ClientGUICommon.BetterChoice( self )
             
-            self._video_thumbnail_percentage_in = QP.MakeQSpinBox( self, min=0, max=100 )
+            self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
             
             for t in ( HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, HydrusImageHandling.THUMBNAIL_SCALE_TO_FILL ):
                 
@@ -3810,7 +3810,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thumbnail_scroll_rate = QW.QLineEdit( self )
             
-            self._thumbnail_visibility_scroll_percent = QP.MakeQSpinBox( self, min=1, max=99 )
+            self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
             self._media_background_bmp_path = QP.FilePickerCtrl( self )

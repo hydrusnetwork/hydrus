@@ -22,9 +22,18 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( label, self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        st = ClientGUICommon.BetterStaticText( self, label )
+        
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( '-or-', self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        st = ClientGUICommon.BetterStaticText( self, '-or-' )
+        
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
@@ -59,9 +68,18 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( label, self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        st = ClientGUICommon.BetterStaticText( self, label )
+        
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( '-or-', self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        st = ClientGUICommon.BetterStaticText( self, '-or-' )
+        
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )

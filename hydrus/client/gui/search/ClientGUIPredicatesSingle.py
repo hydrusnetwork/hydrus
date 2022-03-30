@@ -241,10 +241,10 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
         
-        self._years = QP.MakeQSpinBox( self, max=30, width = 60 )
-        self._months = QP.MakeQSpinBox( self, max=60, width = 60 )
-        self._days = QP.MakeQSpinBox( self, max=90, width = 60 )
-        self._hours = QP.MakeQSpinBox( self, max=24, width = 60 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max=30, width = 60 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max=60, width = 60 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max=90, width = 60 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max=24, width = 60 )
         
         #
         
@@ -360,10 +360,10 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
         
-        self._years = QP.MakeQSpinBox( self, max=30 )
-        self._months = QP.MakeQSpinBox( self, max=60 )
-        self._days = QP.MakeQSpinBox( self, max=90 )
-        self._hours = QP.MakeQSpinBox( self, max=24 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
         
         #
         
@@ -479,10 +479,10 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
         
-        self._years = QP.MakeQSpinBox( self, max=30 )
-        self._months = QP.MakeQSpinBox( self, max=60 )
-        self._days = QP.MakeQSpinBox( self, max=90 )
-        self._hours = QP.MakeQSpinBox( self, max=24 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
         
         #
         
@@ -539,7 +539,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num = QP.MakeQSpinBox( self, min=0, max=65535 )
+        self._num = ClientGUICommon.BetterSpinBox( self, min=0, max=65535 )
         
         choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
@@ -595,8 +595,8 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._duration_s = QP.MakeQSpinBox( self, max=3599, width = 60 )
-        self._duration_ms = QP.MakeQSpinBox( self, max=999, width = 60 )
+        self._duration_s = ClientGUICommon.BetterSpinBox( self, max=3599, width = 60 )
+        self._duration_ms = ClientGUICommon.BetterSpinBox( self, max=999, width = 60 )
         
         #
         
@@ -720,7 +720,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
-        self._num = QP.MakeQSpinBox( self, min=0, max=1000000 )
+        self._num = ClientGUICommon.BetterSpinBox( self, min=0, max=1000000 )
         
         #
         
@@ -861,7 +861,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._framerate = QP.MakeQSpinBox( self, min = 1, max = 3600, width = 60 )
+        self._framerate = ClientGUICommon.BetterSpinBox( self, min = 1, max = 3600, width = 60 )
         
         #
         
@@ -1042,7 +1042,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
-        self._height = QP.MakeQSpinBox( self, max=200000, width = 60 )
+        self._height = ClientGUICommon.BetterSpinBox( self, max=200000, width = 60 )
         
         #
         
@@ -1392,7 +1392,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._limit = QP.MakeQSpinBox( self, max=1000000, width = 60 )
+        self._limit = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
         
         #
         
@@ -1485,7 +1485,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=[ '<', CC.UNICODE_ALMOST_EQUAL_TO, '=', CC.UNICODE_NOT_EQUAL_TO, '>' ] )
         
-        self._num_pixels = QP.MakeQSpinBox( self, max=1048576, width = 60 )
+        self._num_pixels = ClientGUICommon.BetterSpinBox( self, max=1048576, width = 60 )
         
         self._unit = QP.RadioBox( self, choices=['pixels','kilopixels','megapixels'] )
         
@@ -1541,7 +1541,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num_frames = QP.MakeQSpinBox( self, min = 0, max = 1000000, width = 80 )
+        self._num_frames = ClientGUICommon.BetterSpinBox( self, min = 0, max = 1000000, width = 80 )
         
         #
         
@@ -1591,7 +1591,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
         
-        self._num_tags = QP.MakeQSpinBox( self, max=2000, width = 60 )
+        self._num_tags = ClientGUICommon.BetterSpinBox( self, max=2000, width = 60 )
         
         #
         
@@ -1666,7 +1666,7 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = [ '<', '=', '>' ] )
         
-        self._num_notes = QP.MakeQSpinBox( self, max = 256, width = 60 )
+        self._num_notes = ClientGUICommon.BetterSpinBox( self, max = 256, width = 60 )
         
         #
         
@@ -1714,7 +1714,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
-        self._num_words = QP.MakeQSpinBox( self, max=1000000, width = 60 )
+        self._num_words = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
         
         #
         
@@ -1762,9 +1762,9 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['=','wider than','taller than',CC.UNICODE_ALMOST_EQUAL_TO,CC.UNICODE_NOT_EQUAL_TO] )
         
-        self._width = QP.MakeQSpinBox( self, max=50000, width = 60 )
+        self._width = ClientGUICommon.BetterSpinBox( self, max=50000, width = 60 )
         
-        self._height = QP.MakeQSpinBox( self, max=50000, width = 60 )
+        self._height = ClientGUICommon.BetterSpinBox( self, max=50000, width = 60 )
         
         #
         
@@ -1821,7 +1821,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         
         self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
         
-        self._max_hamming = QP.MakeQSpinBox( self, max=256, width = 60 )
+        self._max_hamming = ClientGUICommon.BetterSpinBox( self, max=256, width = 60 )
         
         #
         
@@ -1933,7 +1933,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num = QP.MakeQSpinBox( self, min=-(2**31), max=(2**31)-1 )
+        self._num = ClientGUICommon.BetterSpinBox( self, min=-(2 ** 31), max= (2 ** 31) - 1 )
         
         #
         
@@ -1983,7 +1983,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=',CC.UNICODE_NOT_EQUAL_TO,'>'] )
         
-        self._width = QP.MakeQSpinBox( self, max=200000, width = 60 )
+        self._width = ClientGUICommon.BetterSpinBox( self, max=200000, width = 60 )
         
         #
         

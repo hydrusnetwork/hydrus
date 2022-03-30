@@ -3999,13 +3999,15 @@ class DB( HydrusDB.HydrusDB ):
         
         since_deleted = self._STL( self._Execute( 'SELECT original_timestamp FROM {} WHERE original_timestamp IS NOT NULL;'.format( deleted_files_table_name ) ) )
         
-        current_timestamps.extend( since_deleted )
+        all_known_import_timestamps = list( current_timestamps )
         
-        current_timestamps.sort()
+        all_known_import_timestamps.extend( since_deleted )
+        
+        all_known_import_timestamps.sort()
         
         deleted_timestamps = self._STL( self._Execute( 'SELECT timestamp FROM {} WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;'.format( deleted_files_table_name ) ) )
         
-        combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in current_timestamps ]
+        combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in all_known_import_timestamps ]
         combined_timestamps_with_delta.extend( ( ( timestamp, -1 ) for timestamp in deleted_timestamps ) )
         
         combined_timestamps_with_delta.sort()
@@ -4028,11 +4030,11 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( timestamp, delta ) in combined_timestamps_with_delta:
                 
-                if timestamp > step_timestamp + step_gap:
+                while timestamp > step_timestamp + step_gap:
                     
                     current_file_history.append( ( step_timestamp, total_current_files ) )
                     
-                    step_timestamp = timestamp
+                    step_timestamp += step_gap
                     
                 
                 total_current_files += delta
@@ -4062,11 +4064,11 @@ class DB( HydrusDB.HydrusDB ):
             
             for deleted_timestamp in deleted_timestamps:
                 
-                if deleted_timestamp > step_timestamp + step_gap:
+                while deleted_timestamp > step_timestamp + step_gap:
                     
                     deleted_file_history.append( ( step_timestamp, total_deleted_files ) )
                     
-                    step_timestamp = deleted_timestamp
+                    step_timestamp += step_gap
                     
                 
                 total_deleted_files += 1
@@ -4080,11 +4082,19 @@ class DB( HydrusDB.HydrusDB ):
         # working backwards in time (which reverses increment/decrement):
             # an archive increments
             # a file import decrements
-        # note that we archive right before we delete a file, so file deletes shouldn't change anything. all deletes are on archived files, so the increment will already be counted
+        # note that we archive right before we delete a file, so file deletes shouldn't change anything for inbox count. all deletes are on archived files, so the increment will already be counted
+        # UPDATE: and now we add archived, which is mostly the same deal but we subtract from current files to start and don't care about file imports since they are always inbox but do care about file deletes
         
         inbox_file_history = []
+        archive_file_history = []
         
         ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
+        total_current_files = len( current_timestamps )
+
+        total_update_files = self.modules_files_storage.GetCurrentFilesCount( self.modules_services.local_update_service_id, HC.CONTENT_STATUS_CURRENT )
+        total_trash_files = self.modules_files_storage.GetCurrentFilesCount( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        total_archive_files = ( total_current_files - total_update_files - total_trash_files ) - total_inbox_files
         
         # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
         archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
@@ -4093,44 +4103,120 @@ class DB( HydrusDB.HydrusDB ):
             
             first_archive_time = archive_timestamps[0]
             
-            combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in archive_timestamps ]
-            combined_timestamps_with_delta.extend( ( ( timestamp, -1 ) for timestamp in current_timestamps if timestamp >= first_archive_time ) )
+            combined_timestamps_with_deltas = [ ( timestamp, 1, -1 ) for timestamp in archive_timestamps ]
+            combined_timestamps_with_deltas.extend( ( ( timestamp, -1, 0 ) for timestamp in all_known_import_timestamps if timestamp >= first_archive_time ) )
+            combined_timestamps_with_deltas.extend( ( ( timestamp, 0, 1 ) for timestamp in deleted_timestamps if timestamp >= first_archive_time ) )
             
-            combined_timestamps_with_delta.sort( reverse = True )
+            combined_timestamps_with_deltas.sort( reverse = True )
             
-            if len( combined_timestamps_with_delta ) > 0:
+            if len( combined_timestamps_with_deltas ) > 0:
                 
-                if len( combined_timestamps_with_delta ) < 2:
+                if len( combined_timestamps_with_deltas ) < 2:
                     
                     step_gap = 1
                     
                 else:
                     
                     # reversed, so first minus last
-                    step_gap = max( ( combined_timestamps_with_delta[0][0] - combined_timestamps_with_delta[-1][0] ) // num_steps, 1 )
+                    step_gap = max( ( combined_timestamps_with_deltas[0][0] - combined_timestamps_with_deltas[-1][0] ) // num_steps, 1 )
                     
                 
-                step_timestamp = combined_timestamps_with_delta[0][0]
+                step_timestamp = combined_timestamps_with_deltas[0][0]
                 
-                for ( archived_timestamp, delta ) in combined_timestamps_with_delta:
+                for ( archived_timestamp, inbox_delta, archive_delta ) in combined_timestamps_with_deltas:
                     
-                    if archived_timestamp < step_timestamp - step_gap:
+                    while archived_timestamp < step_timestamp - step_gap:
                         
                         inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
+                        archive_file_history.append( ( archived_timestamp, total_archive_files ) )
                         
-                        step_timestamp = archived_timestamp
+                        step_timestamp -= step_gap
                         
                     
-                    total_inbox_files += delta
+                    total_inbox_files += inbox_delta
+                    total_archive_files += archive_delta
                     
                 
                 inbox_file_history.reverse()
+                archive_file_history.reverse()
                 
             
         
         file_history[ 'inbox' ] = inbox_file_history
+        file_history[ 'archive' ] = archive_file_history
         
         return file_history
+        
+    
+    def _GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+        
+        ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
+        
+        file_info_managers = [ media_result.GetFileInfoManager() for media_result in cached_media_results ]
+        
+        if len( missing_hash_ids ) > 0:
+            
+            missing_hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = missing_hash_ids )
+            
+            with self._MakeTemporaryIntegerTable( missing_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                # temp hashes to metadata
+                hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
+                
+            
+            # build it
+            
+            for hash_id in missing_hash_ids:
+                
+                if hash_id in hash_ids_to_info:
+                    
+                    file_info_manager = hash_ids_to_info[ hash_id ]
+                    
+                else:
+                    
+                    hash = missing_hash_ids_to_hashes[ hash_id ]
+                    
+                    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
+                    
+                
+                file_info_managers.append( file_info_manager )
+                
+            
+        
+        if sorted:
+            
+            if len( hash_ids ) > len( file_info_managers ):
+                
+                hash_ids = HydrusData.DedupeList( hash_ids )
+                
+            
+            hash_ids_to_file_info_managers = { file_info_manager.hash_id : file_info_manager for file_info_manager in file_info_managers }
+            
+            file_info_managers = [ hash_ids_to_file_info_managers[ hash_id ] for hash_id in hash_ids if hash_id in hash_ids_to_file_info_managers ]
+            
+        
+        return file_info_managers
+        
+    
+    def _GetFileInfoManagersFromHashes( self, hashes: typing.Collection[ bytes ], sorted: bool = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+        
+        query_hash_ids = set( self.modules_hashes_local_cache.GetHashIds( hashes ) )
+        
+        file_info_managers = self._GetFileInfoManagers( query_hash_ids )
+        
+        if sorted:
+            
+            if len( hashes ) > len( query_hash_ids ):
+                
+                hashes = HydrusData.DedupeList( hashes )
+                
+            
+            hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
+            
+            file_info_managers = [ hashes_to_file_info_managers[ hash ] for hash in hashes if hash in hashes_to_file_info_managers ]
+            
+        
+        return file_info_managers
         
     
     def _GetFileNotes( self, hash ):
@@ -10365,6 +10451,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_duplicate_info': result = self.modules_files_duplicates.DuplicatesGetFileDuplicateInfo( *args, **kwargs )
         elif action == 'file_hashes': result = self.modules_hashes.GetFileHashes( *args, **kwargs )
         elif action == 'file_history': result = self._GetFileHistory( *args, **kwargs )
+        elif action == 'file_info_managers': result = self._GetFileInfoManagersFromHashes( *args, **kwargs )
+        elif action == 'file_info_managers_from_ids': result = self._GetFileInfoManagers( *args, **kwargs )
         elif action == 'file_maintenance_get_job': result = self.modules_files_maintenance_queue.GetJob( *args, **kwargs )
         elif action == 'file_maintenance_get_job_counts': result = self.modules_files_maintenance_queue.GetJobCounts( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
@@ -12196,6 +12284,16 @@ class DB( HydrusDB.HydrusDB ):
                 hash_ids = list( hash_ids )
                 
                 random.shuffle( hash_ids )
+                
+                did_sort = True
+                
+            elif sort_data == CC.SORT_FILES_BY_HASH:
+                
+                hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
+                
+                hash_ids_to_hex_hashes = { hash_id : hash.hex() for ( hash_id, hash ) in hash_ids_to_hashes }
+                
+                hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hex_hashes[ hash_id ] )
                 
                 did_sort = True
                 
@@ -14183,6 +14281,29 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 478:
+            
+            try:
+                
+                # transparent webp regen
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_WEBP, ) ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some webp regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

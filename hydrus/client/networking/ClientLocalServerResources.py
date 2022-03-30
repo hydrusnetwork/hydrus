@@ -55,7 +55,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'include_notes', 'notes', 'note_names' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -2108,20 +2108,30 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             return_hashes = request.parsed_request_args.GetValue( 'return_hashes', bool )
             
         
+        return_file_ids = True
+        
+        if 'return_file_ids' in request.parsed_request_args:
+            
+            return_file_ids = request.parsed_request_args.GetValue( 'return_file_ids', bool )
+            
+        
         hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
         
         request.client_api_permissions.SetLastSearchResults( hash_ids )
+        
+        body_dict = {}
         
         if return_hashes:
             
             hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = hash_ids )
             
             # maintain sort
-            body_dict = { 'hashes' : [ hash_ids_to_hashes[ hash_id ].hex() for hash_id in hash_ids ], 'file_ids' : list( hash_ids ) }
+            body_dict[ 'hashes' ] = [ hash_ids_to_hashes[ hash_id ].hex() for hash_id in hash_ids ]
             
-        else:
+        
+        if return_file_ids:
             
-            body_dict = { 'file_ids' : list( hash_ids ) }
+            body_dict[ 'file_ids' ] = list( hash_ids )
             
         
         body = Dumps( body_dict, request.preferred_mime )
@@ -2190,6 +2200,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
+        only_return_basic_information = request.parsed_request_args.GetValue( 'only_return_basic_information', bool, default_value = False )
         hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
@@ -2211,6 +2222,10 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 if only_return_identifiers:
                     
                     file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = file_ids )
+                    
+                elif only_return_basic_information:
+                    
+                    file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', file_ids, sorted = True )
                     
                 else:
                     
@@ -2234,6 +2249,10 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 if only_return_identifiers:
                     
                     file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hashes = hashes )
+                    
+                elif only_return_basic_information:
+                    
+                    file_info_managers = HG.client_controller.Read( 'file_info_managers', hashes, sorted = True )
                     
                 else:
                     
@@ -2261,6 +2280,27 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row = {
                     'file_id' : file_id,
                     'hash' : hash.hex()
+                }
+                
+                metadata.append( metadata_row )
+                
+            
+        elif only_return_basic_information:
+            
+            for file_info_manager in file_info_managers:
+                
+                metadata_row = {
+                    'file_id' : file_info_manager.hash_id,
+                    'hash' : file_info_manager.hash.hex(),
+                    'size' : file_info_manager.size,
+                    'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
+                    'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
+                    'width' : file_info_manager.width,
+                    'height' : file_info_manager.height,
+                    'duration' : file_info_manager.duration,
+                    'num_frames' : file_info_manager.num_frames,
+                    'num_words' : file_info_manager.num_words,
+                    'has_audio' : file_info_manager.has_audio
                 }
                 
                 metadata.append( metadata_row )

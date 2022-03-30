@@ -26,7 +26,6 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 import math
-import typing
 
 from collections import defaultdict
     
@@ -941,16 +940,6 @@ def SplitHorizontally( splitter: QW.QSplitter, w1, w2, vpos ):
         
         splitter.setSizes( [ vpos, total_sum - vpos ] )
 
-
-def MakeQLabelWithAlignment( label, parent, align ):
-    
-    res = QW.QLabel( label, parent )
-
-    res.setAlignment( align )
-
-    return res
-
-
 class GridLayout( QW.QGridLayout ):
     
     def __init__( self, cols = 1, spacing = 2 ):
@@ -1197,17 +1186,6 @@ def AddShortcut( widget, modifier, key, callable, *args ):
     
     shortcut.activated.connect( lambda: callable( *args ) )
     
-class BusyCursor:
-    
-    def __enter__( self ):
-        
-        QW.QApplication.setOverrideCursor( QC.Qt.WaitCursor )
-    
-    def __exit__( self, exc_type, exc_val, exc_tb ):
-        
-        QW.QApplication.restoreOverrideCursor()
-
-
 def GetBackgroundColour( widget ):
     
     return widget.palette().color( QG.QPalette.Window )
@@ -1325,10 +1303,6 @@ def Unsplit( splitter, widget ):
         widget.setVisible( False )
         
     
-def GetSystemColour( colour ):
-    
-    return QG.QPalette().color( colour )
-
 def CenterOnWindow( parent, window ):
     
     parent_window = parent.window()
@@ -1394,21 +1368,6 @@ def ListWidgetSetSelection( widget, idxs ):
             
         
     
-def MakeQSpinBox( parent = None, initial = None, min = None, max = None, width = None ):
-    
-    spinbox = QW.QSpinBox( parent )
-    
-    if min is not None: spinbox.setMinimum( min )
-    
-    if max is not None: spinbox.setMaximum( max )
-    
-    if initial is not None: spinbox.setValue( initial )
-    
-    if width is not None: spinbox.setMinimumWidth( width )
-
-    return spinbox
-
-
 def SetInitialSize( widget, size ):
     
     if hasattr( widget, 'SetInitialSize' ):
@@ -1701,6 +1660,18 @@ class RadioBox( QW.QFrame ):
             self._choices[-1].setChecked( True )
         
         
+    def _GetCurrentChoiceWidget( self ):
+        
+        for choice in self._choices:
+            
+            if choice.isChecked():
+                
+                return choice
+                
+            
+        
+        return None
+        
     def GetCurrentIndex( self ):
         
         for i in range( len( self._choices ) ):
@@ -1730,6 +1701,20 @@ class RadioBox( QW.QFrame ):
             if self._choices[ i ].isChecked(): return self._choices[ i ].text()
 
         return None
+    
+    def setFocus( self, reason ):
+        
+        item = self._GetCurrentChoiceWidget()
+        
+        if item is not None:
+            
+            item.setFocus( reason )
+            
+        else:
+            
+            QW.QFrame.setFocus( self, reason )
+            
+        
     
     def SetValue( self, data ):
         

@@ -41,28 +41,6 @@ If you add more tags or system predicates to a search, you will limit the result
 
 You can also exclude a tag by prefixing it with a hyphen (e.g. `-heresy`).
 
-## OR searching
-
-Searches find files that match every search 'predicate' in the list (it is an **AND** search), which makes it difficult to search for files that include one **OR** another tag. More recently, simple OR search support was added. All you have to do is hold down Shift when you enter/double-click a tag in the autocomplete entry area. Instead of sending the tag up to the active search list up top, it will instead start an under-construction 'OR chain' in the tag results below:
-
-![](images/or_under_construction.png)
-
-You can keep searching for and entering new tags. Holding down Shift on new tags will extend the OR chain, and entering them as normal will 'cap' the chain and send it to the complete and active search predicates above.
-
-![](images/or_done.png)
-
-Any file that has one or more of those OR sub-tags will match.
-
-If you enter an OR tag incorrectly, you can either cancel or 'rewind' the under-construction search predicate with these new buttons that will appear:
-
-![](images/or_buttons.png)
-
-You can also cancel an under-construction OR by hitting Esc on an empty input. You can add any sort of search term to an OR search predicate, including system predicates. Some unusual sub-predicates (typically a `-tag`, or a very broad system predicate) can run very slowly, but they will run much faster if you include non-OR search predicates in the search:
-
-![](images/or_mixed.png)
-
-This search will return all files that have the tag `fanfic` and one or more of `medium:text`, a positive value for the like/dislike rating 'read later', or PDF mime.
-
 ## tag repositories
 
 It can take a long time to tag even small numbers of files well, so I created _tag repositories_ so people can share the work.

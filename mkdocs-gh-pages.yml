@@ -33,7 +33,6 @@ plugins:
         'help/getting_started_downloading.md': 'getting_started_downloading.md'
         'help/getting_started_files.md': 'getting_started_files.md'
         'help/getting_started_installing.md': 'getting_started_installing.md'
-        'help/getting_started_more_files.md': 'getting_started_more_files.md'
         'help/getting_started_ratings.md': 'getting_started_ratings.md'
         'help/getting_started_subscriptions.md': 'getting_started_subscriptions.md'
         'help/getting_started_tags.md': 'getting_started_tags.md'

@@ -86,7 +86,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             ClientGUICommon.StaticBox.__init__( self, parent, 'basic information' )
             
             self._name = QW.QLineEdit( self )
-            self._port = QP.MakeQSpinBox( self, min=1, max=65535 )
+            self._port = ClientGUICommon.BetterSpinBox( self, min=1, max=65535 )
             self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
             
             self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )

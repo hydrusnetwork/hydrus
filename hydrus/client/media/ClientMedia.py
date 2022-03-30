@@ -2840,7 +2840,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         if sort_metatype == 'system':
             
-            if sort_data in ( CC.SORT_FILES_BY_MIME, CC.SORT_FILES_BY_RANDOM ):
+            if sort_data in ( CC.SORT_FILES_BY_MIME, CC.SORT_FILES_BY_RANDOM, CC.SORT_FILES_BY_HASH ):
                 
                 return False
                 
@@ -2882,6 +2882,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 def sort_key( x ):
                     
                     return random.random()
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_HASH:
+                
+                def sort_key( x ):
+                    
+                    return x.GetHash().hex()
                     
                 
             elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
@@ -3179,6 +3186,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'hash', 'hash', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )

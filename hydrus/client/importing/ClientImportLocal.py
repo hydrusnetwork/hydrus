@@ -4,7 +4,6 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
@@ -554,7 +553,24 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif status == CC.IMPORT_FOLDER_IGNORE:
                 
-                pass
+                file_seeds = self._file_seed_cache.GetFileSeeds( status )
+                
+                for file_seed in file_seeds:
+                    
+                    path = file_seed.file_seed_data
+                    
+                    try:
+                        
+                        if not os.path.exists( path ):
+                            
+                            self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
+                            
+                        
+                    except Exception as e:
+                        
+                        raise Exception( 'Tried to check existence of "{}", but could not.'.format( path ) )
+                        
+                    
                 
             
         
@@ -621,9 +637,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         i = 0
         
-        num_total = len( self._file_seed_cache )
-        num_total_unknown = self._file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
-        num_total_done = num_total - num_total_unknown
+        # don't want to start at 23/100 because of carrying over failed results or whatever
+        # num_to_do is num currently unknown
+        num_total = self._file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
         
         while True:
             
@@ -647,7 +663,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 time_to_save = HydrusData.GetNow() + 600
                 
             
-            gauge_num_done = num_total_done + num_files_imported + 1
+            gauge_num_done = num_files_imported + 1
             
             job_key.SetVariable( 'popup_text_1', 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
             job_key.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
@@ -657,6 +673,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             file_seed.ImportPath( self._file_seed_cache, self._file_import_options, limited_mimes = self._mimes )
             
             if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
+                
+                hash = None
                 
                 if file_seed.HasHash():
                     

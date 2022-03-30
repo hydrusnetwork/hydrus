@@ -685,14 +685,14 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
             self._data_text = QW.QLineEdit( self._control_panel )
-            self._data_number = QP.MakeQSpinBox( self._control_panel, min=0, max=65535 )
+            self._data_number = ClientGUICommon.BetterSpinBox( self._control_panel, min=0, max=65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_decoding = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_regex_repl = QW.QLineEdit( self._control_panel )
             self._data_date_link = ClientGUICommon.BetterHyperLink( self._control_panel, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
-            self._data_timezone_offset = QP.MakeQSpinBox( self._control_panel, min=-86400, max=86400 )
+            self._data_timezone_offset = ClientGUICommon.BetterSpinBox( self._control_panel, min=-86400, max=86400 )
             
             for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
                 
@@ -1318,7 +1318,7 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._single_panel = QW.QWidget( self._controls_panel )
         
-        self._index_single = QP.MakeQSpinBox( self._single_panel, min = -65536, max = 65536 )
+        self._index_single = ClientGUICommon.BetterSpinBox( self._single_panel, min = -65536, max = 65536 )
         
         self._range_panel = QW.QWidget( self._controls_panel )
         

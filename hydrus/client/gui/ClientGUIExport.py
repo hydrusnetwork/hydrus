@@ -920,7 +920,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         for service_key in media.GetLocationsManager().GetCurrent():
                             
-                            service_keys_to_hashes[ service_key ].add( hash )
+                            service_keys_to_hashes[ service_key ].add( media.GetHash() )
                             
                         
                     

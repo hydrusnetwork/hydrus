@@ -654,8 +654,9 @@ class ThumbnailCache( object ):
         thumbnail_mime = HC.IMAGE_JPEG
         
         # we don't actually know this, it comes down to detailed stuff, but since this is png vs jpeg it isn't a huge deal down in the guts of image loading
+        # only really matters with transparency, so anything that can be transparent we'll prime with a png thing
         # ain't like I am encoding EXIF rotation in my jpeg thumbs
-        if mime in ( HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_ICON ):
+        if mime in ( HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP ):
             
             thumbnail_mime = HC.IMAGE_PNG
             

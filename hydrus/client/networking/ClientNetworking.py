@@ -19,13 +19,13 @@ JOB_STATUS_AWAITING_LOGIN = 2
 JOB_STATUS_AWAITING_SLOT = 3
 JOB_STATUS_RUNNING = 4
 
-job_status_str_lookup = {}
-
-job_status_str_lookup[ JOB_STATUS_AWAITING_VALIDITY ] = 'waiting for validation'
-job_status_str_lookup[ JOB_STATUS_AWAITING_BANDWIDTH ] = 'waiting for bandwidth'
-job_status_str_lookup[ JOB_STATUS_AWAITING_LOGIN ] = 'waiting for login'
-job_status_str_lookup[ JOB_STATUS_AWAITING_SLOT ] = 'waiting for free work slot'
-job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
+job_status_str_lookup = {
+    JOB_STATUS_AWAITING_VALIDITY : 'waiting for validation',
+    JOB_STATUS_AWAITING_BANDWIDTH : 'waiting for bandwidth',
+    JOB_STATUS_AWAITING_LOGIN : 'waiting for login',
+    JOB_STATUS_AWAITING_SLOT : 'waiting for free work slot',
+    JOB_STATUS_RUNNING : 'running'
+}
 
 class NetworkEngine( object ):
     
@@ -48,6 +48,9 @@ class NetworkEngine( object ):
         self.login_manager.engine = self
         
         self._lock = threading.Lock()
+        
+        self.MAX_JOBS = 1
+        self.MAX_JOBS_PER_DOMAIN = 1
         
         self.RefreshOptions()
         

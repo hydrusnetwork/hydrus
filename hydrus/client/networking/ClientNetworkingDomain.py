@@ -2,7 +2,6 @@ import collections
 import os
 import threading
 import time
-import typing
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -22,11 +21,11 @@ VALID_DENIED = 0
 VALID_APPROVED = 1
 VALID_UNKNOWN = 2
 
-valid_str_lookup = {}
-
-valid_str_lookup[ VALID_DENIED ] = 'denied'
-valid_str_lookup[ VALID_APPROVED ] = 'approved'
-valid_str_lookup[ VALID_UNKNOWN ] = 'unknown'
+valid_str_lookup = {
+    VALID_DENIED : 'denied',
+    VALID_APPROVED : 'approved',
+    VALID_UNKNOWN : 'unknown'
+}
 
 class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
@@ -2137,4 +2136,3 @@ class DomainValidationPopupProcess( object ):
             self._is_done = True
             
         
-    

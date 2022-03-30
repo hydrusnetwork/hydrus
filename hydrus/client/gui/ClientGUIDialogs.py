@@ -101,7 +101,12 @@ class DialogChooseNewServiceMethod( Dialog ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment('-or-', self, QC.Qt.AlignHCenter | QC.Qt.AlignVCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        st = ClientGUICommon.BetterStaticText( self, '-or-' )
+        
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
@@ -135,7 +140,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._service_key = service_key
         
-        self._num = QP.MakeQSpinBox( self, min=1, max=10000, width = 80 )
+        self._num = ClientGUICommon.BetterSpinBox( self, min=1, max=10000, width = 80 )
         
         self._account_types = ClientGUICommon.BetterChoice( self )
         
@@ -586,15 +591,15 @@ class DialogInputUPnPMapping( Dialog ):
         
         Dialog.__init__( self, parent, 'configure upnp mapping' )
         
-        self._external_port = QP.MakeQSpinBox( self, min=0, max=65535 )
+        self._external_port = ClientGUICommon.BetterSpinBox( self, min=0, max=65535 )
         
         self._protocol_type = ClientGUICommon.BetterChoice( self )
         self._protocol_type.addItem( 'TCP', 'TCP' )
         self._protocol_type.addItem( 'UDP', 'UDP' )
         
-        self._internal_port = QP.MakeQSpinBox( self, min=0, max=65535 )
+        self._internal_port = ClientGUICommon.BetterSpinBox( self, min=0, max=65535 )
         self._description = QW.QLineEdit( self )
-        self._duration = QP.MakeQSpinBox( self, min=0, max=86400 )
+        self._duration = ClientGUICommon.BetterSpinBox( self, min=0, max=86400 )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )

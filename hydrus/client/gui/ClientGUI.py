@@ -1740,7 +1740,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 service = self._controller.services_manager.GetService( service_key )
                 
-                with QP.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
+                with ClientGUICommon.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
                 
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
@@ -2276,7 +2276,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             HG.client_controller.pub( 'message', job_key )
             
-            num_steps = 2000
+            num_steps = 7680
             
             file_history = HG.client_controller.Read( 'file_history', num_steps )
             
@@ -2289,7 +2289,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             job_key.Delete()
             
-            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'file history' )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'file history', frame_key = 'file_history_chart' )
             
             panel = ClientGUIScrolledPanelsReview.ReviewFileHistory( frame, file_history )
             

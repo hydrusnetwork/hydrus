@@ -531,6 +531,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
+        QP.CallAfter( self._SetFocus )
+        
     
     def _FilterForDeleteLock( self, media, suggested_file_service_key: bytes ):
         
@@ -720,6 +722,18 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         if len( self._permitted_action_choices ) == 0:
             
             raise HydrusExceptions.CancelledException( 'No valid delete choices!' )
+            
+        
+    
+    def _SetFocus( self ):
+        
+        if self._action_radio.isVisible():
+            
+            self._action_radio.setFocus( QC.Qt.OtherFocusReason )
+            
+        elif self._reason_panel.isVisible() and self._reason_panel.isEnabled():
+            
+            self._reason_radio.setFocus( QC.Qt.OtherFocusReason )
             
         
     

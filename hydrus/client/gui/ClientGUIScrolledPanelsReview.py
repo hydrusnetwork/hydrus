@@ -2296,11 +2296,11 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_history_chart = ClientGUICharts.FileHistory( self, file_history )
         
-        file_history_chart.setMinimumSize( 640, 480 )
+        file_history_chart.setMinimumSize( 720, 480 )
         
         vbox = QP.VBoxLayout()
         
-        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them.'
+        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them. Also, files in storage includes trash and any repository updates, so inbox and archive may not add up to 100% of it.'
         
         st = ClientGUICommon.BetterStaticText( self, label = label )
         
@@ -2308,6 +2308,14 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         st.setAlignment( QC.Qt.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        flip_deleted = QW.QCheckBox( 'show deleted', self )
+        
+        flip_deleted.setChecked( True )
+        
+        flip_deleted.clicked.connect( file_history_chart.FlipDeletedVisible )
+        
+        QP.AddToLayout( vbox, flip_deleted, CC.FLAGS_CENTER )
         
         QP.AddToLayout( vbox, file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
         

@@ -323,6 +323,7 @@ SORT_FILES_BY_NUM_FRAMES = 16
 SORT_FILES_BY_NUM_COLLECTION_FILES = 17
 SORT_FILES_BY_LAST_VIEWED_TIME = 18
 SORT_FILES_BY_ARCHIVED_TIMESTAMP = 19
+SORT_FILES_BY_HASH = 20
 
 SYSTEM_SORT_TYPES = {
     SORT_FILES_BY_NUM_COLLECTION_FILES,
@@ -344,7 +345,8 @@ SYSTEM_SORT_TYPES = {
     SORT_FILES_BY_IMPORT_TIME,
     SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP,
     SORT_FILES_BY_LAST_VIEWED_TIME,
-    SORT_FILES_BY_ARCHIVED_TIMESTAMP
+    SORT_FILES_BY_ARCHIVED_TIMESTAMP,
+    SORT_FILES_BY_HASH
 }
 
 system_sort_type_submetatype_string_lookup = {
@@ -358,6 +360,7 @@ system_sort_type_submetatype_string_lookup = {
     SORT_FILES_BY_NUM_FRAMES : 'duration',
     SORT_FILES_BY_APPROX_BITRATE : 'file',
     SORT_FILES_BY_FILESIZE : 'file',
+    SORT_FILES_BY_HASH : 'file',
     SORT_FILES_BY_MIME : 'file',
     SORT_FILES_BY_HAS_AUDIO : 'file',
     SORT_FILES_BY_RANDOM : None,
@@ -388,6 +391,7 @@ sort_type_basic_string_lookup = {
     SORT_FILES_BY_ARCHIVED_TIMESTAMP : 'archived time',
     SORT_FILES_BY_LAST_VIEWED_TIME : 'last viewed time',
     SORT_FILES_BY_RANDOM : 'random',
+    SORT_FILES_BY_HASH : 'hash',
     SORT_FILES_BY_NUM_TAGS : 'number of tags',
     SORT_FILES_BY_MEDIA_VIEWS : 'media views',
     SORT_FILES_BY_MEDIA_VIEWTIME : 'media viewtime'

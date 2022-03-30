@@ -631,6 +631,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'deeply_nested_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'regular_center_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
+        self._dictionary[ 'frame_locations' ][ 'file_history_chart' ] = ( True, True, ( 960, 720 ), None, ( -1, -1 ), 'topleft', False, False )
         
         #
         

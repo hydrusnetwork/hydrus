@@ -194,7 +194,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             self._bandwidth_type.currentIndexChanged.connect( self._UpdateEnabled )
             
             self._max_allowed_bytes = BytesControl( self )
-            self._max_allowed_requests = QP.MakeQSpinBox( self, min=1, max=1048576 )
+            self._max_allowed_requests = ClientGUICommon.BetterSpinBox( self, min=1, max=1048576 )
             
             self._time_delta = ClientGUITime.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
             
@@ -272,7 +272,7 @@ class BytesControl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._spin = QP.MakeQSpinBox( self, min=0, max=1048576 )
+        self._spin = ClientGUICommon.BetterSpinBox( self, min=0, max=1048576 )
         
         self._unit = ClientGUICommon.BetterChoice( self )
         

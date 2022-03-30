@@ -1091,7 +1091,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
         
-        self._next_gallery_page_delta = QP.MakeQSpinBox( self._next_gallery_page_panel, min=1, max=65536 )
+        self._next_gallery_page_delta = ClientGUICommon.BetterSpinBox( self._next_gallery_page_panel, min=1, max=65536 )
         
         self._next_gallery_page_url = QW.QLineEdit( self._next_gallery_page_panel )
         self._next_gallery_page_url.setReadOnly( True )

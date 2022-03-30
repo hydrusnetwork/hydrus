@@ -740,6 +740,7 @@ class Canvas( QW.QWidget ):
             
             ( previous_width, previous_height ) = CalculateMediaSize( previous_media, self._current_zoom )
             
+            ( previous_media_100_width, previous_media_100_height ) = previous_media.GetResolution()
             ( current_media_100_width, current_media_100_height ) = self._current_media.GetResolution()
             
             width_locked_zoom = previous_width / current_media_100_width
@@ -748,29 +749,42 @@ class Canvas( QW.QWidget ):
             width_locked_size = CalculateMediaContainerSize( self._current_media, width_locked_zoom, media_show_action )
             height_locked_size = CalculateMediaContainerSize( self._current_media, height_locked_zoom, media_show_action )
             
-            # if we have both landscape, we'll go height, otherwise default width
-            if previous_width > previous_height and current_media_100_width > current_media_100_height:
+            # if landscape, go height, portrait, go width
+            if previous_media_100_width > previous_media_100_height and current_media_100_width > current_media_100_height:
                 
                 lock_height = True
                 
-            else:
+            elif previous_media_100_width < previous_media_100_height and current_media_100_width < current_media_100_height:
                 
                 lock_height = False
                 
+            else:
+                
+                # for weird stuff, we'll choose the smaller of the two ratios
+                
+                width_difference = max( previous_media_100_width, current_media_100_width ) / min( previous_media_100_width, current_media_100_width )
+                height_difference = max( previous_media_100_height, current_media_100_height ) / min( previous_media_100_height, current_media_100_height )
+                
+                lock_height = height_difference <= width_difference
+                
             
-            if previous_current_zoom == previous_default_zoom and previous_current_zoom <= previous_canvas_zoom * 1.02:
+            # however we don't want to accidentally zoom in if the media we are switching to is larger. it'll spill over the bottom of the canvas
+            # therefore let's have a little safety check
+            
+            if previous_current_zoom == previous_default_zoom and previous_current_zoom <= previous_canvas_zoom * 1.05:
                 
                 # we were looking at the default zoom, near or at canvas edge(s), probably hadn't zoomed before switching comparison
                 # we want to make sure our comparison does not spill over the canvas edge
                 
-                width_a_concern = self._media_container.width() >= self.width() * 0.95
                 height_a_concern = self._media_container.height() >= self.height() * 0.95
                 
                 # locking by width will spill over bottom of screen
-                if height_a_concern and width_locked_size.height() > self._media_container.height():
+                if height_a_concern and width_locked_size.height() >= self._media_container.height():
                     
                     lock_height = True
                     
+                
+                width_a_concern = self._media_container.width() >= self.width() * 0.95
                 
                 # locking by height will spill over right of screen
                 if width_a_concern and height_locked_size.width() > self._media_container.width():
@@ -1997,7 +2011,7 @@ class CanvasPanel( Canvas ):
             
             copy_hash_menu = QW.QMenu( copy_menu )
 
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( self._current_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
@@ -4514,7 +4528,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             copy_hash_menu = QW.QMenu( copy_menu )
 
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( self._current_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard.', self._CopyHashToClipboard, 'sha1' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )

@@ -365,8 +365,8 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._seek_direction = ClientGUICommon.BetterRadioBox( self._seek_panel, choices = choices )
         
-        self._seek_duration_s = QP.MakeQSpinBox( self._seek_panel, max=3599, width = 60 )
-        self._seek_duration_ms = QP.MakeQSpinBox( self._seek_panel, max=999, width = 60 )
+        self._seek_duration_s = ClientGUICommon.BetterSpinBox( self._seek_panel, max=3599, width = 60 )
+        self._seek_duration_ms = ClientGUICommon.BetterSpinBox( self._seek_panel, max=999, width = 60 )
         
         #
         

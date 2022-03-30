@@ -417,7 +417,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
         credentials = dictionary[ 'credentials' ]
         
         self._host = QW.QLineEdit( self )
-        self._port = QP.MakeQSpinBox( self, min=1, max=65535, width = 80 )
+        self._port = ClientGUICommon.BetterSpinBox( self, min=1, max=65535, width = 80 )
         
         self._test_address_button = ClientGUICommon.BetterButton( self, 'test address', self._TestAddress )
         
@@ -1292,7 +1292,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, 'numerical ratings' )
         
-        self._num_stars = QP.MakeQSpinBox( self, min=1, max=20 )
+        self._num_stars = ClientGUICommon.BetterSpinBox( self, min=1, max=20 )
         self._allow_zero = QW.QCheckBox( self )
         
         #

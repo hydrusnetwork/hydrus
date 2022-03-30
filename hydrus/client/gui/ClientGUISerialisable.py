@@ -34,7 +34,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._text = QW.QLineEdit( self )
         
-        self._width = QP.MakeQSpinBox( self, min=100, max=4096 )
+        self._width = ClientGUICommon.BetterSpinBox( self, min=100, max=4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         
@@ -190,7 +190,7 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._directory_picker.setMinimumWidth( dp_width )
         
-        self._width = QP.MakeQSpinBox( self, min=100, max=4096 )
+        self._width = ClientGUICommon.BetterSpinBox( self, min=100, max=4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         

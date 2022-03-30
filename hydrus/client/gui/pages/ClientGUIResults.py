@@ -79,7 +79,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         self._focused_media = None
         self._next_best_media_after_focused_media_removed = None
-        self._shift_focused_media = None
+        self._shift_select_started_with_this_media = None
+        self._media_added_in_current_shift_select = set()
         
         self._empty_page_status_override = None
         
@@ -404,6 +405,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
                 
             
+        
+    
+    def _EndShiftSelect( self ):
+        
+        self._shift_select_started_with_this_media = None
+        self._media_added_in_current_shift_select = set()
         
     
     def _ExportFiles( self, do_export_and_then_quit = False ):
@@ -844,7 +851,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NONE ) )
                 self._SetFocusedMedia( None )
-                self._shift_focused_media = None
+                self._EndShiftSelect()
+                
                 
             
         else:
@@ -860,31 +868,41 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                         self._SetFocusedMedia( None )
                         
                     
-                    self._shift_focused_media = None
+                    self._EndShiftSelect()
                     
                 else:
                     
                     self._DeselectSelect( (), ( media, ) )
                     
-                    if self._focused_media is None: self._SetFocusedMedia( media )
+                    self._SetFocusedMedia( media )
                     
-                    self._shift_focused_media = media
+                    self._StartShiftSelect( media )
                     
                 
-            elif shift and self._shift_focused_media is not None:
+            elif shift and self._shift_select_started_with_this_media is not None:
                 
-                start_index = self._sorted_media.index( self._shift_focused_media )
+                start_index = self._sorted_media.index( self._shift_select_started_with_this_media )
                 
                 end_index = self._sorted_media.index( media )
                 
-                if start_index < end_index: media_to_select = set( self._sorted_media[ start_index : end_index + 1 ] )
-                else: media_to_select = set( self._sorted_media[ end_index : start_index + 1 ] )
+                if start_index < end_index:
+                    
+                    media_from_start_of_shift_to_end = set( self._sorted_media[ start_index : end_index + 1 ] )
+                    
+                else:
+                    
+                    media_from_start_of_shift_to_end = set( self._sorted_media[ end_index : start_index + 1 ] )
+                    
                 
-                self._DeselectSelect( (), media_to_select )
+                media_to_deselect = [ m for m in self._media_added_in_current_shift_select if m not in media_from_start_of_shift_to_end ]
+                media_to_select = [ m for m in media_from_start_of_shift_to_end if not m.IsSelected() ]
+                
+                self._media_added_in_current_shift_select.difference_update( media_to_deselect )
+                self._media_added_in_current_shift_select.update( media_to_select )
+                
+                self._DeselectSelect( media_to_deselect, media_to_select )
                 
                 self._SetFocusedMedia( media )
-                
-                self._shift_focused_media = media
                 
             else:
                 
@@ -898,7 +916,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                 
                 self._SetFocusedMedia( media )
-                self._shift_focused_media = media
+                self._StartShiftSelect( media )
                 
             
         
@@ -1343,9 +1361,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         move_focus = self._focused_media in media_to_deselect or self._focused_media is None
         
-        if move_focus or self._shift_focused_media in media_to_deselect:
+        if move_focus or self._shift_select_started_with_this_media in media_to_deselect:
             
-            self._shift_focused_media = None
+            self._EndShiftSelect()
             
         
         self._DeselectSelect( media_to_deselect, media_to_select )
@@ -1747,6 +1765,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes )
             
+        
+    
+    def _StartShiftSelect( self, media ):
+        
+        self._shift_select_started_with_this_media = media
+        self._media_added_in_current_shift_select = set()
         
     
     def _Undelete( self ):
@@ -2876,7 +2900,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._selected_media.difference_update( singleton_media )
         self._selected_media.difference_update( collected_media )
         
-        self._shift_focused_media = None
+        self._EndShiftSelect()
         
         self._RecalculateVirtualSize()
         
@@ -4103,10 +4127,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 copy_hash_menu = QW.QMenu( copy_menu )
                 
-                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
-                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
-                ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
+                if self._HasFocusSingleton():
+                    
+                    focus_singleton = self._GetFocusSingleton()
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( focus_singleton.GetHash().hex() ), 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
+                    
                 
                 ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
                 

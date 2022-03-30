@@ -2,7 +2,7 @@
 title: subscriptions
 ---
 
-# getting started with subscriptions  
+# subscriptions  
 
 Do not try to create a subscription until you are comfortable with a normal gallery download page! Go [here](getting_started_downloading.md).
 

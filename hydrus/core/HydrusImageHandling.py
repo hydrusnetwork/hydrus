@@ -97,7 +97,7 @@ try:
         # this preserves colour info but does EXIF reorientation and flipping
         CV_IMREAD_FLAGS_JPEG = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
         # this seems to allow weirdass tiffs to load as non greyscale, although the LAB conversion 'whitepoint' or whatever can be wrong
-        CV_IMREAD_FLAGS_WEIRD = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
+        CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
         
         CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
         CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
@@ -310,7 +310,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             HydrusData.ShowText( 'Loading with OpenCV' )
             
         
-        if mime == HC.IMAGE_JPEG:
+        if mime in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF ):
             
             flags = CV_IMREAD_FLAGS_JPEG
             
@@ -450,7 +450,7 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
     
     pil_image = GeneratePILImage( path )
     
-    if clip_rect is None:
+    if clip_rect is not None:
         
         pil_image = ClipPILImage( pil_image, clip_rect )
         

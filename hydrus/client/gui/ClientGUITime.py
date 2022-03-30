@@ -72,7 +72,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
-        self._intended_files_per_check = QP.MakeQSpinBox( self._reactive_check_panel, min=1, max=1000 )
+        self._intended_files_per_check = ClientGUICommon.BetterSpinBox( self._reactive_check_panel, min=1, max=1000 )
         self._intended_files_per_check.setToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' )
         
         self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
@@ -348,7 +348,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         if self._show_days:
             
-            self._days = QP.MakeQSpinBox( self, min=0, max=3653, width = 50 )
+            self._days = ClientGUICommon.BetterSpinBox( self, min=0, max=3653, width = 50 )
             self._days.valueChanged.connect( self.EventChange )
             
             QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -357,7 +357,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         if self._show_hours:
             
-            self._hours = QP.MakeQSpinBox( self, min=0, max=23, width = 45 )
+            self._hours = ClientGUICommon.BetterSpinBox( self, min=0, max=23, width = 45 )
             self._hours.valueChanged.connect( self.EventChange )
             
             QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -366,7 +366,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         if self._show_minutes:
             
-            self._minutes = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
+            self._minutes = ClientGUICommon.BetterSpinBox( self, min=0, max=59, width = 45 )
             self._minutes.valueChanged.connect( self.EventChange )
             
             QP.AddToLayout( hbox, self._minutes, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -375,7 +375,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         if self._show_seconds:
             
-            self._seconds = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
+            self._seconds = ClientGUICommon.BetterSpinBox( self, min=0, max=59, width = 45 )
             self._seconds.valueChanged.connect( self.EventChange )
             
             QP.AddToLayout( hbox, self._seconds, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -549,7 +549,7 @@ class VelocityCtrl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._num = QP.MakeQSpinBox( self, min=min_unit_value, max=max_unit_value, width = 60 )
+        self._num = ClientGUICommon.BetterSpinBox( self, min=min_unit_value, max=max_unit_value, width = 60 )
         
         self._times = TimeDeltaCtrl( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
         

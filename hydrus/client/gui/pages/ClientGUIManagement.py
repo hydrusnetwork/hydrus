@@ -1174,7 +1174,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._search_distance_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_items )
         
-        self._search_distance_spinctrl = QP.MakeQSpinBox( self._searching_panel, min=0, max=64, width = 50 )
+        self._search_distance_spinctrl = ClientGUICommon.BetterSpinBox( self._searching_panel, min=0, max=64, width = 50 )
         self._search_distance_spinctrl.setSingleStep( 2 )
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
@@ -1214,7 +1214,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._pixel_dupes_preference.addItem( CC.similar_files_pixel_dupes_string_lookup[ p ], p )
             
         
-        self._max_hamming_distance = QP.MakeQSpinBox( self._filtering_panel, min = 0, max = 64 )
+        self._max_hamming_distance = ClientGUICommon.BetterSpinBox( self._filtering_panel, min = 0, max = 64 )
         self._max_hamming_distance.setSingleStep( 2 )
         
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
@@ -4655,7 +4655,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         location_context = self._management_controller.GetVariable( 'location_context' )
         
-        with QP.BusyCursor():
+        with ClientGUICommon.BusyCursor():
             
             media_results = self._controller.Read( 'media_results', hashes )
             
