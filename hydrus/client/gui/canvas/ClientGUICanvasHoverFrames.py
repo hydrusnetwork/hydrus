@@ -258,9 +258,12 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        QW.QFrame.__init__( self, parent )
+        # TODO: Clean up old references to window stuff, decide on lower/hide/show/raise options
+        # OK, so I converted these from this "self.setWindowFlags( QC.Qt.FramelessWindowHint | QC.Qt.Tool )" to normal raise/lower widgets embedded in the canvas
+        # this took some hacks, and there is still a bunch of focus and TLW checking code going on here that needs to be cleaned up
+        # note I tried to have them just lower rather than hide and it looked really stupid, so that thought is dead for the current moment. atm I just want to do the same thing as before with no graphics errors
         
-        self.setWindowFlags( QC.Qt.FramelessWindowHint | QC.Qt.Tool )
+        QW.QFrame.__init__( self, parent )
         
         self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
@@ -268,7 +271,8 @@ class CanvasHoverFrame( QW.QFrame ):
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
         self.setLineWidth( 2 )
         
-        self._my_parent_tlw = parent.window()
+        QP.SetBackgroundColour( self, QG.QPalette().color( QG.QPalette.Background ) )
+        
         self._my_canvas = my_canvas
         self._canvas_key = canvas_key
         self._current_media = None
@@ -277,22 +281,56 @@ class CanvasHoverFrame( QW.QFrame ):
         
         self._last_ideal_position = None
         
-        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+        self.hide()
+        self._is_currently_up = False
         
-        self._hide_until =  None
+        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
         self._position_initialised = False
         
-        self._my_parent_tlw.installEventFilter( self )
+        parent.installEventFilter( self )
         
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
-        
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _GetIdealSizeAndPosition( self ):
         
         raise NotImplementedError()
+        
+    
+    def _LowerHover( self ):
+        
+        if self._is_currently_up:
+            
+            if HG.hover_window_report_mode:
+                
+                HydrusData.ShowText( repr( self ) + ' - lowering' )
+                
+            
+            self.hide()
+            
+            self._is_currently_up = False
+            
+            self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
+            
+        
+        pass
+        
+    
+    def _RaiseHover( self ):
+        
+        if not self._is_currently_up:
+            
+            if HG.hover_window_report_mode:
+                
+                HydrusData.ShowText( repr( self ) + ' - raising' )
+                
+            
+            self.show()
+            self.raise_()
+            
+            self._is_currently_up = True
+            
         
     
     def _SizeAndPosition( self, force = False ):
@@ -315,17 +353,19 @@ class CanvasHoverFrame( QW.QFrame ):
             
         
     
-    def eventFilter( self, watched, event ):
+    def eventFilter( self, object, event ):
         
-        if watched == self._my_parent_tlw:
+        if event.type() == QC.QEvent.Resize:
             
-            if event.type() in ( QC.QEvent.Move, QC.QEvent.Resize ):
-                
-                self._position_initialised = False
-                
+            self._SizeAndPosition()
             
         
         return False
+        
+    
+    def PositionIsInitialised( self ):
+        
+        return self._position_initialised
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -336,7 +376,7 @@ class CanvasHoverFrame( QW.QFrame ):
             
         
     
-    def TIMERUIUpdate( self ):
+    def DoRegularHideShow( self ):
         
         if not self._position_initialised:
             
@@ -367,40 +407,18 @@ class CanvasHoverFrame( QW.QFrame ):
         
         if self._always_on_top:
             
-            self._SizeAndPosition()
-            
-            self.show()
+            self._RaiseHover()
             
             return
             
         
-        if self._hide_until is not None:
-            
-            if HydrusData.TimeHasPassed( self._hide_until ):
-                
-                self._hide_until =  None
-                
-            else:
-                
-                return
-                
-            
-        
         if self._current_media is None or not self._my_canvas.isVisible():
             
-            if self.isVisible():
-                
-                if HG.hover_window_report_mode:
-                    
-                    HydrusData.ShowText( repr( self ) + ' - hiding because nothing to show or parent hidden.' )
-                    
-                
-                self.hide()
-                
+            self._LowerHover()
             
         else:
             
-            mouse_pos = QG.QCursor.pos()
+            mouse_pos = self.parentWidget().mapFromGlobal( QG.QCursor.pos() )
             
             mouse_x = mouse_pos.x()
             mouse_y = mouse_pos.y()
@@ -486,305 +504,12 @@ class CanvasHoverFrame( QW.QFrame ):
                 
                 self._SizeAndPosition()
                 
-                if not self.isVisible():
-                    
-                    if HG.hover_window_report_mode:
-                        
-                        HydrusData.ShowText( repr( self ) + ' - showing.' + get_logic_report_string() )
-                        
-                    
-                    self.show()
-                    
+                self._RaiseHover()
                 
             elif ready_to_hide:
                 
-                if self.isVisible():
-                    
-                    if HG.hover_window_report_mode:
-                        
-                        HydrusData.ShowText( repr( self ) + ' - hiding.' + get_logic_report_string() )
-                        
-                    
-                    self.hide()
-                    
+                self._LowerHover()
                 
-            
-        
-    
-class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
-    
-    def __init__( self, parent, my_canvas, canvas_key ):
-        
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
-        
-        self._always_on_top = True
-        
-        self._current_index_string = ''
-        
-        self._comparison_media = None
-        
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._trash_button.setToolTip( 'send to trash' )
-        
-        menu_items = []
-        
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-            
-        
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
-        
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
-        
-        close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
-        close_button.setToolTip( 'close filter' )
-        
-        self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ), self._canvas_key )
-        self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
-        
-        self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
-        
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pair, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ), self._canvas_key )
-        self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
-        
-        self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ), self._canvas_key )
-        self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
-        
-        command_button_vbox = QP.VBoxLayout()
-        
-        dupe_boxes = []
-        
-        dupe_commands = []
-        
-        dupe_commands.append( ( 'this is better, and delete the other', 'Set that the current file you are looking at is better than the other in the pair, and set the other file to be deleted.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER ) ) )
-        dupe_commands.append( ( 'this is better, but keep both', 'Set that the current file you are looking at is better than the other in the pair, but keep both files.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH ) ) )
-        dupe_commands.append( ( 'they are the same quality', 'Set that the two files are duplicates of very similar quality.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_EXACTLY_THE_SAME ) ) )
-        
-        dupe_boxes.append( ( 'they are duplicates', dupe_commands ) )
-        
-        dupe_commands = []
-        
-        dupe_commands.append( ( 'they are related alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_ALTERNATES ) ) )
-        dupe_commands.append( ( 'they are not related', 'Set that the files are not duplicates or otherwise related--that this potential pair is a false positive match.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_FALSE_POSITIVE ) ) )
-        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_CUSTOM_ACTION ) ) )
-        
-        dupe_boxes.append( ( 'other', dupe_commands ) )
-        
-        for ( panel_name, dupe_commands ) in dupe_boxes:
-            
-            button_panel = ClientGUICommon.StaticBox( self, panel_name )
-            
-            for ( label, tooltip, command ) in dupe_commands:
-                
-                command_button = ClientGUICommon.BetterButton( button_panel, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
-                
-                command_button.SetToolTipWithShortcuts( tooltip, command.GetSimpleAction() )
-                
-                button_panel.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            QP.AddToLayout( command_button_vbox, button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-        
-        self._comparison_statements_vbox = QP.VBoxLayout()
-        
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
-        
-        self._comparison_statements_sts = {}
-        
-        for name in self._comparison_statement_names:
-            
-            panel = QW.QWidget( self )
-            
-            st = ClientGUICommon.BetterStaticText( panel, 'init' )
-            
-            self._comparison_statements_sts[ name ] = ( panel, st )
-            
-            hbox = QP.HBoxLayout()
-            
-            QP.AddToLayout( hbox, st, CC.FLAGS_CENTER )
-            
-            panel.setLayout( hbox )
-            
-            panel.setVisible( False )
-            
-            QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-        
-        #
-        
-        top_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( top_button_hbox, self._next_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        navigation_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
-        navigation_button_hbox.addStretch( 1 )
-        QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
-        navigation_button_hbox.addStretch( 1 )
-        QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        #QP.AddToLayout( vbox, self._next_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, top_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self.setLayout( vbox )
-        
-        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
-        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
-        
-    
-    def _EditBackgroundSwitchIntensity( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                new_value = panel.GetValue()
-                
-                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
-                
-            
-        
-    
-    def _EditMergeOptions( self, duplicate_type ):
-        
-        new_options = HG.client_controller.new_options
-        
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                duplicate_action_options = panel.GetValue()
-                
-                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
-                
-            
-        
-    
-    def _GetIdealSizeAndPosition( self ):
-        
-        parent_window = self.parentWidget().window()
-        
-        parent_size = parent_window.size()
-        
-        parent_width = parent_size.width()
-        parent_height = parent_size.height()
-        
-        my_size = self.size()
-        
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        my_ideal_width = max( int( parent_width * 0.2 ), self.sizeHint().width() )
-        my_ideal_height = self.sizeHint().height()
-        
-        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
-        
-        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) ) )
-        
-        return ( should_resize, ideal_size, ideal_position )
-        
-    
-    def _ResetComparisonStatements( self ):
-        
-        statements_and_scores = ClientMedia.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
-        
-        for name in self._comparison_statement_names:
-            
-            ( panel, st ) = self._comparison_statements_sts[ name ]
-            
-            got_data = name in statements_and_scores
-            
-            show_panel = got_data
-            
-            if panel.isVisible() != show_panel:
-                
-                panel.setVisible( show_panel )
-                
-            
-            if got_data:
-                
-                ( statement, score ) = statements_and_scores[ name ]
-                
-                st.setText( statement )
-                
-                if score > 0:
-                    
-                    object_name = 'HydrusValid'
-                    
-                elif score < 0:
-                    
-                    object_name = 'HydrusInvalid'
-                    
-                else:
-                    
-                    object_name = 'HydrusIndeterminate'
-                    
-                
-                st.setObjectName( object_name )
-                
-                st.style().polish( st )
-                
-            
-        
-    
-    def wheelEvent( self, event ):
-        
-        QW.QApplication.sendEvent( self.parentWidget(), event )
-        
-    
-    def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = shown_media
-            self._comparison_media = comparison_media
-            
-            self._ResetComparisonStatements()
-            
-            # minimumsize is not immediately updated without this
-            self.layout().activate()
-            
-            self._SizeAndPosition( force = True )
-            
-        
-    
-    def SetIndexString( self, canvas_key, text ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_index_string = text
-            
-            self._index_text.setText( self._current_index_string )
             
         
     
@@ -860,7 +585,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width * 0.2 ), 0 ) )
+        ideal_position = QC.QPoint( int( parent_width * 0.2 ), 0 )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -1269,14 +994,12 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().trash )
         self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().inbox, click_callable = self._Archive )
-        self._notes_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().notes, click_callable = self._EditNotes )
         
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
         icon_hbox.addStretch( 1 )
         QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( icon_hbox, self._notes_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._icon_panel.setLayout( icon_hbox )
         
@@ -1353,11 +1076,6 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         HG.client_controller.pub( 'canvas_application_command', command, self._canvas_key )
         
     
-    def _EditNotes( self ):
-        
-        HG.client_controller.pub( 'canvas_manage_notes', self._canvas_key )
-        
-    
     def _GetIdealSizeAndPosition( self ):
         
         parent_window = self.parentWidget().window()
@@ -1371,12 +1089,22 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
-        top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
+        my_ideal_width = self.sizeHint().width()
         
-        width_beside_top_hover = ClientGUIFunctions.ClientToScreen( parent_window, parent_window.rect().topRight() ).x() - top_hover_bottom_right.x()
+        if not self._top_hover.PositionIsInitialised():
+            
+            self._top_hover.DoRegularHideShow()
+            
         
-        my_ideal_width = max( self.sizeHint().width(), width_beside_top_hover )
+        if self._top_hover.PositionIsInitialised():
+            
+            # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
+            top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
+            
+            width_beside_top_hover = parent_window.rect().topRight().x() - top_hover_bottom_right.x()
+            
+            my_ideal_width = max( my_ideal_width, width_beside_top_hover )
+            
         
         my_ideal_height = self.sizeHint().height()
         
@@ -1384,11 +1112,14 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
         
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( int( parent_width - my_ideal_width ), 0 ) )
+        ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), 0 )
         
-        if top_hover_bottom_right.x() > ideal_position.x():
+        if self._top_hover.PositionIsInitialised():
             
-            ideal_position.setY( top_hover_bottom_right.y() )
+            if top_hover_bottom_right.x() > ideal_position.x():
+                
+                ideal_position.setY( top_hover_bottom_right.y() )
+                
             
         
         return ( should_resize, ideal_size, ideal_position )
@@ -1400,9 +1131,8 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             has_inbox = self._current_media.HasInbox()
             has_trash = self._current_media.GetLocationsManager().IsTrashed()
-            has_notes = self._current_media.HasNotes()
             
-            if has_inbox or has_trash or has_notes:
+            if has_inbox or has_trash:
                 
                 self._icon_panel.show()
                 
@@ -1422,15 +1152,6 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 else:
                     
                     self._trash_icon.hide()
-                    
-                
-                if has_notes:
-                    
-                    self._notes_icon.show()
-                    
-                else:
-                    
-                    self._notes_icon.hide()
                     
                 
             else:
@@ -1526,6 +1247,531 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
         
     
+class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
+    
+    def __init__( self, parent, my_canvas, top_right_hover: CanvasHoverFrameTopRight, canvas_key ):
+        
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        
+        self._top_right_hover = top_right_hover
+        
+        self._vbox = QP.VBoxLayout()
+        self._note_panels = []
+        self._note_controls_to_name = {}
+        self._height_for_width_controls = []
+        
+        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Expanding )
+        
+        self.setLayout( self._vbox )
+        
+        self._ResetNotes()
+        
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _EditNotes( self, name ):
+        
+        HG.client_controller.pub( 'canvas_manage_notes', self._canvas_key, name )
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        if len( self._note_panels ) == 0:
+            
+            return ( False, QC.QSize( 0, 0 ), QC.QPoint( -1, -1 ) )
+            
+        
+        parent_window = self.parentWidget().window()
+        
+        parent_size = parent_window.size()
+        
+        parent_width = parent_size.width()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        my_ideal_width = self.sizeHint().width()
+        
+        ideal_position = QC.QPoint( parent_width - my_width, 0 )
+        
+        if not self._top_right_hover.PositionIsInitialised():
+            
+            self._top_right_hover.DoRegularHideShow()
+            
+        
+        if self._top_right_hover.PositionIsInitialised():
+            
+            my_ideal_width = self._top_right_hover.width()
+            
+            ideal_position = self._top_right_hover.geometry().bottomRight() + QC.QPoint( 0, 2 ) - QC.QPoint( my_ideal_width, 0 )
+            
+        
+        max_possible_height = parent_size.height() - ideal_position.y()
+        
+        # now let's go full meme
+        # the problem here is that sizeHint produces what width the static text wants based on its own word wrap rules
+        # we want to say 'with this fixed width, how tall are we?'
+        # VBoxLayout doesn't support heightForWidth, but statictext does, so let's hack it
+        # ideal solution here is to write a new layout that delivers heightforwidth, but lmao. maybe Qt6 will do it
+        best_guess_at_height_for_width = sum( ( child.heightForWidth( my_ideal_width ) for child in self._height_for_width_controls ) )
+        best_guess_at_height_for_width += 4 * len( self._height_for_width_controls )
+        best_guess_at_height_for_width += 4 * len( self.children() )
+        
+        #
+        
+        my_ideal_height = min( best_guess_at_height_for_width, max_possible_height )
+        
+        should_resize = my_ideal_width != my_width or abs( my_height - my_ideal_height ) > 10
+        
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetNotes( self ):
+        
+        for note_panel in self._note_panels:
+            
+            self._vbox.removeWidget( note_panel )
+            
+            note_panel.deleteLater()
+            
+        
+        self._note_panels = []
+        self._note_controls_to_name = {}
+        self._height_for_width_controls = []
+        
+        if self._current_media is not None and self._current_media.HasNotes():
+            
+            names_to_notes = self._current_media.GetNotesManager().GetNamesToNotes()
+            
+            for name in sorted( names_to_notes.keys() ):
+                
+                note = names_to_notes[ name ]
+                
+                note_panel = QW.QWidget( self )
+                
+                note_name = ClientGUICommon.BetterStaticText( note_panel, label = name )
+                
+                note_name.setAlignment( QC.Qt.AlignHCenter )
+                note_name.setWordWrap( True )
+                
+                font = QG.QFont( note_name.font() )
+                
+                font.setBold( True )
+                
+                note_name.setFont( font )
+                
+                note_text = ClientGUICommon.BetterStaticText( note_panel, label = note )
+                
+                note_text.setAlignment( QC.Qt.AlignJustify )
+                note_text.setWordWrap( True )
+                
+                vbox = QP.VBoxLayout()
+                
+                QP.AddToLayout( vbox, note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
+                QP.AddToLayout( vbox, note_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                note_panel.setLayout( vbox )
+                
+                QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                self._note_controls_to_name[ note_name ] = name
+                self._note_controls_to_name[ note_text ] = name
+                self._note_controls_to_name[ note_panel ] = name
+                
+                note_name.installEventFilter( self )
+                note_text.installEventFilter( self )
+                note_panel.installEventFilter( self )
+                
+                self._height_for_width_controls.append( note_name )
+                self._height_for_width_controls.append( note_text )
+                
+                self._note_panels.append( note_panel )
+                
+            
+        
+        self._SizeAndPosition()
+        
+    
+    def eventFilter( self, object, event ):
+        
+        if event.type() == QC.QEvent.MouseButtonPress:
+            
+            if object in self._note_controls_to_name:
+                
+                name = self._note_controls_to_name[ object ]
+                
+                self._EditNotes( name )
+                
+                return True
+                
+            
+        
+        return CanvasHoverFrame.eventFilter( self, object, event )
+        
+    
+    def wheelEvent( self, event ):
+        
+        QW.QApplication.sendEvent( self.parentWidget(), event )
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                # ratings updates do not change the shape of this hover but file changes of several kinds do
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates if content_update.GetDataType() == HC.CONTENT_TYPE_NOTES ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ResetNotes()
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            
+            if self._is_currently_up:
+                
+                # magical refresh that makes the labels look correct and not be hidden???
+                self._LowerHover()
+                self._ResetNotes()
+                self._RaiseHover()
+                
+            else:
+                
+                self._ResetNotes()
+                
+            # size is not immediately updated without this
+            #self.layout().activate()
+            
+            #self._SizeAndPosition( force = True )
+            
+        
+    
+class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
+    
+    def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, right_notes_hover: CanvasHoverFrameRightNotes, canvas_key: bytes ):
+        
+        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        
+        self._right_notes_hover = right_notes_hover
+        
+        self._always_on_top = True
+        
+        self._current_index_string = ''
+        
+        self._comparison_media = None
+        
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button.setToolTip( 'send to trash' )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            
+        
+        menu_items.append( ( 'separator', None, None, None ) )
+        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
+        
+        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
+        
+        close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close_button.setToolTip( 'close filter' )
+        
+        self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ), self._canvas_key )
+        self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
+        
+        self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
+        
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pair, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ), self._canvas_key )
+        self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
+        
+        self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ), self._canvas_key )
+        self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
+        
+        command_button_vbox = QP.VBoxLayout()
+        
+        dupe_boxes = []
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'this is better, and delete the other', 'Set that the current file you are looking at is better than the other in the pair, and set the other file to be deleted.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER ) ) )
+        dupe_commands.append( ( 'this is better, but keep both', 'Set that the current file you are looking at is better than the other in the pair, but keep both files.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH ) ) )
+        dupe_commands.append( ( 'they are the same quality', 'Set that the two files are duplicates of very similar quality.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_EXACTLY_THE_SAME ) ) )
+        
+        dupe_boxes.append( ( 'they are duplicates', dupe_commands ) )
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'they are related alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_ALTERNATES ) ) )
+        dupe_commands.append( ( 'they are not related', 'Set that the files are not duplicates or otherwise related--that this potential pair is a false positive match.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_FALSE_POSITIVE ) ) )
+        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_CUSTOM_ACTION ) ) )
+        
+        dupe_boxes.append( ( 'other', dupe_commands ) )
+        
+        for ( panel_name, dupe_commands ) in dupe_boxes:
+            
+            button_panel = ClientGUICommon.StaticBox( self, panel_name )
+            
+            for ( label, tooltip, command ) in dupe_commands:
+                
+                command_button = ClientGUICommon.BetterButton( button_panel, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
+                
+                command_button.SetToolTipWithShortcuts( tooltip, command.GetSimpleAction() )
+                
+                button_panel.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            QP.AddToLayout( command_button_vbox, button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        self._comparison_statements_vbox = QP.VBoxLayout()
+        
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
+        
+        self._comparison_statements_sts = {}
+        
+        for name in self._comparison_statement_names:
+            
+            panel = QW.QWidget( self )
+            
+            st = ClientGUICommon.BetterStaticText( panel, 'init' )
+            
+            self._comparison_statements_sts[ name ] = ( panel, st )
+            
+            hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( hbox, st, CC.FLAGS_CENTER )
+            
+            panel.setLayout( hbox )
+            
+            panel.setVisible( False )
+            
+            QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+        
+        #
+        
+        top_button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( top_button_hbox, self._next_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        navigation_button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
+        navigation_button_hbox.addStretch( 1 )
+        QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        navigation_button_hbox.addStretch( 1 )
+        QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        #QP.AddToLayout( vbox, self._next_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, top_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
+        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        
+    
+    def _EditBackgroundSwitchIntensity( self ):
+        
+        new_options = HG.client_controller.new_options
+        
+        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                new_value = panel.GetValue()
+                
+                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
+                
+            
+        
+    
+    def _EditMergeOptions( self, duplicate_type ):
+        
+        new_options = HG.client_controller.new_options
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                duplicate_action_options = panel.GetValue()
+                
+                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+                
+            
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        parent_window = self.parentWidget().window()
+        
+        parent_size = parent_window.size()
+        
+        parent_width = parent_size.width()
+        parent_height = parent_size.height()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        my_ideal_width = max( int( parent_width * 0.2 ), self.sizeHint().width() )
+        my_ideal_height = self.sizeHint().height()
+        
+        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
+        
+        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+        ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) )
+        
+        ideal_rect = QC.QRect( ideal_position, ideal_size )
+        
+        right_notes_hover_geometry = self._right_notes_hover.geometry()
+        
+        if ideal_rect.intersects( right_notes_hover_geometry ):
+            
+            # the notes are tall enough to overlap us
+            
+            right_notes_correct_bottom = right_notes_hover_geometry.y() + right_notes_hover_geometry.height()
+            
+            if self._my_canvas.height() - right_notes_correct_bottom > my_ideal_height:
+                
+                # if we can slide down and still fit in the gap, do that
+                
+                ideal_position.setY( right_notes_correct_bottom )
+                
+            else:
+                
+                # slide it right
+                
+                ideal_position.setX( right_notes_hover_geometry.x() - my_ideal_width )
+                
+            
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetComparisonStatements( self ):
+        
+        statements_and_scores = ClientMedia.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
+        
+        for name in self._comparison_statement_names:
+            
+            ( panel, st ) = self._comparison_statements_sts[ name ]
+            
+            got_data = name in statements_and_scores
+            
+            show_panel = got_data
+            
+            if panel.isVisible() != show_panel:
+                
+                panel.setVisible( show_panel )
+                
+            
+            if got_data:
+                
+                ( statement, score ) = statements_and_scores[ name ]
+                
+                st.setText( statement )
+                
+                if score > 0:
+                    
+                    object_name = 'HydrusValid'
+                    
+                elif score < 0:
+                    
+                    object_name = 'HydrusInvalid'
+                    
+                else:
+                    
+                    object_name = 'HydrusIndeterminate'
+                    
+                
+                st.setObjectName( object_name )
+                
+                st.style().polish( st )
+                
+            
+        
+    
+    def wheelEvent( self, event ):
+        
+        QW.QApplication.sendEvent( self.parentWidget(), event )
+        
+    
+    def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = shown_media
+            self._comparison_media = comparison_media
+            
+            self._ResetComparisonStatements()
+            
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition( force = True )
+            
+        
+    
+    def SetIndexString( self, canvas_key, text ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_index_string = text
+            
+            self._index_text.setText( self._current_index_string )
+            
+        
+    
 class CanvasHoverFrameTags( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
@@ -1566,7 +1812,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, QC.QPoint( 0, 0 ) )
+        ideal_position = QC.QPoint( 0, 0 )
         
         return ( should_resize, ideal_size, ideal_position )
         

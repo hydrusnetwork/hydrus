@@ -51,7 +51,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._names_to_name_overrides = dict( names_and_name_overrides )
         
     
-    def GetServiceKeysToContentUpdates( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Iterable[ typing.Tuple[ str, str ] ] ):
+    def GetServiceKeysToContentUpdates( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Collection[ typing.Tuple[ str, str ] ] ):
         
         content_updates = []
         

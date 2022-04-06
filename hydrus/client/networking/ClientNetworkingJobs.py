@@ -75,6 +75,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.NotFoundException
         
+    elif status_code == 406:
+        
+        eclass = HydrusExceptions.NotAcceptable
+        
     elif status_code == 409:
         
         eclass = HydrusExceptions.ConflictException

@@ -260,7 +260,7 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
     
     return True
     
-def EditFileNotes( win: QW.QWidget, media: ClientMedia.Media ):
+def EditFileNotes( win: QW.QWidget, media: ClientMedia.Media, name_to_start_on = typing.Optional[ str ] ):
     
     names_to_notes = media.GetNotesManager().GetNamesToNotes()
     
@@ -268,7 +268,7 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.Media ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditFileNotesPanel( dlg, names_to_notes )
+        panel = ClientGUIScrolledPanelsEdit.EditFileNotesPanel( dlg, names_to_notes, name_to_start_on = name_to_start_on )
         
         dlg.SetPanel( panel )
         

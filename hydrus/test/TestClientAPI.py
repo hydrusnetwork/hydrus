@@ -30,6 +30,14 @@ from hydrus.client.networking import ClientLocalServer
 from hydrus.client.networking import ClientLocalServerResources
 from hydrus.client.networking import ClientNetworkingContexts
 
+CBOR_AVAILABLE = False
+try:
+    import cbor2
+    import base64
+    CBOR_AVAILABLE = True
+except:
+    pass
+
 class TestClientAPI( unittest.TestCase ):
     
     @classmethod
@@ -94,6 +102,108 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( data, favicon )
         
         time.sleep( 3 )
+        
+    
+    def _test_cbor( self, connection, set_up_permissions ):
+        
+        # get url files
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        json_headers = dict( headers )
+        json_headers[ 'Accept' ] = 'application/json'
+        
+        cbor_headers = dict( headers )
+        cbor_headers[ 'Accept' ] = 'application/cbor'
+        
+        url = 'http://safebooru.org/index.php?page=post&s=view&id=2753608'
+        normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
+        
+        expected_answer = {}
+        
+        expected_answer[ 'normalised_url' ] = normalised_url
+        expected_answer[ 'url_type' ] = HC.URL_TYPE_POST
+        expected_answer[ 'url_type_string' ] = 'post url'
+        expected_answer[ 'match_name' ] = 'safebooru file page'
+        expected_answer[ 'can_parse' ] = True
+        
+        hash = os.urandom( 32 )
+        
+        # normal GET json
+        
+        path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( url, safe = '' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.headers[ 'Content-Type' ], 'application/json' )
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_answer )
+        
+        # explicit GET cbor by arg
+        
+        path = '/add_urls/get_url_info?url={}&cbor=1'.format( urllib.parse.quote( url, safe = '' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.headers[ 'Content-Type' ], 'application/cbor' )
+        self.assertEqual( response.status, 200 )
+        
+        d = cbor2.loads( data )
+        
+        self.assertEqual( d, expected_answer )
+        
+        # explicit GET json by Accept
+        
+        path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( url, safe = '' ) )
+        
+        connection.request( 'GET', path, headers = json_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.headers[ 'Content-Type' ], 'application/json' )
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_answer )
+        
+        # explicit GET cbor by Accept
+        
+        path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( url, safe = '' ) )
+        
+        connection.request( 'GET', path, headers = cbor_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.headers[ 'Content-Type' ], 'application/cbor' )
+        self.assertEqual( response.status, 200 )
+        
+        d = cbor2.loads( data )
+        
+        self.assertEqual( d, expected_answer )
         
     
     def _test_client_api_basics( self, connection ):
@@ -3471,6 +3581,12 @@ class TestClientAPI( unittest.TestCase ):
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
+        
+        if CBOR_AVAILABLE:
+            
+            self._test_cbor( connection, set_up_permissions )
+            
+        
         self._test_search_files_predicate_parsing( connection, set_up_permissions )
         self._test_file_metadata( connection, set_up_permissions )
         self._test_get_files( connection, set_up_permissions )

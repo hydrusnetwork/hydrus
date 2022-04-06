@@ -78,7 +78,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         self._page_key = page_key
         
         self._focused_media = None
-        self._next_best_media_after_focused_media_removed = None
+        self._last_hit_media = None
+        self._next_best_media_if_focuses_removed = None
         self._shift_select_started_with_this_media = None
         self._media_added_in_current_shift_select = set()
         
@@ -874,7 +875,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                     self._DeselectSelect( (), ( media, ) )
                     
-                    self._SetFocusedMedia( media )
+                    self._last_hit_media = media
                     
                     self._StartShiftSelect( media )
                     
@@ -902,7 +903,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 self._DeselectSelect( media_to_deselect, media_to_select )
                 
-                self._SetFocusedMedia( media )
+                self._last_hit_media = media
                 
             else:
                 
@@ -1684,16 +1685,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 next_best_media = self._sorted_media[ i ]
                 
             
-            self._next_best_media_after_focused_media_removed = next_best_media
+            self._next_best_media_if_focuses_removed = next_best_media
             
         else:
             
-            self._next_best_media_after_focused_media_removed = None
+            self._next_best_media_if_focuses_removed = None
             
         
         publish_media = None
         
         self._focused_media = media
+        self._last_hit_media = media
         
         if self._focused_media is not None:
             
@@ -2708,13 +2710,13 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _MoveFocusedThumbnail( self, rows, columns, shift ):
         
-        if self._focused_media is not None:
+        if self._last_hit_media is not None:
             
-            media_to_use = self._focused_media
+            media_to_use = self._last_hit_media
             
-        elif self._next_best_media_after_focused_media_removed is not None:
+        elif self._next_best_media_if_focuses_removed is not None:
             
-            media_to_use = self._next_best_media_after_focused_media_removed
+            media_to_use = self._next_best_media_if_focuses_removed
             
             if columns == -1: # treat it as if the focused area is between this and the next
                 

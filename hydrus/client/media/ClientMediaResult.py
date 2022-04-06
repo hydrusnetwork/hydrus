@@ -101,7 +101,7 @@ class MediaResult( object ):
         return self._file_info_manager.mime
         
     
-    def GetNotesManager( self ):
+    def GetNotesManager( self ) -> ClientMediaManagers.NotesManager:
         
         return self._notes_manager
         

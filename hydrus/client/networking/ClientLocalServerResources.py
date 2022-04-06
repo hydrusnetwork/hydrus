@@ -24,6 +24,7 @@ from twisted.web.static import File as FileResource
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
@@ -61,7 +62,12 @@ CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_ac
 
 def Dumps( data, mime ):
     
-    if CBOR_AVAILABLE and mime == HC.APPLICATION_CBOR:
+    if mime == HC.APPLICATION_CBOR:
+        
+        if not CBOR_AVAILABLE:
+            
+            raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
+            
         
         return cbor2.dumps( data )
     
@@ -266,7 +272,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     if not request.requestHeaders.hasHeader( 'Content-Type' ):
         
-        request_mime = HC.APPLICATION_JSON
+        request_content_type_mime = HC.APPLICATION_JSON
         
         parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
         
@@ -286,7 +292,7 @@ def ParseClientAPIPOSTArgs( request ):
         
         try:
             
-            request_mime = HC.mime_enum_lookup[ content_type ]
+            request_content_type_mime = HC.mime_enum_lookup[ content_type ]
             
         except:
             
@@ -295,7 +301,7 @@ def ParseClientAPIPOSTArgs( request ):
         
         total_bytes_read = 0
         
-        if request_mime == HC.APPLICATION_JSON:
+        if request_content_type_mime == HC.APPLICATION_JSON:
             
             json_bytes = request.content.read()
             
@@ -307,7 +313,12 @@ def ParseClientAPIPOSTArgs( request ):
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
         
-        elif request_mime == HC.APPLICATION_CBOR and CBOR_AVAILABLE:
+        elif request_content_type_mime == HC.APPLICATION_CBOR:
+            
+            if not CBOR_AVAILABLE:
+                
+                raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
+                
             
             cbor_bytes = request.content.read()
             
@@ -337,7 +348,7 @@ def ParseClientAPIPOSTArgs( request ):
             
         
     
-    return ( parsed_request_args, total_bytes_read, request_mime )
+    return ( parsed_request_args, total_bytes_read )
     
 def ParseClientAPISearchPredicates( request ):
     
@@ -468,6 +479,51 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
     
     return hashes
     
+def ParseRequestedResponseMime( request: HydrusServerRequest.HydrusRequest ):
+    
+    # let them ask for something specifically, else default to what they asked in, finally default to json
+    
+    if request.requestHeaders.hasHeader( 'Accept' ):
+        
+        accepts = request.requestHeaders.getRawHeaders( 'Accept' )
+        
+        accept = accepts[0]
+        
+        if 'cbor' in accept and 'json' not in accept:
+            
+            return HC.APPLICATION_CBOR
+            
+        elif 'json' in accept and 'cbor' not in accept:
+            
+            return HC.APPLICATION_JSON
+            
+        
+    
+    if request.requestHeaders.hasHeader( 'Content-Type' ):
+        
+        content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
+        
+        content_type = content_types[0]
+        
+        if 'cbor' in content_type:
+            
+            return HC.APPLICATION_CBOR
+            
+        elif 'json' in content_type:
+            
+            return HC.APPLICATION_JSON
+            
+        
+        
+    
+    if b'cbor' in request.args:
+        
+        return HC.APPLICATION_CBOR
+        
+    
+    return HC.APPLICATION_JSON
+    
+
 def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) -> list:
     
     or_tag_lists = [ tag for tag in tag_list if isinstance( tag, list ) ]
@@ -855,20 +911,34 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         
         request.parsed_request_args = parsed_request_args
         
-        request.preferred_mime = HC.APPLICATION_CBOR if CBOR_AVAILABLE and b'cbor' in request.args else HC.APPLICATION_JSON
+        requested_response_mime = ParseRequestedResponseMime( request )
+        
+        if requested_response_mime == HC.APPLICATION_CBOR and not CBOR_AVAILABLE:
+            
+            raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
+            
+        
+        request.preferred_mime = requested_response_mime
         
         return request
         
     
     def _callbackParsePOSTArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
-        ( parsed_request_args, total_bytes_read, request_mime ) = ParseClientAPIPOSTArgs( request )
+        ( parsed_request_args, total_bytes_read ) = ParseClientAPIPOSTArgs( request )
         
         self._reportDataUsed( request, total_bytes_read )
         
         request.parsed_request_args = parsed_request_args
         
-        request.preferred_mime = request_mime
+        requested_response_mime = ParseRequestedResponseMime( request )
+        
+        if requested_response_mime == HC.APPLICATION_CBOR and not CBOR_AVAILABLE:
+            
+            raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
+            
+        
+        request.preferred_mime = requested_response_mime
         
         return request
         
@@ -2533,7 +2603,9 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
             path = HydrusPaths.mimes_to_default_thumbnail_paths[ media_result.GetMime() ]
             
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, path = path )
+        mime = HydrusFileHandling.GetThumbnailMime( path )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
         
         return response_context
         

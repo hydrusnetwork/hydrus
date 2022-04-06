@@ -1374,7 +1374,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _GetDuplicateFileSearchData( self ) -> typing.Tuple[ ClientSearch.FileSearchContext, bool ]:
+    def _GetDuplicateFileSearchData( self ) -> typing.Tuple[ ClientSearch.FileSearchContext, bool, int, int ]:
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
@@ -2182,22 +2182,38 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'show file log', 'Show the file log windows for the selected query.', self._ShowSelectedImportersFileSeedCaches )
-        ClientGUIMenus.AppendMenuItem( menu, 'show search log', 'Show the search log windows for the selected query.', self._ShowSelectedImportersGallerySeedLogs )
-        
-        if self._CanRetryFailed() or self._CanRetryIgnored():
+        if len( selected_importers ) == 1:
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ( importer, ) = selected_importers
             
-            if self._CanRetryFailed():
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
-                
+            file_seed_cache = importer.GetFileSeedCache()
             
-            if self._CanRetryIgnored():
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'retry ignored', 'Retry all the failed downloads.', self._RetryIgnored )
-                
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'show file log', 'Show the file log windows for the selected query.', self._ShowSelectedImportersFileSeedCaches )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'file log' )
+            
+            gallery_seed_log = importer.GetGallerySeedLog()
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'show search log', 'Show the search log windows for the selected query.', self._ShowSelectedImportersGallerySeedLogs )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, False, True, 'search' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'search log' )
+            
+        else:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'show file logs', 'Show the file log windows for the selected queries.', self._ShowSelectedImportersFileSeedCaches )
+            ClientGUIMenus.AppendMenuItem( menu, 'show search log', 'Show the search log windows for the selected query.', self._ShowSelectedImportersGallerySeedLogs )
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -2408,6 +2424,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             self._query_input.setPlaceholderText( new_initial_search_text )
             
         
+        self._query_input.setFocus( QC.Qt.OtherFocusReason )
+        
     
     def _SetOptionsToGalleryImports( self ):
         
@@ -2537,7 +2555,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, gallery_seed_log )
+        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, 'search', gallery_seed_log )
         
         frame.SetPanel( panel )
         
@@ -3015,8 +3033,39 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'show file log', 'Show the file log windows for the selected watcher.', self._ShowSelectedImportersFileSeedCaches )
-        ClientGUIMenus.AppendMenuItem( menu, 'show check log', 'Show the checker log windows for the selected watcher.', self._ShowSelectedImportersGallerySeedLogs )
+        if len( selected_watchers ) == 1:
+            
+            ( watcher, ) = selected_watchers
+            
+            file_seed_cache = watcher.GetFileSeedCache()
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'show file log', 'Show the file log windows for the selected watcher.', self._ShowSelectedImportersFileSeedCaches )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'file log' )
+            
+            gallery_seed_log = watcher.GetGallerySeedLog()
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'show check log', 'Show the check log windows for the selected watcher.', self._ShowSelectedImportersGallerySeedLogs )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, True, False, 'check' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'check log' )
+            
+        else:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'show file logs', 'Show the file log windows for the selected queries.', self._ShowSelectedImportersFileSeedCaches )
+            ClientGUIMenus.AppendMenuItem( menu, 'show check log', 'Show the checker log windows for the selected watcher.', self._ShowSelectedImportersGallerySeedLogs )
+            
         
         if self._CanRetryFailed() or self._CanRetryIgnored():
             
@@ -3366,7 +3415,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, gallery_seed_log )
+        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, 'check', gallery_seed_log )
         
         frame.SetPanel( panel )
         

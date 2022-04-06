@@ -57,7 +57,9 @@ On 200 OK, the API returns JSON for everything except actual file/thumbnail requ
 
 The API now tentatively supports CBOR, which is basically 'byte JSON'. If you are in a lower level language or need to do a lot of heavy work quickly, try it out!
 
-To work in CBOR, use CBOR to encode any parameters that you would previously put in JSON, and put Content-Type `application/cbor` in your request header. For POST requests, just print the pure bytes in the body, like this:
+To send CBOR, for POST put Content-Type `application/cbor` in your request header instead of `application/json`, and for GET just add a `cbor=1` parameter to the URL string. Use CBOR to encode any parameters that you would previously put in JSON:
+
+For POST requests, just print the pure bytes in the body, like this:
 
 ```py
 cbor2.dumps( arg_dict )
@@ -72,6 +74,15 @@ base64.urlsafe_b64encode( cbor2.dumps( argument ) )
 
 str( base64.urlsafe_b64encode( cbor2.dumps( argument ) ), 'ascii' )
 ```
+
+If you send CBOR, the client will return CBOR. If you want to send CBOR and get JSON back, or _vice versa_ (or you are uploading a file and can't set CBOR Content-Type), send the Accept request header, like so:
+
+```
+Accept: application/cbor
+Accept: application/json
+```
+
+If the client does not support CBOR, you'll get 406.
 
 ## Access and permissions
 
@@ -1691,7 +1702,7 @@ Arguments:
 ```
 
 Response:
-:   The thumbnail for the file. It will give application/octet-stream as the mime type. Some hydrus thumbs are jpegs, some are pngs.
+:   The thumbnail for the file. Some hydrus thumbs are jpegs, some are pngs. It should give you the correct image/jpeg or image/png Content-Type.
 
     If hydrus keeps no thumbnail for the filetype, for instance with pdfs, then you will get the same default 'pdf' icon you see in the client. If the file does not exist in the client, or the thumbnail was expected but is missing from storage, you will get the fallback 'hydrus' icon, again just as you would in the client itself. This request should never give a 404.
 

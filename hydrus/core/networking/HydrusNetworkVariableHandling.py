@@ -310,6 +310,11 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
     
     cbor_requested = b'cbor' in requests_args
     
+    if cbor_requested and not CBOR_AVAILABLE:
+        
+        raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
+        
+    
     for name_bytes in requests_args:
         
         values_bytes = requests_args[ name_bytes ]
@@ -376,7 +381,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
             
             try:
                 
-                if CBOR_AVAILABLE and cbor_requested:
+                if cbor_requested:
                     
                     args[ name ] = cbor2.loads( base64.urlsafe_b64decode( value ) )
                     
@@ -393,7 +398,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
             
             try:
                 
-                if CBOR_AVAILABLE and cbor_requested:
+                if cbor_requested:
                     
                     list_of_hex_strings = cbor2.loads( base64.urlsafe_b64decode( value ) )
                     

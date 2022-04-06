@@ -344,7 +344,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _ConvertLocationToListCtrlTuples( self, location ):
         
         f_space = self._all_local_files_total_size
-        t_space = self._GetThumbnailSizeEstimate()
+        ( t_space_min, t_space_max ) = self._GetThumbnailSizeEstimates()
         
         # current
         
@@ -400,7 +400,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         p = HydrusData.ConvertFloatToPercentage
         
-        current_bytes = fp * f_space + tp * t_space
+        current_bytes = fp * f_space + tp * t_space_max
         
         current_usage = ( fp, tp )
         
@@ -479,7 +479,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        ideal_bytes = ideal_fp * f_space + ideal_tp * t_space
+        ideal_bytes = ideal_fp * f_space + ideal_tp * t_space_max
         
         ideal_usage = ( ideal_fp, ideal_tp )
         
@@ -566,7 +566,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         return all_locations
         
     
-    def _GetThumbnailSizeEstimate( self ):
+    def _GetThumbnailSizeEstimates( self ):
         
         ( t_width, t_height ) = HG.client_controller.options[ 'thumbnail_dimensions' ]
         
@@ -578,7 +578,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         our_total_thumb_size_estimate = self._all_local_files_total_num * our_thumb_size_estimate
         
-        return our_total_thumb_size_estimate
+        return ( int( our_total_thumb_size_estimate * 0.8 ), int( our_total_thumb_size_estimate * 1.4 ) )
         
     
     def _IncreaseWeight( self ):
@@ -854,11 +854,12 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_install_path_st.setText( 'install: '+HC.BASE_DIR )
         
         approx_total_client_files = self._all_local_files_total_size
-        approx_total_thumbnails = self._GetThumbnailSizeEstimate()
+        ( approx_total_thumbnails_min, approx_total_thumbnails_max ) = self._GetThumbnailSizeEstimates()
         
-        label = 'media is ' + HydrusData.ToHumanBytes( approx_total_client_files ) + ', thumbnails are estimated at ' + HydrusData.ToHumanBytes( approx_total_thumbnails ) + ':'
+        label = 'media is {}, thumbnails are estimated at {}-{}'.format( HydrusData.ToHumanBytes( approx_total_client_files ), HydrusData.ToHumanBytes( approx_total_thumbnails_min ), HydrusData.ToHumanBytes( approx_total_thumbnails_max ) )
         
         self._current_media_paths_st.setText( label )
+        self._current_media_paths_st.setToolTip( 'Precise thumbnail sizes are not tracked, so this is an estimate based on your current thumbnail dimensions.' )
         
         locations = self._GetListCtrlLocations()
         

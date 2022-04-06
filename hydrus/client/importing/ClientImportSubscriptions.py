@@ -1880,6 +1880,11 @@ class SubscriptionsManager( object ):
             
         
     
+    def GetName( self ):
+        
+        return 'subscriptions'
+        
+    
     def GetSubscriptions( self ) -> typing.List[ Subscription ]:
         
         with self._lock:

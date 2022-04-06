@@ -3,6 +3,35 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 480](https://github.com/hydrusnetwork/hydrus/releases/tag/v480)
+
+### file notes and media viewer hover windows
+* file notes are now shown on the media viewer! this is a first version, pretty ugly, and may have font layout bugs for some systems, but it works. they hang just below the top-right hover, both in the canvas background and with their own hover if you mouseover. clicking on any note will open 'edit notes' on that note
+* the duplicate filter's always-on hover _should_ slide out of the way when there are many notes
+* furthermore, I rewrote the backend of hover windows. they are now embedded into the media viewer rather than being separate frameless toolbar windows. this should relieve several problems different users had--for instance, if you click a hover, you now no longer lose focus on the main media viewer window. I hacked some of this to get it to work, but along the way I undid three other hacks, so overall it should be better. please let me know how this works for you!
+* fixed a long time hover window positioning bug where the top-right window would sometimes pop in for a frame the first time you moved the mouse to the top middle before repositioning and hiding itself again
+* removed the 'notes' icon from the top right hover window
+* refactored a bunch of canvas background code
+
+### client api
+* search_files/get_thumbnail now returns image/jpeg or image/png Content-Type. it _should_ be super fast, but let me know if it lags after 3k thumbs or something
+* you can now ask for CBOR or JSON specifically by using the 'Accept' request header, regardless of your own request Content-Type (issue #1110)
+* if you send or ask for CBOR but it is not available for that client, you now get a new 'Not Acceptable' 406 response (previously it would 500 or 200 but in JSON)
+* updated the help regarding the above and wrote some unit tests to check CBOR/JSON requests and responses
+* client api version is now 30
+
+### misc
+* added a link to 'Hyshare', at https://github.com/floogulinc/hyshare, to the Client API help. it is a neat way to share galleries with friends, just like the the old 'local booru'
+* building on last week's shift-select improvement, I tweaked it and shift-select and ctrl-select are back to not setting the preview focus. you can ctrl-click a bunch of vids in quick silence again
+* the menu on the 'file log' button is now attached to the downloader page lists and the menu when you right-click on the file log panel. you can now access these actions without having to highlight a big query
+* the same is also true of the search/check log!
+* when you select a new downloader in the gallery download page, the keyboard focus now moves immediately to the query text input box
+* tweaked the zoom locking code in the duplicate filter again. the 'don't lock that way if there is spillover' test, which is meant to stop garbage site banners from being hidden just offscreen, is much more strict. it now only cares about 10% or so spillover, assuming that with a large 'B' the spillover will be obvious. this should improve some odd zoom locking situations where the first pair change was ok and the rest were weird
+* if you exit the client before the first session loads (either it is really huge or a problem breaks/delays your boot) the client will not save any 'last/exit session' (previously, it was saving empty here, requiring inconvenient load from a backup)
+* if you have a really really huge session, the client is now more careful about not booting delayed background tasks like subscriptions until the session is in place
+* on 'migrate database', the thumbnail size estimate now has a min-max range and a tooltip to clarify that it is an estimate
+* fixed a bug in the new 'sort by file hash' pre-sort when applying system:limit
+
 ## [Version 479](https://github.com/hydrusnetwork/hydrus/releases/tag/v479)
 
 ### misc
@@ -322,31 +351,3 @@
 * when a thumbnail cannot be provided (for deleted files or many 'all known files' situations), the thumbnail cache now provides the hydrus icon stand-in instantly, no delayed waterfall
 * fixed an unusual situation where the file search could not provide a file in a tagless search when that file had no detailed file info row in the database. this seems to effect a legacy borked row or two in the new deleted file domain searches
 * removed some ancient dumper status code from thumbnail objects
-
-## [Version 469](https://github.com/hydrusnetwork/hydrus/releases/tag/v469)
-
-### misc
-* the 'search log' button and the window panel now let you delete log entries. you can delete by completion status from the menu or specifically by row in the panel (just like the file log)
-* fixed the new 'file is writable' checks for Linux/macOS, which were testing permissions overbroadly and messing with users with user-only permissions set. the code now hands off specific user/group negotiation to the OS. thanks to the maintainer of the AUR package for helping me out here (issue #1042)
-* the various places where a file's permission bits are set are also cleaned up--hydrus now makes a distinction between double-checking a file is set user-writable before deleting/overwriting vs making a file's permission bits (which were potentially messed up in the past) 'nice' for human use after export. in the latter case, which still defaults to 644 on linux/macOS, the user's umask is now applied, so it should be 600 if you prefer that
-* fixed a bug where the media viewer could have trouble initialising video when the player window instantiation was delayed (e.g. with embed button)
-
-### client api
-* added 'return_hashes' boolean parameter to GET /get_files/search_files, which makes the command return hashes instead of file ids. this is documented in the help and has a new unit test
-* client api version is now 25
-
-### multiple local file services work
-* I rewrote a lot of code this week, but it proved more complex than I expected. I also discovered I'll have to switch the pages and canvases over too before I can nicely switch the top level UI over to allow multiple search. rather than release a borked feature, I decided not to rush the final phase, so this remains boring for now! the good news is that it works well when I hack it in, so I just need to keep pushing
-* rewrote the caller side of tag autocomplete lookup to work on the new multiple file search domain
-* rewrote the main database level tag lookup code to work on the new multiple file search domain
-* certain types of complicated tag autocomplete lookup, particularly on all known tags and any client with lots of siblings, will be faster now
-* an unusual and complicated too-expansive sibling lookup on autocomplete lookups on 'all known tags' is now fixed
-
-### boring cleanup and refactoring
-* predicate counts are now managed by a new object. predicates also support 0 minimum count for x-y count ranges, which is now possible when fetching count results from non-cross-referenced file domains (for now this means searching deleted files)
-* cleaned up a ton of predicate instantiation code
-* updated autocomplete, predicate, and pred count unit tests to handle the new objects and bug fixes
-* wrote new classess to cover convenient multiple file search domain at the database level and updated a bunch of tag autocomplete search code to use it
-* misc cleanup and refactoring for file domain search code
-* purged more single file service inspection code from file search systems
-* refactored most duplicate files storage code (about 70KB) to a new client db module

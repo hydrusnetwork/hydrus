@@ -9,7 +9,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -17,7 +16,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
@@ -31,6 +29,17 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.metadata import ClientTagSorting
 
+def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache, statuses_to_remove ):
+    
+    message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' file import items? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit or what watcher/subscription may be using for future check time calculations.'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.DialogCode.Accepted:
+        
+        file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
+        
+    
 def GetRetryIgnoredParam( window ):
     
     choice_tuples = [
@@ -41,6 +50,228 @@ def GetRetryIgnoredParam( window ):
     
     return ClientGUIDialogsQuick.SelectFromListButtons( window, 'select what to retry', choice_tuples )
     
+
+# TODO: I pulled this stuff out of the button to share it with the panel. TBH anything without Qt may be better as be FSC methods
+
+def GetExportableSourcesString( file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    file_seeds = file_seed_cache.GetFileSeeds()
+    
+    sources = [ file_seed.file_seed_data for file_seed in file_seeds ]
+    
+    return os.linesep.join( sources )
+    
+def GetSourcesFromSourcesString( sources_string ):
+    
+    sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
+    
+    return sources
+    
+def ExportToClipboard( file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    payload = GetExportableSourcesString( file_seed_cache )
+    
+    HG.client_controller.pub( 'clipboard', 'text', payload )
+    
+def ExportToPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    payload = GetExportableSourcesString( file_seed_cache )
+    
+    with ClientGUITopLevelWindowsPanels.DialogNullipotent( win, 'export to png' ) as dlg:
+        
+        panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
+        
+        dlg.SetPanel( panel )
+        
+        dlg.exec()
+        
+    
+def ImportFromClipboard( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    try:
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        QW.QMessageBox.critical( win, 'Error', str(e) )
+        
+        return
+        
+    
+    sources = GetSourcesFromSourcesString( raw_text )
+    
+    try:
+        
+        ImportSources( file_seed_cache, sources )
+        
+    except:
+        
+        QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+        
+        raise
+        
+    
+def ImportFromPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    with QP.FileDialog( win, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            path = dlg.GetPath()
+            
+            try:
+                
+                payload_string = ClientSerialisable.LoadStringFromPNG( path )
+                
+                sources = GetSourcesFromSourcesString( payload_string )
+                
+                ImportSources( file_seed_cache, sources )
+                
+            except:
+                
+                QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+                
+                raise
+                
+            
+        
+    
+def ImportSources( file_seed_cache, sources ):
+    
+    if sources[0].startswith( 'http' ):
+        
+        file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_URL
+        
+    else:
+        
+        file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_HDD
+        
+    
+    file_seeds = [ ClientImportFileSeeds.FileSeed( file_seed_type, source ) for source in sources ]
+    
+    file_seed_cache.AddFileSeeds( file_seeds )
+    
+def RetryErrors( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    message = 'Are you sure you want to retry all the files that encountered errors?'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.DialogCode.Accepted:
+        
+        file_seed_cache.RetryFailed()
+        
+    
+
+def RetryIgnored( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    try:
+        
+        ignored_regex = GetRetryIgnoredParam( win )
+        
+    except HydrusExceptions.CancelledException:
+        
+        return
+        
+    
+    file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
+    
+def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, show = 'all' ):
+    
+    if show == 'all':
+        
+        hashes = file_seed_cache.GetHashes()
+        
+    elif show == 'new':
+        
+        presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        
+        hashes = file_seed_cache.GetPresentedHashes( presentation_import_options )
+        
+    
+    if len( hashes ) > 0:
+        
+        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        
+        HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+        
+    
+def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+    num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
+    num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
+    num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
+    num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
+    
+    if num_errors > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this log to reattempt all its error failures.', RetryErrors, win, file_seed_cache )
+        
+    
+    if num_vetoed > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this log to reattempt all its ignored/vetoed results.', RetryIgnored, win, file_seed_cache )
+        
+    
+    ClientGUIMenus.AppendSeparator( menu )
+    
+    if num_successful > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
+        
+    
+    if num_deleted > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this log to clear out deleted files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_DELETED, ) )
+        
+    
+    if num_errors > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_ERROR, ) )
+        
+    
+    if num_vetoed > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_VETOED, ) )
+        
+    
+    if num_skipped > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SKIPPED, ) )
+        
+    
+    ClientGUIMenus.AppendSeparator( menu )
+    
+    if num_successful > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', ShowFilesInNewPage, file_seed_cache, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', ShowFilesInNewPage, file_seed_cache )
+        
+    
+    ClientGUIMenus.AppendSeparator( menu )
+    
+    if len( file_seed_cache ) > 0:
+        
+        submenu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', ExportToClipboard, file_seed_cache )
+        ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', ExportToPNG, win, file_seed_cache )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
+        
+    
+    submenu = QW.QMenu( menu )
+    
+    ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', ImportFromClipboard, win, file_seed_cache )
+    ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', ImportFromPNG, win, file_seed_cache )
+    
+    ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
+    
+
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, controller, file_seed_cache ):
@@ -183,12 +414,16 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         selected_file_seeds = self._list_ctrl.GetData( only_selected = True )
         
+        menu = QW.QMenu()
+        
         if len( selected_file_seeds ) == 0:
             
-            raise HydrusExceptions.DataMissing()
+            PopulateFileSeedCacheMenu( self, menu, self._file_seed_cache )
+            
+            return menu
             
         
-        menu = QW.QMenu()
+        ClientGUIMenus.AppendSeparator( menu )
         
         can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
         
@@ -317,6 +552,14 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIMenus.AppendMenuItem( menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
         
         ClientGUIMenus.AppendMenuItem( menu, 'delete from list', 'Remove all the selected imports.', HydrusData.Call( self._DeleteSelected ) )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        submenu = QW.QMenu( menu )
+        
+        PopulateFileSeedCacheMenu( self, submenu, self._file_seed_cache )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'whole log' )
         
         return menu
         
@@ -509,226 +752,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-        num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
-        num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
-        num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
-        num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' failures', 'Tell this log to reattempt all its error failures.', self._RetryErrors )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this log to reattempt all its ignored/vetoed results.', self._RetryIgnored )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if num_successful > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
-            
-        
-        if num_deleted > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this log to clear out deleted files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, ) )
-            
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' file import items from the queue'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, ) )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' file import items from the queue'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_VETOED, ) )
-            
-        
-        if num_skipped > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SKIPPED, ) )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', self._ShowFilesInNewPage, show = 'new' )
-        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', self._ShowFilesInNewPage )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if len( file_seed_cache ) > 0:
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
-            
-        
-        submenu = QW.QMenu( menu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
-        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPNG )
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
-        
-    
-    def _ClearFileSeeds( self, statuses_to_remove ):
-        
-        message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' file import items? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit or what watcher/subscription may be using for future check time calculations.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            file_seed_cache = self._file_seed_cache_get_callable()
-            
-            file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
-            
-        
-    
-    def _GetExportableSourcesString( self ):
-        
-        file_seed_cache = self._file_seed_cache_get_callable()
-        
-        file_seeds = file_seed_cache.GetFileSeeds()
-        
-        sources = [ file_seed.file_seed_data for file_seed in file_seeds ]
-        
-        return os.linesep.join( sources )
-        
-    
-    def _GetSourcesFromSourcesString( self, sources_string ):
-        
-        sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
-        
-        return sources
-        
-    
-    def _ImportFromClipboard( self ):
-        
-        try:
-            
-            raw_text = HG.client_controller.GetClipboardText()
-            
-        except HydrusExceptions.DataMissing as e:
-            
-            QW.QMessageBox.critical( self, 'Error', str(e) )
-            
-            return
-            
-        
-        sources = self._GetSourcesFromSourcesString( raw_text )
-        
-        try:
-            
-            self._ImportSources( sources )
-            
-        except:
-            
-            QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
-            
-            raise
-            
-        
-    
-    def _ImportFromPNG( self ):
-        
-        with QP.FileDialog( self, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                path = dlg.GetPath()
-                
-                try:
-                    
-                    payload_string = ClientSerialisable.LoadStringFromPNG( path )
-                    
-                    sources = self._GetSourcesFromSourcesString( payload_string )
-                    
-                    self._ImportSources( sources )
-                    
-                except:
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
-                    
-                    raise
-                    
-                
-            
-        
-    
-    def _ImportSources( self, sources ):
-        
-        file_seed_cache = self._file_seed_cache_get_callable()
-        
-        if sources[0].startswith( 'http' ):
-            
-            file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_URL
-            
-        else:
-            
-            file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_HDD
-            
-        
-        file_seeds = [ ClientImportFileSeeds.FileSeed( file_seed_type, source ) for source in sources ]
-        
-        file_seed_cache.AddFileSeeds( file_seeds )
-        
-    
-    def _ExportToPNG( self ):
-        
-        payload = self._GetExportableSourcesString()
-        
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
-            
-            panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
-        
-    
-    def _ExportToClipboard( self ):
-        
-        payload = self._GetExportableSourcesString()
-        
-        HG.client_controller.pub( 'clipboard', 'text', payload )
-        
-    
-    def _RetryErrors( self ):
-        
-        message = 'Are you sure you want to retry all the files that encountered errors?'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            file_seed_cache = self._file_seed_cache_get_callable()
-            
-            file_seed_cache.RetryFailed()
-            
-        
-    
-    def _RetryIgnored( self ):
-        
-        try:
-            
-            ignored_regex = GetRetryIgnoredParam( self )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        file_seed_cache = self._file_seed_cache_get_callable()
-        
-        file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
+        PopulateFileSeedCacheMenu( self, menu, file_seed_cache )
         
     
     def _ShowFileSeedCacheFrame( self ):
@@ -778,31 +802,6 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
             panel = EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
             
             frame.SetPanel( panel )
-            
-        
-    
-    def _ShowFilesInNewPage( self, show = 'all' ):
-        
-        file_seed_cache = self._file_seed_cache_get_callable()
-        
-        if show == 'all':
-            
-            hashes = file_seed_cache.GetHashes()
-            
-        elif show == 'new':
-            
-            presentation_import_options = PresentationImportOptions.PresentationImportOptions()
-            
-            presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
-            
-            hashes = file_seed_cache.GetPresentedHashes( presentation_import_options )
-            
-        
-        if len( hashes ) > 0:
-            
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
-            
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     

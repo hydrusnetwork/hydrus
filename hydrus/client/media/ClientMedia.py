@@ -2402,7 +2402,7 @@ class MediaSingleton( Media ):
     
     def GetMime( self ): return self._media_result.GetMime()
     
-    def GetNotesManager( self ):
+    def GetNotesManager( self ) -> ClientMediaManagers.NotesManager:
         
         return self._media_result.GetNotesManager()
         

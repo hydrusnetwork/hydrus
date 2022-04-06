@@ -3638,6 +3638,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     self._notebook.NewPageQuery( default_location_context, on_deepest_notebook = True )
                     
+                    self._first_session_loaded = True
+                    
+                    self._controller.ReportFirstSessionInitialised()
+                    
                 else:
                     
                     self._notebook.LoadGUISession( default_gui_session )
@@ -3652,8 +3656,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, 'auto save session', self.AutoSaveLastSession )
                 
                 self._BootOrStopClipboardWatcherIfNeeded()
-                
-                self._controller.ReportFirstSessionLoaded()
                 
             
         
@@ -7741,6 +7743,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ReportFreshSessionLoaded( self, gui_session: ClientGUISession.GUISessionContainer ):
         
+        if not self._first_session_loaded:
+            
+            self._first_session_loaded = True
+            
+            self._controller.ReportFirstSessionInitialised()
+            
+        
         if gui_session.GetName() == CC.LAST_SESSION_SESSION_NAME:
             
             self._controller.ReportLastSessionLoaded( gui_session )
@@ -7887,18 +7896,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             #
             
-            only_changed_page_data = True
-            about_to_save = True
-            
-            session = self._notebook.GetCurrentGUISession( CC.LAST_SESSION_SESSION_NAME, only_changed_page_data, about_to_save )
-            
-            session = self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, CC.LAST_SESSION_SESSION_NAME, session )
-            
-            self._controller.SaveGUISession( session )
-            
-            session.SetName( CC.EXIT_SESSION_SESSION_NAME )
-            
-            self._controller.SaveGUISession( session )
+            if self._first_session_loaded:
+                
+                only_changed_page_data = True
+                about_to_save = True
+                
+                session = self._notebook.GetCurrentGUISession( CC.LAST_SESSION_SESSION_NAME, only_changed_page_data, about_to_save )
+                
+                session = self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, CC.LAST_SESSION_SESSION_NAME, session )
+                
+                self._controller.SaveGUISession( session )
+                
+                session.SetName( CC.EXIT_SESSION_SESSION_NAME )
+                
+                self._controller.SaveGUISession( session )
+                
             
             #
             

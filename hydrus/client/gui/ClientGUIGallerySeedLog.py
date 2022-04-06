@@ -13,7 +13,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
@@ -25,15 +24,230 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportGallerySeeds
 
+def ClearGallerySeeds( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, statuses_to_remove, gallery_type_string ):
+    
+    st_text = '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) )
+    
+    message = 'Are you sure you want to delete all the {} {} log entries? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit.'.format( st_text, gallery_type_string )
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.Accepted:
+        
+        gallery_seed_log.RemoveGallerySeedsByStatus( statuses_to_remove )
+        
+    
+def GetExportableURLsString( gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    
+    gallery_seeds = gallery_seed_log.GetGallerySeeds()
+    
+    urls = [ gallery_seed.url for gallery_seed in gallery_seeds ]
+    
+    return os.linesep.join( urls )
+    
+def GetURLsFromURLsString( urls_string ):
+    
+    urls = HydrusText.DeserialiseNewlinedTexts( urls_string )
+    
+    return urls
+    
+def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, can_generate_more_pages: bool ):
+    
+    try:
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        QW.QMessageBox.critical( win, 'Error', str(e) )
+        
+        return
+        
+    
+    urls = GetURLsFromURLsString( raw_text )
+    
+    try:
+        
+        ImportURLs( win, gallery_seed_log, urls, can_generate_more_pages )
+        
+    except:
+        
+        QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+        
+        raise
+        
+    
+def ImportFromPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, can_generate_more_pages: bool ):
+    
+    with QP.FileDialog( win, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            path = dlg.GetPath()
+            
+            try:
+                
+                payload_string = ClientSerialisable.LoadStringFromPNG( path )
+                
+                urls = GetURLsFromURLsString( payload_string )
+                
+                ImportURLs( win, gallery_seed_log, urls, can_generate_more_pages )
+                
+            except:
+                
+                QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+                
+                raise
+                
+            
+        
+    
+def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, urls, can_generate_more_pages: bool ):
+    
+    urls = HydrusData.DedupeList( urls )
+    
+    filtered_urls = [ url for url in urls if not gallery_seed_log.HasGalleryURL( url ) ]
+    
+    urls_to_add = urls
+    
+    if len( filtered_urls ) < len( urls ):
+        
+        num_urls = len( urls )
+        num_removed = num_urls - len( filtered_urls )
+        
+        message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the search log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
+        
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( win, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates', check_for_cancelled = True )
+        
+        if was_cancelled:
+            
+            return
+            
+        
+        if result == QW.QDialog.Accepted:
+            
+            urls_to_add = filtered_urls
+            
+        elif result == QW.QDialog.Rejected:
+            
+            return
+            
+        
+    
+    if can_generate_more_pages:
+        
+        message = 'Would you like these urls to only check for new files, or would you like them to also generate subsequent gallery pages, like a regular search would?'
+        
+        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( win, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added', check_for_cancelled = True )
+        
+        if was_cancelled:
+            
+            return
+            
+        
+        can_generate_more_pages = result == QW.QDialog.Rejected
+        
+    
+    gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
+    
+    gallery_seed_log.AddGallerySeeds( gallery_seeds )
+    
+def ExportToPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    
+    payload = GetExportableURLsString( gallery_seed_log )
+    
+    with ClientGUITopLevelWindowsPanels.DialogNullipotent( win, 'export to png' ) as dlg:
+        
+        panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
+        
+        dlg.SetPanel( panel )
+        
+        dlg.exec()
+        
+    
+def ExportToClipboard( gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    
+    payload = GetExportableURLsString( gallery_seed_log )
+    
+    HG.client_controller.pub( 'clipboard', 'text', payload )
+    
+def RetryErrors( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    
+    message = 'Are you sure you want to retry all the files that encountered errors?'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.Accepted:
+        
+        gallery_seed_log.RetryFailed()
+        
+    
+def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str ):
+    
+    num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
+    num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )
+    num_errors = gallery_seed_log.GetGallerySeedCount( CC.STATUS_ERROR )
+    num_skipped = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SKIPPED )
+    
+    if num_successful > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful records, reducing the size of the queue.', ClearGallerySeeds, win, gallery_seed_log, ( CC.STATUS_SUCCESSFUL_AND_NEW, ), gallery_type_string )
+        
+    
+    if num_errors > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored records, reducing the size of the queue.', ClearGallerySeeds, win, gallery_seed_log, ( CC.STATUS_ERROR, ), gallery_type_string )
+        
+    
+    if num_vetoed > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored records, reducing the size of the queue.', ClearGallerySeeds, win, gallery_seed_log, ( CC.STATUS_VETOED, ), gallery_type_string )
+        
+    
+    if num_skipped > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped records, reducing the size of the queue.', ClearGallerySeeds, win, gallery_seed_log, ( CC.STATUS_SKIPPED, ), gallery_type_string )
+        
+    
+    ClientGUIMenus.AppendSeparator( menu )
+    
+    if len( gallery_seed_log ) > 0:
+        
+        if not read_only and gallery_seed_log.CanRestartFailedSearch():
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        submenu = QW.QMenu( menu )
+
+        ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', ExportToClipboard, gallery_seed_log )
+        ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', ExportToPNG, win, gallery_seed_log )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
+        
+    
+    if not read_only:
+        
+        submenu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', ImportFromClipboard, win, gallery_seed_log, can_generate_more_pages )
+        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', ImportFromPNG, win, gallery_seed_log, can_generate_more_pages )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
+        
+    
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log ):
+    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._controller = controller
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
+        self._gallery_type_string = gallery_type_string
         self._gallery_seed_log = gallery_seed_log
         
         self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
@@ -153,13 +367,15 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         selected_gallery_seeds = self._list_ctrl.GetData( only_selected = True )
         
+        menu = QW.QMenu()
+        
         if len( selected_gallery_seeds ) == 0:
             
-            raise HydrusExceptions.DataMissing()
+            PopulateGallerySeedLogButton( self, menu, self._gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
+            
+            return menu
             
         
-        menu = QW.QMenu()
-
         ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
         ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
@@ -174,9 +390,20 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIMenus.AppendMenuItem( menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
             
             if self._can_generate_more_pages:
+                
                 ClientGUIMenus.AppendMenuItem( menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
-
+                
+            
+        
         ClientGUIMenus.AppendMenuItem( menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        submenu = QW.QMenu( menu )
+        
+        PopulateGallerySeedLogButton( self, submenu, self._gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'whole log' )
         
         return menu
         
@@ -300,7 +527,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
-    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_type_string, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
+    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
         self._controller = controller
         self._read_only = read_only
@@ -323,236 +550,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
-        num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )
-        num_errors = gallery_seed_log.GetGallerySeedCount( CC.STATUS_ERROR )
-        num_skipped = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SKIPPED )
-        
-        if num_successful > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, ) )
-            
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'failed\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_errors ) ), 'Tell this log to clear out errored records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_ERROR, ) )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'ignored\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_vetoed ) ), 'Tell this log to clear out ignored records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_VETOED, ) )
-            
-        
-        if num_skipped > 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' gallery log entries from the log'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped records, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_SKIPPED, ) )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if len( gallery_seed_log ) > 0:
-            
-            if not self._read_only and gallery_seed_log.CanRestartFailedSearch():
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-            
-            submenu = QW.QMenu( menu )
-
-            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
-            
-        
-        if not self._read_only:
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
-            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPNG )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
-            
-        
-    
-    def _ClearGallerySeeds( self, statuses_to_remove ):
-        
-        st_text = '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) )
-        
-        message = 'Are you sure you want to delete all the {} {} log entries? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit.'.format( st_text, self._gallery_type_string )
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.Accepted:
-            
-            gallery_seed_log = self._gallery_seed_log_get_callable()
-            
-            gallery_seed_log.RemoveGallerySeedsByStatus( statuses_to_remove )
-            
-        
-    
-    def _GetExportableURLsString( self ):
-        
-        gallery_seed_log = self._gallery_seed_log_get_callable()
-        
-        gallery_seeds = gallery_seed_log.GetGallerySeeds()
-        
-        urls = [ gallery_seed.url for gallery_seed in gallery_seeds ]
-        
-        return os.linesep.join( urls )
-        
-    
-    def _GetURLsFromURLsString( self, urls_string ):
-        
-        urls = HydrusText.DeserialiseNewlinedTexts( urls_string )
-        
-        return urls
-        
-    
-    def _ImportFromClipboard( self ):
-        
-        try:
-            
-            raw_text = HG.client_controller.GetClipboardText()
-            
-        except HydrusExceptions.DataMissing as e:
-            
-            QW.QMessageBox.critical( self, 'Error', str(e) )
-            
-            return
-            
-        
-        urls = self._GetURLsFromURLsString( raw_text )
-        
-        try:
-            
-            self._ImportURLs( urls )
-            
-        except:
-            
-            QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
-            
-            raise
-            
-        
-    
-    def _ImportFromPNG( self ):
-        
-        with QP.FileDialog( self, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                path = dlg.GetPath()
-                
-                try:
-                    
-                    payload_string = ClientSerialisable.LoadStringFromPNG( path )
-                    
-                    urls = self._GetURLsFromURLsString( payload_string )
-                    
-                    self._ImportURLs( urls )
-                    
-                except:
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
-                    
-                    raise
-                    
-                
-            
-        
-    
-    def _ImportURLs( self, urls ):
-        
-        gallery_seed_log = self._gallery_seed_log_get_callable()
-        
-        urls = HydrusData.DedupeList( urls )
-        
-        filtered_urls = [ url for url in urls if not gallery_seed_log.HasGalleryURL( url ) ]
-        
-        urls_to_add = urls
-        
-        if len( filtered_urls ) < len( urls ):
-            
-            num_urls = len( urls )
-            num_removed = num_urls - len( filtered_urls )
-            
-            message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the search log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
-            
-            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates', check_for_cancelled = True )
-            
-            if was_cancelled:
-                
-                return
-                
-            
-            if result == QW.QDialog.Accepted:
-                
-                urls_to_add = filtered_urls
-                
-            elif result == QW.QDialog.Rejected:
-                
-                return
-                
-            
-        
-        can_generate_more_pages = False
-        
-        if self._can_generate_more_pages:
-            
-            message = 'Would you like these urls to only check for new files, or would you like them to also generate subsequent gallery pages, like a regular search would?'
-            
-            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added', check_for_cancelled = True )
-            
-            if was_cancelled:
-                
-                return
-                
-            
-            can_generate_more_pages = result == QW.QDialog.Rejected
-            
-        
-        gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
-        
-        gallery_seed_log.AddGallerySeeds( gallery_seeds )
-        
-    
-    def _ExportToPNG( self ):
-        
-        payload = self._GetExportableURLsString()
-        
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
-            
-            panel = ClientGUISerialisable.PNGExportPanel( dlg, payload )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
-        
-    
-    def _ExportToClipboard( self ):
-        
-        payload = self._GetExportableURLsString()
-        
-        HG.client_controller.pub( 'clipboard', 'text', payload )
-        
-    
-    def _RetryErrors( self ):
-        
-        message = 'Are you sure you want to retry all the files that encountered errors?'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.Accepted:
-            
-            gallery_seed_log = self._gallery_seed_log_get_callable()
-            
-            gallery_seed_log.RetryFailed()
-            
+        PopulateGallerySeedLogButton( self, menu, gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
         
     
     def _ShowGallerySeedLogFrame( self ):
@@ -569,7 +567,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -582,7 +580,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, dupe_gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, dupe_gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -599,7 +597,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
+            panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
             
             frame.SetPanel( panel )
             
@@ -607,7 +605,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
 class GallerySeedLogStatusControl( QW.QFrame ):
     
-    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_type_string, page_key = None ):
+    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
         
         QW.QFrame.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )

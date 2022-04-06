@@ -89,6 +89,7 @@ class StreamTimeoutException( NetworkException ): pass
 class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass
+class NotAcceptable( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class BadRequestException( NetworkException ): pass
 class ConflictException( NetworkException ): pass

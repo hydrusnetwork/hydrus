@@ -1558,7 +1558,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
     
 class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ] ):
+    def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1576,6 +1576,8 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        index_to_select = 0
+        
         if len( names_to_notes ) == 0:
             
             self._AddNotePanel( 'notes', '' )
@@ -1584,7 +1586,12 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             names = sorted( names_to_notes.keys() )
             
-            for name in names:
+            for ( i, name ) in enumerate( names ):
+                
+                if name == name_to_start_on:
+                    
+                    index_to_select = i
+                    
                 
                 note = names_to_notes[ name ]
                 
@@ -1594,9 +1601,9 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        first_panel = self._notebook.widget( 0 )
+        self._notebook.setCurrentIndex( index_to_select )
         
-        self._notebook.setCurrentIndex( 0 )
+        first_panel = self._notebook.currentWidget()
         
         ClientGUIFunctions.SetFocusLater( first_panel )
         HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )

@@ -120,8 +120,8 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         return {
             'main.local_file_deletion_reasons' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );', 400 ),
-            'deferred_physical_file_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 ),
-            'deferred_physical_thumbnail_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 )
+            'main.deferred_physical_file_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 ),
+            'main.deferred_physical_thumbnail_deletes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 464 )
             
         }
         

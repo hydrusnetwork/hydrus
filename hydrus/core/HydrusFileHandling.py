@@ -19,8 +19,14 @@ from hydrus.core.networking import HydrusNetwork
 
 # Mime
 
-headers_and_mime = [
+headers_and_mime_thumbnails = [
     ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
+    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
+]
+
+headers_and_mime = list( headers_and_mime_thumbnails )
+
+headers_and_mime.extend( [
     ( ( ( 0, b'GIF87a' ), ), HC.IMAGE_GIF ),
     ( ( ( 0, b'GIF89a' ), ), HC.IMAGE_GIF ),
     ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG ),
@@ -57,7 +63,7 @@ headers_and_mime = [
     ( ( ( 0, b'RIFF' ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
     ( ( ( 8, b'AVI ' ), ), HC.VIDEO_AVI ),
     ( ( ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C' ), ), HC.UNDETERMINED_WM )
-    ]
+] )
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, clip_rect = None, percentage_in = 35 ):
     
@@ -403,6 +409,25 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
     
     return HC.APPLICATION_UNKNOWN
+    
+def GetThumbnailMime( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        bit_to_check = f.read( 256 )
+        
+    
+    for ( offsets_and_headers, mime ) in headers_and_mime_thumbnails:
+        
+        it_passes = False not in ( bit_to_check[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
+        
+        if it_passes:
+            
+            return mime
+            
+        
+    
+    return HC.APPLICATION_OCTET_STREAM
     
 def IsPNGAnimated( file_header_bytes ):
     

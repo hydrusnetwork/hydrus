@@ -24,6 +24,7 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 
 * [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support
 * [Hydrus Web](https://github.com/floogulinc/hydrus-web): a web client for hydrus (allows phone browsing of hydrus)
+* [Hyshare](https://github.com/floogulinc/hyshare): a way to share small galleries with friends--a replacement for the old 'local booru' system
 * [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
 * [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
 * [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source

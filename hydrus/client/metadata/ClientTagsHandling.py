@@ -491,6 +491,11 @@ class TagDisplayMaintenanceManager( object ):
         self.Wake()
         
     
+    def GetName( self ):
+        
+        return 'tag display maintenance'
+        
+    
     def IsShutdown( self ):
         
         return self._mainloop_finished

@@ -638,6 +638,10 @@ class HydrusResource( Resource ):
                 
                 response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
                 
+            elif isinstance( e, HydrusExceptions.NotAcceptable ):
+                
+                response_context = ResponseContext( 406, mime = default_mime, body = default_encoding( e ) )
+                
             elif isinstance( e, HydrusExceptions.ConflictException ):
                 
                 response_context = ResponseContext( 409, mime = default_mime, body = default_encoding( e ) )
