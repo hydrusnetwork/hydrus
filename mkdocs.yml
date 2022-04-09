@@ -84,7 +84,7 @@ theme:
         icon: material/toggle-switch
         name: Switch to light mode
   logo: assets/hydrus-white.svg
-  favicon: assets/hydrus-black.svg
+  favicon: assets/favicon.svg
   font: false
   features:
     - navigation.instant
