@@ -3228,6 +3228,48 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 404 )
         self.assertIn( 'test missing', text )
         
+        # no new file_ids
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        HG.test_controller.SetRead( 'media_results_from_ids', media_results )
+        
+        hashes_in_test = list( file_ids_to_hashes.values() )
+        
+        novel_hashes = [ os.urandom( 32 ) for i in range( 5 ) ]
+        
+        hashes_in_test.extend( novel_hashes )
+        
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in hashes_in_test ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        metadata = d[ 'metadata' ]
+        
+        for hash in novel_hashes:
+            
+            self.assertTrue( True in [ hash.hex() == row[ 'hash' ] for row in metadata ] )
+            
+            for row in metadata:
+                
+                if row[ 'hash' ] == hash.hex():
+                    
+                    self.assertEqual( len( row ), 2 )
+                    
+                    self.assertEqual( row[ 'file_id' ], None )
+                    
+                
+            
+        
     
     def _test_get_files( self, connection, set_up_permissions ):
         

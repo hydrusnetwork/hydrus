@@ -1623,6 +1623,8 @@ class FilesMaintenanceManager( object ):
             
             if do_export or delete_record:
                 
+                HydrusPaths.MakeSureDirectoryExists( error_dir )
+                
                 pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._controller.GetBootTime() ) )
                 
                 missing_hashes_filename = '{} missing hashes.txt'.format( pretty_timestamp )

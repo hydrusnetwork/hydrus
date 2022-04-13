@@ -864,6 +864,21 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
+            try:
+                
+                self._file_import_options.CheckReadyToImport()
+                
+            except Exception as e:
+                
+                self._file_status = str( e )
+                
+                HydrusData.ShowText( str( e ) )
+                
+                self._files_paused = True
+                
+                return False
+                
+            
             work_pending = self._file_seed_cache.WorkToDo()
             
             if not work_pending:

@@ -968,11 +968,6 @@ class ListBox( QW.QScrollArea ):
         
         self.setFont( QW.QApplication.font() )
         
-        self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
-        
-        self._widget_event_filter.EVT_LEFT_DOWN( self.EventMouseSelect )
-        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMouseSelect )
-        
     
     def __len__( self ):
         
@@ -1889,19 +1884,19 @@ class ListBox( QW.QScrollArea ):
             
         
     
+    def mousePressEvent( self, event ):
+        
+        self._HandleClick( event )
+        
+        event.accept()
+        
+    
     def mouseReleaseEvent( self, event ):
         
         self._last_drag_start_logical_index = None
         self._drag_started = False
         
         event.ignore()
-        
-    
-    def EventMouseSelect( self, event ):
-        
-        self._HandleClick( event )
-        
-        return True # was: event.ignore()
         
     
     class _InnerWidget( QW.QWidget ):
@@ -2061,8 +2056,6 @@ class ListBoxTags( ListBox ):
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
         self._UpdateBackgroundColour()
-        
-        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseMiddleClick )
         
         HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
@@ -2320,33 +2313,37 @@ class ListBoxTags( ListBox ):
         pass
         
     
-    def EventMouseMiddleClick( self, event ):
-        
-        self._HandleClick( event )
-        
-        if self.can_spawn_new_windows:
-            
-            ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
-            
-            if len( predicates ) > 0:
-                
-                shift_down = event.modifiers() & QC.Qt.ShiftModifier
-                
-                if shift_down and or_predicate is not None:
-                    
-                    predicates = ( or_predicate, )
-                    
-                
-                self._NewSearchPages( [ predicates ] )
-                
-            
-        
-    
     def contextMenuEvent( self, event ):
         
         if event.reason() == QG.QContextMenuEvent.Keyboard:
             
             self.ShowMenu()
+            
+        
+    
+    def mousePressEvent( self, event ):
+        
+        # click first
+        ListBox.mousePressEvent( self, event )
+        
+        if event.button() == QC.Qt.MiddleButton:
+            
+            if self.can_spawn_new_windows:
+                
+                ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
+                
+                if len( predicates ) > 0:
+                    
+                    shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                    
+                    if shift_down and or_predicate is not None:
+                        
+                        predicates = ( or_predicate, )
+                        
+                    
+                    self._NewSearchPages( [ predicates ] )
+                    
+                
             
         
     

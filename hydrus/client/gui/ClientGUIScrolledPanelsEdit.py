@@ -30,6 +30,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -1385,6 +1386,20 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        destination_panel = ClientGUICommon.StaticBox( self, 'import destinations' )
+        
+        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
+        
+        destination_location_context = file_import_options.GetDestinationLocationContext()
+        
+        destination_location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        self._destination_location_context = ClientGUILocation.LocationSearchContextButton( destination_panel, destination_location_context )
+        
+        self._destination_location_context.SetOnlyImportableDomainsAllowed( True )
+        
+        #
+        
         post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
         
         self._auto_archive = QW.QCheckBox( post_import_panel )
@@ -1465,6 +1480,11 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        destination_panel.Add( self._destination_location_context_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        destination_panel.Add( self._destination_location_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
         rows = []
         
         rows.append( ( 'archive all imports: ', self._auto_archive ) )
@@ -1494,12 +1514,15 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
+        
+        self._destination_location_context.locationChanged.connect( self._UpdateLocationText )
         
     
     def _ShowHelp( self ):
@@ -1529,6 +1552,26 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         QW.QMessageBox.information( self, 'Information', help_message )
         
     
+    def _UpdateLocationText( self ):
+        
+        location_context = self._destination_location_context.GetValue()
+        
+        if location_context.IsEmpty():
+            
+            self._destination_location_context_st.setText( 'This will not import anywhere! Any import queue using this File Import Options will halt!' )
+            
+            self._destination_location_context_st.setObjectName( 'HydrusWarning' )
+            
+        else:
+            
+            self._destination_location_context_st.setText( 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
+            
+            self._destination_location_context_st.setObjectName( '' )
+            
+        
+        self._destination_location_context_st.style().polish( self._destination_location_context_st )
+        
+    
     def GetValue( self ) -> FileImportOptions.FileImportOptions:
         
         exclude_deleted = self._exclude_deleted.isChecked()
@@ -1549,11 +1592,28 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         
         file_import_options = FileImportOptions.FileImportOptions()
         
+        destination_location_context = self._destination_location_context.GetValue()
+        
         file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetDestinationLocationContext( destination_location_context )
         file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         file_import_options.SetPresentationImportOptions( presentation_import_options )
         
         return file_import_options
+        
+    
+    def CheckValid( self ):
+        
+        file_import_options = self.GetValue()
+        
+        try:
+            
+            file_import_options.CheckReadyToImport()
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.VetoException( e )
+            
         
     
 class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1606,7 +1666,15 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         first_panel = self._notebook.currentWidget()
         
         ClientGUIFunctions.SetFocusLater( first_panel )
-        HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )
+        
+        if HG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
+            
+            HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )
+            
+        else:
+            
+            HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to start', first_panel.moveCursor, QG.QTextCursor.Start )
+            
         
         #
         
@@ -1624,6 +1692,8 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        
+        self._notebook.tabBarDoubleClicked.connect( self._TabBarDoubleClicked )
         
     
     def _AddNote( self ):
@@ -1689,9 +1759,12 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _EditName( self ):
+    def _EditName( self, index = None ):
         
-        index = self._notebook.currentIndex()
+        if index is None:
+            
+            index = self._notebook.currentIndex()
+            
         
         name = self._notebook.tabText( index )
         
@@ -1711,6 +1784,18 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._notebook.setTabText( index, name )
                 
+            
+        
+    
+    def _TabBarDoubleClicked( self, index: int ):
+        
+        if index == -1:
+            
+            self._AddNote()
+            
+        else:
+            
+            self._EditName( index = index )
             
         
     

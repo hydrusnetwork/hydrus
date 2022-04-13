@@ -344,6 +344,21 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
+            try:
+                
+                self._file_import_options.CheckReadyToImport()
+                
+            except Exception as e:
+                
+                self._current_action = str( e )
+                
+                HydrusData.ShowText( str( e ) )
+                
+                self._paused = True
+                
+                return False
+                
+            
             work_to_do = self._file_seed_cache.WorkToDo()
             
             if not work_to_do:
@@ -890,6 +905,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         job_key = ClientThreading.JobKey( pausable = False, cancellable = True, stop_time = stop_time )
         
         try:
+            
+            self._file_import_options.CheckReadyToImport()
             
             if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
                 

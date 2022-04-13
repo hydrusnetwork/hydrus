@@ -397,7 +397,6 @@ class Canvas( QW.QWidget ):
         HG.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
         HG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         HG.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
-        HG.client_controller.sub( self, 'ManageNotes', 'canvas_manage_notes' )
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
         HG.client_controller.sub( self, 'update', 'notify_new_colourset' )
@@ -2253,6 +2252,8 @@ class CanvasWithDetails( Canvas ):
         
         # tags on the top left
         
+        original_pen = painter.pen()
+        
         painter.setFont( QW.QApplication.font() )
         
         tags_manager = self._current_media.GetTagsManager()
@@ -2310,6 +2311,9 @@ class CanvasWithDetails( Canvas ):
             
             current_y += text_size.height()
             
+        
+        painter.setPen( original_pen )
+        
     
     def _DrawTopMiddle( self, painter: QG.QPainter ):
         
@@ -2319,6 +2323,8 @@ class CanvasWithDetails( Canvas ):
         my_height = my_size.height()
         
         # top-middle
+        
+        painter.setPen( QG.QPen( self._new_options.GetColour( CC.COLOUR_MEDIA_TEXT ) ) )
         
         current_y = 3
         
@@ -3815,7 +3821,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         self.SetMedia( self._GetPrevious( self._current_media ) )
         
     
-    def _StartSlideshow( self, interval ):
+    def _StartSlideshow( self, interval: float ):
         
         pass
         
@@ -4327,7 +4333,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         CanvasMediaListNavigable.__init__( self, parent, page_key, location_context, media_results )
         
         self._timer_slideshow_job = None
-        self._timer_slideshow_interval = 0
+        self._timer_slideshow_interval = 0.0
         
         if first_hash is None:
             
@@ -4361,7 +4367,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         elif self._timer_slideshow_interval > 0:
             
-            self._StartSlideshow( self._timer_slideshow_interval )
+            self._StartSlideshow( interval = self._timer_slideshow_interval )
             
         
     
@@ -4370,37 +4376,35 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         return self._timer_slideshow_job is not None
         
     
-    def _StartSlideshow( self, interval = None ):
+    def _StartSlideshow( self, interval: float ):
         
         self._StopSlideshow()
-        
-        if interval is None:
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    try:
-                        
-                        interval = float( dlg.GetValue() )
-                        
-                    except:
-                        
-                        return
-                        
-                    
-                else:
-                    
-                    return
-                    
-                
-            
         
         if interval > 0:
             
             self._timer_slideshow_interval = interval
             
             self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, 'slideshow', self.DoSlideshow )
+            
+        
+    
+    def _StartSlideshowCustomInterval( self ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                try:
+                    
+                    interval = float( dlg.GetValue() )
+                    
+                    self._StartSlideshow( interval )
+                    
+                except:
+                    
+                    pass
+                    
+                
             
         
     
@@ -4575,7 +4579,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenuItem( slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
             ClientGUIMenus.AppendMenuItem( slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
             ClientGUIMenus.AppendMenuItem( slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
-            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
+            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshowCustomInterval )
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             

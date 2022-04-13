@@ -171,7 +171,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsToHashes( self, hash_ids = None, hashes = None ) -> typing.Dict[ int, bytes ]:
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True ) -> typing.Dict[ int, bytes ]:
         
         if hash_ids is not None:
             
@@ -180,6 +180,11 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
             
         elif hashes is not None:
+            
+            if not create_new_hash_ids:
+                
+                hashes = [ hash for hash in hashes if self.HasHash( hash ) or self.modules_hashes.HasHash( hash ) ]
+                
             
             hash_ids_to_hashes = { self.GetHashId( hash ) : hash for hash in hashes }
             
@@ -192,6 +197,13 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         # we actually provide a backup, which we may want to automate later in mappings caches etc...
         
         return []
+        
+    
+    def HasHash( self, hash: bytes ):
+        
+        result = self._Execute( 'SELECT hash_id FROM local_hashes_cache WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        
+        return result is not None
         
     
     def HasHashId( self, hash_id: int ):

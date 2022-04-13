@@ -91,7 +91,17 @@ def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSea
         
     elif len( editable_predicates ) > 0:
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( window, 'edit predicates' ) as dlg:
+        title = 'edit predicates'
+        
+        if len( editable_predicates ) == 1:
+            
+            if list( editable_predicates )[0].GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+                
+                title = 'edit OR predicate'
+                
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( window, title ) as dlg:
             
             panel = EditPredicatesPanel( dlg, predicates )
             

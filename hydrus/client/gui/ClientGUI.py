@@ -238,13 +238,17 @@ def THREADUploadPending( service_key ):
         initial_num_pending = sum( nums_pending_for_this_service.values() )
         num_to_do = initial_num_pending
         
-        result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
+        current_ideal_weight = 100
+        
+        result = HG.client_controller.Read( 'pending', service_key, content_types_to_request, ideal_weight = current_ideal_weight )
         
         HG.client_controller.pub( 'message', job_key )
         
         no_results_found = result is None
     
         while result is not None:
+            
+            time_started_this_loop = HydrusData.GetNowPrecise()
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
             
@@ -361,7 +365,18 @@ def THREADUploadPending( service_key ):
             
             HG.client_controller.WaitUntilViewFree()
             
-            result = HG.client_controller.Read( 'pending', service_key, content_types_to_request )
+            total_time_this_loop_took = HydrusData.GetNowPrecise() - time_started_this_loop
+            
+            if total_time_this_loop_took > 0.5:
+                
+                current_ideal_weight = max( 1, int( current_ideal_weight * 0.8 ) )
+                
+            elif total_time_this_loop_took < 0.2:
+                
+                current_ideal_weight = min( 1000, int( current_ideal_weight * 1.2 ) )
+                
+            
+            result = HG.client_controller.Read( 'pending', service_key, content_types_to_request, ideal_weight = current_ideal_weight )
             
         
         finished_all_uploads = result == None
@@ -653,17 +668,18 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         else:
             
+            library_versions.append( ( 'mpv', 'not available' ) )
+            
             if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
                 
-                library_versions.append( ( 'mpv: ', 'is not currently available on macOS' ) )
+                HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1, it will try to import it. It seems your system does not have this or it failed to import. The specific error follows:' )
                 
             else:
                 
                 HydrusData.ShowText( 'If this information helps, MPV failed to import because:' )
-                HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
                 
-                library_versions.append( ( 'mpv', 'not available' ) )
-                
+            
+            HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
             
         
         library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )

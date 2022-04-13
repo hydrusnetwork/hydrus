@@ -81,6 +81,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'thumbnails', 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system', 'system', self._SystemPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'notes', 'notes', self._NotesPanel( self._listbook, self._new_options ) )
         
         #
         
@@ -1447,11 +1448,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._controls_panel = ClientGUICommon.StaticBox( self, 'controls' )
+            self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
             
             self._hide_preview = QW.QCheckBox( self._controls_panel )
+            
+            self._focus_preview_on_ctrl_click = QW.QCheckBox( self._controls_panel )
+            self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self._controls_panel )
+            self._focus_preview_on_shift_click = QW.QCheckBox( self._controls_panel )
+            self._focus_preview_on_shift_click_only_static = QW.QCheckBox( self._controls_panel )
             
             #
             
@@ -1507,6 +1513,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
             
             self._hide_preview.setChecked( HC.options[ 'hide_preview' ] )
+            
+            self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
+            self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
+            self._focus_preview_on_shift_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click' ) )
+            self._focus_preview_on_shift_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ) )
             
             #
             
@@ -1564,6 +1575,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'When switching to a page, focus its text input field (if any): ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Hide the bottom-left preview window: ', self._hide_preview ) )
+            rows.append( ( 'Focus thumbnails in the preview window on ctrl-click: ', self._focus_preview_on_ctrl_click ) )
+            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
+            rows.append( ( 'Focus thumbnails in the preview window on shift-click: ', self._focus_preview_on_shift_click ) )
+            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
             
@@ -1577,6 +1592,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
+            
+            self._UpdatePreviewCheckboxes()
+            
+            self._hide_preview.clicked.connect( self._UpdatePreviewCheckboxes )
+            self._focus_preview_on_ctrl_click.clicked.connect( self._UpdatePreviewCheckboxes )
+            self._focus_preview_on_shift_click.clicked.connect( self._UpdatePreviewCheckboxes )
+            
+        
+        def _UpdatePreviewCheckboxes( self ):
+            
+            preview_ok = not self._hide_preview.isChecked()
+            
+            self._focus_preview_on_ctrl_click.setEnabled( preview_ok )
+            self._focus_preview_on_ctrl_click_only_static.setEnabled( preview_ok )
+            self._focus_preview_on_shift_click.setEnabled( preview_ok )
+            self._focus_preview_on_shift_click_only_static.setEnabled( preview_ok )
+            
+            if preview_ok:
+                
+                self._focus_preview_on_ctrl_click_only_static.setEnabled( self._focus_preview_on_ctrl_click.isChecked() )
+                self._focus_preview_on_shift_click_only_static.setEnabled( self._focus_preview_on_shift_click.isChecked() )
+                
             
         
         def UpdateOptions( self ):
@@ -1611,6 +1648,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
             
             HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
+            
+            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click', self._focus_preview_on_ctrl_click.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click_only_static', self._focus_preview_on_ctrl_click_only_static.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_shift_click', self._focus_preview_on_shift_click.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
             
         
     
@@ -2305,6 +2347,38 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._new_options.SetMediaViewOptions( mimes_to_media_view_options )
+            
+        
+    
+    class _NotesPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self._start_note_editing_at_end = QW.QCheckBox( self )
+            self._start_note_editing_at_end.setToolTip( 'Otherwise, start with the cared at the start of the document.' )
+            
+            self._start_note_editing_at_end.setChecked( self._new_options.GetBoolean( 'start_note_editing_at_end' ) )
+            
+            vbox = QP.VBoxLayout()
+            
+            rows = []
+            
+            rows.append( ( 'Start editing notes with caret at the end of the document: ', self._start_note_editing_at_end ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'start_note_editing_at_end', self._start_note_editing_at_end.isChecked() )
             
         
     

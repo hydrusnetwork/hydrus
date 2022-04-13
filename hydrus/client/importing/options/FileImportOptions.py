@@ -268,6 +268,16 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def DoNotCheckHashesBeforeImporting( self ):
+        
+        return self._do_not_check_hashes_before_importing
+        
+    
+    def DoNotCheckKnownURLsBeforeImporting( self ):
+        
+        return self._do_not_check_known_urls_before_importing
+        
+    
     def ExcludesDeleted( self ):
         
         return self._exclude_deleted
@@ -351,6 +361,14 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
+    def CheckReadyToImport( self ) -> bool:
+        
+        if self._import_destination_location_context.IsEmpty():
+            
+            raise HydrusExceptions.FileImportBlockException( 'There is no import destination set in the File Import Options!' )
+            
+        
+    
     def SetDestinationLocationContext( self, location_context: ClientLocation.LocationContext ):
         
         self._import_destination_location_context = location_context.Duplicate()
@@ -389,16 +407,6 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def ShouldAssociateSourceURLs( self ) -> bool:
         
         return self._associate_source_urls
-        
-    
-    def DoNotCheckHashesBeforeImporting( self ):
-        
-        return self._do_not_check_hashes_before_importing
-        
-    
-    def DoNotCheckKnownURLsBeforeImporting( self ):
-        
-        return self._do_not_check_known_urls_before_importing
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS ] = FileImportOptions

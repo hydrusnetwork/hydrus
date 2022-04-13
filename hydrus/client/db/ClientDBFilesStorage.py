@@ -412,7 +412,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def FilterHashIds( self, location_context: ClientLocation.LocationContext, hash_ids ) -> set:
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             return set()
             
@@ -777,7 +777,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def GetDBLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
             

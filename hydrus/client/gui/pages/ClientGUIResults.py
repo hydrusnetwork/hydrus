@@ -875,7 +875,28 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                     
                     self._DeselectSelect( (), ( media, ) )
                     
-                    self._last_hit_media = media
+                    focus_it = False
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click' ):
+                        
+                        if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ):
+                            
+                            focus_it = media.GetDuration() is None
+                            
+                        else:
+                            
+                            focus_it = True
+                            
+                        
+                    
+                    if focus_it:
+                        
+                        self._SetFocusedMedia( media )
+                        
+                    else:
+                        
+                        self._last_hit_media = media
+                        
                     
                     self._StartShiftSelect( media )
                     
@@ -903,7 +924,28 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 self._DeselectSelect( media_to_deselect, media_to_select )
                 
-                self._last_hit_media = media
+                focus_it = False
+                
+                if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click' ):
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ):
+                        
+                        focus_it = media.GetDuration() is None
+                        
+                    else:
+                        
+                        focus_it = True
+                        
+                    
+                
+                if focus_it:
+                    
+                    self._SetFocusedMedia( media )
+                    
+                else:
+                    
+                    self._last_hit_media = media
+                    
                 
             else:
                 

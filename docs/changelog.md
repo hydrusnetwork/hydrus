@@ -3,6 +3,44 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 481](https://github.com/hydrusnetwork/hydrus/releases/tag/v481)
+
+### fixes and improvements after last week's hover and note work
+* fixed the text colour behind the top middle hover window
+* stopped clicks on the taglist and hover greyspace being duplicated up to the main canvas (this affected the archive/delete and duplicate filter shortcuts)
+* fixed the background colour of the hover windows when using non-default stylesheets
+* fixed the notes hover window--after having shown some notes--could then lurk in the top-left corner when it should have been hidden completely
+* cleaned up some old focus test logic that weas used when hovers were separate windows
+* rewrote how each note panel in the new hover is stored. a bunch of sizing and event handling code is less hacked
+* significantly improved the accuracy of the 'how high should the note window be?' calculation, so notes shouldn't spill over so much or have a bunch of greyspace below
+* right- or middle-clicking a note now hides its text. repeat on its name to restore. this should persist through an edit, although it won't be reflected in the background atm. let's see how it works as a simple way to quickly browse a whole stack of big notes
+* a new 'notes' option panel lets you choose if you want the text caret to start at the beginning or end of the document when editing
+* you can now double-click a note tab in 'edit notes' to rename the note. some styles may let you double-click in note greyspace to create a new note, but not all will handle this (yet)
+* as an experiment, all the buttons on the media viewer hover windows now do not take focus when you click them. this should let you, for instance, click a duplicate filter processing button and then use the arrow keys and space to continue to navigate. previously, clicking a button would focus it, and navigation keys would be intercepted to navigate the 'form' of the buttons on the hover window. you can still focus buttons with tab. if this affects you, let me know how this goes!
+
+### misc
+* added checkboxes to _options->gui pages_ to control whether ctrl- and shift- selects will highlight media in the preview viewer. you can choose to only do it for files with no duration if you prefer
+* the 'advanced mode' tag autocomplete dropdown now has 'OR' and 'OR*' buttons. the former opens a new empty OR search predicate in the edit dialog, the latter opens the advanced text parser as before
+* the edit OR predicate panel now starts wider and with the text box having focus
+* hydrus is now more careful about deciding whether to make a png or a jpeg thumbnail. now, only thumbnails that have an alpha channel with interesting data in it are saved to png. everything else is jpeg
+* when uploading to a repository, the client will now slow down or speed up depending on how fast things are going. previously it would work on 100 mappings at a time with a forced 0.1s wait, now it can vary between 1-1,000 weight
+* just to be clean, the current files line on the file history chart now initialises at 0 on your first file import time
+* fixed a bug in 'if file is missing, remove record' file maintenance job. if none of the files yet scanned had any urls, it could error out since the 'missing and invalid files' directory was yet to be created
+* linux users who seem to have mpv support yet are set to use the native viewer will get a one-time popup note on update this week just to let them know that mpv is stable on linux now and how to give it a go
+* the macOS App now spits out any mpv import errors when you hit _help->about_, albeit with some different text around it
+* I maybe fixed the 'hold shift to not follow a dragged page' tech for some users for whom it did not work, but maybe not
+* thanks to a user, the new website now has a darkmode-compatible hydrus favicon
+* all file import options now expose their new 'destination locations' object in a new button in the UI. you can only set one destination for now ('my files', obviously), but when we have multiple local file services, you will be able to set other/multiple destinations here. if you set 'nothing', the dialog will moan at you and stop you from ok-ing it.
+* I have updated all import queues and other importing objects in the program to pause their file work with appropriate error messages if their file import options ever has a 'nothing' destination (this could potentially happen if future after a service deletion). there are multiple layers of checks here, including at the final database level
+* misc code cleanup
+
+### client api
+* added 'create_new_file_ids' parameter to the 'file_metadata' call. this governs whether the client should make a new database entry and file_id when you ask about hashes it has never seen before. it defaults to **false**, which is a change on previous behaviour
+* added help talking about this
+* added a unit test to test this
+* added archive timestamp and hash hex sort enum definitions to the 'search_files' client api help
+* client api version is now 31
+
 ## [Version 480](https://github.com/hydrusnetwork/hydrus/releases/tag/v480)
 
 ### file notes and media viewer hover windows
@@ -317,37 +355,3 @@
 * all across the program, file viewing statistics are now tracked by type rather than a hardcoded double of preview & media viewer. it will take a moment to update the database to reflect this this week
 * cleaned up a ton of file viewing stats code
 * cleared out the last twenty or so uses of the old 'execute many select' database access routine in favour of the new lower-overhead and more query-optimisable temporary integer tables method
-
-## [Version 470](https://github.com/hydrusnetwork/hydrus/releases/tag/v470b)
-
-### multiple file services
-* I finished the conversion of all UI search to the new multiple location object. everything from back- to frontend now supports cleverer search. since searching deleted files is simple to add, users in advanced mode will now see 'deleted from...' in a new list in the tag autocomplete dropdown file domain button
-* the next step is writing a widget that allows multiple selection, and then all this should work right out of the box, and we'll be an important step closer to allowing multiple local file services
-
-### misc
-* the video parsing routine is better at detecting when a present audio track is actually silent (and hence when it should mark a video as 'no audio'). all video with audio will be requeued for a metadata reparse in the files maintenance system on update
-* fixed an error from last week when trying to create a new page from the tags (e.g. middle-clicking them) in the active search list
-* added 'audio mkv' format to the client, to represent mkvs without a video track. I think most of the time this is going to be audio track webms from youtube-dl and similar
-* added 'file relationships: set files as potential duplicates' command to the 'media actions' shortcut set
-* I expanded the 'backing up' section in 'installing and updating' help
-* I wrote an 'anti-virus' section for 'installing and updating' help, since I kept writing the same basic spiel about false positives. please feel free to point people there in future to relieve their concerns
-* improved some shutdown tests, the client and server should exit faster in some cases (e.g. when a hydrus repository network job is hanging on reconnection attempts, holding up the 'synchronise_repository' daemon shutdown)
-* the 'file was xxx at (y timestamp), which was (z time units) before this check' line in file import notes now always puts 'z time units' as that, ignoring the 'always show ISO time' setting, which was just substituting it with 'y timestamp' again. let me know if you spot other bad grammar with this setting on, I'll fix it!
-* fingers crossed, images in the LAB colourspace _should_ now normalise to sRGB with the correct whitepoint. thanks to the user who provided example test tiff images here. this now uses the new PIL-based colourspace conversion I used to make ICC profiles work, just on LAB->sRGB. as far as I understand, OpenCV uses a fixed whitepoint of D65, resulting in yellow/warm conversions for some formats, but PIL may be able to figure out if D50 is needed??? if you have some crazy LUV or YPbPr or YIQ image that shows up wrong, please send it in and I'll see what I can do!
-
-### boring rewrites and cleanup while doing file service work
-* many more UI objects now store and do file service logic using a more complicated 'location context', which can store a mix of multiple services and 'deleted from service' data. all the search code that works on this can now propagate to display:
-* the management objects behind every page now store a multiple location object, not a single file service id
-* all media panels (the thumbnail grid on a page) are now instantiated by a multiple location object, and when they serve a highlighted downloader, they now inherit that from the file import options, which in future will dictate import destinations
-* all canvases are now the same, inheriting their new location context from their parents
-* all tag lists are the same. mostly they don't care much about file domain, but when you middle-click to create new pages from the autocomplete dropdown list or active search list, it can matter, so they now propagate it along
-* the underlying medialist objects are now the same, and various delete logic (e.g. 'should we remove this thumb we just deleted?') is updated to work on complex domains
-* some duplicate lookup code now works on location context
-* renamed 'location search context' object to 'location context' since it is used all over now and put it in its own file. also wrote it some neater initialisation and meta object code
-* mr bones now gives duplicate data based on the union of all non-trash local services sans update files (another case of now supporting n services but n is fixed for the moment at 1, 'my files')
-* a bunch of places across the program that used to default to 'my files' or 'all local files' (which is everything on disk, including trash and repository update files) now default to this new union of all non-trash local media services
-* when doing page-to-page file drag and drops, the location context is now preserved (previously, the new page would always be 'my files')
-* whole heap of other cleanup in these systems
-* when a thumbnail cannot be provided (for deleted files or many 'all known files' situations), the thumbnail cache now provides the hydrus icon stand-in instantly, no delayed waterfall
-* fixed an unusual situation where the file search could not provide a file in a tagless search when that file had no detailed file info row in the database. this seems to effect a legacy borked row or two in the new deleted file domain searches
-* removed some ancient dumper status code from thumbnail objects

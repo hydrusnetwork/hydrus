@@ -467,7 +467,14 @@ def GenerateThumbnailBytesNumPy( numpy_image, mime ) -> bytes:
     
     if depth == 4:
         
-        convert = cv2.COLOR_RGBA2BGRA
+        if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
+            
+            convert = cv2.COLOR_RGBA2BGR
+            
+        else:
+            
+            convert = cv2.COLOR_RGBA2BGRA
+            
         
     else:
         
@@ -476,7 +483,9 @@ def GenerateThumbnailBytesNumPy( numpy_image, mime ) -> bytes:
     
     numpy_image = cv2.cvtColor( numpy_image, convert )
     
-    if mime == HC.IMAGE_PNG or depth == 4:
+    ( im_height, im_width, depth ) = numpy_image.shape
+    
+    if depth == 4:
         
         ext = '.png'
         

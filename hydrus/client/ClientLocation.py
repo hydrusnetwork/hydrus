@@ -137,6 +137,11 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
         
     
+    def IsEmpty( self ):
+        
+        return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 0
+        
+    
     def IsOneDomain( self ):
         
         return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
@@ -149,16 +154,11 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) in service_types ) )
         
     
-    def SearchesAnything( self ):
-        
-        return len( self.current_service_keys ) + len( self.deleted_service_keys ) > 0
-        
-    
     def ToString( self, name_method ):
         
         # this probably needs some params for 'short string' and stuff later on
         
-        if not self.SearchesAnything():
+        if self.IsEmpty():
             
             return 'nothing'
             

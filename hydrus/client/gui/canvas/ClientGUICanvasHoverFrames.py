@@ -15,6 +15,7 @@ from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIMPV
@@ -22,7 +23,6 @@ from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -254,6 +254,10 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
         
     
+
+# Note that I go setFocusPolicy( QC.Qt.TabFocus ) on all the icon buttons in the hover windows
+# this means that a user can click a button and not give it focus, allowing the arrow keys and space to still propagate up to the main canvas
+
 class CanvasHoverFrame( QW.QFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
@@ -265,13 +269,11 @@ class CanvasHoverFrame( QW.QFrame ):
         
         QW.QFrame.__init__( self, parent )
         
-        self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
-        self.setAttribute( QC.Qt.WA_DeleteOnClose )
-        
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
         self.setLineWidth( 2 )
         
-        QP.SetBackgroundColour( self, QG.QPalette().color( QG.QPalette.Background ) )
+        # We need this, or else if the QSS does not define a Widget background color (the default), these 'raised' windows are transparent lmao
+        self.setAutoFillBackground( True )
         
         self._my_canvas = my_canvas
         self._canvas_key = canvas_key
@@ -333,6 +335,16 @@ class CanvasHoverFrame( QW.QFrame ):
             
         
     
+    def _ShouldBeHidden( self ):
+        
+        return self._current_media is None or not self._my_canvas.isVisible()
+        
+    
+    def _ShouldBeShown( self ):
+        
+        return self._always_on_top
+        
+    
     def _SizeAndPosition( self, force = False ):
         
         if self.parentWidget().isVisible() or force:
@@ -363,6 +375,20 @@ class CanvasHoverFrame( QW.QFrame ):
         return False
         
     
+    def mouseReleaseEvent( self, event ):
+        
+        # we eat mouse events to stop interfering with archive/delete and duplicate filter on greyspace clicks
+        
+        event.accept()
+        
+    
+    def mousePressEvent( self, event ):
+        
+        # we eat mouse events to stop interfering with archive/delete and duplicate filter on greyspace clicks
+        
+        event.accept()
+        
+    
     def PositionIsInitialised( self ):
         
         return self._position_initialised
@@ -385,10 +411,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         current_focus_tlw = QW.QApplication.activeWindow()
         
-        focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlw, self._my_canvas.window(), through_tlws = True )
-        focus_has_right_window_type = isinstance( current_focus_tlw, ( ClientGUITopLevelWindows.FrameThatResizesWithHovers, CanvasHoverFrame ) )
-        
-        focus_is_good = focus_is_on_descendant and focus_has_right_window_type
+        focus_is_good = current_focus_tlw == self.window()
         
         mouse_is_over_self_or_child = False
         
@@ -405,111 +428,110 @@ class CanvasHoverFrame( QW.QFrame ):
                 
             
         
-        if self._always_on_top:
+        if self._ShouldBeShown():
             
             self._RaiseHover()
             
             return
             
         
-        if self._current_media is None or not self._my_canvas.isVisible():
+        if self._ShouldBeHidden():
             
             self._LowerHover()
             
-        else:
+            return
             
-            mouse_pos = self.parentWidget().mapFromGlobal( QG.QCursor.pos() )
+        
+        mouse_pos = self.parentWidget().mapFromGlobal( QG.QCursor.pos() )
+        
+        mouse_x = mouse_pos.x()
+        mouse_y = mouse_pos.y()
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        my_pos = self.pos()
+        
+        my_x = my_pos.x()
+        my_y = my_pos.y()
+        
+        ( should_resize, my_ideal_size, my_ideal_pos ) = self._GetIdealSizeAndPosition()
+        
+        my_ideal_width = my_ideal_size.width()
+        my_ideal_height = my_ideal_size.height()
+        
+        my_ideal_x = my_ideal_pos.x()
+        my_ideal_y = my_ideal_pos.y()
+        
+        if my_ideal_width == -1:
             
-            mouse_x = mouse_pos.x()
-            mouse_y = mouse_pos.y()
+            my_ideal_width = max( my_width, 50 )
             
-            my_size = self.size()
+        
+        if my_ideal_height == -1:
             
-            my_width = my_size.width()
-            my_height = my_size.height()
+            my_ideal_height = max( my_height, 50 )
             
-            my_pos = self.pos()
+        
+        in_ideal_x = my_ideal_x <= mouse_x <= my_ideal_x + my_ideal_width
+        in_ideal_y = my_ideal_y <= mouse_y <= my_ideal_y + my_ideal_height
+        
+        in_actual_x = my_x <= mouse_x <= my_x + my_width
+        in_actual_y = my_y <= mouse_y <= my_y + my_height
+        
+        # we test both ideal and actual here because setposition is not always honoured by the OS
+        # for instance, in some Linux window managers on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
+        # the reappearance shuffles the screen coordinates down a bit so the hover sits +20px y despite wanting to be lined up with the underlying fullscreen viewer
+        # wew lad
+        
+        in_position = ( in_ideal_x or in_actual_x ) and ( in_ideal_y or in_actual_y )
+        
+        menu_open = CGC.core().MenuIsOpen()
+        
+        dialog_is_open = ClientGUIFunctions.DialogIsOpen()
+        
+        mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
+        
+        # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
+        mouse_is_over_something_else_important = mouse_is_near_animation_bar
+        
+        hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
+        
+        ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open
+        ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_is_open or not hide_focus_is_good )
+        
+        def get_logic_report_string():
             
-            my_x = my_pos.x()
-            my_y = my_pos.y()
+            tuples = []
             
-            ( should_resize, my_ideal_size, my_ideal_pos ) = self._GetIdealSizeAndPosition()
+            tuples.append( ( 'mouse: ', ( mouse_x, mouse_y ) ) )
+            tuples.append( ( 'winpos: ', ( my_x, my_y ) ) )
+            tuples.append( ( 'ideal winpos: ', ( my_ideal_x, my_ideal_y ) ) )
+            tuples.append( ( 'winsize: ', ( my_width, my_height ) ) )
+            tuples.append( ( 'ideal winsize: ', ( my_ideal_width, my_ideal_height ) ) )
+            tuples.append( ( 'in position: ', in_position ) )
+            tuples.append( ( 'menu open: ', menu_open ) )
+            tuples.append( ( 'dialog open: ', dialog_is_open ) )
+            tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
+            tuples.append( ( 'focus is good: ', focus_is_good ) )
+            tuples.append( ( 'current focus tlw: ', current_focus_tlw ) )
             
-            my_ideal_width = my_ideal_size.width()
-            my_ideal_height = my_ideal_size.height()
+            message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) )
             
-            my_ideal_x = my_ideal_pos.x()
-            my_ideal_y = my_ideal_pos.y()
+            return message
             
-            if my_ideal_width == -1:
-                
-                my_ideal_width = max( my_width, 50 )
-                
+        
+        if ready_to_show:
             
-            if my_ideal_height == -1:
-                
-                my_ideal_height = max( my_height, 50 )
-                
+            self._SizeAndPosition()
             
-            in_ideal_x = my_ideal_x <= mouse_x <= my_ideal_x + my_ideal_width
-            in_ideal_y = my_ideal_y <= mouse_y <= my_ideal_y + my_ideal_height
+            self._RaiseHover()
             
-            in_actual_x = my_x <= mouse_x <= my_x + my_width
-            in_actual_y = my_y <= mouse_y <= my_y + my_height
+        elif ready_to_hide:
             
-            # we test both ideal and actual here because setposition is not always honoured by the OS
-            # for instance, in some Linux window managers on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
-            # the reappearance shuffles the screen coordinates down a bit so the hover sits +20px y despite wanting to be lined up with the underlying fullscreen viewer
-            # wew lad
-            
-            in_position = ( in_ideal_x or in_actual_x ) and ( in_ideal_y or in_actual_y )
-            
-            menu_open = CGC.core().MenuIsOpen()
-            
-            dialog_is_open = ClientGUIFunctions.DialogIsOpen()
-            
-            mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
-            
-            # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
-            mouse_is_over_something_else_important = mouse_is_near_animation_bar
-            
-            hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
-            
-            ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open
-            ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_is_open or not hide_focus_is_good )
-            
-            def get_logic_report_string():
-                
-                tuples = []
-                
-                tuples.append( ( 'mouse: ', ( mouse_x, mouse_y ) ) )
-                tuples.append( ( 'winpos: ', ( my_x, my_y ) ) )
-                tuples.append( ( 'ideal winpos: ', ( my_ideal_x, my_ideal_y ) ) )
-                tuples.append( ( 'winsize: ', ( my_width, my_height ) ) )
-                tuples.append( ( 'ideal winsize: ', ( my_ideal_width, my_ideal_height ) ) )
-                tuples.append( ( 'in position: ', in_position ) )
-                tuples.append( ( 'menu open: ', menu_open ) )
-                tuples.append( ( 'dialog open: ', dialog_is_open ) )
-                tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
-                tuples.append( ( 'focus is good: ', focus_is_good ) )
-                tuples.append( ( 'focus is on descendant: ', focus_is_on_descendant ) )
-                tuples.append( ( 'current focus tlw: ', current_focus_tlw ) )
-                
-                message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) )
-                
-                return message
-                
-            
-            if ready_to_show:
-                
-                self._SizeAndPosition()
-                
-                self._RaiseHover()
-                
-            elif ready_to_hide:
-                
-                self._LowerHover()
-                
+            self._LowerHover()
             
         
     
@@ -593,15 +615,19 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
     def _PopulateCenterButtons( self ):
         
         self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().archive, self._Archive )
+        self._archive_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( 'send to trash' )
+        self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._delete_button.setToolTip( 'delete completely' )
+        self._delete_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
         self._undelete_button.setToolTip( 'undelete' )
+        self._undelete_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -622,12 +648,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_in, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_IN_VIEWER_CENTER ), self._canvas_key )
         zoom_in.SetToolTipWithShortcuts( 'zoom in', CAC.SIMPLE_ZOOM_IN )
+        zoom_in.setFocusPolicy( QC.Qt.TabFocus )
         
         zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_out, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_OUT_VIEWER_CENTER ), self._canvas_key )
         zoom_out.SetToolTipWithShortcuts( 'zoom out', CAC.SIMPLE_ZOOM_OUT )
+        zoom_out.setFocusPolicy( QC.Qt.TabFocus )
         
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER ), self._canvas_key )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
+        zoom_switch.setFocusPolicy( QC.Qt.TabFocus )
         
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
         
@@ -638,9 +667,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().keyboard, self._ShowShortcutMenu )
         shortcuts.setToolTip( 'shortcuts' )
+        shortcuts.setFocusPolicy( QC.Qt.TabFocus )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( 'fullscreen switch' )
+        fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
         
         if HC.PLATFORM_MACOS:
             
@@ -649,15 +680,18 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         open_externally = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().open_externally, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM ), self._canvas_key )
         open_externally.SetToolTipWithShortcuts( 'open externally', CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM )
+        open_externally.setFocusPolicy( QC.Qt.TabFocus )
         
         drag_button = QW.QPushButton( self )
         drag_button.setIcon( QG.QIcon( CC.global_pixmaps().drag ) )
         drag_button.setIconSize( CC.global_pixmaps().drag.size() )
         drag_button.setToolTip( 'drag from here to export file' )
         drag_button.pressed.connect( self.EventDragButton )
+        drag_button.setFocusPolicy( QC.Qt.TabFocus )
         
         close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.setToolTip( 'close' )
+        close.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -912,6 +946,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         
         self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().previous, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK ), self._canvas_key )
         self._back_button.SetToolTipWithShortcuts( 'back', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK )
+        self._back_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -919,6 +954,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         
         self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP ), self._canvas_key )
         self._skip_button.SetToolTipWithShortcuts( 'skip', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP )
+        self._skip_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._skip_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -935,11 +971,13 @@ class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
         
         self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().previous, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_PREVIOUS ), self._canvas_key )
         self._previous_button.SetToolTipWithShortcuts( 'previous', CAC.SIMPLE_VIEW_PREVIOUS )
+        self._previous_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ), self._canvas_key )
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
+        self._next_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -952,6 +990,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
+        self._first_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -959,6 +998,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
+        self._last_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -969,6 +1009,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_FIRST ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'first', CAC.SIMPLE_VIEW_FIRST )
+        self._first_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -976,6 +1017,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_LAST ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'last', CAC.SIMPLE_VIEW_LAST )
+        self._last_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1247,6 +1289,89 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
         
     
+class NotePanel( QW.QWidget ):
+    
+    editNote = QC.Signal( str )
+    
+    def __init__( self, parent: QW.QWidget, name: str, note: str, note_visible: bool ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._name = name
+        self._note_visible = note_visible
+        
+        self._note_name = ClientGUICommon.BetterStaticText( self, label = name )
+        
+        self._note_name.setAlignment( QC.Qt.AlignHCenter )
+        self._note_name.setWordWrap( True )
+        
+        font = QG.QFont( self._note_name.font() )
+        
+        font.setBold( True )
+        
+        self._note_name.setFont( font )
+        
+        self._note_text = ClientGUICommon.BetterStaticText( self, label = note )
+        
+        self._note_text.setAlignment( QC.Qt.AlignJustify )
+        self._note_text.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._note_text.setVisible( self._note_visible )
+        
+        self.setLayout( vbox )
+        
+        self._note_name.installEventFilter( self )
+        self._note_text.installEventFilter( self )
+        
+    
+    def eventFilter( self, object, event ):
+        
+        if event.type() == QC.QEvent.MouseButtonPress:
+            
+            if event.button() == QC.Qt.LeftButton:
+                
+                self.editNote.emit( self._name )
+                
+            else:
+                
+                self._note_text.setVisible( not self._note_text.isVisible() )
+                
+                self._note_visible = self._note_text.isVisible()
+                
+            
+            return True
+            
+        
+        return QW.QWidget.eventFilter( self, object, event )
+        
+    
+    def heightForWidth( self, width: int ):
+        
+        spacing = self.layout().spacing()
+        margin = self.layout().margin()
+        
+        height = self._note_name.heightForWidth( width ) + margin * 2
+        
+        if self._note_text.isVisibleTo( self ):
+            
+            height += spacing
+            
+            height += self._note_text.heightForWidth( width ) + margin * 2
+            
+        
+        return height
+        
+    
+    def IsNoteVisible( self ) -> bool:
+        
+        return self._note_visible
+        
+    
 class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_right_hover: CanvasHoverFrameTopRight, canvas_key ):
@@ -1256,9 +1381,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         self._top_right_hover = top_right_hover
         
         self._vbox = QP.VBoxLayout()
-        self._note_panels = []
-        self._note_controls_to_name = {}
-        self._height_for_width_controls = []
+        self._names_to_note_panels = {}
         
         self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Expanding )
         
@@ -1271,14 +1394,14 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def _EditNotes( self, name ):
         
-        HG.client_controller.pub( 'canvas_manage_notes', self._canvas_key, name )
+        ClientGUIMediaActions.EditFileNotes( self, self._current_media, name_to_start_on = name )
         
     
     def _GetIdealSizeAndPosition( self ):
         
-        if len( self._note_panels ) == 0:
+        if len( self._names_to_note_panels ) == 0:
             
-            return ( False, QC.QSize( 0, 0 ), QC.QPoint( -1, -1 ) )
+            return ( True, QC.QSize( 20, 20 ), QC.QPoint( -100, -100 ) )
             
         
         parent_window = self.parentWidget().window()
@@ -1315,9 +1438,13 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         # we want to say 'with this fixed width, how tall are we?'
         # VBoxLayout doesn't support heightForWidth, but statictext does, so let's hack it
         # ideal solution here is to write a new layout that delivers heightforwidth, but lmao. maybe Qt6 will do it
-        best_guess_at_height_for_width = sum( ( child.heightForWidth( my_ideal_width ) for child in self._height_for_width_controls ) )
-        best_guess_at_height_for_width += 4 * len( self._height_for_width_controls )
-        best_guess_at_height_for_width += 4 * len( self.children() )
+        
+        spacing = self.layout().spacing()
+        margin = self.layout().margin()
+        
+        best_guess_at_height_for_width = sum( ( spacing + ( margin * 2 ) + note_panel.heightForWidth( my_ideal_width ) for note_panel in self._names_to_note_panels.values() ) ) - spacing
+        
+        best_guess_at_height_for_width += self.frameWidth() * 2
         
         #
         
@@ -1332,16 +1459,21 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def _ResetNotes( self ):
         
-        for note_panel in self._note_panels:
+        note_panel_names_with_hidden_notes = set()
+        
+        for ( name, note_panel ) in self._names_to_note_panels.items():
+            
+            if not note_panel.IsNoteVisible():
+                
+                note_panel_names_with_hidden_notes.add( name )
+                
             
             self._vbox.removeWidget( note_panel )
             
             note_panel.deleteLater()
             
         
-        self._note_panels = []
-        self._note_controls_to_name = {}
-        self._height_for_width_controls = []
+        self._names_to_note_panels = {}
         
         if self._current_media is not None and self._current_media.HasNotes():
             
@@ -1351,66 +1483,29 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
                 
                 note = names_to_notes[ name ]
                 
-                note_panel = QW.QWidget( self )
+                note_visible = name not in note_panel_names_with_hidden_notes
                 
-                note_name = ClientGUICommon.BetterStaticText( note_panel, label = name )
+                note_panel = NotePanel( self, name, note, note_visible )
                 
-                note_name.setAlignment( QC.Qt.AlignHCenter )
-                note_name.setWordWrap( True )
+                QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                font = QG.QFont( note_name.font() )
+                self._names_to_note_panels[ name ] = note_panel
                 
-                font.setBold( True )
-                
-                note_name.setFont( font )
-                
-                note_text = ClientGUICommon.BetterStaticText( note_panel, label = note )
-                
-                note_text.setAlignment( QC.Qt.AlignJustify )
-                note_text.setWordWrap( True )
-                
-                vbox = QP.VBoxLayout()
-                
-                QP.AddToLayout( vbox, note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
-                QP.AddToLayout( vbox, note_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                note_panel.setLayout( vbox )
-                
-                QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self._note_controls_to_name[ note_name ] = name
-                self._note_controls_to_name[ note_text ] = name
-                self._note_controls_to_name[ note_panel ] = name
-                
-                note_name.installEventFilter( self )
-                note_text.installEventFilter( self )
-                note_panel.installEventFilter( self )
-                
-                self._height_for_width_controls.append( note_name )
-                self._height_for_width_controls.append( note_text )
-                
-                self._note_panels.append( note_panel )
+                note_panel.editNote.connect( self._EditNotes )
                 
             
         
         self._SizeAndPosition()
         
     
-    def eventFilter( self, object, event ):
+    def _ShouldBeHidden( self ):
         
-        if event.type() == QC.QEvent.MouseButtonPress:
+        if len( self._names_to_note_panels ) == 0:
             
-            if object in self._note_controls_to_name:
-                
-                name = self._note_controls_to_name[ object ]
-                
-                self._EditNotes( name )
-                
-                return True
-                
+            return True
             
         
-        return CanvasHoverFrame.eventFilter( self, object, event )
+        return CanvasHoverFrame._ShouldBeHidden( self )
         
     
     def wheelEvent( self, event ):
@@ -1462,10 +1557,6 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
                 
                 self._ResetNotes()
                 
-            # size is not immediately updated without this
-            #self.layout().activate()
-            
-            #self._SizeAndPosition( force = True )
             
         
     
@@ -1485,6 +1576,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( 'send to trash' )
+        self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
         menu_items = []
         
@@ -1503,17 +1595,21 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close_button.setToolTip( 'close filter' )
+        close_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ), self._canvas_key )
         self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
+        self._back_a_pair.setFocusPolicy( QC.Qt.TabFocus )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pair, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ), self._canvas_key )
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
+        self._next_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, HG.client_controller.pub, 'canvas_application_command', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ), self._canvas_key )
         self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
+        self._skip_a_pair.setFocusPolicy( QC.Qt.TabFocus )
         
         command_button_vbox = QP.VBoxLayout()
         
@@ -1542,6 +1638,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             for ( label, tooltip, command ) in dupe_commands:
                 
                 command_button = ClientGUICommon.BetterButton( button_panel, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
+                command_button.setFocusPolicy( QC.Qt.TabFocus )
                 
                 command_button.SetToolTipWithShortcuts( tooltip, command.GetSimpleAction() )
                 

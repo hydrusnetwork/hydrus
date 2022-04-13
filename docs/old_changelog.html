@@ -33,6 +33,44 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_481"><a href="#version_481">version 481</a></h3></li>
+				<ul>
+					<li>fixes and improvements after last week's hover and note work:</li>
+					<li>fixed the text colour behind the top middle hover window</li>
+					<li>stopped clicks on the taglist and hover greyspace being duplicated up to the main canvas (this affected the archive/delete and duplicate filter shortcuts)</li>
+					<li>fixed the background colour of the hover windows when using non-default stylesheets</li>
+					<li>fixed the notes hover window--after having shown some notes--could then lurk in the top-left corner when it should have been hidden completely</li>
+					<li>cleaned up some old focus test logic that weas used when hovers were separate windows</li>
+					<li>rewrote how each note panel in the new hover is stored. a bunch of sizing and event handling code is less hacked</li>
+					<li>significantly improved the accuracy of the 'how high should the note window be?' calculation, so notes shouldn't spill over so much or have a bunch of greyspace below</li>
+					<li>right- or middle-clicking a note now hides its text. repeat on its name to restore. this should persist through an edit, although it won't be reflected in the background atm. let's see how it works as a simple way to quickly browse a whole stack of big notes</li>
+					<li>a new 'notes' option panel lets you choose if you want the text caret to start at the beginning or end of the document when editing</li>
+					<li>you can now double-click a note tab in 'edit notes' to rename the note. some styles may let you double-click in note greyspace to create a new note, but not all will handle this (yet)</li>
+					<li>as an experiment, all the buttons on the media viewer hover windows now do not take focus when you click them. this should let you, for instance, click a duplicate filter processing button and then use the arrow keys and space to continue to navigate. previously, clicking a button would focus it, and navigation keys would be intercepted to navigate the 'form' of the buttons on the hover window. you can still focus buttons with tab. if this affects you, let me know how this goes!</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>added checkboxes to _options->gui pages_ to control whether ctrl- and shift- selects will highlight media in the preview viewer. you can choose to only do it for files with no duration if you prefer</li>
+					<li>the 'advanced mode' tag autocomplete dropdown now has 'OR' and 'OR*' buttons. the former opens a new empty OR search predicate in the edit dialog, the latter opens the advanced text parser as before</li>
+					<li>the edit OR predicate panel now starts wider and with the text box having focus</li>
+					<li>hydrus is now more careful about deciding whether to make a png or a jpeg thumbnail. now, only thumbnails that have an alpha channel with interesting data in it are saved to png. everything else is jpeg</li>
+					<li>when uploading to a repository, the client will now slow down or speed up depending on how fast things are going. previously it would work on 100 mappings at a time with a forced 0.1s wait, now it can vary between 1-1,000 weight</li>
+					<li>just to be clean, the current files line on the file history chart now initialises at 0 on your first file import time</li>
+					<li>fixed a bug in 'if file is missing, remove record' file maintenance job. if none of the files yet scanned had any urls, it could error out since the 'missing and invalid files' directory was yet to be created</li>
+					<li>linux users who seem to have mpv support yet are set to use the native viewer will get a one-time popup note on update this week just to let them know that mpv is stable on linux now and how to give it a go</li>
+					<li>the macOS App now spits out any mpv import errors when you hit _help->about_, albeit with some different text around it</li>
+					<li>I maybe fixed the 'hold shift to not follow a dragged page' tech for some users for whom it did not work, but maybe not</li>
+					<li>thanks to a user, the new website now has a darkmode-compatible hydrus favicon</li>
+					<li>all file import options now expose their new 'destination locations' object in a new button in the UI. you can only set one destination for now ('my files', obviously), but when we have multiple local file services, you will be able to set other/multiple destinations here. if you set 'nothing', the dialog will moan at you and stop you from ok-ing it.</li>
+					<li>I have updated all import queues and other importing objects in the program to pause their file work with appropriate error messages if their file import options ever has a 'nothing' destination (this could potentially happen if future after a service deletion). there are multiple layers of checks here, including at the final database level</li>
+					<li>misc code cleanup</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>added 'create_new_file_ids' parameter to the 'file_metadata' call. this governs whether the client should make a new database entry and file_id when you ask about hashes it has never seen before. it defaults to **false**, which is a change on previous behaviour</li>
+					<li>added help talking about this</li>
+					<li>added a unit test to test this</li>
+					<li>added archive timestamp and hash hex sort enum definitions to the 'search_files' client api help</li>
+					<li>client api version is now 31</li>
+				</ul>
 				<li><h3 id="version_480"><a href="#version_480">version 480</a></h3></li>
 				<ul>
 					<li>file notes and media viewer hover windows:</li>

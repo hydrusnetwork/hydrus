@@ -1582,6 +1582,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     self._SyncQueries( job_key )
                     
                 
+                self._file_import_options.CheckReadyToImport()
+                
                 self._WorkOnQueriesFiles( job_key )
                 
             except HydrusExceptions.NetworkException as e:

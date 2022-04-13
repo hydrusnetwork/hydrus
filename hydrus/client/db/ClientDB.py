@@ -3289,7 +3289,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # returns hashes in order, to be nice to UI
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             return []
             
@@ -4015,6 +4015,9 @@ class DB( HydrusDB.HydrusDB ):
         current_file_history = []
         
         if len( combined_timestamps_with_delta ) > 0:
+            
+            # set 0 on first file import time
+            current_file_history.append( ( combined_timestamps_with_delta[0][0], 0 ) )
             
             if len( combined_timestamps_with_delta ) < 2:
                 
@@ -4895,7 +4898,7 @@ class DB( HydrusDB.HydrusDB ):
         include_current_tags = tag_search_context.include_current_tags
         include_pending_tags = tag_search_context.include_pending_tags
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             return set()
             
@@ -6578,7 +6581,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, namespace_wildcard = None, hash_ids_table_name = None, job_key = None ):
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             return set()
             
@@ -6703,7 +6706,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
-        if not location_context.SearchesAnything():
+        if location_context.IsEmpty():
             
             return set()
             
@@ -7351,7 +7354,7 @@ class DB( HydrusDB.HydrusDB ):
         return options
         
     
-    def _GetPending( self, service_key, content_types ):
+    def _GetPending( self, service_key, content_types, ideal_weight = 100 ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
@@ -7373,7 +7376,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( service_id )
                         
-                        pending_dict = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT 100;' ) )
+                        pending_dict = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT ?;', ( ideal_weight, ) ) )
                         
                         pending_mapping_ids = list( pending_dict.items() )
                         
@@ -7407,7 +7410,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_PETITION ):
                         
-                        petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._Execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT 100;' ) ] )
+                        petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._Execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT ?;', ( ideal_weight, ) ) ] )
                         
                         petitioned_mapping_ids = list( petitioned_dict.items() )
                         
@@ -7464,7 +7467,7 @@ class DB( HydrusDB.HydrusDB ):
                             client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
                             
                         
-                        petitioned = self._Execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
+                        petitioned = self._Execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED, ideal_weight ) ).fetchall()
                         
                         for ( child_tag_id, parent_tag_id, reason_id ) in petitioned:
                             
@@ -7484,7 +7487,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                         
-                        pending = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
+                        pending = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PENDING, ideal_weight ) ).fetchall()
                         
                         for ( bad_tag_id, good_tag_id, reason_id ) in pending:
                             
@@ -7498,7 +7501,7 @@ class DB( HydrusDB.HydrusDB ):
                             client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
                             
                         
-                        petitioned = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchall()
+                        petitioned = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED, ideal_weight ) ).fetchall()
                         
                         for ( bad_tag_id, good_tag_id, reason_id ) in petitioned:
                             
@@ -8637,6 +8640,14 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.ShowText( 'File import job starting db job' )
             
         
+        file_import_options = file_import_job.GetFileImportOptions()
+        
+        destination_location_context = file_import_options.GetDestinationLocationContext()
+        
+        destination_location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
+        
+        file_import_options.CheckReadyToImport()
+        
         hash = file_import_job.GetHash()
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
@@ -8711,26 +8722,9 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            file_import_options = file_import_job.GetFileImportOptions()
-            
             file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
             
             now = HydrusData.GetNow()
-            
-            destination_location_context = file_import_options.GetDestinationLocationContext()
-            
-            destination_location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
-            
-            if not destination_location_context.IncludesCurrent():
-                
-                service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
-                
-                service_id = min( service_ids )
-                
-                service_key = self.modules_services.GetService( service_id ).GetServiceKey()
-                
-                destination_location_context = ClientLocation.LocationContext( current_service_keys = ( service_key, ) )
-                
             
             for destination_file_service_key in destination_location_context.current_service_keys:
                 
@@ -13902,6 +13896,42 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Some webp regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 480:
+            
+            try:
+                
+                from hydrus.client.gui import ClientGUIMPV
+                
+                if ClientGUIMPV.MPV_IS_AVAILABLE and HC.PLATFORM_LINUX:
+                    
+                    new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                    
+                    show_message = False
+                    
+                    for mime in ( HC.IMAGE_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
+                        
+                        ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( mime )
+                        
+                        if media_show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
+                            
+                            show_message = True
+                            
+                        
+                    
+                    if show_message:
+                        
+                        message = 'Hey, you are a Linux user and seem to have MPV support but you are not set to use MPV for one or more filetypes. If you know all about this, no worries, ignore this message. But if you are a long-time Linux user, you may have been reverted to the native hydrus renderer many releases ago due to stability worries. If you did not know hydrus supports audio now, please check the filetype options under _options->media_ and give mpv a go!'
+                        
+                        self.pub_initial_message( message )
+                        
+                    
+                
+            except:
+                
+                pass
                 
             
         

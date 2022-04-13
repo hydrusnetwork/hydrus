@@ -1027,7 +1027,8 @@ class MediaContainer( QW.QWidget ):
         
         self._controls_bar = QW.QWidget( self )
         
-        QP.SetBackgroundColour( self._controls_bar, QG.QPalette().color( QG.QPalette.Shadow ) )
+        # We need this to force-fill some blanks at times
+        self.setAutoFillBackground( True )
         
         self._animation_bar = AnimationBar( self._controls_bar )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self._controls_bar, self._canvas_type, direction = 'up' )

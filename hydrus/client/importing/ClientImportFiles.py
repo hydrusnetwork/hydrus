@@ -180,6 +180,8 @@ class FileImportJob( object ):
                     status_hook( 'importing to database' )
                     
                 
+                self._file_import_options.CheckReadyToImport()
+                
                 self._post_import_file_status = HG.client_controller.WriteSynchronous( 'import_file', self )
                 
             else:
@@ -443,4 +445,3 @@ class FileImportJob( object ):
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         
-    

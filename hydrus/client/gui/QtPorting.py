@@ -869,7 +869,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                     page_key = source_notebook.GetPageKey()
                     
                 
-                HG.client_controller.gui.ShowPage( page_key )
+                CallAfter( HG.client_controller.gui.ShowPage, page_key )
                 
             
         

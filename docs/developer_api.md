@@ -1369,24 +1369,26 @@ file\_sort\_asc is 'true' for ascending, and 'false' for descending. The default
 
 file\_sort\_type is by default _import time_. It is an integer according to the following enum, and I have written the semantic (asc/desc) meaning for each type after:
 
-*   0 - file size (smallest first/largest first)
-*   1 - duration (shortest first/longest first)
-*   2 - import time (oldest first/newest first)
-*   3 - filetype (N/A)
-*   4 - random (N/A)
-*   5 - width (slimmest first/widest first)
-*   6 - height (shortest first/tallest first)
-*   7 - ratio (tallest first/widest first)
-*   8 - number of pixels (ascending/descending)
-*   9 - number of tags (on the current tag domain) (ascending/descending)
-*   10 - number of media views (ascending/descending)
-*   11 - total media viewtime (ascending/descending)
-*   12 - approximate bitrate (smallest first/largest first)
-*   13 - has audio (audio first/silent first)
-*   14 - modified time (oldest first/newest first)
-*   15 - framerate (slowest first/fastest first)
-*   16 - number of frames (smallest first/largest first)
-*   18 - last viewed time (oldest first/newest first)
+* 0 - file size (smallest first/largest first)
+* 1 - duration (shortest first/longest first)
+* 2 - import time (oldest first/newest first)
+* 3 - filetype (N/A)
+* 4 - random (N/A)
+* 5 - width (slimmest first/widest first)
+* 6 - height (shortest first/tallest first)
+* 7 - ratio (tallest first/widest first)
+* 8 - number of pixels (ascending/descending)
+* 9 - number of tags (on the current tag domain) (ascending/descending)
+* 10 - number of media views (ascending/descending)
+* 11 - total media viewtime (ascending/descending)
+* 12 - approximate bitrate (smallest first/largest first)
+* 13 - has audio (audio first/silent first)
+* 14 - modified time (oldest first/newest first)
+* 15 - framerate (slowest first/fastest first)
+* 16 - number of frames (smallest first/largest first)
+* 18 - last viewed time (oldest first/newest first)
+* 19 - archive timestamp (oldest first/newest first)
+* 20 - hash hex (N/A)
 
 Response:
 :   The full list of numerical file ids that match the search.
@@ -1427,6 +1429,7 @@ Arguments (in percent-encoded JSON):
     *   `file_ids`: (selective, a list of numerical file ids)
     *   `hash`: (selective, a hexadecimal SHA256 hash)
     *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   `create_new_file_ids`: true or false (optional if asking with hash(es), defaulting to false)
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
@@ -1624,6 +1627,23 @@ The tag structure is duplicated for both `name` and `key`. The use of `name` is 
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
 While `service_XXX_to_statuses_to_tags` represent the actual tags stored on the database for a file, the <code>service_XXX_to_statuses_to_<i>display</i>_tags</code> structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with `service_keys_to_statuses_to_tags`. If you want to render to the user, use `service_keys_to_statuses_to_displayed_tags`.
+
+If you ask with hashes rather than file_ids, hydrus will, by default, only return results when it has seen those hashes before. This is to stop the client making thousands of new file_id records in its database if you perform a scanning operation. If you ask about a hash the client has never encountered before--for which there is no file_id--you will get this style of result:
+
+```json title="Missing file_id example"
+{
+    "metadata": [
+        {
+            "file_id": null,
+            "hash": "766da61f81323629f982bc1b71b5c1f9bba3f3ed61caf99906f7f26881c3ae93"
+        }
+    ]
+}
+```
+
+You can change this behaviour with `create_new_file_ids=true`, but bear in mind you will get a fairly 'empty' metadata result with lots of 'null' lines, so this is only useful for gathering the numerical ids for later Client API work.
+
+If you ask about any file_ids that do not exist, you'll get 404.
 
 If you set `only_return_basic_information=true`, this will be much faster for first-time requests than the full metadata result, but it will be slower for repeat requests. The full metadata object is cached after first fetch, the limited file info object is not.
 

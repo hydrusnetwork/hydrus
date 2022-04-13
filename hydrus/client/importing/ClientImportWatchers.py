@@ -1695,6 +1695,19 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
+            try:
+                
+                self._file_import_options.CheckReadyToImport()
+                
+            except Exception as e:
+                
+                self._file_status = str( e )
+                
+                HydrusData.ShowText( str( e ) )
+                
+                return False
+                
+            
             work_to_do = self._file_seed_cache.WorkToDo()
             
             if not work_to_do:

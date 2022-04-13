@@ -56,7 +56,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -2269,69 +2269,71 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
+        missing_hashes = set()
+        
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
         only_return_basic_information = request.parsed_request_args.GetValue( 'only_return_basic_information', bool, default_value = False )
         hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
+        create_new_file_ids = request.parsed_request_args.GetValue( 'create_new_file_ids', bool, default_value = False )
+        
+        if 'file_ids' in request.parsed_request_args or 'file_id' in request.parsed_request_args:
+            
+            if 'file_ids' in request.parsed_request_args:
+                
+                file_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+            
+            else:
+                
+                file_ids = [ request.parsed_request_args.GetValue( 'file_id', int ) ]
+            
+            request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
+            
+        elif 'hashes' in request.parsed_request_args or 'hash' in request.parsed_request_args:
+            
+            request.client_api_permissions.CheckCanSeeAllFiles()
+            
+            if 'hashes' in request.parsed_request_args:
+                
+                hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+            
+            else:
+                
+                hashes = [ request.parsed_request_args.GetValue( 'hash', bytes ) ]
+                
+            
+            hashes = HydrusData.DedupeList( hashes )
+            
+            CheckHashLength( hashes )
+            
+            file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hashes = hashes, create_new_hash_ids = create_new_file_ids )
+            
+            file_ids = set( file_ids_to_hashes.keys() )
+            
+            if len( file_ids_to_hashes ) < len( hashes ):
+                
+                missing_hashes = set( hashes ).difference( file_ids_to_hashes.values() )
+                
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'Please include a file_ids or hashes parameter!' )
+            
         
         try:
             
-            if 'file_ids' in request.parsed_request_args or 'file_id' in request.parsed_request_args:
+            if only_return_identifiers:
                 
-                if 'file_ids' in request.parsed_request_args:
-                    
-                    file_ids = request.parsed_request_args.GetValue( 'file_ids', list, expected_list_type = int )
+                file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = file_ids )
                 
-                else:
-                    
-                    file_ids = [ request.parsed_request_args.GetValue( 'file_id', int ) ]
+            elif only_return_basic_information:
                 
-                request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
-                
-                if only_return_identifiers:
-                    
-                    file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = file_ids )
-                    
-                elif only_return_basic_information:
-                    
-                    file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', file_ids, sorted = True )
-                    
-                else:
-                    
-                    media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids, sorted = True )
-                    
-                
-            elif 'hashes' in request.parsed_request_args or 'hash' in request.parsed_request_args:
-                
-                request.client_api_permissions.CheckCanSeeAllFiles()
-                
-                if 'hashes' in request.parsed_request_args:
-                    
-                    hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
-                
-                else:
-                    
-                    hashes = [ request.parsed_request_args.GetValue( 'hash', bytes ) ]
-                
-                CheckHashLength( hashes )
-                
-                if only_return_identifiers:
-                    
-                    file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hashes = hashes )
-                    
-                elif only_return_basic_information:
-                    
-                    file_info_managers = HG.client_controller.Read( 'file_info_managers', hashes, sorted = True )
-                    
-                else:
-                    
-                    media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
-                    
+                file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', file_ids, sorted = True )
                 
             else:
                 
-                raise HydrusExceptions.BadRequestException( 'Please include a file_ids or hashes parameter!' )
+                media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids, sorted = True )
                 
             
         except HydrusExceptions.DataMissing as e:
@@ -2342,6 +2344,16 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         body_dict = {}
         
         metadata = []
+        
+        for hash in missing_hashes:
+            
+            metadata_row = {
+                'file_id' : None,
+                'hash' : hash.hex()
+            }
+            
+            metadata.append( metadata_row )
+            
         
         if only_return_identifiers:
             

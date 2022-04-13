@@ -630,6 +630,21 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
+            try:
+                
+                self._file_import_options.CheckReadyToImport()
+                
+            except Exception as e:
+                
+                self._current_action = str( e )
+                
+                HydrusData.ShowText( str( e ) )
+                
+                self._files_paused = True
+                
+                return False
+                
+            
             work_to_do = self._file_seed_cache.WorkToDo()
             
             if not work_to_do:
@@ -1208,6 +1223,19 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             files_paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
             
             if files_paused:
+                
+                return False
+                
+            
+            try:
+                
+                self._file_import_options.CheckReadyToImport()
+                
+            except Exception as e:
+                
+                self._paused = True
+                
+                HydrusData.ShowText( str( e ) )
                 
                 return False
                 
