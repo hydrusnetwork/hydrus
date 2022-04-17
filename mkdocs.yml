@@ -11,6 +11,7 @@ nav:
     - gettingStartedOverview.md
     - getting_started_installing.md
     - getting_started_files.md
+    - searching_and_sorting.md
     - getting_started_tags.md
     - getting_started_downloading.md
     - getting_started_ratings.md
@@ -19,7 +20,6 @@ nav:
       - PTR.md
       - petitionPractices.md
     - Next Steps:
-      - getting_started_searching.md
       - getting_started_exporting.md
       - adding_new_downloaders.md
       - getting_started_subscriptions.md
