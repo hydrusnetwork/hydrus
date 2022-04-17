@@ -40,21 +40,32 @@ Note that this relationship implies that B is in some way 'better' than A.
 
 ## ok, I understand; now confuse me { id="more_complicated" }
 
-This relationship is transitive, which means as well as saying A->B, you can also say B->C, which implies A->C and B->C.
+This relationship is transitive, which means as well as saying `A->B`, you can also say `B->C`, which implies `A->C` and `B->C`.
 
-![](images/tag_siblings_usa.png)
+``` mermaid
+graph LR
+  A[murrikkka] --> B[united states] --> C[united states of america];
+```
 
-You can also have an A->C and B->C that does not include A->B.
+You can also have an `A->C` and `B->C` that does not include `A->B`.
 
-![](images/tag_siblings_what_is_a_man.png)
+```mermaid
+graph LR
+  boy --> male
+  man --> male
+```
 
 The outcome of these two arrangements is the same (everything ends up as C), but the underlying semantics are a little different if you ever want to edit them.
 
 Many complicated arrangements are possible:
 
-![](images/tag_siblings_yo_dawg.png)
+```mermaid
+graph LR
+  A[Calvin Broadus] --> B[snoop doggy dogg] --> C[snoop dogg] --> D[snoop lion]
+  E[dj snoopadelic] --> D
+```
 
-Note that if you say A->B, you cannot say A->C; the left-hand side can only go to one. The right-hand side can receive many. The client will stop you from constructing loops.
+Note that if you say `A->B`, you cannot say `A->C`; the left-hand side can only go to one. The right-hand side can receive many. The client will stop you from constructing loops.
 
 ## how you do it { id="how_to_do_it" }
 
