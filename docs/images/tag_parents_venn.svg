@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 384 274" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;">
+    <g id="rect2985" transform="matrix(1,0,0,1,-10.9769,-13.7905)">
+        <rect x="15.1" y="17.914" width="374.871" height="264.817" style="fill:none;stroke:rgb(0,29,0);stroke-width:2px;"/>
+    </g>
+    <g id="path2987" transform="matrix(0.755812,0,0,0.755492,96.8866,-8.30532)">
+        <path d="M342.442,191.691L342.442,191.733C342.442,272.64 275.866,339.216 194.959,339.216C114.053,339.216 47.477,272.64 47.477,191.733L47.477,191.691C47.477,110.785 114.053,44.209 194.959,44.209C275.866,44.209 342.442,110.785 342.442,191.691Z" style="fill:rgb(0,255,0);fill-opacity:0.24;fill-rule:nonzero;stroke:rgb(0,29,0);stroke-width:2.65px;"/>
+    </g>
+    <g id="path2989" transform="matrix(0.755812,0,0,0.755492,82.7621,-21.6607)">
+        <path d="M237.386,169.481L237.386,169.497C237.386,207.734 205.922,239.198 167.685,239.198C129.449,239.198 97.985,207.734 97.985,169.497L97.985,169.481C97.985,131.244 129.449,99.78 167.685,99.78C205.922,99.78 237.386,131.244 237.386,169.481Z" style="fill:rgb(0,255,255);fill-opacity:0.24;fill-rule:nonzero;stroke:rgb(0,29,0);stroke-width:2.65px;"/>
+    </g>
+    <g id="path2991" transform="matrix(0.755812,0,0,0.755492,84.2891,-23.187)">
+        <path d="M173.746,157.862L173.746,157.882C173.746,171.459 162.574,182.631 148.997,182.631C135.421,182.631 124.249,171.459 124.249,157.882L124.249,157.862C124.249,144.285 135.421,133.113 148.997,133.113C162.574,133.113 173.746,144.285 173.746,157.862Z" style="fill:rgb(255,0,255);fill-opacity:0.24;fill-rule:nonzero;stroke:rgb(0,29,0);stroke-width:2.65px;"/>
+    </g>
+    <g transform="matrix(1.00021,0,0,0.999789,32.3721,93.4131)">
+        <g id="text3761">
+            <text x="0px" y="0px" style="font-family:'ArialNarrow', 'Arial', sans-serif;font-stretch:condensed;font-size:13.602px;">ak-47</text>
+        </g>
+    </g>
+    <g transform="matrix(1.00021,0,0,0.999789,15.5754,130.808)">
+        <g id="text3765">
+            <text x="0px" y="0px" style="font-family:'ArialNarrow', 'Arial', sans-serif;font-stretch:condensed;font-size:13.602px;">assault riﬂe</text>
+        </g>
+    </g>
+    <g transform="matrix(1.00021,0,0,0.999789,24.7372,174.308)">
+        <g id="text3769">
+            <text x="0px" y="0px" style="font-family:'ArialNarrow', 'Arial', sans-serif;font-stretch:condensed;font-size:13.602px;">ﬁrearm</text>
+        </g>
+    </g>
+    <g id="text3773" transform="matrix(1.00021,0,0,0.999789,-10.9769,-13.7905)">
+        <g transform="matrix(1,0,0,1,20.44,256.074)">
+            <text x="0px" y="0px" style="font-family:'ArialNarrow', 'Arial', sans-serif;font-stretch:condensed;font-size:13.602px;">all ak-47s are assault riﬂes</text>
+        </g>
+        <g transform="matrix(1,0,0,1,20.44,273.077)">
+            <text x="0px" y="0px" style="font-family:'ArialNarrow', 'Arial', sans-serif;font-stretch:condensed;font-size:13.602px;">all assault riﬂes are ﬁrearms</text>
+        </g>
+    </g>
+    <g id="path3779" transform="matrix(1,0,0,1,-10.9769,-13.7905)">
+        <path d="M202.154,101.861L84.577,101.861" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:1px;"/>
+    </g>
+    <g id="path3781" transform="matrix(1,0,0,1,-10.9769,-13.7905)">
+        <path d="M187.648,140.783L100.61,140.783" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:1px;"/>
+    </g>
+    <g id="path3783" transform="matrix(1,0,0,1,-10.9769,-13.7905)">
+        <path d="M175.432,185.046L81.523,185.046" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:1px;"/>
+    </g>
+</svg>

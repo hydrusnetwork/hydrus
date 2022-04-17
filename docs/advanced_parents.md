@@ -10,7 +10,7 @@ Tags often fall into certain heirarchies. Certain tags _always_ imply certain ot
 
 For example, whenever you tag a file with _ak-47_, you probably also want to tag it _assault rifle_, and maybe even _firearm_ as well.
 
-![](images/tag_parents_venn.png)
+![](images/tag_parents_venn.svg)
 
 Another time, you might tag a file _character:eddard stark_, and then also have to type in _house stark_ and then _series:game of thrones_. (you might also think _series:game of thrones_ should actually be _series:a song of ice and fire_, but that is an issue for [siblings](advanced_siblings.md))
 
