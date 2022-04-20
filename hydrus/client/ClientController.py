@@ -763,7 +763,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.MaintainDB( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
         
-        if not self.options[ 'pause_repo_sync' ]:
+        if not self.new_options.GetBoolean( 'pause_repo_sync' ):
             
             services = self.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
             
@@ -2026,7 +2026,7 @@ class Controller( HydrusController.HydrusController ):
             return
             
         
-        if not self.options[ 'pause_repo_sync' ]:
+        if not self.new_options.GetBoolean( 'pause_repo_sync' ):
             
             services = self.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
             
@@ -2037,7 +2037,7 @@ class Controller( HydrusController.HydrusController ):
                     return
                     
                 
-                if self.options[ 'pause_repo_sync' ]:
+                if self.new_options.GetBoolean( 'pause_repo_sync' ):
                     
                     return
                     

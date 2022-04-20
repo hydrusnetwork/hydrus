@@ -2359,7 +2359,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = new_options
             
             self._start_note_editing_at_end = QW.QCheckBox( self )
-            self._start_note_editing_at_end.setToolTip( 'Otherwise, start with the cared at the start of the document.' )
+            self._start_note_editing_at_end.setToolTip( 'Otherwise, start with the caret at the start of the document.' )
             
             self._start_note_editing_at_end.setChecked( self._new_options.GetBoolean( 'start_note_editing_at_end' ) )
             
@@ -2738,7 +2738,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache' )
             
-            self._thumbnail_cache_size = ClientGUICommon.BetterSpinBox( thumbnail_cache_panel, min=5, max=3000 )
+            self._thumbnail_cache_size = ClientGUIControls.BytesControl( thumbnail_cache_panel )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
             
             self._estimated_number_thumbnails = QW.QLabel( '', thumbnail_cache_panel )
@@ -2748,8 +2748,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
             
-            self._fullscreen_cache_size = ClientGUICommon.BetterSpinBox( image_cache_panel, min=25, max=8192 )
-            self._fullscreen_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
+            self._image_cache_size = ClientGUIControls.BytesControl( image_cache_panel )
+            self._image_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
             
             self._estimated_number_fullscreens = QW.QLabel( '', image_cache_panel )
             
@@ -2801,10 +2801,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._thumbnail_cache_size.setValue( int( HC.options['thumbnail_cache_size'] // 1048576 ) )
-            
-            self._fullscreen_cache_size.setValue( int( HC.options['fullscreen_cache_size'] // 1048576 ) )
-            
+            self._thumbnail_cache_size.SetValue( self._new_options.GetInteger( 'thumbnail_cache_size' ) )
+            self._image_cache_size.SetValue( self._new_options.GetInteger( 'image_cache_size' ) )
             self._image_tile_cache_size.SetValue( self._new_options.GetInteger( 'image_tile_cache_size' ) )
             
             self._thumbnail_cache_timeout.SetValue( self._new_options.GetInteger( 'thumbnail_cache_timeout' ) )
@@ -2843,7 +2841,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             fullscreens_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( fullscreens_sizer, self._fullscreen_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( fullscreens_sizer, self._image_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( fullscreens_sizer, self._estimated_number_fullscreens, CC.FLAGS_CENTER_PERPENDICULAR )
             
             image_tiles_sizer = QP.HBoxLayout()
@@ -2985,14 +2983,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_cache_prefetch_limit_percentage.valueChanged.connect( self.EventImageCacheUpdate )
             
             self.EventImageCacheUpdate()
-            self.EventThumbnailsUpdate( self._thumbnail_cache_size.value() )
+            self.EventThumbnailsUpdate()
             self.EventImageTilesUpdate()
             self.EventVideoBufferUpdate( self._video_buffer_size_mb.value() )
             
         
         def EventImageCacheUpdate( self ):
             
-            cache_size = self._fullscreen_cache_size.value() * 1048576
+            cache_size = self._image_cache_size.GetValue()
             
             display_size = ClientGUIFunctions.GetDisplaySize( self )
             
@@ -3036,7 +3034,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._estimated_number_image_tiles.setText( '(about {} fullscreens)'.format( HydrusData.ToHumanInt( estimate ) ) )
             
         
-        def EventThumbnailsUpdate( self, value ):
+        def EventThumbnailsUpdate( self ):
+            
+            value = self._thumbnail_cache_size.GetValue()
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
@@ -3044,7 +3044,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_bytes_per_thumb = 3 * thumbnail_width * thumbnail_height
             
-            estimated_thumbs = ( value * 1024 * 1024 ) // estimated_bytes_per_thumb
+            estimated_thumbs = value // estimated_bytes_per_thumb
             
             self._estimated_number_thumbnails.setText( '(at '+res_string+', about '+HydrusData.ToHumanInt(estimated_thumbs)+' thumbnails)' )
             
@@ -3058,9 +3058,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.value() * 1048576
-            HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.value() * 1048576
-            
+            self._new_options.SetInteger( 'thumbnail_cache_size', self._thumbnail_cache_size.GetValue() )
+            self._new_options.SetInteger( 'image_cache_size', self._image_cache_size.GetValue() )
             self._new_options.SetInteger( 'image_tile_cache_size', self._image_tile_cache_size.GetValue() )
             
             self._new_options.SetInteger( 'thumbnail_cache_timeout', self._thumbnail_cache_timeout.GetValue() )

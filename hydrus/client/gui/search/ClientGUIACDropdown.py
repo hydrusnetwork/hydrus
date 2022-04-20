@@ -719,7 +719,6 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._UpdateBackgroundColour()
         
         self._last_attempted_dropdown_width = 0
-        self._last_attempted_dropdown_position = ( None, None )
         
         self._text_ctrl_widget_event_filter = QP.WidgetEventFilter( self._text_ctrl )
         
@@ -834,6 +833,9 @@ class AutoCompleteDropdown( QW.QWidget ):
         self._ScheduleResultsRefresh( 0.0 )
         
         HG.client_controller.CallLaterQtSafe( self, 0.05, 'hide/show dropdown', self._DropdownHideShow )
+        
+        # trying a second go to see if that improves some positioning
+        HG.client_controller.CallLaterQtSafe( self, 0.25, 'hide/show dropdown', self._DropdownHideShow )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -1007,11 +1009,9 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_input_panel, QC.QPoint( 0, text_input_height ) )
             
-            if self._last_attempted_dropdown_position != desired_dropdown_position:
+            if self.pos() != desired_dropdown_position:
                 
                 self._dropdown_window.move( desired_dropdown_position )
-                
-                self._last_attempted_dropdown_position = desired_dropdown_position
                 
             
         

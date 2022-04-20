@@ -217,6 +217,49 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( tag_ids_table_name, counts_cache_table_name ) ) )
         
     
+    def GetAutocompleteCountEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
+        
+        count = 0
+        
+        if not include_current_tags and not include_pending_tags:
+            
+            return count
+            
+        
+        ( current_count, pending_count ) = self.GetAutocompleteCountEstimateStatuses( tag_display_type, tag_service_id, file_service_id, tag_ids )
+        
+        if include_current_tags:
+            
+            count += current_count
+            
+        
+        if include_current_tags:
+            
+            count += pending_count
+            
+        
+        return count
+        
+    
+    def GetAutocompleteCountEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ] ):
+        
+        include_current_tags = True
+        include_pending_tags = True
+        
+        ids_to_count = self.GetCounts( tag_display_type, tag_service_id, file_service_id, tag_ids, include_current_tags, include_pending_tags )
+        
+        current_count = 0
+        pending_count = 0
+        
+        for ( current_min, current_max, pending_min, pending_max ) in ids_to_count.values():
+            
+            current_count += current_min
+            pending_count += pending_min
+            
+        
+        return ( current_count, pending_count )
+        
+    
     def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, domain_is_cross_referenced = True, zero_count_ok = False, job_key = None, tag_ids_table_name = None ):
         
         if len( tag_ids ) == 0:
@@ -531,4 +574,3 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         return ( deleted_tag_ids, deleted_local_tag_ids )
         
-    

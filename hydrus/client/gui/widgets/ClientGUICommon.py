@@ -709,11 +709,20 @@ class BetterHyperLink( BetterStaticText ):
         self._url = url
         
         self.setToolTip( self._url )
-
-        self.setTextFormat( QC.Qt.RichText )
-        self.setTextInteractionFlags( QC.Qt.TextBrowserInteraction )
         
-        self.setText( '<a href="{}">{}</a>'.format( url, label ) )
+        self.setTextFormat( QC.Qt.RichText )
+        self.setTextInteractionFlags( QC.Qt.LinksAccessibleByMouse | QC.Qt.LinksAccessibleByKeyboard )
+        
+        self._colours = {
+            'link_color' : QG.QColor( 0, 0, 255 )
+        }
+        
+        self.setObjectName( 'HydrusHyperlink' )
+        
+        # need this polish to load the QSS property and update self._colours
+        self.style().polish( self )
+        
+        self.setText( '<a style="text-decoration:none; color:{};" href="{}">{}</a>'.format( self._colours[ 'link_color' ].name(), url, label ) )
         
         self.linkActivated.connect( self.Activated )
         
@@ -722,7 +731,19 @@ class BetterHyperLink( BetterStaticText ):
         
         ClientPaths.LaunchURLInWebBrowser( self._url )
         
-
+    
+    def get_link_color( self ):
+        
+        return self._colours[ 'link_color' ]
+        
+    
+    def set_link_color( self, colour ):
+        
+        self._colours[ 'link_color' ] = colour
+        
+    
+    link_color = QC.Property( QG.QColor, get_link_color, set_link_color )
+    
 class BufferedWindow( QW.QWidget ):
     
     def __init__( self, *args, **kwargs ):

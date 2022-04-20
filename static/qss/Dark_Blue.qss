@@ -429,3 +429,14 @@ QLineEdit#HydrusInvalid {
 QCheckBox#HydrusWarning {
 	color: #ff5555;
 }
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #8be9fd;
+}

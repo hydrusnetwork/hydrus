@@ -13,7 +13,7 @@ def DAEMONCheckExportFolders():
     
     controller = HG.client_controller
     
-    if not controller.options[ 'pause_export_folders_sync' ]:
+    if not controller.new_options.GetBoolean( 'pause_export_folders_sync' ):
         
         HG.export_folders_running = True
         
@@ -25,7 +25,7 @@ def DAEMONCheckExportFolders():
                 
                 export_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
                 
-                if controller.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+                if controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                     
                     break
                     
@@ -43,7 +43,7 @@ def DAEMONCheckImportFolders():
     
     controller = HG.client_controller
     
-    if not controller.options[ 'pause_import_folders_sync' ]:
+    if not controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
         
         HG.import_folders_running = True
         
@@ -55,7 +55,7 @@ def DAEMONCheckImportFolders():
                 
                 import_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
                 
-                if controller.options[ 'pause_import_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+                if controller.new_options.GetBoolean( 'pause_import_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                     
                     break
                     

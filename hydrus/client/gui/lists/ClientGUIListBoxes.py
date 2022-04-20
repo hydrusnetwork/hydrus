@@ -1832,24 +1832,53 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def mouseDoubleClickEvent( self, event ):
+    def eventFilter( self, watched, event ):
         
-        if event.button() == QC.Qt.LeftButton:
+        # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
+        
+        if watched == self.widget():
             
-            ctrl_down = event.modifiers() & QC.Qt.ControlModifier
-            shift_down = event.modifiers() & QC.Qt.ShiftModifier
-            
-            action_occurred = self._Activate( ctrl_down, shift_down )
-            
-            if action_occurred:
+            if event.type() == QC.QEvent.MouseButtonPress:
                 
-                self.mouseActivationOccurred.emit()
+                self._HandleClick( event )
+                
+                event.accept()
+                
+                return True
+                
+            elif event.type() == QC.QEvent.MouseButtonRelease:
+                
+                self._last_drag_start_logical_index = None
+                self._drag_started = False
+                
+                event.ignore()
+                
+            elif event.type() == QC.QEvent.MouseButtonDblClick:
+                
+                if event.button() == QC.Qt.LeftButton:
+                    
+                    ctrl_down = event.modifiers() & QC.Qt.ControlModifier
+                    shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                    
+                    action_occurred = self._Activate( ctrl_down, shift_down )
+                    
+                    if action_occurred:
+                        
+                        self.mouseActivationOccurred.emit()
+                        
+                    
+                else:
+                    
+                    QW.QScrollArea.mouseDoubleClickEvent( self, event )
+                    
+                
+                event.accept()
+                
+                return True
                 
             
-        else:
-            
-            QW.QScrollArea.mouseDoubleClickEvent( self, event )
-            
+        
+        return QW.QScrollArea.eventFilter( self, watched, event )
         
     
     def mouseMoveEvent( self, event ):
@@ -1882,21 +1911,6 @@ class ListBox( QW.QScrollArea ):
             
             event.ignore()
             
-        
-    
-    def mousePressEvent( self, event ):
-        
-        self._HandleClick( event )
-        
-        event.accept()
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        self._last_drag_start_logical_index = None
-        self._drag_started = False
-        
-        event.ignore()
         
     
     class _InnerWidget( QW.QWidget ):
@@ -2321,42 +2335,53 @@ class ListBoxTags( ListBox ):
             
         
     
-    def mousePressEvent( self, event ):
+    def eventFilter( self, watched, event ):
         
-        # click first
-        ListBox.mousePressEvent( self, event )
+        # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
         
-        if event.button() == QC.Qt.MiddleButton:
+        if watched == self.widget():
             
-            if self.can_spawn_new_windows:
+            if event.type() == QC.QEvent.MouseButtonPress:
                 
-                ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
-                
-                if len( predicates ) > 0:
+                if event.button() == QC.Qt.MiddleButton:
                     
-                    shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                    self._HandleClick( event )
                     
-                    if shift_down and or_predicate is not None:
+                    if self.can_spawn_new_windows:
                         
-                        predicates = ( or_predicate, )
+                        (predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate) = self._GetSelectedPredicatesAndInverseCopies()
+                        
+                        if len( predicates ) > 0:
+                            
+                            shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                            
+                            if shift_down and or_predicate is not None:
+                                
+                                predicates = (or_predicate,)
+                                
+                            self._NewSearchPages( [ predicates ] )
+                            
                         
                     
-                    self._NewSearchPages( [ predicates ] )
+                    event.accept()
+                    
+                    return True
+                    
+                
+            elif event.type() == QC.QEvent.MouseButtonRelease:
+                
+                if event.button() == QC.Qt.RightButton:
+                    
+                    self.ShowMenu()
+                    
+                    event.accept()
+                    
+                    return True
                     
                 
             
         
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.RightButton:
-            
-            ListBox.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        self.ShowMenu()
+        return ListBox.eventFilter( self, watched, event )
         
     
     def ShowMenu( self ):

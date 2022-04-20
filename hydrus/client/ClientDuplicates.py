@@ -219,13 +219,17 @@ class DuplicatesManager( object ):
             
         
     
+SYNC_ARCHIVE_NONE = 0
+SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
+SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
+
 class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
     SERIALISABLE_NAME = 'Duplicate Action Options'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, tag_service_actions = None, rating_service_actions = None, sync_archive = False, sync_urls_action = None ):
+    def __init__( self, tag_service_actions = None, rating_service_actions = None, sync_archive_action = False, sync_urls_action = None ):
         
         if tag_service_actions is None:
             
@@ -241,7 +245,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         self._tag_service_actions = tag_service_actions
         self._rating_service_actions = rating_service_actions
-        self._sync_archive = sync_archive
+        self._sync_archive_action = sync_archive_action
         self._sync_urls_action = sync_urls_action
         
     
@@ -258,12 +262,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
         serialisable_rating_service_actions = [ ( service_key.hex(), action ) for ( service_key, action ) in self._rating_service_actions ]
         
-        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive, self._sync_urls_action )
+        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive_action, self._sync_urls_action )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive, self._sync_urls_action ) = serialisable_info
+        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive_action, self._sync_urls_action ) = serialisable_info
         
         self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
@@ -322,18 +326,36 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( serialisable_tag_service_actions, serialisable_rating_service_actions, sync_archive, sync_urls_action ) = old_serialisable_info
+            
+            if sync_archive:
+                
+                sync_archive_action = SYNC_ARCHIVE_IF_ONE_DO_BOTH
+                
+            else:
+                
+                sync_archive_action = SYNC_ARCHIVE_NONE
+                
+            
+            new_serialisable_info = ( serialisable_tag_service_actions, serialisable_rating_service_actions, sync_archive_action, sync_urls_action )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
-    def SetTuple( self, tag_service_actions, rating_service_actions, sync_archive, sync_urls_action ):
+    def SetTuple( self, tag_service_actions, rating_service_actions, sync_archive_action, sync_urls_action ):
         
         self._tag_service_actions = tag_service_actions
         self._rating_service_actions = rating_service_actions
-        self._sync_archive = sync_archive
+        self._sync_archive_action = sync_archive_action
         self._sync_urls_action = sync_urls_action
         
     
     def ToTuple( self ):
         
-        return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive, self._sync_urls_action )
+        return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive_action, self._sync_urls_action )
         
     
     def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, delete_both = False, file_deletion_reason = None ):
@@ -478,19 +500,29 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        if self._sync_archive:
+        content_update_archive_first = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
+        content_update_archive_second = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
+        
+        if self._sync_archive_action == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
             
             if first_media.HasInbox() and second_media.HasArchive():
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
-                
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
                 
             elif first_media.HasArchive() and second_media.HasInbox():
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            
+        elif self._sync_archive_action == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
+            
+            if first_media.HasInbox():
+                
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
+                
+            if second_media.HasInbox():
+                
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
                 
             
         

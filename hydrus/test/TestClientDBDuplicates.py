@@ -138,8 +138,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         for ( a, b ) in filtering_pairs:
             
-            self.assertIn( a, self._all_hashes )
-            self.assertIn( b, self._all_hashes )
+            self.assertIn( a.GetHash(), self._all_hashes )
+            self.assertIn( b.GetHash(), self._all_hashes )
             
         
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[0] )

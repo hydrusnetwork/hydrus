@@ -19,8 +19,6 @@ def GetClientDefaultOptions():
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
     options[ 'vpos' ] = -240
-    options[ 'thumbnail_cache_size' ] = 25 * 1048576
-    options[ 'fullscreen_cache_size' ] = 150 * 1048576
     options[ 'thumbnail_dimensions' ] = [ 150, 125 ]
     options[ 'password' ] = None
     options[ 'default_gui_session' ] = CC.LAST_SESSION_SESSION_NAME
@@ -65,11 +63,6 @@ def GetClientDefaultOptions():
     options[ 'proxy' ] = None
     
     options[ 'confirm_client_exit' ] = False
-    
-    options[ 'pause_export_folders_sync' ] = False
-    options[ 'pause_import_folders_sync' ] = False
-    options[ 'pause_repo_sync' ] = False
-    options[ 'pause_subs_sync' ] = False
     
     return options
     

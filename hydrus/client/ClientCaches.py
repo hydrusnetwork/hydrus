@@ -476,7 +476,7 @@ class ImageRendererCache( object ):
         
         self._controller = controller
         
-        cache_size = self._controller.options[ 'fullscreen_cache_size' ]
+        cache_size = self._controller.new_options.GetInteger( 'image_cache_size' )
         cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
         self._data_cache = DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
@@ -527,7 +527,7 @@ class ImageRendererCache( object ):
     
     def NotifyNewOptions( self ):
         
-        cache_size = self._controller.options[ 'fullscreen_cache_size' ]
+        cache_size = self._controller.new_options.GetInteger( 'image_cache_size' )
         cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
         self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
@@ -612,7 +612,7 @@ class ThumbnailCache( object ):
         
         self._controller = controller
         
-        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
+        cache_size = self._controller.new_options.GetInteger( 'thumbnail_cache_size' )
         cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
         
         self._data_cache = DataCache( self._controller, 'thumbnail cache', cache_size, timeout = cache_timeout )
@@ -1092,7 +1092,7 @@ class ThumbnailCache( object ):
     
     def NotifyNewOptions( self ):
         
-        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
+        cache_size = self._controller.new_options.GetInteger( 'thumbnail_cache_size' )
         cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
         
         self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )

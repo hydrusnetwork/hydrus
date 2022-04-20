@@ -916,7 +916,11 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._sync_archive = QW.QCheckBox( self )
+        self._sync_archive_action = ClientGUICommon.BetterChoice( self )
+        
+        self._sync_archive_action.addItem( 'make no change', ClientDuplicates.SYNC_ARCHIVE_NONE )
+        self._sync_archive_action.addItem( 'if one is archived, archive the other', ClientDuplicates.SYNC_ARCHIVE_IF_ONE_DO_BOTH )
+        self._sync_archive_action.addItem( 'always archive both', ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
         
@@ -927,11 +931,11 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY], HC.CONTENT_MERGE_ACTION_COPY )
             
         
-        self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         #
         
-        ( tag_service_options, rating_service_options, sync_archive, sync_urls_action ) = duplicate_action_options.ToTuple()
+        ( tag_service_options, rating_service_options, sync_archive_action, sync_urls_action ) = duplicate_action_options.ToTuple()
         
         services_manager = HG.client_controller.services_manager
         
@@ -947,7 +951,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rating_service_actions.Sort()
         
-        self._sync_archive.setChecked( sync_archive )
+        self._sync_archive_action.SetValue( sync_archive_action )
         
         #
         
@@ -979,7 +983,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'if one file is archived, archive the other as well: ', self._sync_archive ) )
+        rows.append( ( 'sync archived status?: ', self._sync_archive_action ) )
         rows.append( ( 'sync known urls?: ', self._sync_urls_action ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1312,10 +1316,15 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, ( action, tag_filter ) ) in self._service_keys_to_tag_options.items() ]
         rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._service_keys_to_rating_options.items() ]
-        sync_archive = self._sync_archive.isChecked()
+        sync_archive_action = self._sync_archive_action.GetValue()
         sync_urls_action = self._sync_urls_action.GetValue()
         
-        duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, sync_archive, sync_urls_action )
+        duplicate_action_options = ClientDuplicates.DuplicateActionOptions(
+            tag_service_actions = tag_service_actions,
+            rating_service_actions = rating_service_actions,
+            sync_archive_action = sync_archive_action,
+            sync_urls_action = sync_urls_action
+        )
         
         return duplicate_action_options
         

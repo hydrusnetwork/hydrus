@@ -2595,6 +2595,14 @@ class ServerService( object ):
             
         
     
+    def UseNormieEris( self ):
+        
+        with self._lock:
+            
+            return False
+            
+        
+    
 class ServerServiceRestricted( ServerService ):
     
     def _GetSerialisableDictionary( self ):

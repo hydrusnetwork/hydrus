@@ -367,13 +367,13 @@ def THREADUploadPending( service_key ):
             
             total_time_this_loop_took = HydrusData.GetNowPrecise() - time_started_this_loop
             
-            if total_time_this_loop_took > 0.5:
+            if total_time_this_loop_took > 1.5:
                 
-                current_ideal_weight = max( 1, int( current_ideal_weight * 0.8 ) )
+                current_ideal_weight = max( 25, int( current_ideal_weight * 0.95 ) )
                 
-            elif total_time_this_loop_took < 0.2:
+            elif total_time_this_loop_took < 0.5:
                 
-                current_ideal_weight = min( 1000, int( current_ideal_weight * 1.2 ) )
+                current_ideal_weight = min( 500, int( current_ideal_weight * 1.05 ) )
                 
             
             result = HG.client_controller.Read( 'pending', service_key, content_types_to_request, ideal_weight = current_ideal_weight )
@@ -1008,7 +1008,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _CheckImportFolder( self, name = None ):
         
-        if self._controller.options[ 'pause_import_folders_sync' ]:
+        if self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
             
             HydrusData.ShowText( 'Import folders are currently paused under the \'file\' menu. Please unpause them and try this again.' )
             
@@ -2440,7 +2440,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             self._menubar_network_all_traffic_paused.setChecked( HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             
-            self._menubar_network_subscriptions_paused.setChecked( HC.options[ 'pause_subs_sync' ] )
+            self._menubar_network_subscriptions_paused.setChecked( HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) )
             
             self._menubar_network_paged_import_queues_paused.setChecked( HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ) )
             
@@ -3065,8 +3065,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         submenu = QW.QMenu( i_and_e_submenu )
         
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PausePlaySync, 'import_folders' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PausePlaySync, 'export_folders' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ), self._PausePlaySync, 'import_folders' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', self._controller.new_options.GetBoolean( 'pause_export_folders_sync' ), self._PausePlaySync, 'export_folders' )
         
         ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )
         
@@ -3323,7 +3323,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        self._menubar_network_subscriptions_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self.FlipSubscriptionsPaused )
+        self._menubar_network_subscriptions_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', self._controller.new_options.GetBoolean( 'pause_subs_sync' ), self.FlipSubscriptionsPaused )
         
         self._menubar_network_nudge_subs = ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.Wake )
         
@@ -3530,7 +3530,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         submenu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'all repository synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PausePlaySync, 'repo' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'all repository synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', self._controller.new_options.GetBoolean( 'pause_repo_sync' ), self._PausePlaySync, 'repo' )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
         
@@ -3885,9 +3885,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with self._delayed_dialog_lock:
                 
-                original_pause_status = controller.options[ 'pause_export_folders_sync' ]
+                original_pause_status = controller.new_options.GetBoolean( 'pause_export_folders_sync' )
                 
-                controller.options[ 'pause_export_folders_sync' ] = True
+                controller.new_options.SetBoolean( 'pause_export_folders_sync', True )
                 
                 try:
                     
@@ -3928,7 +3928,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 finally:
                     
-                    controller.options[ 'pause_export_folders_sync' ] = original_pause_status
+                    controller.new_options.SetBoolean( 'pause_export_folders_sync', original_pause_status )
                     
                     controller.pub( 'notify_new_export_folders' )
                     
@@ -4004,9 +4004,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             with self._delayed_dialog_lock:
                 
-                original_pause_status = controller.options[ 'pause_import_folders_sync' ]
+                original_pause_status = controller.new_options.GetBoolean( 'pause_import_folders_sync' )
                 
-                controller.options[ 'pause_import_folders_sync' ] = True
+                controller.new_options.SetBoolean( 'pause_import_folders_sync', True )
                 
                 try:
                     
@@ -4047,7 +4047,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 finally:
                     
-                    controller.options[ 'pause_import_folders_sync' ] = original_pause_status
+                    controller.new_options.SetBoolean( 'pause_import_folders_sync', original_pause_status )
                     
                     controller.pub( 'notify_new_import_folders' )
                     
@@ -4249,9 +4249,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _ManageServices( self, auto_account_creation_service_key = None ):
         
-        original_pause_status = HC.options[ 'pause_repo_sync' ]
+        original_pause_status = self._controller.new_options.GetBoolean( 'pause_repo_sync' )
         
-        HC.options[ 'pause_repo_sync' ] = True
+        self._controller.new_options.SetBoolean( 'pause_repo_sync', True )
         
         try:
             
@@ -4268,7 +4268,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         finally:
             
-            HC.options[ 'pause_repo_sync' ] = original_pause_status
+            self._controller.new_options.SetBoolean( 'pause_repo_sync', original_pause_status )
             
         
     
@@ -4848,19 +4848,19 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         if sync_type == 'repo':
             
-            HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
+            self._controller.new_options.FlipBoolean( 'pause_repo_sync' )
             
             self._controller.pub( 'notify_restart_repo_sync' )
             
         elif sync_type == 'export_folders':
             
-            HC.options[ 'pause_export_folders_sync' ] = not HC.options[ 'pause_export_folders_sync' ]
+            self._controller.new_options.FlipBoolean( 'pause_export_folders_sync' )
             
             self._controller.pub( 'notify_restart_export_folders_daemon' )
             
         elif sync_type == 'import_folders':
             
-            HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
+            self._controller.new_options.FlipBoolean( 'pause_import_folders_sync' )
             
             self._controller.pub( 'notify_restart_import_folders_daemon' )
             
@@ -5423,7 +5423,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def _RunExportFolder( self, name = None ):
         
-        if self._controller.options[ 'pause_export_folders_sync' ]:
+        if self._controller.new_options.GetBoolean( 'pause_export_folders_sync' ):
             
             HydrusData.ShowText( 'Export folders are currently paused under the \'file\' menu. Please unpause them and try this again.' )
             
@@ -6567,7 +6567,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
             self._system_tray_icon.SetUIIsCurrentlyShown( not self._currently_minimised_to_system_tray )
             self._system_tray_icon.SetNetworkTrafficPaused( new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
-            self._system_tray_icon.SetSubscriptionsPaused( HC.options[ 'pause_subs_sync' ] )
+            self._system_tray_icon.SetSubscriptionsPaused( new_options.GetBoolean( 'pause_subs_sync' ) )
             
         else:
             
@@ -6971,7 +6971,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def FlipSubscriptionsPaused( self ):
         
-        HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
+        self._controller.new_options.FlipBoolean( 'pause_subs_sync' )
         
         self._controller.subscriptions_manager.Wake()
         
@@ -7606,7 +7606,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             bandwidth_status += ' (' + HydrusData.ToHumanBytes( current_usage ) + '/s)'
             
         
-        if HC.options[ 'pause_subs_sync' ]:
+        if self._controller.new_options.GetBoolean( 'pause_subs_sync' ):
             
             bandwidth_status += ', subs paused'
             

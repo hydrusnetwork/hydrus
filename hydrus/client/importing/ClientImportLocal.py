@@ -660,7 +660,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
             
-            p1 = HC.options[ 'pause_import_folders_sync' ] or self._paused
+            p1 = HG.client_controller.new_options.GetBoolean( 'pause_import_folders_sync' ) or self._paused
             p2 = HydrusThreading.IsThreadShuttingDown()
             p3 = job_key.IsCancelled()
             
@@ -889,7 +889,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return
             
         
-        if HC.options[ 'pause_import_folders_sync' ] or self._paused:
+        if HG.client_controller.new_options.GetBoolean( 'pause_import_folders_sync' ) or self._paused:
             
             return
             

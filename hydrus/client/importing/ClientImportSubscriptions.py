@@ -81,7 +81,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _CanDoWorkNow( self ):
         
-        p1 = not ( self._paused or HG.client_controller.options[ 'pause_subs_sync' ] or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) or HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
+        p1 = not ( self._paused or HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) or HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
         p2 = not ( HG.started_shutdown or self._stop_work_for_shutdown )
         p3 = self._NoDelays()
         
@@ -89,7 +89,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             message = 'Subscription "{}" CanDoWork check.'.format( self._name )
             message += os.linesep
-            message += 'Paused/Global/Network/Dialog Pause: {}/{}/{}/{}'.format( self._paused, HG.client_controller.options[ 'pause_subs_sync' ], HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ), HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
+            message += 'Paused/Global/Network/Dialog Pause: {}/{}/{}/{}'.format( self._paused, HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ), HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ), HG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
             message += os.linesep
             message += 'Started/Sub shutdown: {}/{}'.format( HG.started_shutdown, self._stop_work_for_shutdown )
             message += os.linesep
@@ -1782,7 +1782,7 @@ class SubscriptionsManager( object ):
     
     def _GetSubscriptionReadyToGo( self ):
         
-        p1 = HG.client_controller.options[ 'pause_subs_sync' ] or self._pause_subscriptions_for_editing
+        p1 = HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) or self._pause_subscriptions_for_editing
         p2 = HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
         p3 = HG.started_shutdown
         
@@ -1863,7 +1863,7 @@ class SubscriptionsManager( object ):
                 
             else:
                 
-                p1 = HG.client_controller.options[ 'pause_subs_sync' ] or self._pause_subscriptions_for_editing
+                p1 = HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) or self._pause_subscriptions_for_editing
                 p2 = HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
                 
                 stopped_because_pause = p1 or p2

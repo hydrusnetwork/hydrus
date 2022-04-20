@@ -352,6 +352,11 @@ class NetworkJobControl( QW.QFrame ):
         self._auto_override_bandwidth_rules = not self._auto_override_bandwidth_rules
         
     
+    def HasNetworkJob( self ) -> bool:
+        
+        return self._network_job is not None
+        
+    
     def SetNetworkJob( self, network_job: ClientNetworkingJobs.NetworkJob ):
         
         if self._network_job != network_job:
@@ -392,4 +397,3 @@ class NetworkJobControl( QW.QFrame ):
             self._Update()
             
         
-    

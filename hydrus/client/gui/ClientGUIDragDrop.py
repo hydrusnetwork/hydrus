@@ -5,6 +5,7 @@ from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
@@ -302,6 +303,17 @@ class FileDropTarget( QC.QObject ):
                 if len( urls ) > 0:
                     
                     for url in urls:
+                        
+                        # https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
+                        # data:image/png;base64,(data)
+                        # so what I prob have to do here is parse the file, decode from base64 or whatever, and then write to a fresh temp location and call self._filenames_callable
+                        # but I need to figure out a way to reproduce this on my own. Chrome is supposed to do it on image DnD, but didn't for me
+                        if url.startswith( 'data:' ) or len( url ) > 8 * 1024:
+                            
+                            HydrusData.ShowText( 'This drag and drop was in the unsupported \'Data URL\' format. hydev would like to know more about this so he can fix it.' )
+                            
+                            continue
+                            
                         
                         QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
                         

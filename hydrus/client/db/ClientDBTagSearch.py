@@ -1,4 +1,3 @@
-import itertools
 import sqlite3
 import typing
 
@@ -8,7 +7,6 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -425,6 +423,33 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         
     
+    def GetAllTagIds( self, leaf: ClientDBServices.FileSearchContextLeaf, job_key = None ):
+        
+        tag_ids = set()
+        
+        query = '{};'.format( self.GetQueryPhraseForTagIds( leaf.file_service_id, leaf.tag_service_id ) )
+        
+        cursor = self._Execute( query )
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
+        loop_of_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+        
+        if job_key is not None and job_key.IsCancelled():
+            
+            return set()
+            
+        
+        tag_ids.update( loop_of_tag_ids )
+        
+        return tag_ids
+        
+    
     def GetIntegerSubtagsTableName( self, file_service_id, tag_service_id ):
         
         if file_service_id == self.modules_services.combined_file_service_id:
@@ -792,6 +817,110 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         ( count, ) = self._Execute( 'SELECT COUNT( * ) FROM {};'.format( tags_table_name ) ).fetchone()
         
         return count
+        
+    
+    def GetTagIdsFromNamespaceIds( self, leaf: ClientDBServices.FileSearchContextLeaf, namespace_ids: typing.Collection[ int ], job_key = None ):
+        
+        if len( namespace_ids ) == 0:
+            
+            return set()
+            
+        
+        final_result_tag_ids = set()
+        
+        with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+            
+            tags_table_name = self.GetTagsTableName( leaf.file_service_id, leaf.tag_service_id )
+            
+            if len( namespace_ids ) == 1:
+                
+                ( namespace_id, ) = namespace_ids
+                
+                cursor = self._Execute( 'SELECT tag_id FROM {} WHERE namespace_id = ?;'.format( tags_table_name ), ( namespace_id, ) )
+                
+            else:
+                
+                # temp namespaces to tags
+                cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( temp_namespace_ids_table_name, tags_table_name ) )
+                
+            
+            cancelled_hook = None
+            
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
+            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            
+            if job_key is not None:
+                
+                if job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+            
+            final_result_tag_ids.update( result_tag_ids )
+            
+        
+        return final_result_tag_ids
+        
+    
+    def GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: typing.Collection[ int ], job_key = None ):
+        
+        if len( subtag_ids ) == 0:
+            
+            return set()
+            
+        
+        with self._MakeTemporaryIntegerTable( subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
+            
+            return self.GetTagIdsFromSubtagIdsTable( file_service_id, tag_service_id, temp_subtag_ids_table_name, job_key = job_key )
+            
+        
+    
+    def GetTagIdsFromSubtagIdsTable( self, file_service_id: int, tag_service_id: int, subtag_ids_table_name: str, job_key = None ):
+        
+        final_result_tag_ids = set()
+        
+        if tag_service_id == self.modules_services.combined_tag_service_id:
+            
+            search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = ( tag_service_id, )
+            
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            tags_table_name = self.GetTagsTableName( file_service_id, search_tag_service_id )
+            
+            # temp subtags to tags
+            cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id );'.format( subtag_ids_table_name, tags_table_name ) )
+            
+            cancelled_hook = None
+            
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
+            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            
+            if job_key is not None:
+                
+                if job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+            
+            final_result_tag_ids.update( result_tag_ids )
+            
+        
+        return final_result_tag_ids
         
     
     def GetTagsTableName( self, file_service_id, tag_service_id ):

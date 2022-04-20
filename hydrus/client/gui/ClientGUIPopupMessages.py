@@ -121,6 +121,7 @@ class PopupMessage( PopupWindow ):
         
         self._network_job_ctrl = ClientGUINetworkJobControl.NetworkJobControl( self )
         self._network_job_ctrl.hide()
+        self._time_network_job_disappeared = 0
         
         self._copy_to_clipboard_button = ClientGUICommon.BetterButton( self, 'copy to clipboard', self.CopyToClipboard )
         self._copy_to_clipboard_button_ev = QP.WidgetEventFilter( self._copy_to_clipboard_button )
@@ -460,9 +461,17 @@ class PopupMessage( PopupWindow ):
         
         if network_job is None:
             
-            self._network_job_ctrl.ClearNetworkJob()
+            if self._network_job_ctrl.HasNetworkJob():
+                
+                self._network_job_ctrl.ClearNetworkJob()
+                
+                self._time_network_job_disappeared = HydrusData.GetNow()
+                
             
-            self._network_job_ctrl.hide()
+            if self._network_job_ctrl.isVisible() and HydrusData.TimeHasPassed( self._time_network_job_disappeared + 10 ):
+                
+                self._network_job_ctrl.hide()
+                
             
         else:
             

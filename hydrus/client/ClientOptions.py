@@ -176,6 +176,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
         self._dictionary[ 'booleans' ][ 'force_hide_page_signal_on_new_page' ] = False
         
+        self._dictionary[ 'booleans' ][ 'pause_export_folders_sync' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_import_folders_sync' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_repo_sync' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_subs_sync' ] = False
+        
         self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
         self._dictionary[ 'booleans' ][ 'boot_with_network_traffic_paused' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_file_queues' ] = False
@@ -299,8 +304,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from hydrus.client.metadata import ClientTags
         
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ], [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ], [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions(
+            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ],
+            rating_service_actions = [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ],
+            sync_archive_action = ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS,
+            sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY
+        )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions(
+            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ],
+            rating_service_actions = [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ],
+            sync_archive_action = ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS,
+            sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+        )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = ClientDuplicates.DuplicateActionOptions()
         
         #
@@ -376,6 +391,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 4
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_nicer_ratio' ] = 10
         
+        self._dictionary[ 'integers' ][ 'thumbnail_cache_size' ] = 1024 * 1024 * 32
+        self._dictionary[ 'integers' ][ 'image_cache_size' ] = 1024 * 1024 * 384
         self._dictionary[ 'integers' ][ 'image_tile_cache_size' ] = 1024 * 1024 * 256
         
         self._dictionary[ 'integers' ][ 'thumbnail_cache_timeout' ] = 86400
@@ -1010,7 +1027,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                return ClientDuplicates.DuplicateActionOptions( [], [] )
+                return ClientDuplicates.DuplicateActionOptions()
                 
             
         

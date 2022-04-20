@@ -3,6 +3,34 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 482](https://github.com/hydrusnetwork/hydrus/releases/tag/v482)
+
+### misc
+* fixed the stupid taglist scrolled-click position problem--sorry! I have a new specific weekly test for this, so it shouldn't happen again (issue #1120)
+* I made it so middle-clicking on a tag list does a select event again
+* the duplicate action options now let you say to archive both files regardless of their current archive status (issue #472)
+* the duplicate filter is now hooked into the media prefetch system. as soon as 'A' is displayed, the 'B' file will now be queued to be loaded, so with luck you will see very little flicker on the first transition from A->B.
+* I updated the duplicate filter's queue to store more information and added the next pair to the new prefetch queue, so when you action a pair, the A of the next pair should also load up quickly
+* boosted the default sizes of the thumbnail and image caches up to 32MB and 384MB (from 25/150)  and gave them nicer 'bytes quantity' widgets in the options panel
+* when popup windows show network jobs, they now have delayed hide. with luck, this will make subscriptions more stable in height, less flickering as jobs are loaded and unloaded
+* reduced the extremes of the new auto-throttled pending upload. it will now change speed slower, on less strict of a schedule, and won't go as fast or slow max
+* the text colour of hyperlinks across the program, most significantly in the top-right media hover window, can now be customised in QSS. I have set some ok defaults for all the QSS styles that come with the client, if you have a custom QSS, check out my default to see what you need to do. also hyperlinks are no longer underlined and you can't 'select' their text with the mouse any more (this was a weird rich-text flag)
+* the client api and local booru now have a checkbox in their manage services panel for 'normie-friendly welcome page', which switches the default ascii art for an alternate
+* fixed an issue with the hydrus server not explicitly saying it is utf-8 when rendering html
+* may have fixed some issues with autocomplete dropdowns getting hung up in the wrong position and not fixing themselves until parent resize event or similar
+
+### code cleanup
+* about 80KB of code moved out of the main ClientDB.py file:
+* refactored all combined files display mappings cache code from the code database to a new database module
+* refactored all combined files storage mappings cache code from the code database to a new database module
+* refactored all specific storage mappings cache code from the code database to a new database module
+* more misc refactoring of tag count estimate, tag search, and other code down to modules
+* hooked up specific display mappings cache to the repair system correctly--it had been left unregistered by accident
+* some misc duplicate action options code cleanup
+* migrated some ancient pause states--repository, subscriptions, import&export folders--to the newer options structure
+* migrated the image and thumbnail cache sizes to the newer options structure
+* removed some ancient db and dialog code from the retired dumper system
+
 ## [Version 481](https://github.com/hydrusnetwork/hydrus/releases/tag/v481)
 
 ### fixes and improvements after last week's hover and note work
@@ -318,40 +346,3 @@
 * fixed up some upcoming database maintenance code in my new modules
 * updated and cleaned the code in the old wx-converted checkboxlist and replaced some awkward old access routines
 * cleared out some old HTA archive code
-
-## [Version 471](https://github.com/hydrusnetwork/hydrus/releases/tag/v471)
-
-### times
-* if you have file viewing stats turned on (by default it is), the client will now track the 'last viewed time' of your files, both in preview and media viewers. a record is only made assuming they pass the viewtime checks under _options->file viewing statistics_ (so if you scroll through really quick but have it set to only record after five seconds of viewing, it will not save that as the last viewed time). this last viewed time is shown on the right-click menu with the normal file viewing statistics
-* sorting by 'import time' and 'modified time' are moved to a new 'time' subgroup in the sort button menu
-* also added to 'time' is 'last viewed time'. note that this has not been tracked until now, so you will have to look at a bunch of things for a few seconds each to get some data to sort with
-* to go with 'x time' pattern, 'time imported' is renamed to 'import time' across the program. both should work for system predicate parsing
-* system:'import time' and 'modified time' are now bundled into a new 'system:time' stub in the system predicates list. the window launched from here is an experimental new paged panel. I am not sure I really like it, but let's see how it works IRL
-* 'system:last view time' is added to search the new field! give it a go once you have some data
-* also note that the search and sort of last viewed time works on the 'media viewer' number. those users who use preview or combined numbers for stuff, let me know if and how you would like that to work here--sort/search for both media and preview, try to combine based on the logic in the options, or something else?
-
-### loading serialised pngs
-* the client can now load serialised downloader-pngs if they are a perfect RGB conversion of an original greyscale export.
-* the pngs don't technically have to be pngs anymore! if you drag and drop an image from firefox, the temporary bitmap exported and attached to the DnD _should_ work!
-* the lain easy downloader import now has a clipboard paste button. it can take regular json text, and now, bitmap data!
-* the 'import->from clipboard' button action in many multiple column lists across the program (e.g. manage parsers) (but not every list, a couple are working on older code) also now accepts bitmap data on the clipboard
-* the various load errors here are also improved
-
-### custom widget colors
-* (advanced users only for now)
-* after banging my head against it, I finally figured out an ok way to send colors from a QSS style file to python code. this means I can convert my custom widgets to inherit colours from the current QSS. I expect to migrate pretty much everything currently fixed over to this, except tag colours and maybe some thumbnail border stuff, and retire the old darkmode
-* if you are a QSS lad, please check out the new entries at the bottom of default_hydrus.qss and play around with them in your own QSSes. please do not send me any updates to be folded in to the install yet as I still have a bunch of other colours to add. this week is just a test--please let me know how it works for you
-
-### misc
-* mouse release events no longer trigger a command in the shortcuts system if the release happens more than about 20 pixels from the original mouse down. this is tricky, so if you are into clever shortcuts, let me know how it works for you
-* the file maintenance manager (which has been getting a lot of work recently with icc profiles, pixel dupes, some thumb regen, and new audio channel checks), now saves its work and publishes updates faster to the UI, at least once every ten seconds
-* the sort entries in the page sort control are now always sorted according to their full (type, name) string, and the mouse-wheel-to-navigate is now fixed to always mirror this
-* improved some 'delete file reason' handling. currently, a file deletion reason should only be applied when a file is entering trash. there was a bug that force-physical-deleting files from trash would overwrite their original deletion reason. this is now fixed. the advanced delete files dialog now disables the whole reason panel better when needed, never sends a file reason down to the database when there should be no reason, disables the panel if all the files are in the trash, and at the database level when file deletion reasons are being set, all files are filtered for status beforehand to ensure none are accidentally set by other means. I am about to make trash more intelligent as part of multiple local file services, so I expect to revisit this soon
-* the new ICC Profile conversion no longer occurs on I or F mode files. there are weird 32/64 bit monochrome files, and mode/ICC conversion goes whack with current PIL code
-* replaced the critical hamming test in the duplicate files system with a different bit-counting strategy that works about 9% faster. hamming test is used in all duplicate file searching, so this should help out a tiny bit in a lot of places
-
-### boring cleanup
-* cleaned up how media viewer canvas type is stored and tested in many places
-* all across the program, file viewing statistics are now tracked by type rather than a hardcoded double of preview & media viewer. it will take a moment to update the database to reflect this this week
-* cleaned up a ton of file viewing stats code
-* cleared out the last twenty or so uses of the old 'execute many select' database access routine in favour of the new lower-overhead and more query-optimisable temporary integer tables method

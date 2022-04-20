@@ -1369,7 +1369,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        if HG.client_controller.options[ 'pause_subs_sync' ]:
+        if HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ):
             
             message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
             

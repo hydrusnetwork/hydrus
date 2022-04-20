@@ -84,6 +84,8 @@ def GenerateDefaultServiceDictionary( service_type ):
         dictionary[ 'support_cors' ] = False
         dictionary[ 'log_requests' ] = False
         
+        dictionary[ 'use_normie_eris' ] = False
+        
         dictionary[ 'external_scheme_override' ] = None
         dictionary[ 'external_host_override' ] = None
         dictionary[ 'external_port_override' ] = None
@@ -363,6 +365,7 @@ class ServiceLocalServerService( Service ):
         dictionary[ 'allow_non_local_connections' ] = self._allow_non_local_connections
         dictionary[ 'support_cors' ] = self._support_cors
         dictionary[ 'log_requests' ] = self._log_requests
+        dictionary[ 'use_normie_eris' ] = self._use_normie_eris
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         dictionary[ 'external_scheme_override' ] = self._external_scheme_override
@@ -382,6 +385,7 @@ class ServiceLocalServerService( Service ):
         self._allow_non_local_connections = dictionary[ 'allow_non_local_connections' ]
         self._support_cors = dictionary[ 'support_cors' ]
         self._log_requests = dictionary[ 'log_requests' ]
+        self._use_normie_eris = dictionary[ 'use_normie_eris' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         self._external_scheme_override = dictionary[ 'external_scheme_override' ]
@@ -461,6 +465,14 @@ class ServiceLocalServerService( Service ):
         with self._lock:
             
             return self._use_https
+            
+        
+    
+    def UseNormieEris( self ):
+        
+        with self._lock:
+            
+            return self._use_normie_eris
             
         
     
@@ -1435,12 +1447,12 @@ class ServiceRepository( ServiceRestricted ):
     
     def _CanSyncProcess( self ):
         
-        return not ( self._update_processing_paused or HC.options[ 'pause_repo_sync' ] )
+        return not ( self._update_processing_paused or HG.client_controller.new_options.GetBoolean( 'pause_repo_sync' ) )
         
     
     def _CheckFunctional( self, including_external_communication = True, including_bandwidth = True, including_account = True ):
         
-        if HG.client_controller.options[ 'pause_repo_sync' ]:
+        if HG.client_controller.new_options.GetBoolean( 'pause_repo_sync' ):
             
             raise HydrusExceptions.ConflictException( 'All repositories are paused!' )
             

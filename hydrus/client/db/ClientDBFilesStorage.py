@@ -9,7 +9,6 @@ from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -1021,6 +1020,69 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
             
         
         return rows
+        
+    
+    def GroupHashIdsByTagCachedFileServiceId( self, hash_ids, hash_ids_table_name, hash_ids_to_current_file_service_ids = None ):
+        
+        # when we would love to do a fast cache lookup, it is useful to know if all the hash_ids are on one or two common file domains
+        
+        if hash_ids_to_current_file_service_ids is None:
+            
+            hash_ids_to_current_file_service_ids = self.GetHashIdsToCurrentServiceIds( hash_ids_table_name )
+            
+        
+        cached_file_service_ids = set( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
+        
+        file_service_ids_to_hash_ids = collections.defaultdict( set )
+        
+        for ( hash_id, file_service_ids ) in hash_ids_to_current_file_service_ids.items():
+            
+            for file_service_id in file_service_ids:
+                
+                if file_service_id in cached_file_service_ids:
+                    
+                    file_service_ids_to_hash_ids[ file_service_id ].add( hash_id )
+                    
+                
+            
+        
+        # ok, we have our map, let's sort it out
+        
+        # sorting by most comprehensive service_id first
+        file_service_ids_to_value = sorted( ( ( file_service_id, len( hash_ids ) ) for ( file_service_id, hash_ids ) in file_service_ids_to_hash_ids.items() ), key = lambda p: p[1], reverse = True )
+        
+        seen_hash_ids = set()
+        
+        # make our mapping non-overlapping
+        for pair in file_service_ids_to_value:
+            
+            file_service_id = pair[0]
+            
+            this_services_hash_ids_set = file_service_ids_to_hash_ids[ file_service_id ]
+            
+            if len( seen_hash_ids ) > 0:
+                
+                this_services_hash_ids_set.difference_update( seen_hash_ids )
+                
+            
+            if len( this_services_hash_ids_set ) == 0:
+                
+                del file_service_ids_to_hash_ids[ file_service_id ]
+                
+            else:
+                
+                seen_hash_ids.update( this_services_hash_ids_set )
+                
+            
+        
+        unmapped_hash_ids = set( hash_ids ).difference( seen_hash_ids )
+        
+        if len( unmapped_hash_ids ) > 0:
+            
+            file_service_ids_to_hash_ids[ self.modules_services.combined_file_service_id ] = unmapped_hash_ids
+            
+        
+        return file_service_ids_to_hash_ids
         
     
     def PendFiles( self, service_id, hash_ids ):

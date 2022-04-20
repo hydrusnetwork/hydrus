@@ -36,7 +36,7 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
         self.modules_mappings_storage = modules_mappings_storage
         self.modules_tag_display = modules_tag_display
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client mappings counts', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client specific display mappings cache', cursor )
         
     
     def _GetServiceIndexGenerationDictSingle( self, file_service_id, tag_service_id ):
@@ -724,4 +724,3 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
             self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id, counts_cache_changes )
             
         
-    

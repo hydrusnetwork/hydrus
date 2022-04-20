@@ -691,7 +691,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _UnloadModules( self ):
         
-        pass
+        self._modules = []
         
     
     def _UpdateDB( self, version ):

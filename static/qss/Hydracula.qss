@@ -477,3 +477,14 @@ QPushButton#HydrusOnOffButton[hydrus_on=false]
 }
 
 /* You are permitted to use this theme however you want for the low, low price of your soul. :3 */
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #50fa7b;
+}

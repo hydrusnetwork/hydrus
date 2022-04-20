@@ -385,3 +385,14 @@ QPushButton#HydrusCancel
 {
 	color: #ff7171;
 }
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #ffa02f;
+}

@@ -394,7 +394,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         while i < len( query_hash_ids ):
             
-            if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+            if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 
@@ -430,7 +430,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         for media_result in media_results:
             
-            if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+            if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 

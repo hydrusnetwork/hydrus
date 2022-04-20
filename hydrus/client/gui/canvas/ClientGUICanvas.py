@@ -2827,7 +2827,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         pair_info = []
         
-        for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+        for ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
             
             if duplicate_type is None or was_auto_skipped:
                 
@@ -3087,7 +3087,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None and not was_auto_skipped ] )
+        return len( [ 1 for ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None and not was_auto_skipped ] )
         
     
     def _GoBack( self ):
@@ -3096,9 +3096,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._unprocessed_pairs.append( self._current_pair )
             
-            ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+            ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
             
-            self._unprocessed_pairs.append( hash_pair )
+            self._unprocessed_pairs.append( media_result_pair )
             
             while was_auto_skipped:
                 
@@ -3111,13 +3111,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return
                     
                 
-                ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
-                self._unprocessed_pairs.append( hash_pair )
+                self._unprocessed_pairs.append( media_result_pair )
                 
             
-            self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
-            self._hashes_processed_in_this_batch.difference_update( hash_pair )
+            # only want this for the one that wasn't auto-skipped
+            for hash in ( first_media.GetHash(), second_media.GetHash() ):
+                
+                self._hashes_due_to_be_deleted_in_this_batch.discard( hash )
+                self._hashes_processed_in_this_batch.discard( hash )
+                
             
             self._ShowNewPair()
             
@@ -3136,6 +3140,42 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     def _MediaAreTheSame( self ):
         
         self._ProcessPair( HC.DUPLICATE_SAME_QUALITY )
+        
+    
+    def _PrefetchNeighbours( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        other_media = self._media_list.GetNext( self._current_media )
+        
+        media_to_prefetch = [ other_media ]
+        
+        # this doesn't handle big skip events, but that's a job for later
+        if len( self._unprocessed_pairs ) > 0:
+            
+            media_to_prefetch.extend( self._unprocessed_pairs[-1] )
+            
+        
+        image_cache = HG.client_controller.GetCache( 'images' )
+        
+        for media in media_to_prefetch:
+            
+            hash = media.GetHash()
+            mime = media.GetMime()
+            
+            if media.IsStaticImage():
+                
+                if not image_cache.HasImageRenderer( hash ):
+                    
+                    # we do qt safe to make sure the job is cancelled if we are destroyed
+                    
+                    HG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
+                    
+                
+            
         
     
     def _ProcessPair( self, duplicate_type, delete_first = False, delete_second = False, delete_both = False, duplicate_action_options = None ):
@@ -3248,9 +3288,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
-                self._unprocessed_pairs.append( hash_pair )
+                self._unprocessed_pairs.append( media_result_pair )
                 
                 while was_auto_skipped:
                     
@@ -3265,13 +3305,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         return
                         
                     
-                    ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                    ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                     
-                    self._unprocessed_pairs.append( hash_pair )
+                    self._unprocessed_pairs.append( media_result_pair )
                     
                 
-                self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
-                self._hashes_processed_in_this_batch.difference_update( hash_pair )
+                for hash in ( first_media.GetHash(), second_media.GetHash() ):
+                    
+                    self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash )
+                    self._hashes_processed_in_this_batch.difference_update( hash )
+                    
                 
             
         
@@ -3307,7 +3350,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return False
                     
                 
-                ( first_media_result, second_media_result ) = HG.client_controller.Read( 'media_results', pair )
+                ( first_media_result, second_media_result ) = pair
                 
                 first_media = ClientMedia.MediaSingleton( first_media_result )
                 second_media = ClientMedia.MediaSingleton( second_media_result )
@@ -3353,7 +3396,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._current_pair = potential_pair
             
-            ( first_media_result, second_media_result ) = HG.client_controller.Read( 'media_results', self._current_pair )
+            ( first_media_result, second_media_result ) = self._current_pair
             
             if not ( first_media_result.GetLocationsManager().IsLocal() and second_media_result.GetLocationsManager().IsLocal() ):
                 

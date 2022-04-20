@@ -428,3 +428,13 @@ QPushButton#HydrusOnOffButton[hydrus_on=false]
 	color: #ff7171;
 }
 
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: white;
+}

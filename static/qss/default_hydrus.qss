@@ -157,3 +157,17 @@ QWidget#HydrusAnimationBar
 	qproperty-hab_background: #f0f0f0;
 	qproperty-hab_nub: #606060;
 }
+
+
+/*
+
+And this one is odd since we are assigning a colour to <a> html richtext inside a QLabel.
+We hack it with hardcoded 'style' attribute in the html in python code.
+
+*/
+
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #0000ff;
+}

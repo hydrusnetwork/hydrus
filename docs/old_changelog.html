@@ -33,6 +33,34 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_482"><a href="#version_482">version 482</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed the stupid taglist scrolled-click position problem--sorry! I have a new specific weekly test for this, so it shouldn't happen again (issue #1120)</li>
+					<li>I made it so middle-clicking on a tag list does a select event again</li>
+					<li>the duplicate action options now let you say to archive both files regardless of their current archive status (issue #472)</li>
+					<li>the duplicate filter is now hooked into the media prefetch system. as soon as 'A' is displayed, the 'B' file will now be queued to be loaded, so with luck you will see very little flicker on the first transition from A->B.</li>
+					<li>I updated the duplicate filter's queue to store more information and added the next pair to the new prefetch queue, so when you action a pair, the A of the next pair should also load up quickly</li>
+					<li>boosted the default sizes of the thumbnail and image caches up to 32MB and 384MB (from 25/150)  and gave them nicer 'bytes quantity' widgets in the options panel</li>
+					<li>when popup windows show network jobs, they now have delayed hide. with luck, this will make subscriptions more stable in height, less flickering as jobs are loaded and unloaded</li>
+					<li>reduced the extremes of the new auto-throttled pending upload. it will now change speed slower, on less strict of a schedule, and won't go as fast or slow max</li>
+					<li>the text colour of hyperlinks across the program, most significantly in the top-right media hover window, can now be customised in QSS. I have set some ok defaults for all the QSS styles that come with the client, if you have a custom QSS, check out my default to see what you need to do. also hyperlinks are no longer underlined and you can't 'select' their text with the mouse any more (this was a weird rich-text flag)</li>
+					<li>the client api and local booru now have a checkbox in their manage services panel for 'normie-friendly welcome page', which switches the default ascii art for an alternate</li>
+					<li>fixed an issue with the hydrus server not explicitly saying it is utf-8 when rendering html</li>
+					<li>may have fixed some issues with autocomplete dropdowns getting hung up in the wrong position and not fixing themselves until parent resize event or similar</li>
+					<li>.</li>
+					<li>code cleanup:</li>
+					<li>about 80KB of code moved out of the main ClientDB.py file:</li>
+					<li>refactored all combined files display mappings cache code from the code database to a new database module</li>
+					<li>refactored all combined files storage mappings cache code from the code database to a new database module</li>
+					<li>refactored all specific storage mappings cache code from the code database to a new database module</li>
+					<li>more misc refactoring of tag count estimate, tag search, and other code down to modules</li>
+					<li>hooked up specific display mappings cache to the repair system correctly--it had been left unregistered by accident</li>
+					<li>some misc duplicate action options code cleanup</li>
+					<li>migrated some ancient pause states--repository, subscriptions, import&export folders--to the newer options structure</li>
+					<li>migrated the image and thumbnail cache sizes to the newer options structure</li>
+					<li>removed some ancient db and dialog code from the retired dumper system</li>
+				</ul>
 				<li><h3 id="version_481"><a href="#version_481">version 481</a></h3></li>
 				<ul>
 					<li>fixes and improvements after last week's hover and note work:</li>

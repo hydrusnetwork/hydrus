@@ -1089,6 +1089,9 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._log_requests = QW.QCheckBox( 'log requests', self._client_server_options_panel )
         self._log_requests.setToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' )
         
+        self._use_normie_eris = QW.QCheckBox( 'normie-friendly welcome page', self._client_server_options_panel )
+        self._use_normie_eris.setToolTip( 'Use alternate ASCII art on the root page of the server.' )
+        
         self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
         
         self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'scheme (http/https) override when copying external links' )
@@ -1118,6 +1121,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._use_https.setChecked( dictionary[ 'use_https' ] )
         self._support_cors.setChecked( dictionary[ 'support_cors' ] )
         self._log_requests.setChecked( dictionary[ 'log_requests' ] )
+        self._use_normie_eris.setChecked( dictionary[ 'use_normie_eris' ] )
         
         self._external_scheme_override.SetValue( dictionary[ 'external_scheme_override' ] )
         self._external_host_override.SetValue( dictionary[ 'external_host_override' ] )
@@ -1130,6 +1134,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._client_server_options_panel.Add( self._use_https, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._support_cors, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._log_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._client_server_options_panel.Add( self._use_normie_eris, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._external_scheme_override, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._external_host_override, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1165,6 +1170,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         dictionary_part[ 'use_https' ] = self._use_https.isChecked()
         dictionary_part[ 'support_cors' ] = self._support_cors.isChecked()
         dictionary_part[ 'log_requests' ] = self._log_requests.isChecked()
+        dictionary_part[ 'use_normie_eris' ] = self._use_normie_eris.isChecked()
         dictionary_part[ 'external_scheme_override' ] = self._external_scheme_override.GetValue()
         dictionary_part[ 'external_host_override' ] = self._external_host_override.GetValue()
         dictionary_part[ 'external_port_override' ] = self._external_port_override.GetValue()
@@ -2478,7 +2484,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             self._my_updater.Update()
             
         
-        if HG.client_controller.options[ 'pause_repo_sync' ]:
+        if HG.client_controller.new_options.GetBoolean( 'pause_repo_sync' ):
             
             QW.QMessageBox.warning( self, 'Warning', 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
             
