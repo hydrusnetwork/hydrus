@@ -12,7 +12,7 @@ If you already have many local files, either downloaded by hand or by some other
 If you want to download with Hydrus, check out [getting started with downloading](getting_started_downloading.md) and then [getting started with subscriptions](getting_started_subscriptions.md). If you want to add the ability to download from sites not already available in Hydrus by default, check out [adding new downloaders](adding_new_downloaders.md) for how and a link to a user-maintained archive of downloaders.
 
 ## Tags and ratings
-If you have imported and/or downloaded some files and want to get started searching and tagging see [searching and sorting](searching_and_sorting.md) and [getting started with ratings](getting_started_ratings.md).
+If you have imported and/or downloaded some files and want to get started searching and tagging see [searching and sorting](getting_started_searching.md) and [getting started with ratings](getting_started_ratings.md).
 
 It is also worth having a look at [siblings](advanced_siblings.md) for when you want to consolidate different tags that all mean the same thing, common misspellings, or preferential differences into one tag.  
 
