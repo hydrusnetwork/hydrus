@@ -10,13 +10,29 @@ Tags often fall into certain heirarchies. Certain tags _always_ imply certain ot
 
 For example, whenever you tag a file with _ak-47_, you probably also want to tag it _assault rifle_, and maybe even _firearm_ as well.
 
-![](images/tag_parents_venn.png)
+![](images/tag_parents_venn.svg)
 
 Another time, you might tag a file _character:eddard stark_, and then also have to type in _house stark_ and then _series:game of thrones_. (you might also think _series:game of thrones_ should actually be _series:a song of ice and fire_, but that is an issue for [siblings](advanced_siblings.md))
 
 Drawing more relationships would make a significantly more complicated venn diagram, so let's draw a family tree instead:
 
-![](images/tag_parents_got.png)
+```mermaid
+graph TB
+  got[series:game of thrones]
+  got --- stark[house stark]
+  got --- baratheon[house baratheon]
+  got --- lannister[house lannister]
+  got --- targaryen[house targaryen]
+  stark --- eddard[character:eddard stark]
+  stark ---- sansa[character:sansa stark]
+  stark ----- bran[character:bran stark]
+  baratheon --- robert[character:robert baratheon]
+  lannister --- cersei[character:cersei lannister]
+  lannister ---- jaime[character:jaime lannister]
+  targaryen --- daenerys[character:daenerys targaryen]
+```
+
+e.g. cersei lannister is a member of house lannister, which occurs in the series game of thrones.
 
 ## tag parents { id="tag_parents" }
 
@@ -24,7 +40,28 @@ Let's define the child-parent relationship 'C->P' as saying that tag P is the se
 
 Let's expand our weapon example:
 
-![](images/tag_parents_firearms.png)
+```mermaid
+graph TB
+  firearm --- rifle
+  firearm --- shotgun
+  firearm --- handgun
+  rifle --- assult[assult rifle]
+  rifle --- semi[semi-automatic rifle]
+  rifle --- bolt[bolt-action rifle]
+  assult --- ak-47
+  assult --- ak-74
+  assult --- m16
+  assult --- m4
+  semi --- ar-15
+  bolt --- winchester70[winchester model 70]
+  shotgun ---- remington870[remington model 870]
+  remington --- remington870
+  handgun ---- m1911
+  handgun ---- sw10[smith & wesson model 10]
+  sw[smith and wesson] --- sw10
+```
+
+Searching for any term should generally return all the files tagged with anything below. Note that a tag can have more than one parent.
 
 In that graph, adding _ar-15_ to a file would also add _semi-automatic rifle_, _rifle_, and _firearm_. Searching for _handgun_ would return everything with _m1911_ and _smith and wesson model 10_.
 
