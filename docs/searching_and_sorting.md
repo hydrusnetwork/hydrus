@@ -6,7 +6,7 @@ title: Searching and sorting
 The primary purpose of tags is to be able to find what you've tagged again. For this we have the search feature of Hydrus.
 
 ## Searching
-Just open a new search page (`pages > new search page` or <kbd>Ctrl+T</kbd> `> files`) and start typing away in the search field which should be focused when you first open the page.
+Just open a new search page (`pages > new file search page` or <kbd>Ctrl+T</kbd> `> file search`) and start typing away in the search field which should be focused when you first open the page.
 
 ### The dropdown controls
 
