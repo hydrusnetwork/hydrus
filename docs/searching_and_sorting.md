@@ -1,12 +1,16 @@
 ---
-title: powerful searching
+title: Searching and sorting
 ---
 
-# powerful searching
+# Searching and sorting
+The primary purpose of tags is to be able to find what you've tagged again. For this we have the search feature of Hydrus.
 
-## the dropdown controls
+## Searching
+Just open a new search page (`pages > new file search page` or <kbd>Ctrl+T</kbd> `> file search`) and start typing away in the search field which should be focused when you first open the page.
 
-Let's look at the tag autocomplete dropdown again:
+### The dropdown controls
+
+Let's look at the tag autocomplete dropdown:
 
 ![](images/ac_dropdown.png)
 
@@ -22,7 +26,7 @@ Let's look at the tag autocomplete dropdown again:
     
     This controls whether a change to the search tags will instantly run the new search and get new results. Turning this off is helpful if you want to add, remove, or replace several heavy search terms in a row without getting UI lag.
     
-*   **OR**
+*   **[OR](/hydrus/docs/searching_and_sorting.md#or-searching)**
     
     You only see this if you have 'advanced mode' on. It lets you enter some pretty complicated tags!
     
@@ -33,9 +37,12 @@ Let's look at the tag autocomplete dropdown again:
     For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a `system:num_tags` or a `character:samus aran` will only look 'my tags'.
     
     Turning on 'advanced mode' gives access to more search domains. Some of them are subtly complicated and only useful for clever jobs--most of the time, you still want 'my files' and 'all known tags'.
-    
 
-## searching with wildcards { id="wildcards" }
+Hydrus will treat a space the same way as an underscore when searching so the query `character:samus aran` will find files tagged with `character:samus aran` and `character:samus_aran`.
+
+Tags will be searchable by all its [siblings](/advanced_siblings.md). If there's a sibling for `large` -> `huge` then the query `large` will find files tagged with either and so will a search for `huge`. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
+
+### Wildcards
 
 The autocomplete tag dropdown supports wildcard searching with `*`.
 
@@ -55,13 +62,17 @@ This is particularly useful if you have a number of files with commonly structur
 
 In this case, selecting the `title:cool pic*` predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like `series:cool pic` and `page:1`, `page:2`, `page:3`.
 
-## OR searching
+### System predicates
+Tags are intended to tell you about content in the file while system predicates on the other hand deals with the files themselves for the most part: How big a file is, resolution, number of pixels, sound or no sound, number of tags assigned to the file, time imported, and quite a few other things. System predicates are the things prefixed with `system:` in the window that appear when you click in the search box.
 
-Searches find files that match every search 'predicate' in the list (it is an **AND** search), which makes it difficult to search for files that include one **OR** another tag. More recently, simple OR search support was added. All you have to do is hold down Shift when you enter/double-click a tag in the autocomplete entry area. Instead of sending the tag up to the active search list up top, it will instead start an under-construction 'OR chain' in the tag results below:
+## OR searching
+Searches find files that match every search 'predicate' in the list (it is an **AND** search), which makes it difficult to search for files that include one **OR** another tag. For example the query `red eyes` **AND** `green eyes` (aka what you get if you enter each tag by itself) will only find files that has both tags. While the query `red eyes` **OR** `green eyes` will present you with files that are tagged with red eyes or green eyes, or both.
+
+More recently, simple OR search support was added. All you have to do is hold down ++shift++ when you enter/double-click a tag in the autocomplete entry area. Instead of sending the tag up to the active search list up top, it will instead start an under-construction 'OR chain' in the tag results below:
 
 ![](images/or_under_construction.png)
 
-You can keep searching for and entering new tags. Holding down Shift on new tags will extend the OR chain, and entering them as normal will 'cap' the chain and send it to the complete and active search predicates above.
+You can keep searching for and entering new tags. Holding down ++Shift++ on new tags will extend the OR chain, and entering them as normal will 'cap' the chain and send it to the complete and active search predicates above.
 
 ![](images/or_done.png)
 
@@ -77,10 +88,20 @@ You can also cancel an under-construction OR by hitting Esc on an empty input. Y
 
 This search will return all files that have the tag `fanfic` and one or more of `medium:text`, a positive value for the like/dislike rating 'read later', or PDF mime.
 
-## sorting with system limit
+There's a more advanced OR search function available by pressing the OR button. Previous knowledge of operators expected and required.
 
-If you add system:limit to a search, the client will consider what that page's file sort currently is. If it is simple enough--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.
+## Sorting
+At the top-left of most pages there's a `sort by: ` dropdown menu. Most of the options are self-explanatory. They do nothing except change in what order Hydrus presents the currently searched files to you.
+
+Default sort order and more `sort by: namespace` are found in `file -> options -> sort/collect`.
+
+### Sorting with `system:limit`
+
+If you add `system:limit` to a search, the client will consider what that page's file sort currently is. If it is simple enough--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.
 
 If you change the sort, hydrus will not refresh the search, it'll just re-sort the n files you have. Hit F5 to refresh the search with a new sort.
 
 Not all sorts are supported. Anything complicated like tag sort will result in a random sample instead.
+
+## Collecting
+Collection is found under the `sort by: ` dropdown and uses namespaces listed in the `sort by: namespace` sort options. The new namespaces will only be available in new pages.
