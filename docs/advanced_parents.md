@@ -6,66 +6,84 @@ Tag parents let you automatically add a particular tag every time another tag is
 
 ## what's the problem? { id="the_problem" }
 
-Tags often fall into certain heirarchies. Certain tags _always_ imply certain other tags, and it is annoying and time-consuming to add them all individually every time.
+Tags often fall into certain heirarchies. Certain tags _always_ imply other tags, and it is annoying and time-consuming to type them all out individually every time.
 
-For example, whenever you tag a file with _ak-47_, you probably also want to tag it _assault rifle_, and maybe even _firearm_ as well.
+As a basic example, a `car` _is_ a `vehicle`. It is a _subset_. Any time you see a car, you also see a vehicle. Similarly, a `rifle` _is_ a `firearm`, `face tattoo` implies `tattoo`, and `species:pikachu` implies `species:pokémon` which also implies `series:pokémon`.
 
-![](images/tag_parents_venn.svg)
+Another way of thinking about this is considering what you would expect to see when you search these terms. If you search `vehicle`, you would expect the result to include _all_ `cars`. If you search `series:league of legends`, you would expect to see all instances of `character:ahri` (even if, on rare occasion, she were just appearing in cameo or in a crossover).
 
-Another time, you might tag a file _character:eddard stark_, and then also have to type in _house stark_ and then _series:game of thrones_. (you might also think _series:game of thrones_ should actually be _series:a song of ice and fire_, but that is an issue for [siblings](advanced_siblings.md))
-
-Drawing more relationships would make a significantly more complicated venn diagram, so let's draw a family tree instead:
+For hydrus terms, `character x is in series y` is a common relationship, as is `costume x is of character y`: 
 
 ```mermaid
 graph TB
-  got[series:game of thrones]
-  got --- stark[house stark]
-  got --- baratheon[house baratheon]
-  got --- lannister[house lannister]
-  got --- targaryen[house targaryen]
-  stark --- eddard[character:eddard stark]
-  stark ---- sansa[character:sansa stark]
-  stark ----- bran[character:bran stark]
-  baratheon --- robert[character:robert baratheon]
-  lannister --- cersei[character:cersei lannister]
-  lannister ---- jaime[character:jaime lannister]
-  targaryen --- daenerys[character:daenerys targaryen]
+  C[series:metroid] --- B[character:samus aran] --- A[character:zero suit samus]
 ```
 
-e.g. cersei lannister is a member of house lannister, which occurs in the series game of thrones.
+In this instance, anything with `character:zero suit samus` would also have `character:samus aran`. Anything with `character:samus aran` (and thus anything with `character:zero suit samus`) would have `series:metroid`.
+
+Remember that the reverse is not true. Samus comes inextricably from Metroid, but not everything Metroid is Samus (e.g. a picture of just Ridley).
+
+Even a small slice of these relationships can get complicated:
+
+```mermaid
+graph TB
+  A[studio:blizzard entertainment]
+  A --- B[series:overwatch]
+  B --- B1[character:dr. angela 'mercy' ziegler]
+  B1 --- B1b[character:pink mercy]
+  B1 --- B1c[character:witch mercy]
+  B --- B2[character:hana 'd.va' song]
+  B2 --- B2b["character:d.va (gremlin)"]
+  A --- C[series:world of warcraft]
+  C --- C1[character:jaina proudmoore]
+  C1 --- C1a[character:dreadlord jaina]
+  C --- C2[character:sylvanas windrunner]
+```
+
+Some franchises are bananas:
+
+![](images/azur_hell.png)
+
+Also, unlike siblings, which as we previously saw are `n->1`, some tags have more than one implication (`n->n`):
+
+```mermaid
+graph TB
+  A[adjusting clothes] --- B[adjusting swimsuit]
+  C[swimsuit] --- B
+```
+
+`adjusting swimsuit` implies both a `swimsuit` and `adjusting clothes`. Consider how `adjusting bikini` might fit on this chart--perhaps this:
+
+```mermaid
+graph TB
+  A[adjusting clothes] --- B[adjusting swimsuit]
+  A --- E[adjusting bikini]
+  C[swimsuit] --- B
+  F[bikini] --- E
+  D[swimwear] --- C
+  D --- F
+```
+
+Note this is not a loop--like with siblings, loops are not allowed--this is a family tree with three 'generations'. `adjusting bikini` is a child to both `bikini` and `adjusting clothes`, and `bikini` is a child to the new `swimwear`, which is also a parent to `swimsuit`. `adjusting bikini` and `adjusting swimsuit` are both grandchildren to `swimwear`.
+
+This can obviously get as complicated and autistic as you like, but be careful of being too confident. Reasonable people disagree on what is 'clearly' a parent or sibling, or what is an excessive level of detail (e.g. `person:scarlett johansson` may be `gender:female`, if you think that useful, but `species:human`, `species:mammal`, and `species:animal` may be going a little far). Beyond its own intellectual neatness, ask yourself the purpose of what you are creating.
+
+Of course you can create any sort of parent tags on your local tags or your own tag repositories, but this sort of thing can easily lead to arguments between reasonable people on a shared server like the PTR.
+
+Just like with normal tags, try not to create anything 'perfect' or stray away from what you actually search with, as it usually ends up wasting time. Act from need, not toward purpose.
 
 ## tag parents { id="tag_parents" }
 
-Let's define the child-parent relationship 'C->P' as saying that tag P is the semantic superset/superclass of tag C. **All files that have C should also have P, without exception.** When the user tries to add tag C to a file, tag P is added automatically.
+Let's define the child-parent relationship 'C->P' as saying that tag P is the semantic superset/superclass of tag C. **All files that have C should also have P, without exception.**
 
-Let's expand our weapon example:
+Any file that has C should appear to have P. Any search for P will include all of C implicitly.
 
-```mermaid
-graph TB
-  firearm --- rifle
-  firearm --- shotgun
-  firearm --- handgun
-  rifle --- assult[assult rifle]
-  rifle --- semi[semi-automatic rifle]
-  rifle --- bolt[bolt-action rifle]
-  assult --- ak-47
-  assult --- ak-74
-  assult --- m16
-  assult --- m4
-  semi --- ar-15
-  bolt --- winchester70[winchester model 70]
-  shotgun ---- remington870[remington model 870]
-  remington --- remington870
-  handgun ---- m1911
-  handgun ---- sw10[smith & wesson model 10]
-  sw[smith and wesson] --- sw10
-```
+Tags can have multiple parents, and multiple tags have the same parent. Loops are not allowed.
 
-Searching for any term should generally return all the files tagged with anything below. Note that a tag can have more than one parent.
-
-In that graph, adding _ar-15_ to a file would also add _semi-automatic rifle_, _rifle_, and _firearm_. Searching for _handgun_ would return everything with _m1911_ and _smith and wesson model 10_.
-
-This can obviously get as complicated and autistic as you like, but be careful of being too confident--this is just a fun example, but is an AK-47 truly _always_ an assault rifle? Some people would say no, and beyond its own intellectual neatness, what is the purpose of attempting to create such a complicated and 'perfect' tree? Of course you can create any sort of parent tags on your local tags or your own tag repositories, but this sort of thing can easily lead to arguments between reasonable people. I only mean to say, as someone who does a lot of tag work, to try not to create anything 'perfect', as it usually ends up wasting time. Act from need, not toward purpose.
+!!! note
+    In hydrus, tag parents are _virtual_. P is not actually added to every file by C, it just appears as if it is. When you look at a file in _manage tags_, you will see the implication, just like you see how tags will be renamed by siblings, but you won't see the parent unless it actually happens to also be there as a 'hard' tag. If you remove a `C->P` parent relationship, all the implied P tags will disappear!
+    
+    It also takes a bunch of CPU to figure this stuff out. Please bear with this system, sometimes it can take time.
 
 ## how you do it { id="how_to_do_it" }
 

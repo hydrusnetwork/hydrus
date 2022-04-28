@@ -44,28 +44,35 @@ This relationship is transitive, which means as well as saying `A->B`, you can a
 
 ``` mermaid
 graph LR
-  A[murrikkka] --> B[united states] --> C[united states of america];
+  A[lena_oxton] --> B[lena oxton] --> C[character:tracer];
 ```
+
+In this case, everything with 'lena_oxton' or 'lena oxton' will show 'character:tracer' instead.
 
 You can also have an `A->C` and `B->C` that does not include `A->B`.
 
 ```mermaid
 graph LR
-  boy --> male
-  man --> male
+  A[d.va] --> C[character:hana 'd.va' song]
+  B[hana song] --> C
 ```
 
-The outcome of these two arrangements is the same (everything ends up as C), but the underlying semantics are a little different if you ever want to edit them.
+The outcome of these two arrangements is the same--everything ends up as C.
 
-Many complicated arrangements are possible:
+Many complicated arrangements are possible (and inevitable, as we try to merge many different communities' ideal tags):
 
 ```mermaid
 graph LR
-  A[Calvin Broadus] --> B[snoop doggy dogg] --> C[snoop dogg] --> D[snoop lion]
-  E[dj snoopadelic] --> D
+  A[angela_ziegler] --> B[angela ziegler] --> I[character:dr. angela 'mercy' ziegler]
+  C["angela_ziegler_(overwatch)"] --> B
+  D[character:mercy] --> I
+  E["character:mercy (overwatch)"] --> I
+  F[dr angela ziegler] --> I
+  G["character:マーシー（オーバーウォッチ）"] --> E
+  H[overwatch mercy] --> I
 ```
 
-Note that if you say `A->B`, you cannot say `A->C`; the left-hand side can only go to one. The right-hand side can receive many. The client will stop you from constructing loops.
+Note that if you say `A->B`, you cannot also say `A->C`. This is an `n->1` relationship. Many things can point to a single ideal, but a tag cannot have more than one ideal. Also, obviously, these graphs are non-cyclic--no loops.
 
 ## how you do it { id="how_to_do_it" }
 
