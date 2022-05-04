@@ -3339,7 +3339,7 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            return [ service for service in self._services_sorted if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN and service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+            return [ service for service in self._services_sorted if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN ]
             
         
     

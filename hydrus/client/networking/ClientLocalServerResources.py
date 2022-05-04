@@ -1205,6 +1205,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             ( ( HC.LOCAL_TAG, ), 'local_tags' ),
             ( ( HC.TAG_REPOSITORY, ), 'tag_repositories' ),
             ( ( HC.LOCAL_FILE_DOMAIN, ), 'local_files' ),
+            ( ( HC.LOCAL_FILE_UPDATE_DOMAIN, ), 'local_updates' ),
             ( ( HC.FILE_REPOSITORY, ), 'file_repositories' ),
             ( ( HC.COMBINED_LOCAL_FILE, ), 'all_local_files' ),
             ( ( HC.COMBINED_FILE, ), 'all_known_files' ),

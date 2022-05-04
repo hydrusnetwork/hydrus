@@ -45,7 +45,298 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
-class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
+def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
+    
+    # TODO: I am hesitating making this async since we'll have duplicate relations available in the MediaResult soon enough
+    # it would be great to have it in the Canvas though, hence the refactoring. needs a bit more reworking for that, but a good step forward
+    
+    multiple_selected = num_selected > 1
+    
+    duplicates_menu = QW.QMenu( menu )
+    
+    focused_hash = focus_singleton.GetHash()
+    
+    combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    
+    if HG.client_controller.DBCurrentlyDoingJob():
+        
+        file_duplicate_info = {}
+        
+    else:
+        
+        file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', location_context, focused_hash )
+        
+        if location_context.current_service_keys.isdisjoint( HG.client_controller.services_manager.GetServiceKeys( HC.SPECIFIC_LOCAL_FILE_SERVICES ) ):
+            
+            all_local_files_file_duplicate_info = {}
+            
+        else:
+            
+            all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
+            
+        
+    
+    focus_is_in_duplicate_group = False
+    focus_is_in_alternate_group = False
+    focus_has_fps = False
+    focus_has_potentials = False
+    focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
+    
+    if len( file_duplicate_info ) == 0:
+        
+        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch file\'s duplicates (db currently locked)' )
+        
+    else:
+        
+        view_duplicate_relations_jobs = []
+        
+        if len( file_duplicate_info[ 'counts' ] ) > 0:
+            
+            view_duplicate_relations_jobs.append( ( location_context, file_duplicate_info ) )
+            
+        
+        if len( all_local_files_file_duplicate_info ) > 0 and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
+            
+            view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
+            
+        
+        for ( job_location_context, job_duplicate_info ) in view_duplicate_relations_jobs:
+            
+            file_duplicate_types_to_counts = job_duplicate_info[ 'counts' ]
+            
+            duplicates_view_menu = QW.QMenu( duplicates_menu )
+            
+            if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
+                
+                if job_duplicate_info[ 'is_king' ]:
+                    
+                    ClientGUIMenus.AppendMenuLabel( duplicates_view_menu, 'this is the best quality file of its group' )
+                    
+                else:
+                    
+                    ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
+                    
+                
+                ClientGUIMenus.AppendSeparator( duplicates_view_menu )
+                
+            
+            for duplicate_type in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ):
+                
+                if duplicate_type in file_duplicate_types_to_counts:
+                    
+                    count = file_duplicate_types_to_counts[ duplicate_type ]
+                    
+                    if count > 0:
+                        
+                        label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
+                        
+                        ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
+                        
+                        if duplicate_type == HC.DUPLICATE_MEMBER:
+                            
+                            focus_is_in_duplicate_group = True
+                            
+                        elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+                            
+                            focus_is_in_alternate_group = True
+                            
+                        elif duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                            
+                            focus_has_fps = True
+                            
+                        elif duplicate_type == HC.DUPLICATE_POTENTIAL:
+                            
+                            focus_has_potentials = True
+                            
+                        
+                    
+                
+            
+            label = 'view this file\'s relations'
+            
+            if job_location_context is combined_local_location_context:
+                
+                label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                
+            
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, label )
+            
+        
+    
+    focus_is_definitely_king = len( file_duplicate_info ) > 0 and file_duplicate_info[ 'is_king' ]
+    
+    dissolution_actions_available = focus_can_be_searched or focus_is_in_duplicate_group or focus_is_in_alternate_group or focus_has_fps
+    
+    single_action_available = dissolution_actions_available or not focus_is_definitely_king
+    
+    if multiple_selected or single_action_available:
+        
+        duplicates_action_submenu = QW.QMenu( duplicates_menu )
+        
+        if len( file_duplicate_info ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
+            
+        else:
+            
+            if not focus_is_definitely_king:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
+                
+            
+        
+        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+        
+        if multiple_selected:
+            
+            label = 'set this file as better than the ' + HydrusData.ToHumanInt( num_selected - 1 ) + ' other selected'
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
+            
+            num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
+            
+            num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
+            
+            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
+            
+            if collections_selected:
+                
+                ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
+                
+            
+            #
+            
+            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            
+            duplicates_edit_action_submenu = QW.QMenu( duplicates_action_submenu )
+            
+            for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[duplicate_type], 'Edit what happens when you set this status.', EditDuplicateActionOptions, win, duplicate_type )
+                
+            
+            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', EditDuplicateActionOptions, win, HC.DUPLICATE_ALTERNATE )
+                
+            
+            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
+            
+            #
+            
+            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
+            
+        
+        if dissolution_actions_available:
+            
+            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            
+            duplicates_single_dissolution_menu = QW.QMenu( duplicates_action_submenu )
+            
+            if focus_can_be_searched:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
+                
+            
+            if focus_has_potentials:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
+                
+            
+            if focus_is_in_duplicate_group:
+                
+                if not focus_is_definitely_king:
+                    
+                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
+                
+            
+            if focus_is_in_alternate_group:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
+                
+            
+            if focus_has_fps:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
+                
+            
+            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
+            
+        
+        if multiple_selected:
+            
+            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                duplicates_multiple_dissolution_menu = QW.QMenu( duplicates_action_submenu )
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
+                
+                ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for all selected' )
+                
+            
+        
+        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
+        
+    
+    if len( duplicates_menu.actions() ) == 0:
+        
+        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'no file relationships or actions available for this file at present' )
+        
+    
+    ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'file relationships' )
+    
+
+def EditDuplicateActionOptions( win: QW.QWidget, duplicate_type: int ):
+    
+    new_options = HG.client_controller.new_options
+    
+    duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'edit duplicate merge options' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            duplicate_action_options = panel.GetValue()
+            
+            new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+            
+        
+    
+
+def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, hash, duplicate_type ):
+    
+    # TODO: this can be replaced by a call to the MediaResult when it holds these hashes
+    hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
+    
+    if hashes is not None and len( hashes ) > 0:
+        
+        HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+        
+    
+class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.ApplicationCommandProcessorMixin ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
@@ -60,6 +351,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QScrollArea.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -284,7 +576,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             prefix = service.GetMultihashPrefix()
             
         
-        hashes = self._GetSelectedHashes( has_location = service_key )
+        hashes = self._GetSelectedHashes( is_in_file_service_key = service_key )
         
         if len( hashes ) > 0:
             
@@ -308,6 +600,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
     
     def _Delete( self, file_service_key = None, only_those_in_file_service_key = None ):
+        
+        if file_service_key is None:
+            
+            if len( self._location_context.current_service_keys ) == 1:
+    
+                ( possible_suggested_file_service_key, ) = self._location_context.current_service_keys
+                
+                if HG.client_controller.services_manager.GetServiceType( possible_suggested_file_service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES + ( HC.FILE_REPOSITORY, ):
+                    
+                    file_service_key = possible_suggested_file_service_key
+                    
+                
+            
         
         media_to_delete = ClientMedia.FlattenMedia( self._selected_media )
         
@@ -385,27 +690,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     def _DownloadHashes( self, hashes ):
         
         HG.client_controller.quick_download_manager.DownloadFiles( hashes )
-        
-    
-    def _EditDuplicateActionOptions( self, duplicate_type ):
-        
-        new_options = HG.client_controller.new_options
-        
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
-            
-            dlg_2.SetPanel( panel )
-            
-            if dlg_2.exec() == QW.QDialog.Accepted:
-                
-                duplicate_action_options = panel.GetValue()
-                
-                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
-                
-            
         
     
     def _EndShiftSelect( self ):
@@ -594,7 +878,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 ( selected_media, ) = self._selected_media
                 
-                s += selected_files_string + ' selected, ' + ', '.join( selected_media.GetPrettyInfoLines() )
+                s += selected_files_string + ' selected, ' + ', '.join( selected_media.GetPrettyInfoLines( only_interesting_lines = True ) )
                 
             else: # 23 files - 5 selected, selection_info
                 
@@ -661,7 +945,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _GetSelectedHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+    def _GetSelectedHashes( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None, ordered = False ):
         
         if ordered:
             
@@ -669,7 +953,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             for media in self._GetSelectedMediaOrdered():
                 
-                result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                result.extend( media.GetHashes( is_in_file_service_key, discriminant, is_not_in_file_service_key, ordered ) )
                 
             
         else:
@@ -678,7 +962,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
             for media in self._selected_media:
                 
-                result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                result.update( media.GetHashes( is_in_file_service_key, discriminant, is_not_in_file_service_key, ordered ) )
                 
             
         
@@ -692,7 +976,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         return sorted_selected_collections
         
 
-    def _GetSelectedFlatMedia( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+    def _GetSelectedFlatMedia( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None ):
         
         # this now always delivers sorted results
         
@@ -700,7 +984,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
         
         flat_media = ClientMedia.FlattenMedia( sorted_selected_media )
         
-        flat_media = [ media for media in flat_media if media.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ) ]
+        flat_media = [ media for media in flat_media if media.MatchesDiscriminant( is_in_file_service_key = is_in_file_service_key, discriminant = discriminant, is_not_in_file_service_key = is_not_in_file_service_key ) ]
         
         return flat_media
         
@@ -989,6 +1273,83 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
+    def _DOLocalDuplicateFiles( self, service_key, flat_media ):
+        
+        now = HydrusData.GetNow()
+        
+        for block_of_flat_media in HydrusData.SplitListIntoChunks( flat_media, 64 ):
+            
+            content_updates = []
+            undelete_hashes = set()
+            
+            for m in block_of_flat_media:
+                
+                if service_key in m.GetLocationsManager().GetDeleted():
+                    
+                    undelete_hashes.add( m.GetHash() )
+                    
+                else:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( m.GetMediaResult().GetFileInfoManager(), now ) ) )
+                    
+                
+            
+            if len( undelete_hashes ) > 0:
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undelete_hashes ) )
+                
+            
+            HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
+            
+        
+    
+    def _LocalDuplicateFiles( self, service_key ):
+        
+        flat_media = self._GetSelectedFlatMedia( is_not_in_file_service_key = service_key )
+        
+        if len( flat_media ) > 0:
+            
+            text = 'Add {} files to {}?'.format( HydrusData.ToHumanInt( len( flat_media ) ), HG.client_controller.services_manager.GetName( service_key ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+            self._DOLocalDuplicateFiles( service_key, flat_media )
+            
+        
+    
+    def _LocalMoveFiles( self, service_key_from, service_key_to ):
+        
+        flat_media = self._GetSelectedFlatMedia( is_in_file_service_key = service_key_from, is_not_in_file_service_key = service_key_to )
+        
+        if len( flat_media ) > 0:
+            
+            text = 'Move {} files from {} to {}?'.format( HydrusData.ToHumanInt( len( flat_media ) ), HG.client_controller.services_manager.GetName( service_key_from ), HG.client_controller.services_manager.GetName( service_key_to ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+            self._DOLocalDuplicateFiles( service_key_to, flat_media )
+            
+            for block_of_flat_media in HydrusData.SplitListIntoChunks( flat_media, 64 ):
+                
+                block_of_hashes = [ m.GetHash() for m in block_of_flat_media ]
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_hashes, reason = 'Moved to {}'.format( HG.client_controller.services_manager.GetName( service_key_to ) ) ) ]
+                
+                HG.client_controller.Write( 'content_updates', { service_key_from : content_updates } )
+                
+            
+        
+    
     def _ManageNotes( self ):
         
         if self._HasFocusSingleton():
@@ -1179,11 +1540,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
                 
                 if len( hashes ) == 1:
                     
-                    message = 'Enter a reason for this file to be removed from ' + remote_service.GetName() + '.'
+                    message = 'Enter a reason for this file to be removed from {}.'.format( remote_service.GetName() )
                     
                 else:
                     
-                    message = 'Enter a reason for these ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files to be removed from ' + remote_service.GetName() + '.'
+                    message = 'Enter a reason for these {} files to be removed from {}.'.format( HydrusData.ToHumanInt( len( hashes ) ), remote_service.GetName() )
                     
                 
                 with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
@@ -1791,16 +2152,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
             
         
     
-    def _ShowDuplicatesInNewPage( self, location_context: ClientLocation.LocationContext, hash, duplicate_type ):
-        
-        hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
-        
-        if hashes is not None and len( hashes ) > 0:
-            
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
-            
-        
-    
     def _ShowSelectionInNewPage( self ):
         
         hashes = self._GetSelectedHashes( ordered = True )
@@ -1851,7 +2202,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     def _UploadFiles( self, file_service_key ):
         
-        hashes = self._GetSelectedHashes( not_uploaded_to = file_service_key )
+        hashes = self._GetSelectedHashes( is_not_in_file_service_key = file_service_key )
         
         if hashes is not None and len( hashes ) > 0:   
             
@@ -3374,8 +3725,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             service_keys_to_names = { service.GetServiceKey() : service.GetName() for service in services }
             
-            tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
-            
             file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
             
             ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
@@ -3390,6 +3739,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             focused_is_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._focused_media.GetLocationsManager().GetCurrent()
             
+            local_media_file_service_keys = { service.GetServiceKey() for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN }
+            
             file_repository_service_keys = { repository.GetServiceKey() for repository in file_repositories }
             upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
             petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ) }
@@ -3400,6 +3751,9 @@ class MediaPanelThumbnails( MediaPanel ):
             focused_is_ipfs = not self._focused_media.GetLocationsManager().GetCurrent().isdisjoint( ipfs_service_keys )
             
             if multiple_selected:
+                
+                local_duplicate_phrase = 'add all possible selected to'
+                local_move_from_to_phrase = 'all possible selected from {} to {}'
                 
                 download_phrase = 'download all possible selected'
                 rescind_download_phrase = 'cancel downloads for all possible selected'
@@ -3424,6 +3778,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_phrase = 'files'
                 
             else:
+                
+                local_duplicate_phrase = 'add to'
+                local_move_from_to_phrase = 'from {} to {}'
                 
                 download_phrase = 'download'
                 rescind_download_phrase = 'cancel download'
@@ -3500,6 +3857,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # valid commands for the files
             
+            local_duplicable_to_file_service_keys = set()
+            local_moveable_from_and_to_file_service_keys = set()
+            
             uploadable_file_service_keys = set()
             
             downloadable_file_service_keys = set()
@@ -3522,6 +3882,26 @@ class MediaPanelThumbnails( MediaPanel ):
                 deleted = locations_manager.GetDeleted()
                 pending = locations_manager.GetPending()
                 petitioned = locations_manager.GetPetitioned()
+                
+                # LOCAL MIGRATION
+                
+                if locations_manager.IsLocal():
+                    
+                    can_send_to = local_media_file_service_keys.difference( current )
+                    can_send_from = local_media_file_service_keys.intersection( current )
+                    
+                    if len( can_send_to ) > 0:
+                        
+                        local_duplicable_to_file_service_keys.update( can_send_to )
+                        
+                        if len( can_send_from ) > 0:
+                            
+                            # can_send_from does not include trash. we won't say 'move from trash to blah' since that's a little complex. we'll just say 'add to blah' in that case I think
+                            
+                            local_moveable_from_and_to_file_service_keys.update( list( itertools.product( can_send_from, can_send_to ) ) )
+                            
+                        
+                    
                 
                 # FILE REPOS
                 
@@ -3764,257 +4144,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
-            duplicates_menu = QW.QMenu( manage_menu )
-            
-            focused_hash = focus_singleton.GetHash()
-            
-            combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-            if HG.client_controller.DBCurrentlyDoingJob():
-                
-                file_duplicate_info = {}
-                
-            else:
-                
-                file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._location_context, focused_hash )
-                
-                if self._location_context.current_service_keys.isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) ):
-                    
-                    all_local_files_file_duplicate_info = {}
-                    
-                else:
-                    
-                    all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
-                    
-                
-            
-            focus_is_in_duplicate_group = False
-            focus_is_in_alternate_group = False
-            focus_has_fps = False
-            focus_has_potentials = False
-            focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
-            
-            if len( file_duplicate_info ) == 0:
-                
-                ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch file\'s duplicates (db currently locked)' )
-                
-            else:
-                
-                view_duplicate_relations_jobs = []
-                
-                if len( file_duplicate_info[ 'counts' ] ) > 0:
-                    
-                    view_duplicate_relations_jobs.append( ( self._location_context, file_duplicate_info ) )
-                    
-                
-                if len( all_local_files_file_duplicate_info ) > 0 and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
-                    
-                    view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
-                    
-                
-                for ( job_location_context, job_duplicate_info ) in view_duplicate_relations_jobs:
-                    
-                    file_duplicate_types_to_counts = job_duplicate_info[ 'counts' ]
-                    
-                    duplicates_view_menu = QW.QMenu( duplicates_menu )
-                    
-                    if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
-                        
-                        if job_duplicate_info[ 'is_king' ]:
-                            
-                            ClientGUIMenus.AppendMenuLabel( duplicates_view_menu, 'this is the best quality file of its group' )
-                            
-                        else:
-                            
-                            ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
-                            
-                        
-                        ClientGUIMenus.AppendSeparator( duplicates_view_menu )
-                        
-                    
-                    for duplicate_type in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ):
-                        
-                        if duplicate_type in file_duplicate_types_to_counts:
-                            
-                            count = file_duplicate_types_to_counts[ duplicate_type ]
-                            
-                            if count > 0:
-                                
-                                label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
-                                
-                                ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
-                                
-                                if duplicate_type == HC.DUPLICATE_MEMBER:
-                                    
-                                    focus_is_in_duplicate_group = True
-                                    
-                                elif duplicate_type == HC.DUPLICATE_ALTERNATE:
-                                    
-                                    focus_is_in_alternate_group = True
-                                    
-                                elif duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
-                                    
-                                    focus_has_fps = True
-                                    
-                                elif duplicate_type == HC.DUPLICATE_POTENTIAL:
-                                    
-                                    focus_has_potentials = True
-                                    
-                                
-                            
-                        
-                    
-                    label = 'view this file\'s relations'
-                    
-                    if job_location_context is combined_local_location_context:
-                        
-                        label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, label )
-                    
-                
-            
-            focus_is_definitely_king = len( file_duplicate_info ) > 0 and file_duplicate_info[ 'is_king' ]
-            
-            dissolution_actions_available = focus_can_be_searched or focus_is_in_duplicate_group or focus_is_in_alternate_group or focus_has_fps
-            
-            single_action_available = dissolution_actions_available or not focus_is_definitely_king
-            
-            if multiple_selected or single_action_available:
-                
-                duplicates_action_submenu = QW.QMenu( duplicates_menu )
-                
-                if len( file_duplicate_info ) == 0:
-                    
-                    ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
-                    
-                else:
-                    
-                    if not focus_is_definitely_king:
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
-                        
-                    
-                
-                ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                
-                if multiple_selected:
-                    
-                    label = 'set this file as better than the ' + HydrusData.ToHumanInt( num_selected - 1 ) + ' other selected'
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
-                    
-                    num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
-                    
-                    num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
-                    
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
-                    
-                    if collections_selected:
-                        
-                        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
-                        
-                    
-                    #
-                    
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    duplicates_edit_action_submenu = QW.QMenu( duplicates_action_submenu )
-                    
-                    for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[duplicate_type], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
-                        
-                    
-                    if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, HC.DUPLICATE_ALTERNATE )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
-                    
-                    #
-                    
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
-                    
-                
-                if dissolution_actions_available:
-                    
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    duplicates_single_dissolution_menu = QW.QMenu( duplicates_action_submenu )
-                    
-                    if focus_can_be_searched:
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
-                        
-                    
-                    if focus_has_potentials:
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
-                        
-                    
-                    if focus_is_in_duplicate_group:
-                        
-                        if not focus_is_definitely_king:
-                            
-                            ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
-                            
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
-                        
-                    
-                    if focus_is_in_alternate_group:
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
-                        
-                    
-                    if focus_has_fps:
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
-                    
-                
-                if multiple_selected:
-                
-                    if advanced_mode:
-                        
-                        duplicates_multiple_dissolution_menu = QW.QMenu( duplicates_action_submenu )
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
-                        ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
-                        
-                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for all selected' )
-                        
-                    
-                
-                ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
-                
-            
-            if len( duplicates_menu.actions() ) == 0:
-                
-                ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'no file relationships or actions available for this file at present' )
-                
-            
-            ClientGUIMenus.AppendMenu( manage_menu, duplicates_menu, 'file relationships' )
+            AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
             
             regen_menu = QW.QMenu( manage_menu )
             
@@ -4025,6 +4155,11 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
+            
+            len_interesting_local_service_keys = 0
+            
+            len_interesting_local_service_keys += len( local_duplicable_to_file_service_keys )
+            len_interesting_local_service_keys += len( local_moveable_from_and_to_file_service_keys )
             
             #
             
@@ -4047,9 +4182,37 @@ class MediaPanelThumbnails( MediaPanel ):
                 len_interesting_remote_service_keys += len( ipfs_service_keys )
                 
             
+            if len_interesting_local_service_keys > 0 and len_interesting_remote_service_keys > 0:
+                
+                files_parent_menu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenu( menu, files_parent_menu, 'files' )
+                
+            else:
+                
+                files_parent_menu = menu
+                
+            
+            if len_interesting_local_service_keys > 0:
+                
+                local_action_menu = QW.QMenu( files_parent_menu )
+                
+                if len( local_duplicable_to_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddServiceKeysToMenu( self, local_action_menu, local_duplicable_to_file_service_keys, local_duplicate_phrase, 'Duplicate the files to the local file service.', self._LocalDuplicateFiles )
+                    
+                
+                if len( local_moveable_from_and_to_file_service_keys ) > 0:
+                    
+                    ClientGUIMedia.AddDoubleServiceKeysToMenu( self, local_action_menu, local_moveable_from_and_to_file_service_keys, 'move', local_move_from_to_phrase, 'Move the files to the local file service.', self._LocalMoveFiles )
+                    
+                
+                ClientGUIMenus.AppendMenu( files_parent_menu, local_action_menu, 'local services' )
+                
+            
             if len_interesting_remote_service_keys > 0:
                 
-                remote_action_menu = QW.QMenu( menu )
+                remote_action_menu = QW.QMenu( files_parent_menu )
                 
                 if len( downloadable_file_service_keys ) > 0:
                     
@@ -4116,7 +4279,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
                     
                 
-                ClientGUIMenus.AppendMenu( menu, remote_action_menu, 'remote services' )
+                ClientGUIMenus.AppendMenu( files_parent_menu, remote_action_menu, 'remote services' )
                 
             
             #

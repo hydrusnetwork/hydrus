@@ -13,7 +13,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
-    
+
 class RatingLikeSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):

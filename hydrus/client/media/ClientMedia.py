@@ -592,7 +592,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+    def GetHashes( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None, ordered = False ):
         
         raise NotImplementedError()
         
@@ -637,7 +637,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetPrettyInfoLines( self ) -> typing.List[ str ]:
+    def GetPrettyInfoLines( self, only_interesting_lines = False ) -> typing.List[ str ]:
         
         raise NotImplementedError()
         
@@ -1351,17 +1351,17 @@ class MediaList( object ):
         return set()
         
     
-    def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ):
+    def GenerateMediaResults( self, is_in_file_service_key = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ):
         
         media_results = []
         
         for media in self._sorted_media:
             
-            if has_location is not None:
+            if is_in_file_service_key is not None:
                 
                 locations_manager = media.GetLocationsManager()
                 
-                if has_location not in locations_manager.GetCurrent():
+                if is_in_file_service_key not in locations_manager.GetCurrent():
                     
                     continue
                     
@@ -1376,7 +1376,7 @@ class MediaList( object ):
                 
                 # don't include selected_media here as it is not valid at the deeper collection level
                 
-                media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, unrated = unrated, for_media_viewer = True ) )
+                media_results.extend( media.GenerateMediaResults( is_in_file_service_key = is_in_file_service_key, discriminant = discriminant, unrated = unrated, for_media_viewer = True ) )
                 
             else:
                 
@@ -1488,9 +1488,9 @@ class MediaList( object ):
         return flat_media
         
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+    def GetHashes( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None, ordered = False ):
         
-        if has_location is None and discriminant is None and not_uploaded_to is None:
+        if is_in_file_service_key is None and discriminant is None and is_not_in_file_service_key is None:
             
             if ordered:
                 
@@ -1509,7 +1509,7 @@ class MediaList( object ):
                 
                 for media in self._sorted_media:
                     
-                    result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    result.extend( media.GetHashes( is_in_file_service_key, discriminant, is_not_in_file_service_key, ordered ) )
                     
                 
             else:
@@ -1518,7 +1518,7 @@ class MediaList( object ):
                 
                 for media in self._sorted_media:
                     
-                    result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    result.update( media.GetHashes( is_in_file_service_key, discriminant, is_not_in_file_service_key, ordered ) )
                     
                 
             
@@ -2212,7 +2212,7 @@ class MediaCollection( MediaList, Media ):
         return sum( ( nw for nw in num_words if nw is not None ) )
         
     
-    def GetPrettyInfoLines( self ):
+    def GetPrettyInfoLines( self, only_interesting_lines = False ):
         
         size = HydrusData.ToHumanBytes( self._size )
         
@@ -2367,9 +2367,9 @@ class MediaSingleton( Media ):
         return self._media_result.GetHashId()
         
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+    def GetHashes( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None, ordered = False ):
         
-        if self.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ):
+        if self.MatchesDiscriminant( is_in_file_service_key = is_in_file_service_key, discriminant = discriminant, is_not_in_file_service_key = is_not_in_file_service_key ):
             
             if ordered:
                 
@@ -2429,7 +2429,19 @@ class MediaSingleton( Media ):
         return self._media_result.GetLocationsManager().GetDeletedTimestamps( service_key )
         
     
-    def GetPrettyInfoLines( self ):
+    def GetPrettyInfoLines( self, only_interesting_lines = False ):
+        
+        def timestamp_is_interesting( timestamp_1, timestamp_2 ):
+            
+            distance_1 = abs( timestamp_1 - HydrusData.GetNow() )
+            distance_2 = abs( timestamp_2 - HydrusData.GetNow() )
+            
+            # 50000 / 51000 = 0.98 = not interesting
+            # 10000 / 51000 = 0.20 = interesting
+            difference = min( distance_1, distance_2 ) / max( distance_1, distance_2, 1 )
+            
+            return difference < 0.9
+            
         
         file_info_manager = self._media_result.GetFileInfoManager()
         locations_manager = self._media_result.GetLocationsManager()
@@ -2469,7 +2481,7 @@ class MediaSingleton( Media ):
         
         if num_words is not None: info_string += ' (' + HydrusData.ToHumanInt( num_words ) + ' words)'
         
-        lines = [ info_string ]
+        lines = [ ( True, info_string ) ]
         
         locations_manager = self._media_result.GetLocationsManager()
         
@@ -2477,6 +2489,8 @@ class MediaSingleton( Media ):
         deleted_service_keys = locations_manager.GetDeleted()
         
         local_file_services = HG.client_controller.services_manager.GetLocalMediaFileServices()
+        
+        seen_local_file_service_timestamps = set()
         
         current_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in current_service_keys ]
         
@@ -2486,14 +2500,25 @@ class MediaSingleton( Media ):
                 
                 timestamp = locations_manager.GetCurrentTimestamp( local_file_service.GetServiceKey() )
                 
-                lines.append( 'added to {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+                lines.append( ( True, 'added to {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) ) )
+                
+                seen_local_file_service_timestamps.add( timestamp )
                 
             
-        elif CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
+        
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
             
-            timestamp = locations_manager.GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            import_timestamp = locations_manager.GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'imported {}'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+            # if we haven't already printed this timestamp somewhere
+            line_is_interesting = False not in ( timestamp_is_interesting( t, import_timestamp ) for t in seen_local_file_service_timestamps )
+            
+            lines.append( ( line_is_interesting, 'imported {}'.format( ClientData.TimestampToPrettyTimeDelta( import_timestamp ) ) ) )
+            
+            if line_is_interesting:
+                
+                seen_local_file_service_timestamps.add( import_timestamp )
+                
             
         
         deleted_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in deleted_service_keys ]
@@ -2504,7 +2529,7 @@ class MediaSingleton( Media ):
             
             ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'deleted from this client {} ({})'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) )
+            lines.append( ( True, 'deleted from this client {} ({})'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) ) )
             
         elif len( deleted_local_file_services ) > 0:
             
@@ -2519,18 +2544,18 @@ class MediaSingleton( Media ):
                     l = '{} ({})'.format( l, local_file_deletion_reason )
                     
                 
-                lines.append( l )
+                lines.append( ( True, l ) )
                 
             
             if len( deleted_local_file_services ) > 1:
                 
-                lines.append( 'Deletion reason: {}'.format( local_file_deletion_reason ) )
+                lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
                 
             
         
         if locations_manager.IsTrashed():
             
-            lines.append( 'in the trash' )
+            lines.append( ( True, 'in the trash' ) )
             
         
         timestamp_manager = locations_manager.GetTimestampManager()
@@ -2539,7 +2564,10 @@ class MediaSingleton( Media ):
         
         if file_modified_timestamp is not None:
             
-            lines.append( 'file modified: {}'.format( ClientData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) )
+            # if we haven't already printed this timestamp somewhere
+            line_is_interesting = False not in ( timestamp_is_interesting( timestamp, file_modified_timestamp ) for timestamp in seen_local_file_service_timestamps )
+            
+            lines.append( ( line_is_interesting, 'modified: {}'.format( ClientData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) ) )
             
         
         if not locations_manager.inbox:
@@ -2548,7 +2576,7 @@ class MediaSingleton( Media ):
             
             if archive_timestamp is not None:
                 
-                lines.append( 'file archived: {}'.format( ClientData.TimestampToPrettyTimeDelta( archive_timestamp ) ) )
+                lines.append( ( True, 'archived: {}'.format( ClientData.TimestampToPrettyTimeDelta( archive_timestamp ) ) ) )
                 
             
         
@@ -2569,15 +2597,17 @@ class MediaSingleton( Media ):
             
             if service_type == HC.IPFS:
                 
-                status = 'pinned '
+                status_label = 'pinned'
                 
             else:
                 
-                status = 'uploaded '
+                status_label = 'uploaded'
                 
             
-            lines.append( status + 'to ' + service.GetName() + ' ' + ClientData.TimestampToPrettyTimeDelta( timestamp ) )
+            lines.append( ( True, '{} to {} {}'.format( status_label, service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) ) )
             
+        
+        lines = [ line for ( interesting, line ) in lines if interesting or not only_interesting_lines ]
         
         return lines
         
@@ -2665,7 +2695,7 @@ class MediaSingleton( Media ):
         return self._media_result.IsStaticImage()
         
     
-    def MatchesDiscriminant( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+    def MatchesDiscriminant( self, is_in_file_service_key = None, discriminant = None, is_not_in_file_service_key = None ):
         
         if discriminant is not None:
             
@@ -2704,21 +2734,21 @@ class MediaSingleton( Media ):
                 
             
         
-        if has_location is not None:
+        if is_in_file_service_key is not None:
             
             locations_manager = self._media_result.GetLocationsManager()
             
-            if has_location not in locations_manager.GetCurrent():
+            if is_in_file_service_key not in locations_manager.GetCurrent():
                 
                 return False
                 
             
         
-        if not_uploaded_to is not None:
+        if is_not_in_file_service_key is not None:
             
             locations_manager = self._media_result.GetLocationsManager()
             
-            if not_uploaded_to in locations_manager.GetCurrent():
+            if is_not_in_file_service_key in locations_manager.GetCurrent():
                 
                 return False
                 

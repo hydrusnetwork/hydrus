@@ -2251,8 +2251,10 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces, include_veto = True )
         
+        # produces has some garbage stuff like StringMatch that doesn't sort nice, so sort on pretty produces
+        
         display_tuple = ( pretty_name, pretty_produces )
-        sort_tuple = ( name, produces )
+        sort_tuple = ( name, pretty_produces )
         
         return ( display_tuple, sort_tuple )
         
@@ -3100,7 +3102,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
         display_tuple = ( pretty_name, pretty_formula, pretty_produces )
-        sort_tuple = ( name, pretty_formula, produces )
+        sort_tuple = ( name, pretty_formula, pretty_produces )
         
         return ( display_tuple, sort_tuple )
         

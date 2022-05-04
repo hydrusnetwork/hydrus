@@ -1738,13 +1738,14 @@ class OpenExternallyPanel( QW.QWidget ):
         HydrusPaths.LaunchFile( path, launch_path )
         
     
-class StaticImage( QW.QWidget ):
+class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     launchMediaViewer = QC.Signal()
     readyForNeighbourPrefetch = QC.Signal()
     
     def __init__( self, parent, canvas_type ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
         
         self._canvas_type = canvas_type

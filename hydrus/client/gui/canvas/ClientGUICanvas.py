@@ -41,7 +41,6 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
-from hydrus.client.gui.widgets import ClientGUICommon
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1
@@ -343,13 +342,14 @@ def CalculateMediaSize( media, zoom ):
     
     return ( media_width, media_height )
     
-class Canvas( QW.QWidget ):
+class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     PREVIEW_WINDOW = False
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
         
         self.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
@@ -398,7 +398,6 @@ class Canvas( QW.QWidget ):
         HG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         HG.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
-        HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
         HG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
     
@@ -507,6 +506,19 @@ class Canvas( QW.QWidget ):
         if default_reason is None:
             
             default_reason = 'Deleted from Preview or Media Viewer.'
+            
+        
+        if file_service_key is None:
+            
+            if len( self._location_context.current_service_keys ) == 1:
+                
+                ( possible_suggested_file_service_key, ) = self._location_context.current_service_keys
+                
+                if HG.client_controller.services_manager.GetServiceType( possible_suggested_file_service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES + ( HC.FILE_REPOSITORY, ):
+                    
+                    file_service_key = possible_suggested_file_service_key
+                    
+                
             
         
         try:
@@ -1491,12 +1503,7 @@ class Canvas( QW.QWidget ):
         self._PauseCurrentMedia()
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
@@ -2463,7 +2470,7 @@ class CanvasWithDetails( Canvas ):
     
     def _GetInfoString( self ):
         
-        lines = self._current_media.GetPrettyInfoLines()
+        lines = self._current_media.GetPrettyInfoLines( only_interesting_lines = True )
         
         lines.insert( 1, ClientData.ConvertZoomToPercentage( self._current_zoom ) )
         
@@ -2499,11 +2506,15 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         top_hover = self._GenerateHoverTopFrame()
         
+        top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
         self._hovers.append( top_hover )
         
         self._my_shortcuts_handler.AddWindowToFilter( top_hover )
         
         tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key )
+        
+        tags_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._hovers.append( tags_hover )
         
@@ -2511,11 +2522,15 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
         
+        top_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
         self._hovers.append( top_right_hover )
         
         self._my_shortcuts_handler.AddWindowToFilter( top_right_hover )
         
         self._right_notes_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightNotes( self, self, top_right_hover, self._canvas_key )
+        
+        self._right_notes_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._hovers.append( self._right_notes_hover )
         
@@ -2730,12 +2745,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         CanvasWithDetails.mouseMoveEvent( self, event )
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
@@ -2784,6 +2794,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._right_notes_hover, self._canvas_key )
         
+        hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
         self._hovers.append( hover )
         
         self._my_shortcuts_handler.AddWindowToFilter( hover )
@@ -2797,8 +2809,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._currently_fetching_pairs = False
         
-        self._unprocessed_pairs = []
-        self._current_pair = None
+        self._batch_of_pairs_to_process = []
+        self._current_pair_index = 0
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         
@@ -2820,7 +2832,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         
-        QP.CallAfter( self._ShowNewPair )
+        QP.CallAfter( self._LoadNextBatchOfPairs() )
         
     
     def _CommitProcessed( self, blocking = True ):
@@ -3064,19 +3076,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
-            progress = len( self._processed_pairs ) + 1 # +1 here actually counts for the one currently displayed
-            total = progress + len( self._unprocessed_pairs )
+            current_media_label = 'A' if self._current_media == self._media_list.GetFirst() else 'B'
+            
+            progress = self._current_pair_index + 1
+            total = len( self._batch_of_pairs_to_process )
             
             index_string = HydrusData.ConvertValueRangeToPrettyString( progress, total )
             
-            if self._current_media == self._media_list.GetFirst():
-                
-                return 'A - ' + index_string
-                
-            else:
-                
-                return 'B - ' + index_string
-                
+            num_decisions_string = '{} decisions'.format( HydrusData.ToHumanInt( self._GetNumCommittableDecisions() ) )
+            
+            return '{} - {} - {}'.format( current_media_label, index_string, num_decisions_string )
             
         
     
@@ -3090,41 +3099,39 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         return len( [ 1 for ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None and not was_auto_skipped ] )
         
     
+    def _GetNumRemainingDecisions( self ):
+        
+        return len( self._batch_of_pairs_to_process ) - self._current_pair_index
+        
+    
     def _GoBack( self ):
         
-        if len( self._processed_pairs ) > 0 and self._GetNumCommittableDecisions() > 0:
+        if self._current_pair_index > 0:
             
-            self._unprocessed_pairs.append( self._current_pair )
+            it_went_ok = self._RewindProcessing()
             
-            ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
-            
-            self._unprocessed_pairs.append( media_result_pair )
-            
-            while was_auto_skipped:
+            if it_went_ok:
                 
-                if len( self._processed_pairs ) == 0:
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
-                    
-                    self.window().deleteLater()
-                    
-                    return
-                    
-                
-                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
-                
-                self._unprocessed_pairs.append( media_result_pair )
+                self._ShowCurrentPair()
                 
             
-            # only want this for the one that wasn't auto-skipped
-            for hash in ( first_media.GetHash(), second_media.GetHash() ):
-                
-                self._hashes_due_to_be_deleted_in_this_batch.discard( hash )
-                self._hashes_processed_in_this_batch.discard( hash )
-                
-            
-            self._ShowNewPair()
-            
+        
+    
+    def _LoadNextBatchOfPairs( self ):
+        
+        self._hashes_due_to_be_deleted_in_this_batch = set()
+        self._hashes_processed_in_this_batch = set()
+        self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above in the commit
+        
+        self.ClearMedia()
+        
+        self._media_list = ClientMedia.ListeningMediaList( self._location_context, [] )
+        
+        self._currently_fetching_pairs = True
+        
+        HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match, self._pixel_dupes_preference, self._max_hamming_distance )
+        
+        self.update()
         
     
     def _MediaAreAlternates( self ):
@@ -3154,9 +3161,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         media_to_prefetch = [ other_media ]
         
         # this doesn't handle big skip events, but that's a job for later
-        if len( self._unprocessed_pairs ) > 0:
+        if self._GetNumRemainingDecisions() > 1: # i.e. more than the current one we are looking at
             
-            media_to_prefetch.extend( self._unprocessed_pairs[-1] )
+            media_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
             
         
         image_cache = HG.client_controller.GetCache( 'images' )
@@ -3247,17 +3254,105 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, file_deletion_reason = file_deletion_reason )
         
-        self._processed_pairs.append( ( self._current_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) )
         
-        self._ShowNewPair()
+        self._ShowNextPair()
         
     
-    def _ShowNewPair( self ):
+    def _RewindProcessing( self ) -> bool:
+        
+        if self._current_pair_index > 0:
+            
+            ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+            
+            self._current_pair_index -= 1
+            
+            while was_auto_skipped:
+                
+                if len( self._processed_pairs ) == 0:
+                    
+                    # the first one shouldn't be auto-skipped, so if it was and now we can't pop, something weird happened
+                    
+                    HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                    
+                    QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It will now close.' )
+                    
+                    self.window().deleteLater()
+                    
+                    return False
+                    
+                
+                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                
+                self._current_pair_index -= 1
+                
+            
+            # only want this for the one that wasn't auto-skipped
+            for media_result in media_result_pair:
+                
+                hash = media_result.GetHash()
+                
+                self._hashes_due_to_be_deleted_in_this_batch.discard( hash )
+                self._hashes_processed_in_this_batch.discard( hash )
+                
+            
+            return True
+            
+        
+        return False
+        
+    
+    def _ShowCurrentPair( self ):
         
         if self._currently_fetching_pairs:
             
             return
             
+        
+        ( first_media_result, second_media_result ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+        
+        first_media = ClientMedia.MediaSingleton( first_media_result )
+        second_media = ClientMedia.MediaSingleton( second_media_result )
+        
+        score = ClientMedia.GetDuplicateComparisonScore( first_media, second_media )
+        
+        if score > 0:
+            
+            media_results_with_better_first = ( first_media_result, second_media_result )
+            
+        else:
+            
+            media_results_with_better_first = ( second_media_result, first_media_result )
+            
+        
+        self._media_list = ClientMedia.ListeningMediaList( self._location_context, media_results_with_better_first )
+        
+        # reset zoom gubbins
+        self.SetMedia( None )
+        
+        self.SetMedia( self._media_list.GetFirst() )
+
+        self._media_container.hide()
+        
+        self._ReinitZoom()
+        
+        self._ResetMediaWindowCenterPosition()
+        
+        self._SizeAndPositionMediaContainer()
+        
+        self._media_container.show()
+        
+    
+    def _ShowNextPair( self ):
+        
+        if self._currently_fetching_pairs:
+            
+            return
+            
+        
+        self._current_pair_index += 1
+        
+        #
         
         # hackery dackery doo to quick solve something that is calling this a bunch of times while the 'and continue?' dialog is open, making like 16 of them
         # a full rewrite is needed on this awful workflow
@@ -3275,8 +3370,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         #
         
         num_committable = self._GetNumCommittableDecisions()
+        num_remaining = self._GetNumRemainingDecisions()
         
-        if len( self._unprocessed_pairs ) == 0 and num_committable > 0:
+        if num_remaining == 0 and num_committable > 0:
             
             label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
             
@@ -3288,57 +3384,29 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                it_went_ok = self._RewindProcessing()
                 
-                self._unprocessed_pairs.append( media_result_pair )
-                
-                while was_auto_skipped:
+                if not it_went_ok:
                     
-                    if len( self._processed_pairs ) == 0:
-                        
-                        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-                        
-                        QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
-                        
-                        self.window().deleteLater()
-                        
-                        return
-                        
-                    
-                    ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
-                    
-                    self._unprocessed_pairs.append( media_result_pair )
-                    
-                
-                for hash in ( first_media.GetHash(), second_media.GetHash() ):
-                    
-                    self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash )
-                    self._hashes_processed_in_this_batch.difference_update( hash )
+                    return
                     
                 
             
         
-        if len( self._unprocessed_pairs ) == 0:
+        num_remaining = self._GetNumRemainingDecisions()
+        
+        if num_remaining == 0:
             
-            self._hashes_due_to_be_deleted_in_this_batch = set()
-            self._hashes_processed_in_this_batch = set()
-            self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above
-            
-            self.ClearMedia()
-            
-            self._media_list = ClientMedia.ListeningMediaList( self._location_context, [] )
-            
-            self._currently_fetching_pairs = True
-            
-            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match, self._pixel_dupes_preference, self._max_hamming_distance )
-            
-            self.update()
+            self._LoadNextBatchOfPairs()
             
         else:
             
             def pair_is_good( pair ):
                 
-                ( first_hash, second_hash ) = pair
+                ( first_media_result, second_media_result ) = pair
+                
+                first_hash = first_media_result.GetHash()
+                second_hash = second_media_result.GetHash()
                 
                 if first_hash in self._hashes_processed_in_this_batch or second_hash in self._hashes_processed_in_this_batch:
                     
@@ -3349,8 +3417,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     return False
                     
-                
-                ( first_media_result, second_media_result ) = pair
                 
                 first_media = ClientMedia.MediaSingleton( first_media_result )
                 second_media = ClientMedia.MediaSingleton( second_media_result )
@@ -3363,17 +3429,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 return True
                 
             
-            potential_pair = self._unprocessed_pairs.pop()
-            
-            while not pair_is_good( potential_pair ):
+            while not pair_is_good( self._batch_of_pairs_to_process[ self._current_pair_index ] ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( potential_pair, None, None, None, {}, was_auto_skipped ) )
+                self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, {}, was_auto_skipped ) )
                 
-                if len( self._unprocessed_pairs ) == 0:
+                self._current_pair_index += 1
+                
+                if self._GetNumRemainingDecisions() == 0:
                     
-                    if len( self._processed_pairs ) == 0:
+                    if self._GetNumCommittableDecisions() == 0:
                         
                         HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                         
@@ -3385,62 +3451,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                     else:
                         
-                        self._ShowNewPair() # there are no useful decisions left in the queue, so let's reset
+                        self._ShowNextPair() # there are no useful decisions left in the queue, so let's reset
                         
                         return
                         
                     
                 
-                potential_pair = self._unprocessed_pairs.pop()
-                
             
-            self._current_pair = potential_pair
-            
-            ( first_media_result, second_media_result ) = self._current_pair
-            
-            if not ( first_media_result.GetLocationsManager().IsLocal() and second_media_result.GetLocationsManager().IsLocal() ):
-                
-                QW.QMessageBox.warning( self, 'Warning', 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
-                
-                self._CommitProcessed( blocking = True )
-                
-                HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-                
-                self._TryToCloseWindow()
-                
-                return
-                
-            
-            first_media = ClientMedia.MediaSingleton( first_media_result )
-            second_media = ClientMedia.MediaSingleton( second_media_result )
-            
-            score = ClientMedia.GetDuplicateComparisonScore( first_media, second_media )
-            
-            if score > 0:
-                
-                media_results_with_better_first = ( first_media_result, second_media_result )
-                
-            else:
-                
-                media_results_with_better_first = ( second_media_result, first_media_result )
-                
-            
-            self._media_list = ClientMedia.ListeningMediaList( self._location_context, media_results_with_better_first )
-            
-            # reset zoom gubbins
-            self.SetMedia( None )
-            
-            self.SetMedia( self._media_list.GetFirst() )
-
-            self._media_container.hide()
-            
-            self._ReinitZoom()
-            
-            self._ResetMediaWindowCenterPosition()
-            
-            self._SizeAndPositionMediaContainer()
-            
-            self._media_container.show()
+            self._ShowCurrentPair()
             
         
     
@@ -3453,9 +3471,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._current_pair, None, None, None, {}, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, {}, was_auto_skipped ) )
         
-        self._ShowNewPair()
+        self._ShowNextPair()
         
     
     def _SwitchMedia( self ):
@@ -3509,12 +3527,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
@@ -3584,7 +3597,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if len( self._media_list ) < 2:
                 
-                self._ShowNewPair()
+                self._ShowNextPair()
                 
             else:
                 
@@ -3631,7 +3644,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if cancelled:
                 
-                close_was_triggered_by_everything_being_processed = len( self._unprocessed_pairs ) == 0
+                close_was_triggered_by_everything_being_processed = self._GetNumRemainingDecisions() == 0
                 
                 if close_was_triggered_by_everything_being_processed:
                     
@@ -3678,11 +3691,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 return
                 
             
-            self._unprocessed_pairs = unprocessed_pairs
+            self._batch_of_pairs_to_process = unprocessed_pairs
+            self._current_pair_index = 0
             
             self._currently_fetching_pairs = False
             
-            self._ShowNewPair()
+            self._ShowCurrentPair()
             
         
         result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
@@ -4168,12 +4182,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
@@ -4278,12 +4287,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         
@@ -4504,12 +4508,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand, canvas_key = None ):
-        
-        if canvas_key is not None and canvas_key != self._canvas_key:
-            
-            return False
-            
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
         

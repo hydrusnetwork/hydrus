@@ -686,7 +686,7 @@ class CloseACDropdownCatcher( QC.QObject ):
         
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
-class AutoCompleteDropdown( QW.QWidget ):
+class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     selectUp = QC.Signal()
     selectDown = QC.Signal()
@@ -695,6 +695,7 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def __init__( self, parent ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
         
         self._can_intercept_unusual_key_events = True
@@ -1657,9 +1658,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._predicates_listbox.listBoxChanged.connect( self._SignalNewSearchState )
         
-        self._include_current_tags.valueChanged.connect( self.SetIncludeCurrent )
-        self._include_pending_tags.valueChanged.connect( self.SetIncludePending )
-        self._search_pause_play.valueChanged.connect( self.SetSynchronised )
+        self._include_current_tags.valueChanged.connect( self._IncludeCurrentChanged )
+        self._include_pending_tags.valueChanged.connect( self._IncludePendingChanged )
+        self._search_pause_play.valueChanged.connect( self._SynchronisedChanged )
         
     
     def _AdvancedORInput( self ):
@@ -1855,6 +1856,28 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
+    def _IncludeCurrentChanged( self, value ):
+        
+        self._file_search_context.SetIncludeCurrentTags( value )
+        
+        self._SetListDirty()
+        
+        self._SignalNewSearchState()
+        
+        self._RestoreTextCtrlFocus()
+        
+    
+    def _IncludePendingChanged( self, value ):
+        
+        self._file_search_context.SetIncludePendingTags( value )
+        
+        self._SetListDirty()
+        
+        self._SignalNewSearchState()
+        
+        self._RestoreTextCtrlFocus()
+        
+    
     def _InitFavouritesList( self ):
         
         height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
@@ -2008,6 +2031,19 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self.searchChanged.emit( file_search_context )
         
     
+    def _SynchronisedChanged( self, value ):
+        
+        self._SignalNewSearchState()
+        
+        self._RestoreTextCtrlFocus()
+        
+        if not self._search_pause_play.IsOn() and not self._file_search_context.GetSystemPredicates().HasSystemLimit():
+            
+            # update if user goes from sync to non-sync
+            self._SetListDirty()
+            
+        
+    
     def _StartSearchResultsFetchJob( self, job_key ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
@@ -2119,11 +2155,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return self._search_pause_play.IsOn()
         
     
-    def PauseSearching( self ):
-        
-        self._search_pause_play.SetOnOff( False )
-        
-    
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
@@ -2185,39 +2216,19 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._SignalNewSearchState()
         
     
-    def SetIncludeCurrent( self, value ):
+    def SetIncludeCurrent( self, value: bool ):
         
-        self._file_search_context.SetIncludeCurrentTags( value )
-        
-        self._SetListDirty()
-        
-        self._SignalNewSearchState()
-        
-        self._RestoreTextCtrlFocus()
+        self._include_current_tags.SetOnOff( value )
         
     
-    def SetIncludePending( self, value ):
+    def SetIncludePending( self, value: bool ):
         
-        self._file_search_context.SetIncludePendingTags( value )
-        
-        self._SetListDirty()
-        
-        self._SignalNewSearchState()
-        
-        self._RestoreTextCtrlFocus()
+        self._include_pending_tags.SetOnOff( value )
         
     
-    def SetSynchronised( self, value ):
+    def SetSynchronised( self, value: bool ):
         
-        self._SignalNewSearchState()
-        
-        self._RestoreTextCtrlFocus()
-        
-        if not self._search_pause_play.IsOn() and not self._file_search_context.GetSystemPredicates().HasSystemLimit():
-            
-            # update if user goes from sync to non-sync
-            self._SetListDirty()
-            
+        self._search_pause_play.SetOnOff( value )
         
     
     def PausePlaySearch( self ):

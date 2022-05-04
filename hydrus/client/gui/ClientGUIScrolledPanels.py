@@ -167,10 +167,11 @@ class EditPanel( ResizingScrolledPanel ):
         self.GetValue()
         
     
-class EditSingleCtrlPanel( EditPanel ):
+class EditSingleCtrlPanel( EditPanel, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent, ok_on_these_commands = None ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         EditPanel.__init__( self, parent )
         
         self._control = None

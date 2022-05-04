@@ -266,7 +266,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH : 'file relationships: reset focused file potential search',
     SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH : 'file relationships: reset potential searches',
     SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS : 'file relationships: remove focused file from potential duplicate pairs',
-    SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS : 'file relationships: remote files from potential duplicate pairs',
+    SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS : 'file relationships: remove files from potential duplicate pairs',
     SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL : 'file relationships: set files as potential duplicates',
     SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES : 'file relationships: clear false positives',
     SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES : 'file relationships: clear focused file false positives',
@@ -700,3 +700,14 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND ] = ApplicationCommand
 
+class ApplicationCommandProcessorMixin( object ):
+    
+    def ProcessApplicationCommand( self, command: ApplicationCommand ):
+        
+        # TODO: eventually expand this guy to do the main if and have separate methods for 'do simple command( action )' and 'do complex command( command )', then objects just implement that
+        # only thing they need to do is return False if they don't eat the command, or we move to Qt style event processing and set command.ignore() or similar
+        # then we can hang debug stuff off this shared code and so on
+        
+        raise NotImplementedError()
+        
+    

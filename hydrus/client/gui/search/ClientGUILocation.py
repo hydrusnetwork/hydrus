@@ -17,15 +17,18 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
     
     services_manager = HG.client_controller.services_manager
     
-    if only_local_file_domains_allowed:
-        
-        service_types_in_order = [ HC.LOCAL_FILE_DOMAIN ]
-        
-    else:
-        
-        service_types_in_order = [ HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ]
+    service_types_in_order = [ HC.LOCAL_FILE_DOMAIN ]
+    
+    if not only_local_file_domains_allowed:
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if advanced_mode:
+            
+            service_types_in_order.append( HC.LOCAL_FILE_UPDATE_DOMAIN )
+            
+        
+        service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
         
         if advanced_mode:
             
@@ -42,11 +45,6 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
         
     
     services = services_manager.GetServices( service_types_in_order )
-    
-    if only_local_file_domains_allowed or not advanced_mode:
-        
-        services = [ service for service in services if service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
-        
     
     return services
     

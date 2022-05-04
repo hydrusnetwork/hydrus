@@ -11,8 +11,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusText
-from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -27,7 +25,6 @@ from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUILocation
@@ -367,37 +364,28 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
         
+        self._num_actionable_local_file_services = 0
         self._permitted_action_choices = []
         self._this_dialog_includes_service_keys = False
         
-        self._InitialisePermittedActionChoices( suggested_file_service_key )
+        self._InitialisePermittedActionChoices()
         
         self._action_radio = ClientGUICommon.BetterRadioBox( self, choices = self._permitted_action_choices, vertical = True )
         
         self._action_radio.Select( 0 )
         
+        selection_success = False
+        
         if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
             
             last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
             
-        else:
-            
-            last_advanced_file_deletion_special_action = None
+            selection_success = self._TryToSelectAction( last_advanced_file_deletion_special_action )
             
         
-        if last_advanced_file_deletion_special_action is not None:
+        if not selection_success:
             
-            for ( i, choice ) in enumerate( self._permitted_action_choices ):
-                
-                deletee_file_service_key = choice[1][0]
-                
-                if deletee_file_service_key == last_advanced_file_deletion_special_action:
-                    
-                    self._action_radio.Select( i )
-                    
-                    break
-                    
-                
+            self._TryToSelectAction( suggested_file_service_key )
             
         
         self._reason_panel = ClientGUICommon.StaticBox( self, 'reason' )
@@ -483,24 +471,20 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
+        ( file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, description ) = self._action_radio.GetValue()
         
         self._simple_description.setText( description )
         
-        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+        if len( self._permitted_action_choices ) == 1:
             
-            if len( self._permitted_action_choices ) == 1:
-                
-                self._action_radio.hide()
-                
-            else:
-                
-                self._simple_description.hide()
-                
+            self._action_radio.hide()
             
         else:
             
-            self._action_radio.hide()
+            self._simple_description.hide()
+            
+        
+        if not HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
             self._reason_panel.hide()
             
@@ -606,23 +590,22 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         return reason
         
     
-    def _InitialisePermittedActionChoices( self, suggested_file_service_key: bytes ):
+    def _InitialisePermittedActionChoices( self ):
         
         possible_file_service_keys = []
         
         local_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        local_file_service_keys = { service.GetServiceKey() for service in local_file_services }
         
-        if suggested_file_service_key not in ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
+        possible_file_service_keys.extend( ( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_services ) )
+        
+        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
-            possible_file_service_keys.append( ( suggested_file_service_key, suggested_file_service_key ) )
+            possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
             
         
-        local_file_services = [ lfs for lfs in local_file_services if lfs.GetServiceKey() != suggested_file_service_key ]
-        
-        possible_file_service_keys.extend( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_services )
-        
-        possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-        possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
         
         keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
         
@@ -634,66 +617,155 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             del keys_to_hashes[ trashed_key ]
             
         
-        num_local_file_services = 0
+        possible_file_service_keys_and_hashes = [ ( fsk, keys_to_hashes[ fsk ] ) for fsk in possible_file_service_keys if fsk in keys_to_hashes and len( keys_to_hashes[ fsk ] ) > 0 ]
         
-        for fsk in possible_file_service_keys:
-            
-            if fsk not in keys_to_hashes:
-                
-                continue
-                
-            
-            hashes = keys_to_hashes[ fsk ]
+        self._num_actionable_local_file_services = len( local_file_service_keys.intersection( ( fsk[0] for ( fsk, hashes ) in possible_file_service_keys_and_hashes ) ) )
+        
+        all_local_jobs = []
+        num_local_services_done = 0
+        
+        for ( fsk, hashes ) in possible_file_service_keys_and_hashes:
             
             num_to_delete = len( hashes )
             
-            if num_to_delete > 0:
+            ( selection_file_service_key, deletee_file_service_key ) = fsk
+            
+            deletee_service = HG.client_controller.services_manager.GetService( deletee_file_service_key )
+            
+            deletee_service_type = deletee_service.GetServiceType()
+            
+            if deletee_service_type == HC.LOCAL_FILE_DOMAIN:
                 
-                ( selection_file_service_key, deletee_file_service_key ) = fsk
+                self._this_dialog_includes_service_keys = True
                 
-                deletee_service = HG.client_controller.services_manager.GetService( deletee_file_service_key )
+                if num_to_delete == 1:
+                    
+                    file_desc = 'one file'
+                    
+                else:
+                    
+                    file_desc = '{} files'.format( HydrusData.ToHumanInt( num_to_delete ) )
+                    
                 
-                deletee_service_type = deletee_service.GetServiceType()
+                if self._num_actionable_local_file_services == 1:
+                    
+                    template = 'Send {} from {} to trash?'
+                    
+                else:
+                    
+                    template = 'Remove {} from {}?'
+                    
                 
-                if deletee_service_type == HC.LOCAL_FILE_DOMAIN:
+                text = template.format( file_desc, deletee_service.GetName() )
+                
+                chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                list_of_service_keys_to_content_updates = [ { deletee_file_service_key : [ content_update ] } for content_update in content_updates ]
+                
+                all_local_jobs.extend( list_of_service_keys_to_content_updates )
+                
+                save_reason = True
+                
+                involves_physical_delete = False
+                
+                num_local_services_done += 1
+                
+                # this is an ugly place to put this, and the mickey-mouse append, but it works
+                if self._num_actionable_local_file_services > 1 and num_local_services_done == self._num_actionable_local_file_services:
+                    
+                    self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, text ) ) )
+                    
+                    deletee_file_service_key = 'straight_to_trash'
+                    
+                    text = 'Delete from all local services? (force send to trash)'
+                    
+                    list_of_service_keys_to_content_updates = all_local_jobs
+                    
+                    save_reason = True
+                    
+                    involves_physical_delete = False
+                    
+                
+            elif deletee_service_type == HC.FILE_REPOSITORY:
+                
+                if deletee_service.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ):
                     
                     self._this_dialog_includes_service_keys = True
                     
-                    num_local_file_services += 1
-                    
-                    if num_to_delete == 1: text = 'Send one file from {} to the trash?'.format( deletee_service.GetName() )
-                    else: text = 'Send {} files from {} to the trash?'.format( HydrusData.ToHumanInt( num_to_delete ), deletee_service.GetName() )
-                    
-                elif deletee_service_type == HC.FILE_REPOSITORY:
-                    
-                    self._this_dialog_includes_service_keys = True
-                    
-                    if num_to_delete == 1: text = 'Admin-delete this file?'
-                    else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
-                    
-                elif deletee_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
-                    
-                    # do a physical delete now, skipping or force-removing from trash
-                    
-                    deletee_file_service_key = 'physical_delete'
-                    
-                    if selection_file_service_key == CC.TRASH_SERVICE_KEY:
+                    if num_to_delete == 1:
                         
-                        if num_to_delete == 1: text = 'Permanently delete this trashed file?'
-                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' trashed files?'
+                        file_desc = 'one file'
                         
                     else:
                         
-                        if num_to_delete == 1: text = 'Permanently delete this file?'
-                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                        file_desc = '{} files'.format( HydrusData.ToHumanInt( num_to_delete ) )
                         
                     
+                    if deletee_service.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ):
+                        
+                        text = 'Admin-delete {} from {}?'.format( file_desc, deletee_service.GetName() )
+                        
+                        save_reason = False
+                        reason = 'admin'
+                        
+                    else:
+                        
+                        text = 'Petition {} from {}?'.format( file_desc, deletee_service.GetName() )
+                        
+                        save_reason = True
+                        reason = None
+                        
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason ) ]
+                    
+                    list_of_service_keys_to_content_updates = [ { deletee_file_service_key : content_updates } ]
+                    
+                    involves_physical_delete = False
+                    
                 
-                self._permitted_action_choices.append( ( text, ( deletee_file_service_key, hashes, text ) ) )
+            elif deletee_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                
+                # do a physical delete now, skipping or force-removing from trash
+                
+                deletee_file_service_key = 'physical_delete'
+                
+                if selection_file_service_key == CC.TRASH_SERVICE_KEY:
+                    
+                    suffix = 'trashed '
+                    
+                else:
+                    
+                    suffix = ''
+                    
+                
+                if num_to_delete == 1:
+                    
+                    suffix = 'one {}file'.format( suffix )
+                    
+                else:
+                    
+                    suffix = '{} {}files'.format( HydrusData.ToHumanInt( num_to_delete ), suffix )
+                    
+                
+                text = 'Permanently delete {}?'.format( suffix )
+                
+                chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                list_of_service_keys_to_content_updates = [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ]
+                
+                save_reason = True
+                
+                involves_physical_delete = True
                 
             
+            self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, text ) ) )
+            
         
-        if num_local_file_services == 1 and not HC.options[ 'confirm_trash' ]:
+        if self._num_actionable_local_file_services == 1 and not HC.options[ 'confirm_trash' ]:
             
             # this dialog will never show
             self._question_is_already_resolved = True
@@ -716,7 +788,23 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
                     
                 
-                self._permitted_action_choices.append( ( text, ( 'clear_delete', hashes, text ) ) )
+                chunks_of_hashes = list( HydrusData.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
+                
+                list_of_service_keys_to_content_updates = []
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                list_of_service_keys_to_content_updates.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', chunk_of_hashes ) ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                list_of_service_keys_to_content_updates.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
+                
+                save_reason = False
+                
+                involves_physical_delete = True
+                
+                self._permitted_action_choices.append( ( text, ( 'clear_delete', list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, text ) ) )
                 
             
         
@@ -738,14 +826,49 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _TryToSelectAction( self, action ) -> bool:
+        
+        if action is None:
+            
+            return False
+            
+        
+        # this is a mess since action could be 'clear_delete' or a file service key
+        
+        if isinstance( action, bytes ):
+            
+            action = action.hex()
+            
+        
+        for ( i, choice ) in enumerate( self._permitted_action_choices ):
+            
+            deletee_file_service_key = choice[1][0]
+            
+            if isinstance( deletee_file_service_key, bytes ):
+                
+                comparison_text = deletee_file_service_key.hex()
+                
+            else:
+                
+                comparison_text = deletee_file_service_key
+                
+            
+            if comparison_text == action:
+                
+                self._action_radio.Select( i )
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def _UpdateControls( self ):
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
+        ( file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, description ) = self._action_radio.GetValue()
         
-        local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-        
-        # 'this includes service keys' because if we are deleting physically from the trash, then reason is already set
-        reason_permitted = ( file_service_key in local_file_service_keys or file_service_key == 'physical_delete' ) and self._this_dialog_includes_service_keys
+        reason_permitted = save_reason
         
         if reason_permitted:
             
@@ -770,77 +893,44 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
+        if len( self._permitted_action_choices ) == 0 or len( self._media ) == 0:
+            
+            return ( False, [] )
+            
+        
         involves_physical_delete = False
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
+        ( file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, description ) = self._action_radio.GetValue()
         
-        reason = self._GetReason()
-        
-        save_reason = False
-        
-        local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-        
-        if file_service_key in local_file_service_keys:
+        if save_reason:
             
-            # split them into bits so we don't hang the gui with a huge delete transaction
+            reason = self._GetReason()
             
-            chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
-            
-            jobs = [ { file_service_key : [ content_update ] } for content_update in content_updates ]
-            
-            save_reason = True
-            
-        elif file_service_key == 'physical_delete':
-            
-            chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
-            
-            jobs = []
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
-            
-            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
-            
-            involves_physical_delete = True
-            
-            save_reason = True
-            
-        elif file_service_key == 'clear_delete':
-            
-            chunks_of_hashes = list( HydrusData.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
-            
-            jobs = []
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
-            
-            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', chunk_of_hashes ) ) for chunk_of_hashes in chunks_of_hashes ]
-            
-            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
-            
-            involves_physical_delete = True
-            
-        else:
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'admin' ) ]
-            
-            jobs = [ { file_service_key : content_updates } ]
+            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                
+                for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                    
+                    for content_update in content_updates:
+                        
+                        content_update.SetReason( reason )
+                        
+                    
+                
             
         
         save_action = True
         
         if isinstance( file_service_key, bytes ):
             
-            last_advanced_file_deletion_special_action = None
+            last_advanced_file_deletion_special_action = file_service_key.hex()
             
         else:
             
             previous_last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
             
             # if there is nothing to do but physically delete, then we don't want to overwrite an existing 'use service' setting
-            if previous_last_advanced_file_deletion_special_action is None and not self._this_dialog_includes_service_keys:
+            # HACKMODE ALERT. len() == 64 is a stupid test for 'looks like a service key mate'
+            if ( previous_last_advanced_file_deletion_special_action is None or len( previous_last_advanced_file_deletion_special_action ) == 64 ) and not self._this_dialog_includes_service_keys:
                 
                 save_action = False
                 
@@ -867,7 +957,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
             
         
-        return ( involves_physical_delete, jobs )
+        return ( involves_physical_delete, list_of_service_keys_to_content_updates )
         
     
     def QuestionIsAlreadyResolved( self ):
@@ -1625,10 +1715,11 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
         
     
-class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_names = set()

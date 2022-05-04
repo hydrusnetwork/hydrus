@@ -211,7 +211,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 QP.AddToLayout( hbox, self._gui_colours[colourset][CC.COLOUR_THUMB_BACKGROUND_REMOTE], CC.FLAGS_CENTER_PERPENDICULAR )
                 QP.AddToLayout( hbox, self._gui_colours[colourset][CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED], CC.FLAGS_CENTER_PERPENDICULAR )
                 
-                rows.append( ( 'thumbnail background (local: normal/selected, remote: normal/selected): ', hbox ) )
+                rows.append( ( 'thumbnail background (local: normal/selected, not local: normal/selected): ', hbox ) )
                 
                 hbox = QP.HBoxLayout()
                 
@@ -220,7 +220,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 QP.AddToLayout( hbox, self._gui_colours[colourset][CC.COLOUR_THUMB_BORDER_REMOTE], CC.FLAGS_CENTER_PERPENDICULAR )
                 QP.AddToLayout( hbox, self._gui_colours[colourset][CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED], CC.FLAGS_CENTER_PERPENDICULAR )
                 
-                rows.append( ( 'thumbnail border (local: normal/selected, remote: normal/selected): ', hbox ) )
+                rows.append( ( 'thumbnail border (local: normal/selected, not local: normal/selected): ', hbox ) )
                 
                 rows.append( ( 'thumbnail grid background: ', self._gui_colours[ colourset ][ CC.COLOUR_THUMBGRID_BACKGROUND ] ) )
                 rows.append( ( 'autocomplete background: ', self._gui_colours[ colourset ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] ) )
@@ -3994,10 +3994,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
+class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent, media ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
         media = ClientMedia.FlattenMedia( media )

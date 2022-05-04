@@ -25,7 +25,7 @@ from hydrus.client.metadata import ClientRatings
 
 # Option Enums
 
-class DialogManageRatings( ClientGUIDialogs.Dialog ):
+class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent, media ):
         
@@ -36,6 +36,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._hashes.update( m.GetHashes() )
             
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
         
         #

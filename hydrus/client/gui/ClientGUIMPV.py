@@ -73,12 +73,13 @@ def log_handler( loglevel, component, message ):
     
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
-class mpvWidget( QW.QWidget ):
+class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     launchMediaViewer = QC.Signal()
     
     def __init__( self, parent ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
         
         self._canvas_type = CC.CANVAS_PREVIEW

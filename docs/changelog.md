@@ -3,6 +3,48 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 483](https://github.com/hydrusnetwork/hydrus/releases/tag/v483)
+
+### multiple local file services
+* the multiple local file services feature is ready for advanced users to test out! it lets you have more than one 'my files' service to store things, which will give us some neat privacy and management tools in future. there is no nice help for this feature yet, and the UI is still a little non-user-friendly, so please do not try it out unless you have been following it. and, while this has worked great in all testing, I generally do not recommend it for heavy use on a real client either, just in case something does go wrong. with those caveats, hit up _manage services_ in advanced mode, and you can now add new 'local file domain' services. it is possible to search, import to, and migrate files between these and everything basically works. I need to do more UI work to make it clear what is going on (for instance, I think we'll figure out custom icons or similar to show where files are), and some more search tech, and write up proper help, and figure out easy client merging so users can combine legacy clients, but please feel free to experiment wildly on a fresh client or carefully on your existing one
+* if you have more than one local file service, a new 'files' or 'local services' menu on thumbnail right-click handles duplicating and moving across local services. these actions will preserve original import times (e.g. if you move from A to B and then back to A), so they should be generally non-destructive, but we may want to add some advanced tools in future. let me know how this part goes--I think we'll probably want a different status than 'deleted from A' when you just move A->B, so as not to interfere with some advanced queries, but only IRL testing will show it
+* if you have a 'file import options' that imports files to multiple local services but the file import is 'already in db', the file import job will now examine if and where the file is still needed and send content update calls to fill in the gaps
+* the advanced delete files dialog now gives a new 'delete from all and send to trash' option if the file is in multiple local file domains
+* the advanced delete files dialog now fully supports file repositories
+* cleaned up some logic on the 'remember action' option of the advanced file deletion dialog. it also supports remembering specific file domains, not just the clever commands like 'delete and leave no record'. also this dialog no longer places the 'suggested' file service at the top of the radio button list--instead it selects that 'suggested' if there is no 'remember action' initial selection applicable. the suggested file service is now also set by the underlying thumbnail grid or media canvas if it has a simple one-service location context
+* the normal 'non-advanced' delete files dialog now supports files that are in multiple local file services. it will show a part of the advanced dialog to let you choose where to delete from
+
+### misc
+* thanks to user submissions, there is a bit more help docs work--for file search, and for some neat new 'mermaid' svg diagrams in siblings/parents, which are automatically generated from a markup and easy to edit
+* with the new easy-to-edit mermaid diagrams, I updated the unhelpful and honestly cringe examples in the siblings and parents help to reflect real world PTR data and brushed up all the text in the top sections
+* just a small thing--the 'pages' menu and the page picker dialog now both say 'file search' to refer to a page that searches files. previously, 'search' or 'files' was used in different places
+* completely rewrote the queue code behind the duplicate filter. an ancient bad idea is now replaced with something that will be easier to work with in future
+* you can now go 'back' in the duplicate filter even when you have only done skips so far
+* the 'index string' of duplicate filters, where it says 53/100, now also says the number of decisions made
+* fixed some small edge case bugs in duplicate filter forward/backward move logic, and fixed the recent problem with going back after certain decisions
+* updated the default nijie.info parser to grab video (issue #1113)
+* added in a user fix to the deviant art parser
+* added user-made Mega URL Classes. hydrus won't support Mega for a long while, but it can recognise and categorise these URLs now, presenting them in the media viewer if you want to open them externally
+* fixed Exif image rotation for images that also have ICC Profiles. thanks to the user who provided great test images here (issue #1124)
+* hitting F5 or otherwise saying 'refresh' explicitly will now turn a search page that is currently in 'searching paused' to 'searching immediately'. previously it silently did nothing
+* the 'current file info' in the media window's top hover and the status bar of the main window now ignores Deletion reason, and also file modified date if it is not substantially different from another timestamp already stated. this data can still be seen on the file's right-click menu's expanded info lines off the top entry. also, as a small cleanup, it now says 'modified' and 'archived' instead of 'file modified/archived', just to save some more space
+* like the above 'show if interesting' check for modified date, that list of file info texts now includes the actual import time if it is different than other timestamps. (for instance, if you migrate it from one service to another some time after import)
+* fixed a sort error notification in the edit parser dialog when you have two duplicate subsidiary parsers that both have vetoes
+* fixed the new media viewer note display for PyQt5
+* fixed a rare frame-duration-lookup problem when loading certain gifs into the media viewer
+
+### boring code cleanup
+* cleaned up search signalling UI code, a couple of minor bugs with 'searching immediately' sometimes not saving right should be fixed
+* the 'repository updates' domain now has a different service type. it is now a 'local update file domain' rather than a 'local file domain', which is just an enum change but marks it as different to the regular media domains. some code is cleaned up as a result
+* renamed the terms in some old media filtering code to make it more compatible with multiple local file services
+* brushed up some delete code to handle multiple local file services better
+* cleaned up more behind the scenes of the delete files dialog
+* refactored ClientGUIApplicationCommand to the widgets module
+* wrote a new ApplicationCommandProcessor Mixin class for all UI elements that process commands. it is now used across the program and will grow in responsibility in future to unify some things here
+* the media viewer hover windows now send their application commands through Qt signals rather than the old pubsub system
+* in a bunch of places across the program, renamed 'remote' to 'not local' in file status contexts--this tends to make more sense to people at out the gate
+* misc little syntax cleanup
+
 ## [Version 482](https://github.com/hydrusnetwork/hydrus/releases/tag/v482)
 
 ### misc
@@ -320,29 +362,3 @@
 * reversing a recent change, local file deletion reasons are no longer cleared on undelete or (re)import. they'll now hang around invisibly and initialise any future advanced file deletion dialog
 * updated the thumbnail and canvas undelete mechanism to handle multiple services. now, if the files are deleted in more than one domain, you will be asked to multiple-select which you wish to undelete for. if there is only one eligible undelete service, the process remains unchanged--you'll just get a yes/no confirmation if the 'confirm trash' option is set
 * misc multiple local file services code conversion work
-
-## [Version 472](https://github.com/hydrusnetwork/hydrus/releases/tag/v472b)
-
-### highlights
-* the file domain button of every autocomplete input now has a 'multiple locations' entry. this launches a checkboxlist of all possible search locations and allows you to search more than one domain at once. it works, too! in future, when we can have multiple 'my files' services, you'll be able to choose here unions of what to search. users in advanced mode will see repository updates, all local files, all known files, and the new deleted file domains on this list. I removed the deleted file domains from the front menu because I expect them to be rarely used
-* in _options->thumbnails_, there is now a 'thumbnail scaling' dropdown. you can set it so thumbs only ever scale down (which remains the default), scale to fit (i.e. very small images are also scaled up), or scale to fill. the 'animation' as thumbnails refit and delayed-regen themselves to 'scale to fill' is accidentally one of the coolest things I have done
-* removed the old 'EXPERIMENTAL: thumbnail fill' option. the new mode works essentially the same, but faster and higher quality
-* in the page tab menu, there is a new submenu 'pages', which shows all the pages at or below the current level. if you right-click on a page of pages tab, it will just show for that page of pages. click any of the entries, you will select that page. it is a web browser-like quick navigation menu, let me know what you think!
-* rejiggered the page tab menu a little, reordering groups a bit with nicer separators and putting 'select' navigation on the menu even if you click in greyspace
-* fixed a problem in page tab menu logic where if you right-clicked on greyspace, it would render the menu for the bottommost page of pages row rather than the one actually clicked
-* last week's update where a mouse release event will no longer fire in the shortcuts system if the mouse moved a decent distance between press and release should now work in the media viewer canvas when dragging is set to anchor the mouse in place. some advanced users may wish to try setting archive/delete to work on mouse release and use left click to drag
-
-### bug fixes
-* fixed pages force-refreshing file queries on session load. this has never been intentional, but it slipped through again and was happening for a month or two now. I have added an explicit test to my routine to make sure this doesn't happen again, sorry for the trouble!
-* fixed a problem in the recent fast shutdown code that was accidentally also shutting down some maintenance work like repository processing as soon as it started, even if 'exit and force work' was chosen
-* all images with a completely opaque alpha channel will now have that alpha channel dropped for the new pixel hash calculation, meaning they will now match with regular non-alpha images with the same colour pixel data. in fact, all images with an opaque alpha now have that channel dropped on load, which will save a little memory and CPU any time they are handled (issue #770)
-* if the 'durable' temporary database exists on boot, it is now deleted and a fresh one created rather than trying to re-use the old one (which would not have any useful information anyway), and a note is made to log. one user recently had a problem where an existing corrupt temp dir was stopping boot, which this fixes
-
-### misc
-* updated the windows build to use a newer version of mpv, moving from roughly 2021-02 to 2022-01. this replaces mpv-1.dll with mpv-2.dll, and I set the installer to delete the old '1'. if you extract, you can delete the old '1' yourself, but things seems fine with both. in any case, let me know if you have any trouble!
-* updated the windows build to use sqlite 3.37.2, the sqlite3 in the db dir is also updated
-* the deleted files system now neatly cleans up old file deletion reasons on file import and file undelete
-* cleared out some old thumbnail generation code, including deleting an old and now obselete optimisation where too-large thumbs were scaled down to make new thumbs rather than revisiting source. since our thumb situation is more complicated now, this is gone in favour of nicer quality thumbs and simpler code
-* fixed up some upcoming database maintenance code in my new modules
-* updated and cleaned the code in the old wx-converted checkboxlist and replaced some awkward old access routines
-* cleared out some old HTA archive code

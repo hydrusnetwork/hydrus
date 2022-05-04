@@ -1797,10 +1797,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
+class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext, media, immediate_commit = False, canvas_key = None ):
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
         self._location_context = location_context
@@ -2058,12 +2059,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         return True
         
     
-    class _Panel( QW.QWidget ):
+    class _Panel( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         okSignal = QC.Signal()
         
         def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, media, immediate_commit, canvas_key = None ):
             
+            CAC.ApplicationCommandProcessorMixin.__init__( self )
             QW.QWidget.__init__( self, parent )
             
             self._location_context = location_context

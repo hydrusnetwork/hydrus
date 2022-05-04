@@ -377,7 +377,7 @@ def GeneratePILImage( path, dequantize = True ) -> PILImage.Image:
         raise Exception( 'The file at {} could not be rendered!'.format( path ) )
         
     
-    RotateEXIFPILImage( pil_image )
+    pil_image = RotateEXIFPILImage( pil_image )
     
     if dequantize:
         

@@ -243,6 +243,12 @@ Response:
       "service_key": "6c6f63616c2066696c6573"
     }
   ],
+  "local_updates": [
+    {
+      "name": "repository updates",
+      "service_key": "7265706f7369746f72792075706461746573"
+    }
+  ],
   "file_repositories": [],
   "all_local_files": [
     {

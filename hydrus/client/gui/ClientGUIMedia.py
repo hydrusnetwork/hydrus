@@ -659,3 +659,29 @@ def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
         
     
+def AddDoubleServiceKeysToMenu( event_handler, menu, service_key_pairs, verb, format_phrase, description, call ):
+    
+    services_manager = HG.client_controller.services_manager
+    
+    if len( service_key_pairs ) == 1:
+    
+        ( ( service_key_1, service_key_2 ), ) = service_key_pairs
+        
+        label = verb + ' ' + format_phrase.format( services_manager.GetName( service_key_1 ), services_manager.GetName( service_key_2 ) )
+        
+        ClientGUIMenus.AppendMenuItem( menu, label, description, call, service_key_1, service_key_2 )
+        
+    else:
+        
+        submenu = QW.QMenu( menu )
+        
+        for ( service_key_1, service_key_2 ) in service_key_pairs:
+            
+            label = format_phrase.format( services_manager.GetName( service_key_1 ), services_manager.GetName( service_key_2 ) )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, label, description, call, service_key_1, service_key_2 )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, verb + '\u2026' )
+        
+    

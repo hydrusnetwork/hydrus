@@ -12,7 +12,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client.gui import ClientGUIApplicationCommand
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -20,6 +19,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUIApplicationCommand
 from hydrus.client.gui.widgets import ClientGUICommon
 
 def ManageShortcuts( win: QW.QWidget ):

@@ -450,12 +450,13 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
     
-class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
+class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, controller ):
         
         self._controller = controller
         
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, 'main', 'main_gui' )
         
         self._currently_minimised_to_system_tray = False
@@ -2570,7 +2571,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             services = self._controller.services_manager.GetServices()
             
-            local_file_services = [ service for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN and service.GetServiceKey() != CC.LOCAL_UPDATE_SERVICE_KEY ]
+            local_file_services = [ service for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN ]
             
             for service in local_file_services:
                 
@@ -3473,7 +3474,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._menubar_pages_search_submenu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_search_submenu, 'new search page' )
+        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_search_submenu, 'new file search page' )
         
         #
         

@@ -80,12 +80,12 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys:
             
-            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) )
+            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in HC.SPECIFIC_LOCAL_FILE_SERVICES ) )
             
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.deleted_service_keys:
             
-            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) ) )
+            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.SPECIFIC_LOCAL_FILE_SERVICES ) )
             
         
     
@@ -223,7 +223,6 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 def GetLocationContextForAllLocalMedia() -> LocationContext:
     
     local_file_domain_service_keys = set( HG.client_controller.services_manager.GetServiceKeys( [ HC.LOCAL_FILE_DOMAIN ] ) )
-    local_file_domain_service_keys.discard( CC.LOCAL_UPDATE_SERVICE_KEY )
     
     return LocationContext.STATICCreateAllCurrent( local_file_domain_service_keys )
     

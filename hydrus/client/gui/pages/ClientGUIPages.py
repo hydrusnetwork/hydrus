@@ -266,7 +266,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         if menu_keyword == 'home':
             
-            entries.append( ( 'menu', 'files' ) )
+            entries.append( ( 'menu', 'file search' ) )
             entries.append( ( 'menu', 'download' ) )
             
             if len( self._petition_service_keys ) > 0:
@@ -276,14 +276,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             entries.append( ( 'menu', 'special' ) )
             
-        elif menu_keyword == 'files':
+        elif menu_keyword == 'file search':
             
             for service_key in self._controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
-                
-                if service_key == CC.LOCAL_UPDATE_SERVICE_KEY:
-                    
-                    continue
-                    
                 
                 entries.append( ( 'page_query', service_key ) )
                 

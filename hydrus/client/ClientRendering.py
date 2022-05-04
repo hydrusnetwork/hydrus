@@ -471,6 +471,7 @@ class RasterContainerVideo( RasterContainer ):
         self._renderer = None
         
         self._frames = {}
+        self._durations = []
         
         self._buffer_start_index = -1
         self._buffer_end_index = -1
@@ -739,12 +740,13 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             
-            return self._durations[ index ]
+            if index in self._durations:
+                
+                return self._durations[ index ]
+                
             
-        else:
-            
-            return self._average_frame_duration
-            
+        
+        return self._average_frame_duration
         
     
     def GetFrame( self, index ):

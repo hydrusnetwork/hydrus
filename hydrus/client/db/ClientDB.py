@@ -1125,7 +1125,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', 'looking for orphans' )
             
-            local_file_service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) )
+            local_file_service_ids = self.modules_services.GetServiceIds( HC.SPECIFIC_LOCAL_FILE_SERVICES )
             
             local_hash_ids = set()
             
@@ -1319,8 +1319,8 @@ class DB( HydrusDB.HydrusDB ):
             ( CC.COMBINED_DELETED_FILE_SERVICE_KEY, HC.COMBINED_DELETED_FILE, 'all deleted files' ),
             ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ),
             ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ),
+            ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ),
             ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ),
-            ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'repository updates' ),
             ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'my tags' ),
             ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'downloader tags' ),
             ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ),
@@ -6953,7 +6953,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        if service_type in ( HC.COMBINED_LOCAL_FILE, HC.LOCAL_FILE_DOMAIN, HC.FILE_REPOSITORY ):
+        if service_type in ( HC.COMBINED_LOCAL_FILE, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
             
@@ -12620,6 +12620,50 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Updating some cache sizes and pause states to a new options structure failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log. Also check _options->speed and memory_ for your thumbnail/image cache sizes, and your subs/repository/import folder/export folder pause status.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 482:
+            
+            self._Execute( 'UPDATE services SET service_type = ? WHERE service_key = ?;', ( HC.LOCAL_FILE_UPDATE_DOMAIN, sqlite3.Binary( CC.LOCAL_UPDATE_SERVICE_KEY ) ) )
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'nijie view popup parser',
+                    'deviant art file extended_fetch parser'
+                ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'mega.nz file or folder',
+                    'mega.nz file',
+                    'mega.nz folder (alt format)',
+                    'mega.nz folder'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

@@ -951,7 +951,7 @@ class ManagementPanel( QW.QScrollArea ):
         QW.QScrollArea.__init__( self, parent )
         
         self.setFrameShape( QW.QFrame.NoFrame )
-        self.setWidget( QW.QWidget() )
+        self.setWidget( QW.QWidget( self ) )
         self.setWidgetResizable( True )
         #self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         #self.setLineWidth( 2 )
@@ -987,9 +987,14 @@ class ManagementPanel( QW.QScrollArea ):
     
     def _SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        self._management_controller.SetVariable( 'location_context', location_context )
+        current_location_context = self._management_controller.GetVariable( 'location_context' )
         
-        self.locationChanged.emit( location_context )
+        if location_context != current_location_context:
+            
+            self._management_controller.SetVariable( 'location_context', location_context )
+            
+            self.locationChanged.emit( location_context )
+            
         
     
     def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
@@ -5106,49 +5111,45 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._controller.ResetIdleTimer()
         
-        interrupting_current_search = not self._query_job_key.IsDone()
-        
-        self._query_job_key.Cancel()
-        
         if self._search_enabled:
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
-            self._management_controller.SetVariable( 'file_search_context', file_search_context.Duplicate() )
-            
             location_context = file_search_context.GetLocationContext()
-            
-            self._SetLocationContext( location_context )
             
             synchronised = self._tag_autocomplete.IsSynchronised()
             
-            self._management_controller.SetVariable( 'synchronised', synchronised )
+            # a query refresh now undoes paused sync
+            if not synchronised:
+                
+                # this will trigger a refresh of search
+                self._tag_autocomplete.SetSynchronised( True )
+                
+                return
+                
             
-            if synchronised:
+            interrupting_current_search = not self._query_job_key.IsDone()
+            
+            self._query_job_key.Cancel()
+            
+            if len( file_search_context.GetPredicates() ) > 0:
                 
-                if len( file_search_context.GetPredicates() ) > 0:
-                    
-                    self._query_job_key = ClientThreading.JobKey()
-                    
-                    sort_by = self._media_sort.GetSort()
-                    
-                    self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
-                    
-                    panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, location_context )
-                    
-                else:
-                    
-                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, [] )
-                    
-                    panel.SetEmptyPageStatusOverride( 'no search' )
-                    
+                self._query_job_key = ClientThreading.JobKey()
                 
-                self._page.SwapMediaPanel( panel )
+                sort_by = self._media_sort.GetSort()
                 
-            elif interrupting_current_search:
+                self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
                 
-                self._CancelSearch()
+                panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, location_context )
                 
+            else:
+                
+                panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, [] )
+                
+                panel.SetEmptyPageStatusOverride( 'no search' )
+                
+            
+            self._page.SwapMediaPanel( panel )
             
         else:
             
@@ -5249,7 +5250,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            self._tag_autocomplete.PauseSearching()
+            self._tag_autocomplete.SetSynchronised( False )
             
         
     
@@ -5260,7 +5261,34 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):
         
-        self._RefreshQuery()
+        if self._search_enabled:
+            
+            file_search_context = self._tag_autocomplete.GetFileSearchContext()
+            
+            self._management_controller.SetVariable( 'file_search_context', file_search_context.Duplicate() )
+            
+            location_context = file_search_context.GetLocationContext()
+            
+            self._SetLocationContext( location_context )
+            
+            synchronised = self._tag_autocomplete.IsSynchronised()
+            
+            self._management_controller.SetVariable( 'synchronised', synchronised )
+            
+            if synchronised:
+                
+                self._RefreshQuery()
+                
+            else:
+                
+                interrupting_current_search = not self._query_job_key.IsDone()
+                
+                if interrupting_current_search:
+                    
+                    self._CancelSearch()
+                    
+                
+            
         
     
     def SetSearchFocus( self ):

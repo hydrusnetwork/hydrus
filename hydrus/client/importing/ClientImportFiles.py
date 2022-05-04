@@ -191,6 +191,34 @@ class FileImportJob( object ):
             
         else:
             
+            # if the file is already in the database but not in all the desired file services, let's push content updates to make it happen
+            if self._pre_import_file_status.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+                
+                media_result = HG.client_controller.Read( 'media_result', self._pre_import_file_status.hash )
+                
+                destination_location_context = self._file_import_options.GetDestinationLocationContext()
+                
+                desired_file_service_keys = destination_location_context.current_service_keys
+                current_file_service_keys = media_result.GetLocationsManager().GetCurrent()
+                
+                file_service_keys_to_add_to = set( desired_file_service_keys ).difference( current_file_service_keys )
+                
+                if len( file_service_keys_to_add_to ) > 0:
+                    
+                    file_info_manager = media_result.GetFileInfoManager()
+                    now = HydrusData.GetNow()
+                    
+                    service_keys_to_content_updates = {}
+                    
+                    for service_key in file_service_keys_to_add_to:
+                        
+                        service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now ) ) ]
+                        
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                
+            
             self._post_import_file_status = self._pre_import_file_status.Duplicate()
             
         

@@ -1989,6 +1989,11 @@ class ContentUpdate( object ):
         return self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX )
         
     
+    def SetReason( self, reason: str ):
+        
+        self._reason = reason
+        
+    
     def SetRow( self, row ):
         
         self._row = row

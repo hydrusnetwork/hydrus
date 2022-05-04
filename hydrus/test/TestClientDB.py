@@ -1856,7 +1856,7 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
+        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
         
         result_service_keys = { service.GetServiceKey() for service in result }
         

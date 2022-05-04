@@ -94,6 +94,13 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Add( self, service_type ):
         
+        if service_type == HC.LOCAL_FILE_DOMAIN and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            QW.QMessageBox.warning( self, 'Warning', 'Sorry, I am locking this behind \'advanced mode\' users for now. Hang in there a week or two and this will be nicer to work with.' )
+            
+            return
+            
+        
         service_key = HydrusData.GenerateKey()
         name = 'new service'
         
@@ -129,9 +136,20 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if deletable:
             
-            if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES:
+            if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES or service_type in HC.MUST_BE_EMPTY_OF_FILES_SERVICES:
                 
-                pretty_deletable = 'must have at least one'
+                clauses = []
+                
+                if service_type in HC.MUST_BE_EMPTY_OF_FILES_SERVICES:
+                    
+                    clauses.append( 'must be empty of files' )
+                    
+                if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES:
+                    
+                    clauses.append( 'must have at least one' )
+                    
+                
+                pretty_deletable = ', '.join( clauses )
                 
             else:
                 
@@ -176,6 +194,27 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 return
                 
+            
+        
+        for service_type in HC.MUST_BE_EMPTY_OF_FILES_SERVICES:
+            
+            for service in deletable_services:
+                
+                if service.GetServiceType() == service_type:
+                    
+                    service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
+                    
+                    num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    
+                    if num_files > 0:
+                        
+                        message = 'The service {} needs to be empty before it can be deleted, but it seems to have {} files in it! Please delete or migrate all the files from it and then try again.'.format( service.GetName(), HydrusData.ToHumanInt( num_files ) )
+                        
+                        QW.QMessageBox.information( self, "Information", message )
+                        
+                        return
+                        
+                    
             
         
         if len( deletable_services ) > 0:
