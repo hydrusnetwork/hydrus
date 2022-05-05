@@ -66,7 +66,7 @@ graph TB
 
 Note this is not a loop--like with siblings, loops are not allowed--this is a family tree with three 'generations'. `adjusting bikini` is a child to both `bikini` and `adjusting clothes`, and `bikini` is a child to the new `swimwear`, which is also a parent to `swimsuit`. `adjusting bikini` and `adjusting swimsuit` are both grandchildren to `swimwear`.
 
-This can obviously get as complicated and autistic as you like, but be careful of being too confident. Reasonable people disagree on what is 'clearly' a parent or sibling, or what is an excessive level of detail (e.g. `person:scarlett johansson` may be `gender:female`, if you think that useful, but `species:human`, `species:mammal`, and `species:animal` may be going a little far). Beyond its own intellectual neatness, ask yourself the purpose of what you are creating.
+This can obviously get as nitpicky as you like, but be careful of being too confident. Reasonable people disagree on what is 'clearly' a parent or sibling, or what is an excessive level of detail (e.g. `person:scarlett johansson` may be `gender:female`, if you think that useful, but `species:human`, `species:mammal`, and `species:animal` may be going a little far). Beyond its own intellectual neatness, ask yourself the purpose of what you are creating.
 
 Of course you can create any sort of parent tags on your local tags or your own tag repositories, but this sort of thing can easily lead to arguments between reasonable people on a shared server like the PTR.
 
