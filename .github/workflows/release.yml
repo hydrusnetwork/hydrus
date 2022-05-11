@@ -19,6 +19,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - 
+        name: Install mpv
+        run: brew install mpv
+      - 
         name: Install mkdocs-material
         run: python3 -m pip install mkdocs-material 
       - 
@@ -28,15 +31,12 @@ jobs:
         name: Install PyOxidizer
         run: python3 -m pip install pyoxidizer
       - 
-        name: Install mpv
-        run: brew install mpv
-      - 
         name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
-          cp static/build_files/linux/requirements.txt requirements.txt
+          cp static/build_files/macos/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release
