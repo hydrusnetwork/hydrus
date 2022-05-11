@@ -445,6 +445,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             ( service_key, content_type, action, value ) = self._data
             
+            if content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None and isinstance( value, bytes ):
+                
+                value = value.hex()
+                
+            
             serialisable_data = ( service_key.hex(), content_type, action, value )
             
         
@@ -469,6 +474,18 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
             
             ( serialisable_service_key, content_type, action, value ) = serialisable_data
+            
+            if content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None and isinstance( value, str ):
+                
+                try:
+                    
+                    value = bytes.fromhex( value )
+                    
+                except:
+                    
+                    value = None
+                    
+                
             
             self._data = ( bytes.fromhex( serialisable_service_key ), content_type, action, value )
             
@@ -638,6 +655,8 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             components.append( HC.content_update_string_lookup[ action ] )
             components.append( HC.content_type_string_lookup[ content_type ] )
             
+            value_string = ''
+            
             if content_type == HC.CONTENT_TYPE_RATINGS:
                 
                 if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
@@ -663,7 +682,20 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     value_string = '' # only 1 up/down allowed atm
                     
                 
-            else:
+            elif content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None:
+                
+                try:
+                    
+                    from_name = HG.client_controller.services_manager.GetName( value )
+                    
+                    value_string = '(from {})'.format( from_name )
+                    
+                except:
+                    
+                    value_string = ''
+                    
+                
+            elif value is not None:
                 
                 value_string = '"{}"'.format( value )
                 
@@ -673,7 +705,14 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 components.append( value_string )
                 
             
-            components.append( 'for' )
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                components.append( 'to' )
+                
+            else:
+                
+                components.append( 'for' )
+                
             
             services_manager = HG.client_controller.services_manager
             

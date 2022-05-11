@@ -171,7 +171,7 @@ def SelectMultipleFromList( win, title, choice_tuples ):
             
         
     
-def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
+def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None, message = 'select service' ):
     
     if service_keys is None:
         
@@ -205,7 +205,7 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
             
             tlw = HG.client_controller.GetMainTLW()
             
-            service_key = SelectFromList( tlw, 'select service', choice_tuples )
+            service_key = SelectFromList( tlw, message, choice_tuples )
             
             return service_key
             

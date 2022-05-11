@@ -80,7 +80,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 483
+SOFTWARE_VERSION = 484
 CLIENT_API_VERSION = 31
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -194,6 +194,7 @@ CONTENT_UPDATE_FLIP = 16
 CONTENT_UPDATE_CLEAR_DELETE_RECORD = 17
 CONTENT_UPDATE_INCREMENT = 18
 CONTENT_UPDATE_DECREMENT = 19
+CONTENT_UPDATE_MOVE = 20
 
 content_update_string_lookup = {
     CONTENT_UPDATE_ADD : 'add',
@@ -213,7 +214,8 @@ content_update_string_lookup = {
     CONTENT_UPDATE_FLIP : 'flip on/off',
     CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'clear deletion record',
     CONTENT_UPDATE_INCREMENT : 'increment',
-    CONTENT_UPDATE_DECREMENT : 'decrement'
+    CONTENT_UPDATE_DECREMENT : 'decrement',
+    CONTENT_UPDATE_MOVE : 'move',
 }
 
 DEFINITIONS_TYPE_HASHES = 0
@@ -549,6 +551,7 @@ AUDIO_MKV = 48
 AUDIO_MP4 = 49
 UNDETERMINED_MP4 = 50
 APPLICATION_CBOR = 51
+APPLICATION_WINDOWS_EXE = 52
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -685,6 +688,7 @@ mime_string_lookup = {
     APPLICATION_ZIP : 'zip',
     APPLICATION_RAR : 'rar',
     APPLICATION_7Z : '7z',
+    APPLICATION_WINDOWS_EXE : 'windows exe',
     APPLICATION_HYDRUS_ENCRYPTED_ZIP : 'application/hydrus-encrypted-zip',
     APPLICATION_HYDRUS_UPDATE_CONTENT : 'application/hydrus-update-content',
     APPLICATION_HYDRUS_UPDATE_DEFINITIONS : 'application/hydrus-update-definitions',
@@ -742,6 +746,7 @@ mime_mimetype_string_lookup = {
     APPLICATION_ZIP : 'application/zip',
     APPLICATION_RAR : 'application/vnd.rar',
     APPLICATION_7Z : 'application/x-7z-compressed',
+    APPLICATION_WINDOWS_EXE : 'application/octet-stream',
     APPLICATION_HYDRUS_ENCRYPTED_ZIP : 'application/hydrus-encrypted-zip',
     APPLICATION_HYDRUS_UPDATE_CONTENT : 'application/hydrus-update-content',
     APPLICATION_HYDRUS_UPDATE_DEFINITIONS : 'application/hydrus-update-definitions',
@@ -799,6 +804,7 @@ mime_ext_lookup = {
     APPLICATION_ZIP : '.zip',
     APPLICATION_RAR : '.rar',
     APPLICATION_7Z : '.7z',
+    APPLICATION_WINDOWS_EXE : '.exe',
     APPLICATION_HYDRUS_ENCRYPTED_ZIP : '.zip.encrypted',
     APPLICATION_HYDRUS_UPDATE_CONTENT : '',
     APPLICATION_HYDRUS_UPDATE_DEFINITIONS : '',

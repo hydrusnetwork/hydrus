@@ -2001,6 +2001,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_conf_path = QP.FilePickerCtrl( self, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
             
             self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( self, min=1, max=255 )
+            self._animated_scanbar_hide_height = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'no, hide it', min = 1, max = 255, unit = 'px' )
             self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( self, min=1, max=63 )
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer filetype handling' )
@@ -2027,6 +2028,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
+            
+            self._animated_scanbar_hide_height.SetValue( 5 )
+            self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
             
             self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
             
@@ -2067,6 +2071,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
+            rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
             rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
             rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
@@ -2314,6 +2319,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
             self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
+            
+            self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
             
             self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
             

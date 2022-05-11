@@ -1691,14 +1691,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
             message += os.linesep * 2
-            message += 'Some GUI elements (review services, mainly) may be slow the next time they launch.'
+            message += 'Some GUI elements (review services, mainly) may be slow the next time they launch. Especially if you clear for all services.'
             
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
         if result == QW.QDialog.Accepted:
             
-            self._controller.Write( 'delete_service_info', types_to_delete = types_to_delete )
+            services = HG.client_controller.services_manager.GetServices()
+            
+            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetName() ) for service in services ]
+            
+            choice_tuples.sort()
+            
+            choice_tuples.insert( 0, ( 'all services', None, 'Do it for everything. Can take a long time!' ) )
+            
+            try:
+                
+                service_key = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which service?', choice_tuples )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'delete_service_info', types_to_delete = types_to_delete, service_key = service_key )
             
         
     
@@ -1842,6 +1859,21 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         if self._clipboard_watcher_repeating_job is None:
             
             self._BootOrStopClipboardWatcherIfNeeded()
+            
+        
+    
+    def _FlipMinimiseRestore( self ):
+        
+        if not self._currently_minimised_to_system_tray:
+            
+            if self.isMinimized():
+                
+                self.RestoreOrActivateWindow()
+                
+            else:
+                
+                self.showMinimized()
+                
             
         
     
@@ -3035,7 +3067,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'clear service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'service info numbers', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
         
         ClientGUIMenus.AppendMenu( menu, regen_submenu, 'regenerate' )
@@ -6556,6 +6588,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._system_tray_icon.highlight.connect( self.RestoreOrActivateWindow )
                 self._system_tray_icon.flip_show_ui.connect( self._FlipShowHideWholeUI )
+                self._system_tray_icon.flip_minimise_ui.connect( self._FlipMinimiseRestore )
                 self._system_tray_icon.exit_client.connect( self.TryToExit )
                 self._system_tray_icon.flip_pause_network_jobs.connect( self.FlipNetworkTrafficPaused )
                 self._system_tray_icon.flip_pause_subscription_jobs.connect( self.FlipSubscriptionsPaused )
@@ -6567,6 +6600,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._system_tray_icon.SetShouldAlwaysShow( always_show_system_tray_icon )
             self._system_tray_icon.SetUIIsCurrentlyShown( not self._currently_minimised_to_system_tray )
+            self._system_tray_icon.SetUIIsCurrentlyMinimised( self.isMinimized() )
             self._system_tray_icon.SetNetworkTrafficPaused( new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             self._system_tray_icon.SetSubscriptionsPaused( new_options.GetBoolean( 'pause_subs_sync' ) )
             
@@ -6845,6 +6879,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def EventIconize( self, event: QG.QWindowStateChangeEvent ):
+        
+        if self._have_system_tray_icon:
+            
+            self._system_tray_icon.SetUIIsCurrentlyMinimised( self.isMinimized() )
+            
         
         if self.isMinimized():
             

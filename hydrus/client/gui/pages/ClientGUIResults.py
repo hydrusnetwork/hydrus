@@ -604,7 +604,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
         if file_service_key is None:
             
             if len( self._location_context.current_service_keys ) == 1:
-    
+                
                 ( possible_suggested_file_service_key, ) = self._location_context.current_service_keys
                 
                 if HG.client_controller.services_manager.GetServiceType( possible_suggested_file_service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES + ( HC.FILE_REPOSITORY, ):
@@ -724,74 +724,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
             
             frame.SetPanel( panel )
-            
-        
-    
-    def _LaunchMediaViewer( self, first_media = None ):
-        
-        if self._HasFocusSingleton():
-            
-            media = self._GetFocusSingleton()
-            
-            new_options = HG.client_controller.new_options
-            
-            ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
-            
-            if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
-                
-                hash = media.GetHash()
-                mime = media.GetMime()
-                
-                client_files_manager = HG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                new_options = HG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
-                
-                return
-                
-            elif media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
-                
-                return
-                
-            
-        
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
-        
-        if len( media_results ) > 0:
-            
-            if first_media is None and self._focused_media is not None:
-                
-                first_media = self._focused_media
-                
-            
-            if first_media is not None:
-                
-                first_media = first_media.GetDisplayMedia()
-                
-            
-            if first_media is not None and first_media.GetLocationsManager().IsLocal():
-                
-                first_hash = first_media.GetHash()
-                
-            else:
-                
-                first_hash = None
-                
-            
-            self.SetFocusedMedia( None )
-            
-            canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
-            
-            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._location_context, media_results, first_hash )
-            
-            canvas_frame.SetCanvas( canvas_window )
-            
-            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
     
@@ -1273,80 +1205,71 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
-    def _DOLocalDuplicateFiles( self, service_key, flat_media ):
+    def _LaunchMediaViewer( self, first_media = None ):
         
-        now = HydrusData.GetNow()
-        
-        for block_of_flat_media in HydrusData.SplitListIntoChunks( flat_media, 64 ):
+        if self._HasFocusSingleton():
             
-            content_updates = []
-            undelete_hashes = set()
+            media = self._GetFocusSingleton()
             
-            for m in block_of_flat_media:
+            new_options = HG.client_controller.new_options
+            
+            ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
+            
+            if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                if service_key in m.GetLocationsManager().GetDeleted():
-                    
-                    undelete_hashes.add( m.GetHash() )
-                    
-                else:
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( m.GetMediaResult().GetFileInfoManager(), now ) ) )
-                    
+                hash = media.GetHash()
+                mime = media.GetMime()
                 
-            
-            if len( undelete_hashes ) > 0:
+                client_files_manager = HG.client_controller.client_files_manager
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undelete_hashes ) )
+                path = client_files_manager.GetFilePath( hash, mime )
                 
-            
-            HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
-            
-        
-    
-    def _LocalDuplicateFiles( self, service_key ):
-        
-        flat_media = self._GetSelectedFlatMedia( is_not_in_file_service_key = service_key )
-        
-        if len( flat_media ) > 0:
-            
-            text = 'Add {} files to {}?'.format( HydrusData.ToHumanInt( len( flat_media ) ), HG.client_controller.services_manager.GetName( service_key ) )
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, text )
-            
-            if result != QW.QDialog.Accepted:
+                new_options = HG.client_controller.new_options
+                
+                launch_path = new_options.GetMimeLaunch( mime )
+                
+                HydrusPaths.LaunchFile( path, launch_path )
+                
+                return
+                
+            elif media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
                 
                 return
                 
             
-            self._DOLocalDuplicateFiles( service_key, flat_media )
-            
         
-    
-    def _LocalMoveFiles( self, service_key_from, service_key_to ):
+        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
         
-        flat_media = self._GetSelectedFlatMedia( is_in_file_service_key = service_key_from, is_not_in_file_service_key = service_key_to )
-        
-        if len( flat_media ) > 0:
+        if len( media_results ) > 0:
             
-            text = 'Move {} files from {} to {}?'.format( HydrusData.ToHumanInt( len( flat_media ) ), HG.client_controller.services_manager.GetName( service_key_from ), HG.client_controller.services_manager.GetName( service_key_to ) )
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, text )
-            
-            if result != QW.QDialog.Accepted:
+            if first_media is None and self._focused_media is not None:
                 
-                return
+                first_media = self._focused_media
                 
             
-            self._DOLocalDuplicateFiles( service_key_to, flat_media )
+            if first_media is not None:
+                
+                first_media = first_media.GetDisplayMedia()
+                
             
-            for block_of_flat_media in HydrusData.SplitListIntoChunks( flat_media, 64 ):
+            if first_media is not None and first_media.GetLocationsManager().IsLocal():
                 
-                block_of_hashes = [ m.GetHash() for m in block_of_flat_media ]
+                first_hash = first_media.GetHash()
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_hashes, reason = 'Moved to {}'.format( HG.client_controller.services_manager.GetName( service_key_to ) ) ) ]
+            else:
                 
-                HG.client_controller.Write( 'content_updates', { service_key_from : content_updates } )
+                first_hash = None
                 
+            
+            self.SetFocusedMedia( None )
+            
+            canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
+            
+            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._location_context, media_results, first_hash )
+            
+            canvas_frame.SetCanvas( canvas_window )
+            
+            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
     
@@ -3752,9 +3675,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if multiple_selected:
                 
-                local_duplicate_phrase = 'add all possible selected to'
-                local_move_from_to_phrase = 'all possible selected from {} to {}'
-                
                 download_phrase = 'download all possible selected'
                 rescind_download_phrase = 'cancel downloads for all possible selected'
                 upload_phrase = 'upload all possible selected to'
@@ -3778,9 +3698,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_phrase = 'files'
                 
             else:
-                
-                local_duplicate_phrase = 'add to'
-                local_move_from_to_phrase = 'from {} to {}'
                 
                 download_phrase = 'download'
                 rescind_download_phrase = 'cancel download'
@@ -3857,9 +3774,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # valid commands for the files
             
-            local_duplicable_to_file_service_keys = set()
-            local_moveable_from_and_to_file_service_keys = set()
-            
             uploadable_file_service_keys = set()
             
             downloadable_file_service_keys = set()
@@ -3882,26 +3796,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 deleted = locations_manager.GetDeleted()
                 pending = locations_manager.GetPending()
                 petitioned = locations_manager.GetPetitioned()
-                
-                # LOCAL MIGRATION
-                
-                if locations_manager.IsLocal():
-                    
-                    can_send_to = local_media_file_service_keys.difference( current )
-                    can_send_from = local_media_file_service_keys.intersection( current )
-                    
-                    if len( can_send_to ) > 0:
-                        
-                        local_duplicable_to_file_service_keys.update( can_send_to )
-                        
-                        if len( can_send_from ) > 0:
-                            
-                            # can_send_from does not include trash. we won't say 'move from trash to blah' since that's a little complex. we'll just say 'add to blah' in that case I think
-                            
-                            local_moveable_from_and_to_file_service_keys.update( list( itertools.product( can_send_from, can_send_to ) ) )
-                            
-                        
-                    
                 
                 # FILE REPOS
                 
@@ -4156,6 +4050,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
+            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaActions.GetLocalFileActionServiceKeys( flat_selected_medias )
+            
             len_interesting_local_service_keys = 0
             
             len_interesting_local_service_keys += len( local_duplicable_to_file_service_keys )
@@ -4195,19 +4091,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len_interesting_local_service_keys > 0:
                 
-                local_action_menu = QW.QMenu( files_parent_menu )
-                
-                if len( local_duplicable_to_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddServiceKeysToMenu( self, local_action_menu, local_duplicable_to_file_service_keys, local_duplicate_phrase, 'Duplicate the files to the local file service.', self._LocalDuplicateFiles )
-                    
-                
-                if len( local_moveable_from_and_to_file_service_keys ) > 0:
-                    
-                    ClientGUIMedia.AddDoubleServiceKeysToMenu( self, local_action_menu, local_moveable_from_and_to_file_service_keys, 'move', local_move_from_to_phrase, 'Move the files to the local file service.', self._LocalMoveFiles )
-                    
-                
-                ClientGUIMenus.AppendMenu( files_parent_menu, local_action_menu, 'local services' )
+                ClientGUIMedia.AddLocalFilesMoveAddToMenu( self, files_parent_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
                 
             
             if len_interesting_remote_service_keys > 0:
@@ -4226,57 +4110,57 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( uploadable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
                     
                 
                 if len( pending_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
                     
                 
                 if len( petitionable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
                     
                 
                 if len( petitioned_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
                     
                 
                 if len( deletable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
                     
                 
                 if len( modifyable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
                     
                 
                 if len( pinnable_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
                     
                 
                 if len( pending_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
                     
                 
                 if len( unpinnable_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
                     
                 
                 if len( petitioned_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
                     
                 
                 if multiple_selected and len( ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
+                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
                     
                 
                 ClientGUIMenus.AppendMenu( files_parent_menu, remote_action_menu, 'remote services' )

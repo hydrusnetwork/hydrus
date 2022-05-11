@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -362,8 +363,22 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddConversion( self ):
         
-        conversion_type = ClientStrings.STRING_CONVERSION_APPEND_TEXT
-        data = 'extra text'
+        try:
+            
+            default_string_converter = HG.client_controller.new_options.GetRawSerialisable( 'last_used_string_conversion_step' )
+            
+            default_conversions = default_string_converter.GetConversions()
+            
+            if len( default_conversions ) > 0:
+                
+                ( conversion_type, data ) = default_conversions[0]
+                
+            
+        except:
+            
+            conversion_type = ClientStrings.STRING_CONVERSION_APPEND_TEXT
+            data = 'extra text'
+            
         
         try:
             
@@ -387,6 +402,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 number = self._conversions.topLevelItemCount() + 1
                 
                 ( conversion_type, data ) = panel.GetValue()
+                
+                new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
+                
+                HG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
                 
                 enumerated_conversion = ( number, conversion_type, data )
                 
@@ -541,6 +560,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._conversions.DeleteDatas( ( enumerated_conversion, ) )
                     
                     ( conversion_type, data ) = panel.GetValue()
+                    
+                    new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
+                    
+                    HG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
                     
                     enumerated_conversion = ( number, conversion_type, data )
                     

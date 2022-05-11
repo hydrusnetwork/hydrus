@@ -2159,7 +2159,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             if do_veto:
                 
-                raise HydrusExceptions.VetoException( self._name )
+                raise HydrusExceptions.VetoException( 'veto: {}'.format( self._name ) )
                 
             else:
                 

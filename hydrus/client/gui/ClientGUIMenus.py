@@ -130,6 +130,42 @@ def AppendMenuLabel( menu, label, description = '' ):
     
     return menu_item
     
+def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
+    
+    if sort_tuples:
+        
+        try:
+            
+            menu_tuples = sorted( menu_tuples )
+            
+        except:
+            
+            pass
+            
+        
+    
+    if len( menu_tuples ) == 1:
+        
+        submenu = menu
+        
+        item_prefix = '{} '.format( submenu_name )
+        
+    else:
+        
+        submenu = QW.QMenu( menu )
+        
+        AppendMenu( menu, submenu, submenu_name )
+        
+        item_prefix = ''
+        
+    
+    for ( label, description, call ) in menu_tuples:
+        
+        label = '{}{}'.format( item_prefix, label )
+        
+        AppendMenuItem( submenu, label, description, call )
+        
+    
 def AppendSeparator( menu ):
     
     num_items = len( menu.actions() )

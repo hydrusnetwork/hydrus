@@ -1083,6 +1083,8 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._should_test_tag_string.clicked.connect( self.EventShouldTestChanged )
         
+        ClientGUIFunctions.SetFocusLater( self._tag_name )
+        
     
     def _UpdateShouldTest( self ):
         

@@ -18,6 +18,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     flip_pause_network_jobs = QC.Signal()
     flip_pause_subscription_jobs = QC.Signal()
     highlight = QC.Signal()
+    flip_minimise_ui = QC.Signal()
     exit_client = QC.Signal()
     
     def __init__( self, parent: QW.QWidget ):
@@ -25,6 +26,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         QW.QSystemTrayIcon.__init__( self, parent )
         
         self._ui_is_currently_shown = True
+        self._ui_is_currently_minimised = False
         self._should_always_show = False
         self._network_traffic_paused = False
         self._subscriptions_paused = False
@@ -59,6 +61,8 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         new_menu = QW.QMenu( parent_widget )
         
         self._show_hide_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'show/hide', 'Hide or show the hydrus client', self.flip_show_ui.emit )
+        
+        self._minimise_restore_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'restore/minimise', 'Restore or minimise the hydrus client window', self.flip_minimise_ui.emit )
         
         self._UpdateShowHideMenuItemLabel()
         
@@ -97,11 +101,24 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         self._network_traffic_menu_item.setText( label )
         
     
+    def _UpdateRestoreMinimiseMenuItemLabel( self ):
+        
+        label = 'restore' if self._ui_is_currently_minimised else 'minimise'
+        
+        self._minimise_restore_menu_item.setText( label )
+        
+        show_it = self._ui_is_currently_shown and not HG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray' )
+        
+        self._minimise_restore_menu_item.setVisible( show_it )
+        
+    
     def _UpdateShowHideMenuItemLabel( self ):
         
         label = 'hide' if self._ui_is_currently_shown else 'show'
         
         self._show_hide_menu_item.setText( label )
+        
+        self._UpdateRestoreMinimiseMenuItemLabel()
         
     
     def _UpdateShowSelf( self ) -> bool:
@@ -213,6 +230,16 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             self._UpdateSubscriptionsMenuItemLabel()
             
             self._UpdateTooltip()
+            
+        
+    
+    def SetUIIsCurrentlyMinimised( self, ui_is_currently_minimised: bool ):
+        
+        if ui_is_currently_minimised != self._ui_is_currently_minimised:
+            
+            self._ui_is_currently_minimised = ui_is_currently_minimised
+            
+            self._UpdateRestoreMinimiseMenuItemLabel()
             
         
     

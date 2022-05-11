@@ -14,6 +14,68 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 
+class LocalFilesSubPanel( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._add_or_move_action = ClientGUICommon.BetterChoice( self )
+        
+        self._add_or_move_action.addItem( 'add to', HC.CONTENT_UPDATE_ADD )
+        self._add_or_move_action.addItem( 'move to', HC.CONTENT_UPDATE_MOVE )
+        
+        self._add_or_move_action.SetValue( HC.CONTENT_UPDATE_ADD )
+        
+        self._service_keys = ClientGUICommon.BetterChoice( self )
+        
+        #
+        
+        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
+        
+        for service in services:
+            
+            service_name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            self._service_keys.addItem( service_name, service_key )
+            
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        ratings_numerical_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( vbox, self._add_or_move_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._service_keys, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        service_key = self._service_keys.GetValue()
+        
+        if service_key is None:
+            
+            raise HydrusExceptions.VetoException( 'Please select a service!' )
+            
+        
+        action = self._add_or_move_action.GetValue()
+        
+        value = None
+        
+        return CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_FILES, action, value ) )
+        
+    
+    def SetValue( self, action: int, service_key: bytes ):
+        
+        self._add_or_move_action.SetValue( action )
+        
+        self._service_keys.SetValue( service_key )
+        
+    
 class RatingLikeSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
@@ -572,6 +634,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
     PANEL_RATING_LIKE = 2
     PANEL_RATING_NUMERICAL = 3
     PANEL_RATING_NUMERICAL_INCDEC = 4
+    PANEL_LOCAL_FILES = 5
     
     def __init__( self, parent: QW.QWidget, command: CAC.ApplicationCommand, shortcuts_name: str ):
         
@@ -588,6 +651,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         if is_custom_or_media:
             
             self._panel_choice.addItem( 'tag command', self.PANEL_TAG )
+            self._panel_choice.addItem( 'local file command', self.PANEL_LOCAL_FILES )
             self._panel_choice.addItem( 'like/dislike rating command', self.PANEL_RATING_LIKE )
             self._panel_choice.addItem( 'numerical rating command', self.PANEL_RATING_NUMERICAL )
             self._panel_choice.addItem( 'numerical rating increment/decrement command', self.PANEL_RATING_NUMERICAL_INCDEC )
@@ -606,6 +670,8 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         self._rating_numerical_sub_panel = RatingNumericalSubPanel( self )
         
         self._rating_numerical_inc_dec_sub_panel = RatingNumericalIncDecSubPanel( self )
+        
+        self._local_files_sub_panel = LocalFilesSubPanel( self )
         
         #
         
@@ -649,6 +715,12 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._panel_choice.SetValue( self.PANEL_TAG )
                 
+            elif service_type == HC.LOCAL_FILE_DOMAIN:
+                
+                self._local_files_sub_panel.SetValue( action, service_key )
+                
+                self._panel_choice.SetValue( self.PANEL_LOCAL_FILES )
+                
             elif service_type == HC.LOCAL_RATING_LIKE:
                 
                 rating = value
@@ -685,6 +757,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._panel_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._simple_sub_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._local_files_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_like_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_numerical_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_numerical_inc_dec_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -705,6 +778,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_sub_panel.setVisible( panel_type == self.PANEL_SIMPLE )
         self._tag_sub_panel.setVisible( panel_type == self.PANEL_TAG )
+        self._local_files_sub_panel.setVisible( panel_type == self.PANEL_LOCAL_FILES )
         self._rating_like_sub_panel.setVisible( panel_type == self.PANEL_RATING_LIKE )
         self._rating_numerical_sub_panel.setVisible( panel_type == self.PANEL_RATING_NUMERICAL )
         self._rating_numerical_inc_dec_sub_panel.setVisible( panel_type == self.PANEL_RATING_NUMERICAL_INCDEC )
@@ -721,6 +795,10 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         elif panel_type == self.PANEL_TAG:
             
             return self._tag_sub_panel.GetValue()
+            
+        elif panel_type == self.PANEL_LOCAL_FILES:
+            
+            return self._local_files_sub_panel.GetValue()
             
         elif panel_type == self.PANEL_RATING_LIKE:
             

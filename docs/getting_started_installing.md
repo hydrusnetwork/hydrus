@@ -32,10 +32,22 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.
-    *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv library, not the player. Check help->about to see if it is available--if not, see if you can get it with _apt_.
+    *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it with `apt`.  
+    If the about window provides you an error popup like this:  
+    ```
+    OSError: /lib/x86_64-linux-gnu/libgio-2.0.so.0: undefined symbol: g_module_open_full
+    (traceback)
+    pyimod04_ctypes.install.<locals>.PyInstallerImportError: Failed to load dynlib/dll 'libmpv.so.1'. Most likely this dynlib/dll was not found when the application was frozen.
+    ```  
+    Then please do this:  
+        1. Search your /usr/ dir for `libgmodule*`. You are looking for something like `libgmodule-2.0.so`. Users report finding it in `/usr/lib64/` and `/usr/lib/x86_64-linux-gnu`.
+        2. Copy that .so file to the hydrus install base directory.
+        3. Boot the client and hit _help->about_ to see if it reports a version.
+        4. If it all seems good, hit _options->media_ to set up mpv as your player for video/audio and try to view some things.
     *   You can also try [running the Windows version in wine](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
     If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).
+    
 
 === "From Source"
 

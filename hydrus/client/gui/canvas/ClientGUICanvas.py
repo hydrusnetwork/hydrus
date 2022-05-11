@@ -156,12 +156,12 @@ def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
     canvas_width = canvas_size.width()
     canvas_height = canvas_size.height()
     
-    if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
+    '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
         
         animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-        animated_scanbar_height = 0
-        canvas_height -= animated_scanbar_height
         
+        canvas_height -= animated_scanbar_height
+        '''
     
     canvas_width = max( canvas_width, 80 )
     canvas_height = max( canvas_height, 60 )
@@ -313,12 +313,12 @@ def CalculateMediaContainerSize( media, zoom, show_action ):
         
         ( media_width, media_height ) = CalculateMediaSize( media, zoom )
         
-        if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
+        '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
             
             animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-            animated_scanbar_height = 0
-            media_height += animated_scanbar_height
             
+            media_height += animated_scanbar_height
+            '''
         
         return QC.QSize( media_width, media_height )
         
@@ -1077,6 +1077,10 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._media_window_pos = QC.QPoint( x, y )
         
         self._last_drag_pos = None
+        
+        # this forces a resize if needed, which may have been missed in natural event handling if the window is bigger than its parent and counts as out of view in a weird way
+        # this fixes the 'going from borderless to regular window on a 16:9 video on a perfect 16:9 screen doesn't scale it down until I pan it' bug
+        self._DrawCurrentMedia()
         
     
     def _SaveCurrentMediaViewTime( self ):
@@ -3101,7 +3105,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumRemainingDecisions( self ):
         
-        return len( self._batch_of_pairs_to_process ) - self._current_pair_index
+        # this looks a little weird, but I want to be clear that we make a decision on the final index
+        
+        last_decision_index = len( self._batch_of_pairs_to_process ) - 1
+        
+        number_of_decisions_after_the_current = last_decision_index - self._current_pair_index
+        
+        return 1 + number_of_decisions_after_the_current
         
     
     def _GoBack( self ):
@@ -3435,9 +3445,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, {}, was_auto_skipped ) )
                 
-                self._current_pair_index += 1
-                
-                if self._GetNumRemainingDecisions() == 0:
+                if self._GetNumRemainingDecisions() == 1: # we are at the end of the queue, this decision we just appended is the last
                     
                     if self._GetNumCommittableDecisions() == 0:
                         
@@ -3455,6 +3463,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         return
                         
+                    
+                else:
+                    
+                    self._current_pair_index += 1
                     
                 
             
@@ -4696,6 +4708,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
+            
+            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaActions.GetLocalFileActionServiceKeys( ( self._current_media, ) )
+            
+            multiple_selected = False
+            
+            ClientGUIMedia.AddLocalFilesMoveAddToMenu( self, menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
             
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             

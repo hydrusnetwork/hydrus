@@ -867,11 +867,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         event.ignore()
         
     
-    def wheelEvent( self, event ):
-        
-        QW.QApplication.sendEvent( self.parentWidget(), event )
-        
-    
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         if self._current_media is not None:
@@ -1244,11 +1239,6 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._SizeAndPosition()
         
     
-    def wheelEvent( self, event ):
-        
-        QW.QApplication.sendEvent( self.parentWidget(), event )
-        
-    
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         if self._current_media is not None:
@@ -1508,11 +1498,6 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
         
         return CanvasHoverFrame._ShouldBeHidden( self )
-        
-    
-    def wheelEvent( self, event ):
-        
-        QW.QApplication.sendEvent( self.parentWidget(), event )
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -1840,11 +1825,6 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
         
     
-    def wheelEvent( self, event ):
-        
-        QW.QApplication.sendEvent( self.parentWidget(), event )
-        
-    
     def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
         
         if canvas_key == self._canvas_key:
@@ -1957,5 +1937,20 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
             self._ResetTags()
             
+        
+    
+    def wheelEvent( self, event ):
+        
+        # need the mouse test here since some weird event passing happens on mouse events on other stuff, I think because this hover is child 0 of the parent, it somehow gets 'focus'
+        if self.rect().contains( self.mapFromGlobal( QG.QCursor.pos() ) ):
+            
+            # we do not want to send taglist wheel events up to the canvas lad
+            
+            event.accept()
+            
+            return
+            
+        
+        CanvasHoverFrame.wheelEvent( self, event )
         
     

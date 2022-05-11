@@ -473,6 +473,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'system_busy_cpu_count' ] = 1
         
+        self._dictionary[ 'noneable_integers' ][ 'animated_scanbar_hide_height' ] = 5
+        
         #
         
         self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList()
@@ -517,6 +519,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'string_list' ][ 'advanced_file_deletion_reasons' ] = [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ]
         
         #
+        
+        from hydrus.client import ClientStrings
+        
+        self._dictionary[ 'last_used_string_conversion_step' ] = ClientStrings.StringConverter( [ ( ClientStrings.STRING_CONVERSION_APPEND_TEXT, 'extra text' ) ] )
         
         self._dictionary[ 'custom_default_predicates' ] = HydrusSerialisable.SerialisableList()
         
@@ -1189,6 +1195,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetRawSerialisable( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ name ]
+        
+    
     def GetRecentPredicates( self, predicate_types ):
         
         with self._lock:
@@ -1529,6 +1542,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_strings' ][ name ] = value
+            
+        
+    
+    def SetRawSerialisable( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ name ] = value
             
         
     

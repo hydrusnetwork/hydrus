@@ -300,6 +300,11 @@ class StringConverter( StringProcessingStep ):
         return s
         
     
+    def GetConversions( self ):
+        
+        return list( self.conversions )
+        
+    
     def GetConversionStrings( self ):
         
         return [ self.ConversionToString( conversion ) for conversion in self.conversions ]

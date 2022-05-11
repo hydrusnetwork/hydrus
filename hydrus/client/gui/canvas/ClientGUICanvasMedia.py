@@ -586,6 +586,8 @@ class AnimationBar( QW.QWidget ):
         self._num_frames = 1
         self._last_drawn_info = None
         
+        self._show_text = True
+        
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
         
@@ -670,7 +672,7 @@ class AnimationBar( QW.QWidget ):
         
         #
         
-        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        my_height = self.height()
         
         if buffer_indices is not None:
             
@@ -693,13 +695,13 @@ class AnimationBar( QW.QWidget ):
                 
                 if rendered_to_x > start_x:
                     
-                    painter.drawRect( start_x, 0, rendered_to_x - start_x, animated_scanbar_height )
+                    painter.drawRect( start_x, 0, rendered_to_x - start_x, my_height )
                     
                 else:
                     
-                    painter.drawRect( start_x, 0, my_width - start_x, animated_scanbar_height )
+                    painter.drawRect( start_x, 0, my_width - start_x, my_height )
                     
-                    painter.drawRect( 0, 0, rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( 0, 0, rendered_to_x, my_height )
                     
                 
             
@@ -711,13 +713,13 @@ class AnimationBar( QW.QWidget ):
                 
                 if end_x > rendered_to_x:
                     
-                    painter.drawRect( rendered_to_x, 0, end_x - rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( rendered_to_x, 0, end_x - rendered_to_x, my_height )
                     
                 else:
                     
-                    painter.drawRect( rendered_to_x, 0, my_width - rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( rendered_to_x, 0, my_width - rendered_to_x, my_height )
                     
-                    painter.drawRect( 0, 0, end_x, animated_scanbar_height )
+                    painter.drawRect( 0, 0, end_x, my_height )
                     
                 
             
@@ -741,35 +743,38 @@ class AnimationBar( QW.QWidget ):
         
         if nub_x is not None:
             
-            painter.drawRect( nub_x, 0, animated_scanbar_nub_width, animated_scanbar_height )
+            painter.drawRect( nub_x, 0, animated_scanbar_nub_width, my_height )
             
         
         #
         
-        painter.setPen( QG.QPen() )
-        
-        progress_strings = []
-        
-        if num_frames_are_useful:
+        if self._show_text:
             
-            progress_strings.append( HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
+            painter.setPen( QG.QPen() )
             
-        
-        if current_timestamp_ms is not None:
+            progress_strings = []
             
-            progress_strings.append( HydrusData.ConvertValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+            if num_frames_are_useful:
+                
+                progress_strings.append( HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
+                
             
-        
-        s = ' - '.join( progress_strings )
-        
-        if len( s ) > 0:
+            if current_timestamp_ms is not None:
+                
+                progress_strings.append( HydrusData.ConvertValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+                
             
-            ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
+            s = ' - '.join( progress_strings )
             
-            x = my_width - text_size.width() - 3
-            y = ( my_height - text_size.height() ) / 2
-            
-            ClientGUIFunctions.DrawText( painter, x, y, s )
+            if len( s ) > 0:
+                
+                ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
+                
+                x = my_width - text_size.width() - 3
+                y = ( my_height - text_size.height() ) / 2
+                
+                ClientGUIFunctions.DrawText( painter, x, y, s )
+                
             
         
         #
@@ -927,6 +932,11 @@ class AnimationBar( QW.QWidget ):
         self.update()
         
     
+    def SetShowText( self, show_text: bool ):
+        
+        self._show_text = show_text
+        
+    
     def TIMERAnimationUpdate( self ):
         
         if self._CurrentMediaWindowIsBad():
@@ -1026,6 +1036,7 @@ class MediaContainer( QW.QWidget ):
         self._static_image_window.readyForNeighbourPrefetch.connect( self.readyForNeighbourPrefetch )
         
         self._controls_bar = QW.QWidget( self )
+        self._controls_bar_show_full = True
         
         # We need this to force-fill some blanks at times
         self.setAutoFillBackground( True )
@@ -1224,7 +1235,7 @@ class MediaContainer( QW.QWidget ):
                 self._media_window.move( QC.QPoint( 0, 0 ) )
                 
             
-            controls_bar_rect = self.GetIdealControlsBarRect()
+            controls_bar_rect = self.GetIdealControlsBarRect( full_size = self._controls_bar_show_full )
             
             self._controls_bar.setFixedSize( controls_bar_rect.size() )
             self._controls_bar.move( controls_bar_rect.topLeft() )
@@ -1275,14 +1286,26 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def GetIdealControlsBarRect( self ):
+    def GetIdealControlsBarRect( self, full_size = True ):
         
         my_size = self.size()
         
         my_width = my_size.width()
         my_height = my_size.height()
         
-        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        if full_size:
+            
+            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+            
+        else:
+            
+            animated_scanbar_height = HG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' )
+            
+            if animated_scanbar_height is None:
+                
+                animated_scanbar_height = 5
+                
+            
         
         return QC.QRect(
             QC.QPoint( 0, my_height - animated_scanbar_height ),
@@ -1491,7 +1514,7 @@ class MediaContainer( QW.QWidget ):
             return False
             
         
-        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio()
+        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio() and self._controls_bar_show_full
         
     
     def StopForSlideshow( self, value ):
@@ -1504,18 +1527,35 @@ class MediaContainer( QW.QWidget ):
     
     def TIMERUIUpdate( self ):
         
+        is_near = False
+        show_small_instead_of_hiding = None
+        force_show = False
+        
         if not ShouldHaveAnimationBar( self._media, self._show_action ):
             
             should_show_controls = False
             
         else:
             
-            my_window = self.window()
+            is_near = self.MouseIsNearAnimationBar()
+            show_small_instead_of_hiding = HG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
+            force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or HG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
             
-            should_show_controls = self.MouseIsNearAnimationBar() or self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or HG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
+            should_show_controls = is_near or show_small_instead_of_hiding or force_show
             
         
         if should_show_controls:
+            
+            should_show_full = is_near or force_show
+            
+            if should_show_full != self._controls_bar_show_full:
+                
+                self._controls_bar_show_full = should_show_full
+                
+                self._animation_bar.SetShowText( self._controls_bar_show_full )
+                
+                self._SizeAndPositionChildren()
+                
             
             if not self._controls_bar.isVisible():
                 

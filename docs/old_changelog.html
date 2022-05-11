@@ -33,6 +33,33 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_484"><a href="#version_484">version 484</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed the simple delete files dialog for trashed files. due to a logical oversight, the simple version was not testing 'trashed' status and so didn't see anything to permanently delete and would immediately dump out. now it shows the option for trashed files again, and if the selection includes trash and non-trash, it shows multiple options</li>
+					<li>fixed an error in the 'show next pair' logic of the new duplicate filter queue where if it needed to auto-skip through the end of the current batch and load up the next batch (issues #1139, #1143)</li>
+					<li>a new setting on _options->media_ now lets you set the scanbar to be small and simple instead of hidden when the mouse is moved away. I liked this so much personally it is now the default for new users. try it out!</li>
+					<li>the media viewer's taglist hover window will now never send a mouse wheel event up to the media viewer canvas (so scrolling the tags won't accidentally do previous/next if you hit the end of the list scrollbar)</li>
+					<li>I think I have fixed the bug where going on the media viewer from borderless fullscreen to a regular window would not trigger a media container resize if the media perfectly fitted the ratio of the fullscreen monitor!</li>
+					<li>the system tray icon now has minimise/restore entries</li>
+					<li>to reduce confusion, when a content parser vetoes, it now prepends the file import 'note' with 'veto: '</li>
+					<li>the 'clear service info cache' job under _database->regenerate_ is renamed to 'service info numbers' and now has a service selector so you can, let's say, regen your miscounted 'number of files in trash' count without triggering a complete recount of every single mapping on the PTR the next time you open review services</li>
+					<li>hydrus now recognises most (and maybe all) windows executables so it can discard them from imports confidently. a user discovered an interesting exe with embedded audio that ffmpeg was seeing as an mp3--this no longer occurs</li>
+					<li>the 'edit string conversion step' dialog now saves a new default (which is used on 'add' events) every time you ok it. 'append extra text' is no longer the universal default!</li>
+					<li>the 'edit tag rule' dialog in the parsing system now starts with the tag name field focused</li>
+					<li>updated 'getting started/installing' help to talk more about mpv on Linux. the 'libgmodule' problem _seems_ to have a solid fix now, which is properly written out there. thanks to the users who figured all this out and provided feedback</li>
+					<li>.</li>
+					<li>multiple local file services:</li>
+					<li>the media viewer menu now offers add/move actions just like the thumb grid</li>
+					<li>added a new shortcut action that lets you specify add/move jobs. it is available in the media shortcut set and will work in the thumbnail grid and the media viewer</li>
+					<li>add/move is now nicer in edge cases. files are filtered better to ensure only local media files end up in a job (e.g. if you were to try to move files out of the repository update domain using a shortcut), and 'add' commands from trashed files are naturally and silently converted to a pure undelete</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>refactored the UI side of multiple local file services add/move commands. various functions to select, filter, and question the user on actions are now pulled to a separate simple module where other parts of the UI can also access them, and there is now just one isolated pipeline for file service add/move content updates.</li>
+					<li>if a 'move' job is started without a source service and multiple services could apply, the main routine will now ask the user which to use using a selector that shows how many files each choice will affect</li>
+					<li>also rewrote the add/move menu population code, fixed a couple little issues, and refactored it to a module the media viewer canvas can use</li>
+					<li>wrote a new menu builder that can place a list of items either as a single item (if the list is length 1), or make a submenu if there are more. it drives the new add/move commands and now the behind the scenes of all other service-based menu population</li>
+				</ul>
 				<li><h3 id="version_483"><a href="#version_483">version 483</a></h3></li>
 				<ul>
 					<li>multiple local file services:</li>
