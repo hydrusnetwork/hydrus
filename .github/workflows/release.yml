@@ -49,7 +49,7 @@ jobs:
           cp install/static/build_files/macos/running_from_app "install/running_from_app"
           ln -s /Applications ./Applications
           mkdir mpv_dylibs
-          python3 static/build_files/macos/mpv_dylib_gatherer.py
+          python3 install/static/build_files/macos/mpv_dylib_gatherer.py
           mv mpv_dylibs/* install
           rm -rf mpv_dylibs
           mv install/* "Hydrus Network.app/Contents/MacOS/"
