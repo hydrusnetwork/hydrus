@@ -48,7 +48,6 @@ jobs:
           cp install/static/build_files/macos/ReadMeFirst.rtf ./ReadMeFirst.rtf
           cp install/static/build_files/macos/running_from_app "install/running_from_app"
           ln -s /Applications ./Applications
-          otool -L libmpv.1.dylib
           mkdir mpv_dylibs
           python3 static/build_files/macos/mpv_dylib_gatherer.py
           mv mpv_dylibs/* install
