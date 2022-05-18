@@ -7,7 +7,9 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
+from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -20,8 +22,9 @@ MAX_CACHED_INTEGER = ( 2 ** 63 ) - 1
 
 def CanCacheInteger( num ):
     
-    return MIN_CACHED_INTEGER <= num and num <= MAX_CACHED_INTEGER
+    return MIN_CACHED_INTEGER <= num <= MAX_CACHED_INTEGER
     
+
 def ConvertWildcardToSQLiteLikeParameter( wildcard ):
     
     like_param = wildcard.replace( '*', '%' )
@@ -469,6 +472,79 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return integer_subtags_table_name
         
     
+    def GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        mapping_and_tag_table_names = self.GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
+        
+        mapping_table_names = [ mapping_table_name for ( mapping_table_name, tag_table_name ) in mapping_and_tag_table_names ]
+        
+        return mapping_table_names
+        
+    
+    def GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+        
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        tag_service_key = tag_search_context.service_key
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            tag_service_ids = [ self.modules_services.GetServiceId( tag_service_key ) ]
+            
+        
+        current_tables = []
+        pending_tables = []
+        
+        for tag_service_id in tag_service_ids:
+            
+            tags_table_name = self.GetTagsTableName( file_service_id, tag_service_id )
+            
+            if file_service_id == self.modules_services.combined_file_service_id:
+                
+                # yo this does not support ClientTags.TAG_DISPLAY_ACTUAL--big tricky problem
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+                
+                current_tables.append( ( current_mappings_table_name, tags_table_name ) )
+                pending_tables.append( ( pending_mappings_table_name, tags_table_name ) )
+                
+            else:
+                
+                if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+                    
+                    ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    current_tables.append( ( cache_current_mappings_table_name, tags_table_name ) )
+                    pending_tables.append( ( cache_pending_mappings_table_name, tags_table_name ) )
+                    
+                elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+                    
+                    ( cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    current_tables.append( ( cache_current_display_mappings_table_name, tags_table_name ) )
+                    pending_tables.append( ( cache_pending_display_mappings_table_name, tags_table_name ) )
+                    
+                
+            
+        
+        table_names = []
+        
+        if tag_search_context.include_current_tags:
+            
+            table_names.extend( current_tables )
+            
+        
+        if tag_search_context.include_pending_tags:
+            
+            table_names.extend( pending_tables )
+            
+        
+        return table_names
+        
+    
     def GetMissingTagSearchServicePairs( self ):
         
         return self._missing_tag_search_service_pairs
@@ -843,6 +919,65 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 # temp namespaces to tags
                 cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( temp_namespace_ids_table_name, tags_table_name ) )
                 
+            
+            cancelled_hook = None
+            
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
+            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            
+            if job_key is not None:
+                
+                if job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+            
+            final_result_tag_ids.update( result_tag_ids )
+            
+        
+        return final_result_tag_ids
+        
+    
+    def GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_key = None ):
+        
+        if len( namespace_ids ) == 0 or len( subtag_ids ) == 0:
+            
+            return set()
+            
+        
+        with self._MakeTemporaryIntegerTable( subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
+            
+            with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+                
+                return self.GetTagIdsFromNamespaceIdsSubtagIdsTables( file_service_id, tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_key = job_key )
+                
+            
+        
+    
+    def GetTagIdsFromNamespaceIdsSubtagIdsTables( self, file_service_id: int, tag_service_id: int, namespace_ids_table_name: str, subtag_ids_table_name: str, job_key = None ):
+        
+        final_result_tag_ids = set()
+        
+        if tag_service_id == self.modules_services.combined_tag_service_id:
+            
+            search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = ( tag_service_id, )
+            
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            tags_table_name = self.GetTagsTableName( file_service_id, search_tag_service_id )
+            
+            # temp subtags to tags to temp namespaces
+            cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id ) CROSS JOIN {} USING ( namespace_id );'.format( subtag_ids_table_name, tags_table_name, namespace_ids_table_name ) )
             
             cancelled_hook = None
             

@@ -2541,6 +2541,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
+            
+            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
+            self._forced_search_limit.setToolTip( 'This is overruled if you set an explicit system:limit larger than it.' )
+            
+            #
+            
             self._default_search_synchronised.setChecked( self._new_options.GetBoolean( 'default_search_synchronised' ) )
             
             self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
@@ -2552,6 +2559,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_show_system_everything.setChecked( self._new_options.GetBoolean( 'always_show_system_everything' ) )
             
             self._filter_inbox_and_archive_predicates.setChecked( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
+            
+            self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
             #
             
@@ -2581,7 +2590,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            rows = []
+            
+            rows.append( ( 'Forced system:limit for all searches: ', self._forced_search_limit ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
+            
+            misc_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            #
+            
             QP.AddToLayout( vbox, self._autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -2599,6 +2622,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'always_show_system_everything', self._always_show_system_everything.isChecked() )
             self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.isChecked() )
+            
+            self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
         
     
@@ -2802,12 +2827,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
-            
-            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
-            
-            #
-            
             self._thumbnail_cache_size.SetValue( self._new_options.GetInteger( 'thumbnail_cache_size' ) )
             self._image_cache_size.SetValue( self._new_options.GetInteger( 'image_cache_size' ) )
             self._image_tile_cache_size.SetValue( self._new_options.GetInteger( 'image_tile_cache_size' ) )
@@ -2819,8 +2838,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._ideal_tile_dimension.setValue( self._new_options.GetInteger( 'ideal_tile_dimension' ) )
             
             self._video_buffer_size_mb.setValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
-            
-            self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
             self._media_viewer_prefetch_delay_base_ms.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
             self._media_viewer_prefetch_num_previous.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_previous' ) )
@@ -2968,18 +2985,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'Forced system:limit for all searches: ', self._forced_search_limit ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
-            
-            misc_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -3083,8 +3088,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'image_cache_prefetch_limit_percentage', self._image_cache_prefetch_limit_percentage.value() )
             
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.value() )
-            
-            self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
         
     

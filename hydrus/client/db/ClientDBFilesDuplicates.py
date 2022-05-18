@@ -895,7 +895,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if not db_location_context.location_context.IsAllKnownFiles():
             
-            files_table_name = db_location_context.files_table_name
+            files_table_name = db_location_context.GetSingleFilesTableName()
             
             tables = '{}, {} AS current_files_smaller, {} AS current_files_larger'.format( tables, files_table_name, files_table_name )
             
@@ -935,7 +935,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         else:
             
-            files_table_name = db_location_context.files_table_name
+            files_table_name = db_location_context.GetSingleFilesTableName()
             
             table_join = 'potential_duplicate_pairs, duplicate_file_members AS duplicate_file_members_smaller, {} AS current_files_smaller, duplicate_file_members AS duplicate_file_members_larger, {} AS current_files_larger ON ( smaller_media_id = duplicate_file_members_smaller.media_id AND duplicate_file_members_smaller.hash_id = current_files_smaller.hash_id AND larger_media_id = duplicate_file_members_larger.media_id AND duplicate_file_members_larger.hash_id = current_files_larger.hash_id )'.format( files_table_name, files_table_name )
             
@@ -1014,7 +1014,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                files_table_name = db_location_context.files_table_name
+                files_table_name = db_location_context.GetSingleFilesTableName()
                 
                 tables = '{}, {} AS results_table_for_this_query, {} AS current_files_for_this_query'.format( base_tables, results_table_name, files_table_name )
                 

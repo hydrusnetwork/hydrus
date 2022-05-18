@@ -818,6 +818,18 @@ class Page( QW.QSplitter ):
         return ( hpos, vpos )
         
     
+    def GetTotalFileSize( self ):
+        
+        if self._initialised:
+            
+            return self._media_panel.GetTotalFileSize()
+            
+        else:
+            
+            return 0
+            
+        
+    
     def GetTotalNumHashesAndSeeds( self ):
         
         num_hashes = len( self.GetHashes() )
@@ -1859,8 +1871,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 submenu = QW.QMenu( menu )
                 
-                ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
-                ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they have.', self._SortPagesByFileCount, 'desc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they have.', self._SortPagesByFileCount, 'asc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by largest total file size first', 'Sort these pages according to how large their files are.', self._SortPagesByFileSize, 'desc' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'by smallest total file size first', 'Sort these pages according to how small their files are.', self._SortPagesByFileSize, 'asc' )
                 ClientGUIMenus.AppendMenuItem( submenu, 'by name a-z', 'Sort these pages according to their names.', self._SortPagesByName, 'asc' )
                 ClientGUIMenus.AppendMenuItem( submenu, 'by name z-a', 'Sort these pages according to their names.', self._SortPagesByName, 'desc' )
                 
@@ -1932,6 +1946,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             ( total_num_files, ( total_num_value, total_num_range ) ) = page.GetNumFileSummary()
             
             return ( total_num_files, total_num_range, total_num_value )
+            
+        
+        ordered_pages = sorted( self.GetPages(), key = key, reverse = order == 'desc' )
+        
+        self._SortPagesSetPages( ordered_pages )
+        
+    
+    def _SortPagesByFileSize( self, order ):
+        
+        def key( page ):
+            
+            total_file_size = page.GetTotalFileSize()
+            
+            return total_file_size
             
         
         ordered_pages = sorted( self.GetPages(), key = key, reverse = order == 'desc' )
@@ -2568,6 +2596,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             return None
             
+        
+    
+    def GetTotalFileSize( self ):
+        
+        total_file_size = 0
+        
+        for page in self._GetPages():
+            
+            total_file_size += page.GetTotalFileSize()
+            
+        
+        return total_file_size
         
     
     def GetTotalNumHashesAndSeeds( self ) -> int:

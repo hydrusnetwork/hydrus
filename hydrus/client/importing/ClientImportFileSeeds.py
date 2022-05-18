@@ -65,6 +65,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.status = CC.STATUS_UNKNOWN
         self.note = ''
         
+        self._cloudflare_last_modified_time = None
+        
         self._referral_url = None
         
         self._external_filterable_tags = set()
@@ -476,6 +478,21 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
             last_modified_time = network_job.GetLastModifiedTime()
+            
+            if self.source_time is not None and last_modified_time is not None:
+                
+                # even with timezone weirdness, does the current source time have something reasonable?
+                current_source_time_looks_good = HydrusData.TimeHasPassed( self.source_time - 86400 )
+                
+                # if CF is delivering a timestamp from 17 days before source time, this is probably some unusual CDN situation or delayed post
+                # we don't _really_ want this CF timestamp since it throws the domain-based timestamp ordering out
+                # in future maybe we'll save it as a misc 'cloudflare' domain or something, but for now we'll discard
+                if network_job.IsCloudFlareCache() and abs( self.source_time - last_modified_time ) > 86400 * 2:
+                    
+                    self._cloudflare_last_modified_time = last_modified_time
+                    last_modified_time = None
+                    
+                
             
             self.source_time = ClientTime.MergeModifiedTimes( self.source_time, last_modified_time )
             
@@ -1506,6 +1523,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( 'domain', hash, ( domain, domain_modified_timestamp ) ) )
                     
                     service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+                    
+                    if self._cloudflare_last_modified_time is not None:
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( 'domain', hash, ( 'cloudflare.com', self._cloudflare_last_modified_time ) ) )
+                        
+                        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+                        
                     
                 
                 if self._referral_url is not None:

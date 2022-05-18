@@ -94,13 +94,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Add( self, service_type ):
         
-        if service_type == HC.LOCAL_FILE_DOMAIN and not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            QW.QMessageBox.warning( self, 'Warning', 'Sorry, I am locking this behind \'advanced mode\' users for now. Hang in there a week or two and this will be nicer to work with.' )
-            
-            return
-            
-        
         service_key = HydrusData.GenerateKey()
         name = 'new service'
         

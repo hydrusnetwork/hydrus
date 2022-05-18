@@ -32,7 +32,7 @@ Let's look at the tag autocomplete dropdown:
     
 *   **file/tag domains**
     
-    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:samus aran`, then you will get file results from your 'my files' domain that have `character:samus aran` in any tag service. For most purposes, this search domain is fine, but as you use the client more, you may want to access different search domains.
+    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:samus aran`, then you will get file results from your 'my files' domain that have `character:samus aran` in any tag service. For most purposes, this combination is fine, but as you use the client more, you may want to access different search domains.
     
     For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a `system:num_tags` or a `character:samus aran` will only look 'my tags'.
     
@@ -40,7 +40,7 @@ Let's look at the tag autocomplete dropdown:
 
 Hydrus will treat a space the same way as an underscore when searching so the query `character:samus aran` will find files tagged with `character:samus aran` and `character:samus_aran`.
 
-Tags will be searchable by all its [siblings](/advanced_siblings.md). If there's a sibling for `large` -> `huge` then the query `large` will find files tagged with either and so will a search for `huge`. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
+Tags will be searchable by all their [siblings](/advanced_siblings.md). If there's a sibling for `large` -> `huge` then the query `large` will find files tagged with either and so will a search for `huge`. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
 
 ### Wildcards
 

@@ -12,7 +12,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files metadata', cursor )
+        ClientDBModule.ClientDBModule.__init__( self, 'client files simple metadata', cursor )
         
         self.inbox_hash_ids = set()
         

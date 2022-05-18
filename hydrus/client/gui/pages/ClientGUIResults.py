@@ -2168,6 +2168,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
+    def GetTotalFileSize( self ):
+        
+        return 0
+        
+    
     def LaunchMediaViewerOnFocus( self, page_key ):
         
         if page_key == self._page_key:
@@ -3592,6 +3597,148 @@ class MediaPanelThumbnails( MediaPanel ):
         self.ShowMenu()
         
     
+    def GetTotalFileSize( self ):
+        
+        return sum( ( m.GetSize() for m in self._sorted_media ) )
+        
+    
+    def MaintainPageCache( self ):
+        
+        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
+            
+            self._DirtyAllPages()
+            
+        
+        self._DeleteAllDirtyPages()
+        
+    
+    def NewThumbnails( self, hashes ):
+        
+        affected_thumbnails = self._GetMedia( hashes )
+        
+        if len( affected_thumbnails ) > 0:
+            
+            self._RedrawMedia( affected_thumbnails )
+            
+        
+    
+    def NotifyNewFileInfo( self, hashes ):
+        
+        def qt_do_update( hashes_to_media_results ):
+            
+            affected_media = self._GetMedia( set( hashes_to_media_results.keys() ) )
+            
+            for media in affected_media:
+                
+                media.UpdateFileInfo( hashes_to_media_results )
+                
+            
+            self._RedrawMedia( affected_media )
+            
+        
+        def do_it( win, callable, affected_hashes ):
+            
+            media_results = HG.client_controller.Read( 'media_results', affected_hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            HG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
+            
+        
+        affected_hashes = self._hashes.intersection( hashes )
+        
+        HG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
+        
+    
+    def RedrawAllThumbnails( self ):
+        
+        self._DirtyAllPages()
+        
+        for m in self._collected_media:
+            
+            m.RecalcInternals()
+            
+        
+        self.widget().update()
+        
+    
+    def RefreshAcceleratorTable( self ):
+        
+        if not self or not QP.isValid( self ):
+            
+            return
+        
+        # Remove old shortcuts
+        for child in self.children():
+            
+            if isinstance( child, QW.QShortcut ):
+                
+                child.setParent( None )
+                child.deleteLater()
+                
+            
+        
+        def ctrl_space_callback( self ):
+
+            if self._focused_media is not None:
+                
+                self._HitMedia( self._focused_media, True, False )
+        
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Home, self._ScrollHome, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_End, self._ScrollEnd, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, False )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._LaunchMediaViewer )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._LaunchMediaViewer )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
+        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
+        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Home, self._ScrollHome, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_End, self._ScrollEnd, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True  )
+        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True )
+        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL ) )
+        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
+        
+    
+    def SetFocusedMedia( self, media ):
+        
+        MediaPanel.SetFocusedMedia( self, media )
+        
+        if media is None:
+            
+            self._SetFocusedMedia( None )
+            
+        else:
+            
+            try:
+                
+                my_media = self._GetMedia( media.GetHashes() )[0]
+                
+                self._HitMedia( my_media, False, False )
+                
+                self._ScrollToMedia( self._focused_media )
+                
+            except:
+                
+                pass
+                
+            
+        
+    
     def ShowMenu( self, do_not_show_just_return = False ):
         
         new_options = HG.client_controller.new_options
@@ -4321,143 +4468,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             return menu
             
-    
-    def MaintainPageCache( self ):
-        
-        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._DirtyAllPages()
-            
-        
-        self._DeleteAllDirtyPages()
-        
-    
-    def NewThumbnails( self, hashes ):
-        
-        affected_thumbnails = self._GetMedia( hashes )
-        
-        if len( affected_thumbnails ) > 0:
-            
-            self._RedrawMedia( affected_thumbnails )
-            
-        
-    
-    def NotifyNewFileInfo( self, hashes ):
-        
-        def qt_do_update( hashes_to_media_results ):
-            
-            affected_media = self._GetMedia( set( hashes_to_media_results.keys() ) )
-            
-            for media in affected_media:
-                
-                media.UpdateFileInfo( hashes_to_media_results )
-                
-            
-            self._RedrawMedia( affected_media )
-            
-        
-        def do_it( win, callable, affected_hashes ):
-            
-            media_results = HG.client_controller.Read( 'media_results', affected_hashes )
-            
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            HG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
-            
-        
-        affected_hashes = self._hashes.intersection( hashes )
-        
-        HG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
-        
-    
-    def RedrawAllThumbnails( self ):
-        
-        self._DirtyAllPages()
-        
-        for m in self._collected_media:
-            
-            m.RecalcInternals()
-            
-        
-        self.widget().update()
-        
-    
-    def RefreshAcceleratorTable( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-        
-        # Remove old shortcuts
-        for child in self.children():
-            
-            if isinstance( child, QW.QShortcut ):
-                
-                child.setParent( None )
-                child.deleteLater()
-                
-            
-        
-        def ctrl_space_callback( self ):
-
-            if self._focused_media is not None:
-                
-                self._HitMedia( self._focused_media, True, False )
-        
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Home, self._ScrollHome, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_End, self._ScrollEnd, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._LaunchMediaViewer )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._LaunchMediaViewer )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Home, self._ScrollHome, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_End, self._ScrollEnd, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True  )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True )
-        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL ) )
-        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
-        
-    
-    def SetFocusedMedia( self, media ):
-        
-        MediaPanel.SetFocusedMedia( self, media )
-        
-        if media is None:
-            
-            self._SetFocusedMedia( None )
-            
-        else:
-            
-            try:
-                
-                my_media = self._GetMedia( media.GetHashes() )[0]
-                
-                self._HitMedia( my_media, False, False )
-                
-                self._ScrollToMedia( self._focused_media )
-                
-            except:
-                
-                pass
-                
-            
-        
     
     def Sort( self, media_sort = None ):
         

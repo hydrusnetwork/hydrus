@@ -36,6 +36,16 @@ def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str
     
     return ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name )
     
+def GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id ):
+    
+    suffix = '{}_{}'.format( file_service_id, tag_service_id )
+    
+    cache_display_current_mappings_table_name = 'external_caches.specific_display_current_mappings_cache_{}'.format( suffix )
+    
+    cache_display_pending_mappings_table_name = 'external_caches.specific_display_pending_mappings_cache_{}'.format( suffix )
+    
+    return ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name )
+    
 def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )

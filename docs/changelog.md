@@ -3,6 +3,28 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 485](https://github.com/hydrusnetwork/hydrus/releases/tag/v485)
+
+### multiple local file services
+* multiple local file services are now available for everyone! you no longer need to be in advanced mode to create them. all are welcome, but in terms of skill level, I most recommend it for users who are comfortable with tag siblings and parents
+* the tl;dr: you can now have more than one 'my files', which lets you put things in isolated locations
+* I wrote a proper help document on multiple local file services--what they are, how they work, my recommendations, and a bit of extra info about hydrus file search in general, right here: https://hydrusnetwork.github.io/hydrus/advanced_multiple_local_file_services.html
+* file searches in 'multiple locations' on large clients are now massively faster in almost all situations. the only place multiple location searches are still slow is whenever the duplicates system (system:file relationships) comes into play
+
+### misc
+* in the page tab menu, you can now sort pages by total file size
+* the 'force system:limit for all searches' option is moved from the 'speed and memory' to 'search' panel
+* when files download from sites, if the raw file is served by cloudflare and has a timestamp radically different to a parsed source time, that CF timestamp is saved under a different domain rather than overwriting the original domain timestamp. this seemed to affect danbooru on about 1 in 10-20 files. note this does not change much at the moment, but when you can see and sort on individual domain modified dates, this should improve the sort
+* updated the 'installing' help to talk about bad install locations for the database. network locations are bad, and thanks to user reports, we now know USB drives can be bad if the database is busy when the OS goes to sleep
+* if a 'database is malformed' error occurs on boot, the client now recognises it and points the user to 'install_dir/db/help my db is broke.txt' for the next steps
+
+### boring code cleanup
+* another 60KB or so of code pulled out of ClientDB.py:
+* created a new database module for url mappings and refactored various fetch and update routines to it
+* created a new database module for some rich file metadata and refactored some file filtering, history, and status testing code to it
+* created new database module for file searching and moved all tag-based file searching code to it
+* moved several other misc methods down to database modules
+
 ## [Version 484](https://github.com/hydrusnetwork/hydrus/releases/tag/v484)
 
 ### misc
@@ -335,34 +357,3 @@
 
 ### pycharm
 * as a side note, I finally moved from my jank old WingIDE IDE to PyCharm in this release. I am overall happy with it--it is clearly very powerful and customisable--but adjusting after about ten or twelve years of Wing was a bit awkward. I am very much a person of habit, and it will take me a little while to get fully used to the new shortcuts and UI and so on, but PyCharm does everything that is critical for me, supports many modern coding concepts, and will work well as we move to python 3.9 and beyond
-
-## [Version 474](https://github.com/hydrusnetwork/hydrus/releases/tag/v474)
-
-### command palette
-* the guy who put the command pallete together has fixed a 'show palette' bug some people encountered (issue #1060)
-* he also added mouse support!
-* he added support to show checkable menu items too, and I integrated this for the menubar (lightning bolt icon) items
-* I added a line to the default QSS that I think fixes the odd icon/text background colours some users saw in the command palette
-
-### misc
-* file archive times are now recorded in the background. there's no load/search/sort yet, but this will be added in future
-* under 'manage shortcuts', there is a new checkbox to rename left- and right-click to primary- and secondary- in the shortcuts UI. if you have a flipped mouse or any other odd situation, try it out
-* if a file storage location does not have enough free disk space for a file, or if it just has <100MB generally, the client now throws up a popup to say what happened specifically with instructions to shut down and fix now and automatically pauses subscriptions, paged file import queues, and import folders. this test occurs before the attempt to copy the file into place. free space isn't actually checked over and over, it is cached for up to an hour depending on the last free space amount
-* this 'paused all regular imports' mode is also now fired any time any simple file-add action fails to copy. at this stage, we are talking 'device disconnected' and 'device failed' style errors, so might as well pause everything just to be careful
-* when the downloader hits a post url that spawns several subsidiary downloads (for instance on pixiv and artstation when you have a multi-file post), the status of that parent post is now 'completed', a new status to represent 'good, but not direct file'. new download queues will then present '3N' and '3 successful' summary counts that actually correspond to number of files rather than number of successful items
-* pages now give a concise 'summary name' of 'name - num_files - import progress' (it also eli...des for longer names) for menus and the new command palette, which unlike the older status-bar-based strings are always available and will stop clients with many pages becoming multi-wide-column-menu-hell
-* improved apng parsing. hydrus can now detect that pngs are actually apngs for (hopefully) all types of valid apng. it turns out some weird apngs have some additional header data, but I wrote a new chunk parser that should figure it all out
-* with luck, users who have window focus issues when closing a child window (e.g. close review services, the main gui does not get focus back), should now see that happen (issue #1063). this may need some more work, so let me know
-* the session weight count in the 'pages' menu now updates on any add thumbs, remove thumbs, or thumbnail panel swap. this _should_ be fast all the time, and buffer nicely if it is ever overwhelmed, but let me know if you have a madlad session and get significant new lag when you watch a downloader bring in new files
-* a user came up with a clever idea to efficiently target regenerations for the recent fix to pixel duplicate calculations for images with opaque alpha channels, so this week I will queue up some pixel hash regeneration. it does not fix every file with an opaque alpha channel, but it should help out. it also shouldn't take _all_ that long to clear this queue out. lastly, I renamed that file maintenance job from 'calculate file pixel hash' to 'regenerate pixel duplicate data'
-* the various duplicate system actions on thumbnails now specify the number of files being acted on in the yes/no dialog
-* fixed a bug when searching in complicated multi-file-service domains on a client that has been on for a long time (some data used here was being reset in regular db maintenance)
-* fixed a bug where for very unlucky byte sizes, for instance 188213746, the client was flipping between two different output values (e.g. 179MB/180MB) on subsequent calls (issue #1068)
-* after some user profiles and experimental testing, rebalanced some optimisations in sibling and parent calculation. fingers crossed, some larger sibling groups with worst-case numbers should calculate more efficiently
-* if sibling/parent calculation hits a heavy bump and takes a really long time to do a job during 'normal' time, the whole system now takes a much longer break (half an hour) before continuing
-
-### boring stuff
-* the delete dialog has basic multiple local file service support ready for that expansion. it no longer refers to the old static 'my files' service identifier. I think it will need some user-friendly more polish once that feature is in
-* the 'migrate tags' dialog's file service filtering now supports n local file services, and 'all local files'
-* updated the build scripts to force windows server 2019 (and macos-11). github is rolling out windows 2022 as the new latest, and there's a couple of things to iron out first on our end. this is probably going to happen this year though, along with Qt6 and python 3.9, which will all mean end of life for windows 7 in our built hydrus release
-* removed the spare platform-specific github workflow scripts from the static folder--I wanted these as a sort of backup, but they never proved useful and needed to be synced on all changes

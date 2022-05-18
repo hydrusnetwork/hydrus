@@ -198,6 +198,52 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE
         
     
+    def GetFileSearchContextBranch( self, file_search_context: ClientSearch.FileSearchContext ) -> FileSearchContextBranch:
+        
+        location_context = file_search_context.GetLocationContext()
+        tag_search_context = file_search_context.GetTagSearchContext()
+        
+        ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
+        
+        search_file_service_ids = []
+        
+        for file_service_key in file_service_keys:
+            
+            try:
+                
+                search_file_service_id = self.GetServiceId( file_service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                HydrusData.ShowText( 'A query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+                
+                continue
+                
+            
+            search_file_service_ids.append( search_file_service_id )
+            
+        
+        if tag_search_context.IsAllKnownTags():
+            
+            search_tag_service_ids = self.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            try:
+                
+                search_tag_service_ids = ( self.GetServiceId( tag_search_context.service_key ), )
+                
+            except HydrusExceptions.DataMissing:
+                
+                HydrusData.ShowText( 'A query was run for a tag service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+                
+                search_tag_service_ids = []
+                
+            
+        
+        return FileSearchContextBranch( file_search_context, search_file_service_ids, search_tag_service_ids, file_location_is_cross_referenced )
+        
+    
     def GetNonDupeName( self, name ) -> str:
         
         existing_names = { service.GetName() for service in self._service_ids_to_services.values() }

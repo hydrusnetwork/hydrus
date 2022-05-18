@@ -34,6 +34,16 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return set()
         
     
+    def _GetInitialIndexGenerationDict( self ) -> dict:
+        
+        return {}
+        
+    
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        return {}
+        
+    
     def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
         
         return {}
@@ -76,16 +86,6 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return []
-        
-    
-    def _GetInitialIndexGenerationDict( self ) -> dict:
-        
-        return {}
-        
-    
-    def _GetInitialTableGenerationDict( self ) -> dict:
-        
-        return {}
         
     
     def _PresentMissingIndicesWarningToUser( self, index_names ):

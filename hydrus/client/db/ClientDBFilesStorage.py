@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
+from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -60,6 +61,16 @@ class DBLocationContext( object ):
         return self.location_context
         
     
+    def GetMultipleFilesTableNames( self ):
+        
+        raise HydrusExceptions.DataMissing( 'Sorry, this DB Location Context has no multiple file tables!' )
+        
+    
+    def GetSingleFilesTableName( self ):
+        
+        raise HydrusExceptions.DataMissing( 'Sorry, this DB Location Context has no single file table!' )
+        
+    
     def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
         
         raise NotImplementedError()
@@ -68,6 +79,11 @@ class DBLocationContext( object ):
     def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
         
         raise NotImplementedError()
+        
+    
+    def SingleTableIsFast( self ) -> bool:
+        
+        return False
         
     
 class DBLocationContextAllKnownFiles( DBLocationContext ):
@@ -82,23 +98,129 @@ class DBLocationContextAllKnownFiles( DBLocationContext ):
         return table_phrase
         
     
-class DBLocationContextBranch( DBLocationContext ):
+class DBLocationContextLeaf( DBLocationContext ):
     
     def __init__( self, location_context: ClientLocation.LocationContext, files_table_name: str ):
         
         DBLocationContext.__init__( self, location_context )
         
-        self.files_table_name = files_table_name
+        self._files_table_name = files_table_name
+        
+    
+    def GetMultipleFilesTableNames( self ):
+        
+        return [ self.GetSingleFilesTableName() ]
+        
+    
+    def GetSingleFilesTableName( self ):
+        
+        return self._files_table_name
         
     
     def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
         
-        return '{} CROSS JOIN {} USING ( hash_id )'.format( self.files_table_name, table_phrase )
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( self._files_table_name, table_phrase )
         
     
     def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
         
-        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.files_table_name )
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self._files_table_name )
+        
+    
+    def SingleTableIsFast( self ) -> bool:
+        
+        return True
+        
+    
+class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule ):
+    
+    # this still sucks and should be random and then dropped neatly by a manager or something so we can have more than one of these guys at once
+    SINGLE_TABLE_NAME = 'mem.temp_file_storage_hash_id'
+    
+    def __init__( self, cursor: sqlite3.Cursor, location_context: ClientLocation.LocationContext, files_table_names: typing.Collection[ str ] ):
+        
+        ClientDBModule.ClientDBModule.__init__( self, 'db location (branch)', cursor )
+        DBLocationContext.__init__( self, location_context )
+        
+        self._files_table_names = files_table_names
+        self._single_table_initialised = False
+        
+    
+    def _InitialiseSingleTableIfNeeded( self ):
+        
+        if self._single_table_initialised:
+            
+            return
+            
+        
+        result = self._Execute( 'SELECT 1 FROM mem.sqlite_master WHERE name = ?;', ( self.SINGLE_TABLE_NAME, ) ).fetchone()
+        
+        if result is None:
+            
+            self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( self.SINGLE_TABLE_NAME ) )
+            
+        else:
+            
+            self._Execute( 'DELETE FROM {};'.format( self.SINGLE_TABLE_NAME ) )
+            
+        
+        select_query = ' UNION '.join( ( 'SELECT hash_id FROM {}'.format( table_name ) for table_name in self._files_table_names ) )
+        
+        # these notes are old and transplanted from a previous creation method that prepopulated the table and sent it to this class already made. now it happens on demand
+        # feel free to clear out or reconsider, but my current feeling is we have to bite the bullet a little here. best use of time is working on gettablejoiniterated/limitedby. the callers there may be ok with multiple access too
+        #
+        # ok, so I _can_ just go:
+        #
+        # files_table_name = '({})'.format( select_query )
+        #
+        # here and not populate an actual temp table. basically making a VIEW. this seems to be SEARCH for two tables and SCAN for three or more, at least on newer SQLite. I'm pretty sure older SQLite has trouble optimising
+        # so it is potentially super fast, but worst case is really bad since that SCAN will happen over and over
+        # the temp table population puts a fixed one-time SCAN overhead so is lame but stable
+        # the ideal answer is to rewrite all dblocationcontext code to handle multiple table names. this isn't possible for some requests like duplicates, although honestly they could do the table population themselves
+        # THE ANSWER: since that is more complicated, what I really need is a new subclass of DBLocationClass object that can handle more complicated situations, write a method for single/multiple,
+        # and if the consumer needs the single (as some dupe code does), then the class itself borrows a temp table name from a manager class, like tempinttables, and populates it there and then
+        # MOVING THIS STUFF TO THIS NEW BRANCH OBJECT IS THIS WORK, MORE CAN BE DONE
+        #
+        # another possible solution might be another file table that I always keep synced, maybe something like ( hash_id, service_id, status ). that might be quickly searchable as a VIEW. quicker than this anyway
+        # some experimentation with this results in some really bad worst case query planning at times. most of the time it is great, but sometimes it can't figure out the hash_id as the thing to SEARCH with
+        #
+        # another idea, if we are going to end up adding 'sync' code, is to have multiple not-so-temp tables for different service combinations and then just invalidate them (or even update them) on file changes
+        # we can just re-use them mate
+        
+        self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( self.SINGLE_TABLE_NAME, select_query ) )
+        
+        self._single_table_initialised = True
+        
+    
+    def GetMultipleFilesTableNames( self ):
+        
+        return self._files_table_names
+        
+    
+    def GetSingleFilesTableName( self ):
+        
+        self._InitialiseSingleTableIfNeeded()
+        
+        return self.SINGLE_TABLE_NAME
+        
+    
+    def GetTableJoinIteratedByFileDomain( self, table_phrase: str ) -> str:
+        
+        self._InitialiseSingleTableIfNeeded()
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( self.SINGLE_TABLE_NAME, table_phrase )
+        
+    
+    def GetTableJoinLimitedByFileDomain( self, table_phrase: str ) -> str:
+        
+        self._InitialiseSingleTableIfNeeded()
+        
+        return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.SINGLE_TABLE_NAME )
+        
+    
+    def SingleTableIsFast( self ) -> bool:
+        
+        return False
         
     
 class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
@@ -111,8 +233,6 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         self.modules_texts = modules_texts
         
         ClientDBModule.ClientDBModule.__init__( self, 'client file locations', cursor )
-        
-        self.temp_file_storage_table_name = 'mem.temp_file_storage_hash_id'
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
@@ -806,37 +926,14 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if len( table_names ) == 1:
             
-            table_name = table_names[0]
+            files_table_name = table_names[0]
             
-            files_table_name = table_name
+            return DBLocationContextLeaf( location_context, files_table_name )
             
         else:
             
-            # while I could make a VIEW of the UNION SELECT, we'll populate an indexed single column table to help query planner later on
-            # we're hardcoding the name to this class for now, so a limit of one db_location_context at a time _for now_
-            # we make change this in future to use wrapper temp int tables, we'll see
+            return DBLocationContextBranch( self._c, location_context, table_names )
             
-            # maybe I should stick this guy in 'temp' to live through db connection resets, but we'll see I guess. it is generally ephemeral, not going to linger through weird vacuum maintenance or anything right?
-            
-            result = self._Execute( 'SELECT 1 FROM mem.sqlite_master WHERE name = ?;', ( self.temp_file_storage_table_name, ) ).fetchone()
-            
-            if result is None:
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );'.format( self.temp_file_storage_table_name ) )
-                
-            else:
-                
-                self._Execute( 'DELETE FROM {};'.format( self.temp_file_storage_table_name ) )
-                
-            
-            select_query = ' UNION '.join( ( 'SELECT hash_id FROM {}'.format( table_name ) for table_name in table_names ) )
-            
-            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( self.temp_file_storage_table_name, select_query ) )
-            
-            files_table_name = self.temp_file_storage_table_name
-            
-        
-        return DBLocationContextBranch( location_context, files_table_name )
         
     
     def GetHashIdsToCurrentServiceIds( self, temp_hash_ids_table_name ):

@@ -176,6 +176,7 @@ class NetworkJob( object ):
         self._actual_fetched_url = self._url
         self._temp_path = temp_path
         
+        self._response_server_header = None
         self._response_last_modified = None
         
         if self._temp_path is None:
@@ -1269,6 +1270,13 @@ class NetworkJob( object ):
             
         
     
+    def IsCloudFlareCache( self ):
+        
+        with self._lock:
+            
+            return self._response_server_header is not None and self._response_server_header == 'cloudflare'
+            
+    
     def IsDone( self ):
         
         with self._lock:
@@ -1526,6 +1534,11 @@ class NetworkJob( object ):
                             # we are complete here and worked ok
                             
                             self._GenerateModifiedDate( response )
+                            
+                            if 'Server' in response.headers:
+                                
+                                self._response_server_header = response.headers[ 'Server' ]
+                                
                             
                             self._status_text = 'done!'
                             

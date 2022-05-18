@@ -2132,11 +2132,22 @@ class Controller( HydrusController.HydrusController ):
             HydrusData.DebugPrint( 'If the db crashed, another error may be written just above ^.' )
             HydrusData.DebugPrint( text )
             
-            HydrusData.DebugPrint( traceback.format_exc() )
+            trace = traceback.format_exc()
+            
+            HydrusData.DebugPrint( trace )
             
             self.SafeShowCriticalMessage( 'boot error', text )
             
-            self.SafeShowCriticalMessage( 'boot error', traceback.format_exc() )
+            if 'malformed' in trace:
+                
+                hell_message = 'Looking at it, it looks like your database may be malformed! This is a serious error. Please check "/install_dir/db/help my db is broke.txt" as soon as you can for the next steps. The specific error will now follow.'
+                
+                HydrusData.DebugPrint( hell_message )
+                
+                self.SafeShowCriticalMessage( 'boot error', hell_message )
+                
+            
+            self.SafeShowCriticalMessage( 'boot error', trace )
             
             QP.CallAfter( QW.QApplication.exit, 1 )
             

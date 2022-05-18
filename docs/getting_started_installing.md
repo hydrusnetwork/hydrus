@@ -44,6 +44,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         2. Copy that .so file to the hydrus install base directory.
         3. Boot the client and hit _help->about_ to see if it reports a version.
         4. If it all seems good, hit _options->media_ to set up mpv as your player for video/audio and try to view some things.
+        5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
     *   You can also try [running the Windows version in wine](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
     If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).
@@ -54,6 +55,12 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     *   If you have some python experience, you can [run from source](running_from_source.md).
 
 By default, hydrus stores all its data—options, files, subscriptions, _everything_—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.
+
+!!! warning "Network Install"
+    Unless you are an expert, do not install your client to a network location (i.e. on a different computer's hard drive)! The database is sensitive to interruption and requires good file locking, which network storage often fakes. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
+
+!!! warning "USB Drives and OS sleep"
+    Also be careful putting your client on an external USB drive if you mean to have it always on, through OS sleep. Some users have reported that Windows can damage a running database on a USB drive if it goes to sleep during a busy period. Apparently disabling write caching for the drive can fix it, but best not to mess around here unless you know what you are doing and have a backup. Much easier just to install the database to a system drive!
 
 !!! info "For macOS users"
     The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.
@@ -91,7 +98,7 @@ To run the client:
 
 === "Linux"
 
-    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are talking `./client` from the terminal.
+    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are run `./client` from the terminal.
     *   If you experience virtual memory crashes, please review [this thorough guide](Fixing_Hydrus_Random_Crashes_Under_Linux.md) by a user.
 
 ## updating
