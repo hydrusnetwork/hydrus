@@ -10,30 +10,7 @@ Let's say you found an artist you like. You downloaded everything of theirs from
 
 ## what are subs? { id="intro" }
 
-Subscriptions are a way of telling the client to regularly and quietly repeat a gallery search. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.
-
-Subscriptions only work for booru-like galleries that put the newest files first, and they only keep up with new content--once they have done their first sync, which usually gets the most recent hundred files or so, they will never reach further into the past. Getting older files, as you will see later, is a job best done with a normal download page.
-
-Here's the dialog, which is under _network->downloaders->manage subscriptions_:
-
-![](images/subscriptions_edit_subscriptions.png)
-
-This is a very simple example--there is only one subscription, for safebooru. It has two 'queries' (i.e. searches to keep up with).
-
-It is important to note that while subscriptions can have multiple queries (even hundreds!), they _generally_ only work on one site. Expect to create one subscription for safebooru, one for artstation, one for paheal, and so on for every site you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.
-
-Before we trip over the advanced buttons here, let's zoom in on the actual subscription:
-
-[![](images/subscriptions_edit_subscription.png)](images/subscriptions_edit_subscription.png)
-
-This is a big and powerful panel! I recommend you open the screenshot up in a new browser tab, or in the actual client, so you can refer to it.
-
-Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". These two queries have their own panels for reviewing what URLs they have worked on and further customising their behaviour, but all they _really_ are is little bits of search text. When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.
-
 **For the most part, all you need to do to set up a good subscription is give it a name, select the download source, and use the 'paste queries' button to paste what you want to search. Subscriptions have great default options for almost all query types, so you don't have to go any deeper than that to get started.**
-
-!!! danger
-    **Do not change the max number of new files options until you know _exactly_ what they do and have a good reason to alter them!**
 
 ## how do subscriptions work? { id="description" }
 
@@ -61,13 +38,7 @@ Attribute subscriptions like 'blue_eyes' or 'smile' make for terrible subs as th
 
 If you end up subscribing to eight hundred things and get ten thousand new files a week, you made a mistake. Subscriptions are for _keeping up_ with things you like. If you let them overwhelm you, you'll resent them.
 
-!!! warning
-    Subscriptions syncs are somewhat fragile. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--if you want everything for a query, run it in the manual downloader and get everything, then set up a normal sub for new stuff. There is no benefit to having a 'large' subscription, and it will trim itself down in time anyway.
-
 It is a good idea to run a 'full' download for a search before you set up a subscription. As well as making sure you have the exact right query text and that you have everything ever posted (beyond the 100 files deep a sub will typically look), it saves the bulk of the work (and waiting on bandwidth) for the manual downloader, where it belongs. When a new subscription picks up off a freshly completed download queue, its initial subscription sync only takes thirty seconds since its initial URLs are those that were already processed by the manual downloader. I recommend you stack artist searches up in the manual downloader using 'no limit' file limit, and when they are all finished, select them in the list and _right-click->copy queries_, which will put the search texts in your clipboard, newline-separated. This list can be pasted into the subscription dialog in one go with the 'paste queries' button again!
-
-!!! note
-    The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it will not work reliably.
 
 ## images/how often do subscriptions check? { id="checking" }
 
