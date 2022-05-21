@@ -15,11 +15,20 @@ It also takes a decent whack of CPU to import a file. You'll usually never notic
 
 ## Downloader types
 There are a number of different downloader types, each with its own purpose. This is a short summary of them:  
-URL download: Intended for single posts or images. (Works with the [API](client_api.md))  
-Gallery: For big download jobs such as an artist's catalogue, everything with a given tag on a booru.  
-Subscriptions: Repeated gallery jobs, for keeping up to date with an artist or tag. Use gallery downloader to get everything and a subscription to keep updated.  
-Watcher: Imageboard thread downloader, such as 4chan, 8chan, and what else exists. (Works with the [API](client_api.md))  
-Simple downloader: Intended for simple one-off jobs like grabbing all linked images in a page.
+**URL download**
+:    Intended for single posts or images. (Works with the [API](client_api.md))
+
+**Gallery**
+:    For big download jobs such as an artist's catalogue, everything with a given tag on a booru.
+
+**Subscriptions**
+:    Repeated gallery jobs, for keeping up to date with an artist or tag. Use gallery downloader to get everything and a subscription to keep updated.
+
+**Watcher**
+:    Imageboard thread downloader, such as 4chan, 8chan, and what else exists. (Works with the [API](client_api.md))
+
+**Simple downloader**
+:    Intended for simple one-off jobs like grabbing all linked images in a page.
 
 ## File import settings
 File import settings has a number of options that deal with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode
