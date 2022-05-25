@@ -5,6 +5,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDBBase
 
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMaintenance
@@ -89,6 +90,8 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         self.modules_files_storage = modules_files_storage
         self.modules_mappings_cache_specific_display = modules_mappings_cache_specific_display
         
+        self._missing_tag_service_pairs = set()
+        
         ClientDBModule.ClientDBModule.__init__( self, 'client specific display mappings cache', cursor )
         
     
@@ -96,7 +99,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        version = 400
+        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
         
         index_generation_dict = {}
         
@@ -139,7 +142,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        version = 400
+        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
         
         table_dict[ cache_current_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )
         table_dict[ cache_deleted_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )
@@ -169,6 +172,27 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+    
+    def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+        
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
+        tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
+        
+        for tag_service_id in tag_service_ids:
+            
+            for file_service_id in file_service_ids:
+                
+                table_dict_for_this = self._GetServiceTableGenerationDictSingle( file_service_id, tag_service_id )
+                
+                table_names_for_this = set( table_dict_for_this.keys() )
+                
+                if not table_names_for_this.isdisjoint( table_names ):
+                    
+                    self._missing_tag_service_pairs.add( ( file_service_id, tag_service_id ) )
+                    
+                
+            
         
     
     def AddFiles( self, file_service_id, tag_service_id, hash_ids, hash_ids_table_name ):
@@ -464,6 +488,11 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
             
         
         return FilteredMappingsGenerator( file_service_ids_to_valid_hash_ids, mappings_ids )
+        
+    
+    def GetMissingServicePairs( self ):
+        
+        return self._missing_tag_service_pairs
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

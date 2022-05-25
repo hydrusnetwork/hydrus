@@ -1834,10 +1834,12 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
             name = service.GetName()
             
             page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
-            page._add_tag_box.selectUp.connect( self.EventSelectUp )
-            page._add_tag_box.selectDown.connect( self.EventSelectDown )
-            page._add_tag_box.showPrevious.connect( self.EventShowPrevious )
-            page._add_tag_box.showNext.connect( self.EventShowNext )
+            
+            page.movePageLeft.connect( self.MovePageLeft )
+            page.movePageRight.connect( self.MovePageRight )
+            page.showPrevious.connect( self.ShowPrevious )
+            page.showNext.connect( self.ShowNext )
+            
             page.okSignal.connect( self.okSignal )
             
             select = service_key == default_tag_service_key
@@ -1934,36 +1936,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
             
         
     
-    def EventSelectDown( self ):
-        
-        self._tag_services.SelectRight()
-        
-        self._SetSearchFocus()
-        
-    
-    def EventSelectUp( self ):
-        
-        self._tag_services.SelectLeft()
-        
-        self._SetSearchFocus()
-        
-    
-    def EventShowNext( self ):
-        
-        if self._canvas_key is not None:
-            
-            HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
-            
-        
-    
-    def EventShowPrevious( self ):
-        
-        if self._canvas_key is not None:
-            
-            HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
-            
-        
-    
     def EventServiceChanged( self, index ):
         
         if not self or not QP.isValid( self ): # actually did get a runtime error here, on some Linux WM dialog shutdown
@@ -2040,6 +2012,36 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
         return command_processed
         
     
+    def MovePageRight( self ):
+        
+        self._tag_services.SelectRight()
+        
+        self._SetSearchFocus()
+        
+    
+    def MovePageLeft( self ):
+        
+        self._tag_services.SelectLeft()
+        
+        self._SetSearchFocus()
+        
+    
+    def ShowNext( self ):
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
+            
+        
+    
+    def ShowPrevious( self ):
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
+            
+        
+    
     def UserIsOKToCancel( self ):
         
         groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
@@ -2062,6 +2064,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
     class _Panel( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         okSignal = QC.Signal()
+        movePageLeft = QC.Signal()
+        movePageRight = QC.Signal()
+        showPrevious = QC.Signal()
+        showNext = QC.Signal()
         
         def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, media, immediate_commit, canvas_key = None ):
             
@@ -2137,7 +2143,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
             
             #
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._location_context, self._tag_service_key, null_entry_callable = self.OK )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._location_context, self._tag_service_key )
+            
+            self._add_tag_box.movePageLeft.connect( self.movePageLeft )
+            self._add_tag_box.movePageRight.connect( self.movePageRight )
+            self._add_tag_box.showPrevious.connect( self.showPrevious )
+            self._add_tag_box.showNext.connect( self.showNext )
+            
+            self._add_tag_box.nullEntered.connect( self.OK )
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
@@ -3278,13 +3291,16 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             ( potential_child, potential_parent ) = potential_pair
             
-            if potential_child == potential_parent: return False
+            if potential_child == potential_parent:
+                
+                return False
+                
+            
+            # test for loops
             
             current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
             current_children = { child for ( child, parent ) in current_pairs }
-            
-            # test for loops
             
             if potential_parent in current_children:
                 
@@ -4112,13 +4128,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    if not self._i_am_local_tag_service:
+                    reason = default_reason
+                    
+                    if reason is None and not self._i_am_local_tag_service:
                         
-                        if default_reason is not None:
-                            
-                            reason = default_reason
-                            
-                        elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
+                        if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                             
                             reason = 'admin'
                             
@@ -4158,16 +4172,16 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                                 
                             
                         
-                        if do_it:
+                    
+                    if do_it:
+                        
+                        if reason is not None:
                             
                             for pair in current_pairs:
                                 
                                 self._pairs_to_reasons[ pair ] = reason
                                 
                             
-                        
-                    
-                    if do_it:
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
@@ -4264,17 +4278,55 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        def _AutoPetitionLoops( self, pairs ):
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            current_dict = dict( current_pairs )
+            
+            current_olds = set( current_dict.keys() )
+            
+            for ( potential_old, potential_new ) in pairs:
+                
+                if potential_new in current_dict:
+                    
+                    loop_new = potential_new
+                    
+                    while loop_new in current_dict:
+                        
+                        next_new = current_dict[ loop_new ]
+                        
+                        if next_new == potential_old:
+                            
+                            pairs_to_auto_petition = [ ( loop_new, next_new ) ]
+                            
+                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO BREAK LOOP FOR: {}->{}'.format( potential_old, potential_new ) )
+                            
+                            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                            
+                            current_dict = dict( current_pairs )
+                            
+                            break
+                            
+                        
+                        loop_new = next_new
+                        
+                    
+                
+            
+            
+        
         def _CanAdd( self, potential_pair ):
             
             ( potential_old, potential_new ) = potential_pair
             
             current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
-            current_olds = { old for ( old, new ) in current_pairs }
+            current_dict = dict( current_pairs )
             
             # test for ambiguity
             
-            if potential_old in current_olds:
+            if potential_old in current_dict:
                 
                 QW.QMessageBox.critical( self, 'Error', 'There already is a relationship set for the tag '+potential_old+'.' )
                 
@@ -4283,17 +4335,15 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             # test for loops
             
-            if potential_new in current_olds:
+            if potential_new in current_dict:
                 
                 seen_tags = set()
                 
-                d = dict( current_pairs )
-                
                 next_new = potential_new
                 
-                while next_new in d:
+                while next_new in current_dict:
                     
-                    next_new = d[ next_new ]
+                    next_new = current_dict[ next_new ]
                     
                     if next_new == potential_old:
                         
@@ -4344,6 +4394,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             existing_olds = self._old_siblings.GetTags()
             
             note = ''
+            
+            if pair in self._pairs_to_reasons:
+                
+                note = self._pairs_to_reasons[ pair ]
+                
             
             if old in existing_olds:
                 
@@ -4451,6 +4506,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._AutoPetitionConflicts( pairs )
             
+            self._AutoPetitionLoops( pairs )
+            
             self._AddPairs( pairs, add_only = add_only )
             
             self._UpdateListCtrlData()
@@ -4478,6 +4535,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             pairs = self._DeserialiseImportString( import_string )
             
             self._AutoPetitionConflicts( pairs )
+            
+            self._AutoPetitionLoops( pairs )
             
             self._AddPairs( pairs, add_only = add_only )
             
@@ -4587,6 +4646,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 pairs = [ ( old, self._current_new ) for old in olds ]
                 
                 self._AutoPetitionConflicts( pairs )
+                
+                self._AutoPetitionLoops( pairs )
                 
                 self._AddPairs( pairs )
                 

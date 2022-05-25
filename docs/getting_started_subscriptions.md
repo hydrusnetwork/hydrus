@@ -4,15 +4,11 @@ title: subscriptions
 
 # subscriptions  
 
-Do not try to create a subscription until you are comfortable with a normal gallery download page! Go [here](getting_started_downloading.md).
-
-Let's say you found an artist you like. You downloaded everything of theirs from some site, but one or two pieces of new work is posted every week. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
-
-## what are subs? { id="intro" }
-
-**For the most part, all you need to do to set up a good subscription is give it a name, select the download source, and use the 'paste queries' button to paste what you want to search. Subscriptions have great default options for almost all query types, so you don't have to go any deeper than that to get started.**
+The introduction to subscriptions has been moved to the main downloading help [here](getting_started_downloading.md#subscriptions).
 
 ## how do subscriptions work? { id="description" }
+
+**For the most part, all you need to do to set up a good subscription is give it a name, select the download source, and use the 'paste queries' button to paste what you want to search. Subscriptions have great default options for almost all query types, so you don't have to go any deeper than that to get started.**
 
 Once you hit ok on the main subscription dialog, the subscription system should immediately come alive. If any queries are due for a 'check', they will perform their search and look for new files (i.e. URLs it has not seen before). Once that is finished, the file download queue will be worked through as normal. Typically, the sub will make a popup like this while it works:
 

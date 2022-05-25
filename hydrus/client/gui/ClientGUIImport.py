@@ -158,6 +158,8 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
 class FilenameTaggingOptionsPanel( QW.QWidget ):
     
+    movePageLeft = QC.Signal()
+    movePageRight = QC.Signal()
     tagsChanged = QC.Signal()
     
     def __init__( self, parent, service_key, filename_tagging_options = None, present_for_accompanying_file_list = False ):
@@ -179,6 +181,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         self._simple_panel = self._SimplePanel( self._notebook, self._service_key, filename_tagging_options, present_for_accompanying_file_list )
         self._advanced_panel = self._AdvancedPanel( self._notebook, self._service_key, filename_tagging_options, present_for_accompanying_file_list )
+        
+        self._simple_panel.movePageLeft.connect( self.movePageLeft )
+        self._simple_panel.movePageRight.connect( self.movePageRight )
         
         self._simple_panel.tagsChanged.connect( self.tagsChanged )
         self._advanced_panel.tagsChanged.connect( self.tagsChanged )
@@ -216,6 +221,13 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, self._service_key, tags )
         
         return tags
+        
+    
+    def SetSearchFocus( self ):
+        
+        if self._notebook.currentWidget() == self._simple_panel:
+            
+            self._simple_panel.SetSearchFocus()
         
     
     def SetSelectedPaths( self, paths ):
@@ -478,6 +490,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
     
     class _SimplePanel( QW.QWidget ):
         
+        movePageLeft = QC.Signal()
+        movePageRight = QC.Signal()
         tagsChanged = QC.Signal()
         
         def __init__( self, parent, service_key, filename_tagging_options, present_for_accompanying_file_list ):
@@ -497,6 +511,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, default_location_context, service_key, show_paste_button = True )
             
+            self._tag_autocomplete_all.movePageLeft.connect( self.movePageLeft )
+            self._tag_autocomplete_all.movePageRight.connect( self.movePageRight )
+            
             self._tags_paste_button = ClientGUICommon.BetterButton( self._tags_panel, 'paste tags', self._PasteTags )
             
             #
@@ -510,6 +527,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._single_tags_paste_button = ClientGUICommon.BetterButton( self._single_tags_panel, 'paste tags', self._PasteSingleTags )
             
             self._tag_autocomplete_selection = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, default_location_context, service_key, show_paste_button = True )
+            
+            self._tag_autocomplete_selection.movePageLeft.connect( self.movePageLeft )
+            self._tag_autocomplete_selection.movePageRight.connect( self.movePageRight )
             
             self.SetSelectedPaths( [] )
             
@@ -758,6 +778,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
             
             self.tagsChanged.emit()
+            
+        
+        def SetSearchFocus( self ):
+            
+            ClientGUIFunctions.SetFocusLater( self._tag_autocomplete_all )
             
         
         def SetSelectedPaths( self, paths ):
@@ -1441,6 +1466,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, paths ):
         
+        # TODO: a really nice rewrite for all this, perhaps when I go for string conversions here, would be to eliminate the multi-page format and instead update the controls.
+        # changing service while maintaining focus and list selection would be great
+        
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._paths = paths
@@ -1461,10 +1489,17 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             page = self._Panel( self._tag_repositories, service_key, paths )
             
+            page.movePageLeft.connect( self.MovePageLeft )
+            page.movePageRight.connect( self.MovePageRight )
+            
             select = service_key == default_tag_service_key
             
             tab_index = self._tag_repositories.addTab( page, name )
-            if select: self._tag_repositories.setCurrentIndex( tab_index )
+            
+            if select:
+                
+                self._tag_repositories.setCurrentIndex( tab_index )
+                
             
         
         #
@@ -1476,6 +1511,8 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
         self._tag_repositories.currentChanged.connect( self._SaveDefaultTagServiceKey )
+        
+        self._tag_repositories.currentWidget().SetSearchFocus()
         
     
     def _SaveDefaultTagServiceKey( self ):
@@ -1515,7 +1552,24 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         return paths_to_additional_service_keys_to_tags
         
     
+    def MovePageLeft( self ):
+        
+        self._tag_repositories.SelectLeft()
+        
+        self._tag_repositories.currentWidget().SetSearchFocus()
+        
+    
+    def MovePageRight( self ):
+        
+        self._tag_repositories.SelectRight()
+        
+        self._tag_repositories.currentWidget().SetSearchFocus()
+        
+    
     class _Panel( QW.QWidget ):
+        
+        movePageLeft = QC.Signal()
+        movePageRight = QC.Signal()
         
         def __init__( self, parent, service_key, paths ):
             
@@ -1531,6 +1585,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             #
             
             self._filename_tagging_panel = FilenameTaggingOptionsPanel( self, self._service_key, present_for_accompanying_file_list = True )
+            
+            self._filename_tagging_panel.movePageLeft.connect( self.movePageLeft )
+            self._filename_tagging_panel.movePageRight.connect( self.movePageRight )
             
             self._schedule_refresh_file_list_job = None
             
@@ -1615,6 +1672,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
             self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
+            
+        
+        def SetSearchFocus( self ):
+            
+            self._filename_tagging_panel.SetSearchFocus()
             
         
     

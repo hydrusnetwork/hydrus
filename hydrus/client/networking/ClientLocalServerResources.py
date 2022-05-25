@@ -1208,6 +1208,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             ( ( HC.LOCAL_FILE_UPDATE_DOMAIN, ), 'local_updates' ),
             ( ( HC.FILE_REPOSITORY, ), 'file_repositories' ),
             ( ( HC.COMBINED_LOCAL_FILE, ), 'all_local_files' ),
+            ( ( HC.COMBINED_LOCAL_MEDIA, ), 'all_local_media' ),
             ( ( HC.COMBINED_FILE, ), 'all_known_files' ),
             ( ( HC.COMBINED_TAG, ), 'all_known_tags' ),
             ( ( HC.LOCAL_FILE_TRASH_DOMAIN, ), 'trash' )
@@ -1308,7 +1309,7 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ParseLocationContext( request, HG.client_controller.services_manager.GetLocalMediaLocationContextUmbrella() )
+        location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
         if 'reason' in request.parsed_request_args:
             
@@ -1323,7 +1324,7 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         
         # expand this to take reason
         
-        location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE, HC.LOCAL_FILE_DOMAIN ) )
+        location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
         
@@ -1360,11 +1361,11 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ParseLocationContext( request, HG.client_controller.services_manager.GetLocalMediaLocationContextUmbrella() )
+        location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
         hashes = ParseHashes( request )
         
-        location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.LOCAL_FILE_DOMAIN, ) )
+        location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA ) )
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
         
@@ -2097,7 +2098,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ParseLocationContext( request, HG.client_controller.services_manager.GetLocalMediaLocationContextUmbrella() )
+        location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
         if 'tag_service_key' in request.parsed_request_args or 'tag_service_name' in request.parsed_request_args:
             

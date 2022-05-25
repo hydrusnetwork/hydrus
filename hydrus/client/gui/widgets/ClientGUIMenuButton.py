@@ -181,6 +181,11 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
         CGC.core().PopupMenu( self, menu )
         
     
+    def GetChoiceTuples( self ):
+        
+        return list( self._choice_tuples )
+        
+    
     def GetValue( self ):
         
         if self._value_index is None:

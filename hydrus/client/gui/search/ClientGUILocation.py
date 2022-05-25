@@ -23,12 +23,17 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
+        if len( services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) ) > 1 or advanced_mode:
+            
+            service_types_in_order.append( HC.COMBINED_LOCAL_MEDIA )
+            
+        
+        service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
+        
         if advanced_mode:
             
             service_types_in_order.append( HC.LOCAL_FILE_UPDATE_DOMAIN )
             
-        
-        service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
         
         if advanced_mode:
             
@@ -106,6 +111,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # if user clicks all known files, then all other services will be wiped
         # all local files should do other file services too
+        # and all my files does local file domains
         
         location_context = self._GetValue()
         

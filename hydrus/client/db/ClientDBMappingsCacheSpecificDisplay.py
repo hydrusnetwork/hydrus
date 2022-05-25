@@ -5,6 +5,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDBBase
 
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsCountsUpdate
@@ -26,6 +27,8 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
         self.modules_mappings_storage = modules_mappings_storage
         self.modules_tag_display = modules_tag_display
         
+        self._missing_tag_service_pairs = set()
+        
         ClientDBModule.ClientDBModule.__init__( self, 'client specific display mappings cache', cursor )
         
     
@@ -33,14 +36,16 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
+        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
+        
         index_generation_dict = {}
         
         index_generation_dict[ cache_display_current_mappings_table_name ] = [
-            ( [ 'tag_id', 'hash_id' ], True, 400 )
+            ( [ 'tag_id', 'hash_id' ], True, version )
         ]
         
         index_generation_dict[ cache_display_pending_mappings_table_name ] = [
-            ( [ 'tag_id', 'hash_id' ], True, 400 )
+            ( [ 'tag_id', 'hash_id' ], True, version )
         ]
         
         return index_generation_dict
@@ -70,7 +75,7 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        version = 400
+        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
         
         table_dict[ cache_display_current_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )
         table_dict[ cache_display_pending_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )
@@ -99,6 +104,27 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+    
+    def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+        
+        file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ) )
+        tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
+        
+        for tag_service_id in tag_service_ids:
+            
+            for file_service_id in file_service_ids:
+                
+                table_dict_for_this = self._GetServiceTableGenerationDictSingle( file_service_id, tag_service_id )
+                
+                table_names_for_this = set( table_dict_for_this.keys() )
+                
+                if not table_names_for_this.isdisjoint( table_names ):
+                    
+                    self._missing_tag_service_pairs.add( ( file_service_id, tag_service_id ) )
+                    
+                
+            
         
     
     def AddFiles( self, file_service_id, tag_service_id, hash_ids, hash_ids_table_name ):
@@ -536,6 +562,11 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
             
             self._CreateIndex( table_name, columns, unique = unique )
             
+        
+    
+    def GetMissingServicePairs( self ):
+        
+        return self._missing_tag_service_pairs
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

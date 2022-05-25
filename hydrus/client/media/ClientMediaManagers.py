@@ -642,6 +642,14 @@ class LocationsManager( object ):
             
             self._deleted.discard( service_key )
             
+        else:
+            
+            if do_undelete:
+                
+                # was never deleted from here, so no undelete to do!
+                return
+                
+            
         
         local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
         
@@ -654,6 +662,7 @@ class LocationsManager( object ):
                 self._current.discard( CC.TRASH_SERVICE_KEY )
                 
             
+            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
@@ -705,6 +714,7 @@ class LocationsManager( object ):
             
             if self._current.isdisjoint( local_service_keys ):
                 
+                self._DeleteFromService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, reason )
                 self._AddToService( CC.TRASH_SERVICE_KEY )
                 
             
@@ -788,11 +798,37 @@ class LocationsManager( object ):
                     reason = None
                     
                 
-                self._DeleteFromService( service_key, reason )
+                if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+                    
+                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                        
+                        if s_k in self._current:
+                            
+                            self._DeleteFromService( s_k, reason )
+                            
+                        
+                    
+                else:
+                    
+                    self._DeleteFromService( service_key, reason )
+                    
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
                 
-                self._AddToService( service_key, do_undelete = True )
+                if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+                    
+                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                        
+                        if s_k in self._deleted:
+                            
+                            self._AddToService( s_k, do_undelete = True )
+                            
+                        
+                    
+                else:
+                    
+                    self._AddToService( service_key, do_undelete = True )
+                    
                 
             elif action == HC.CONTENT_UPDATE_PEND:
                 

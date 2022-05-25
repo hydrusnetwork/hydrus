@@ -347,6 +347,13 @@ class DBBase( object ):
         return False
         
     
+
+JOURNAL_SIZE_LIMIT = 128 * 1024 * 1024
+JOURNAL_ZERO_PERIOD = 900
+MEM_REFRESH_PERIOD = 600
+WAL_PASSIVE_CHECKPOINT_PERIOD = 300
+WAL_TRUNCATE_CHECKPOINT_PERIOD = 900
+
 class DBCursorTransactionWrapper( DBBase ):
     
     def __init__( self, c: sqlite3.Cursor, transaction_commit_period: int ):
@@ -362,9 +369,36 @@ class DBCursorTransactionWrapper( DBBase ):
         self._transaction_contains_writes = False
         
         self._last_mem_refresh_time = HydrusData.GetNow()
-        self._last_wal_checkpoint_time = HydrusData.GetNow()
+        self._last_wal_passive_checkpoint_time = HydrusData.GetNow()
+        self._last_wal_truncate_checkpoint_time = HydrusData.GetNow()
+        self._last_journal_zero_time = HydrusData.GetNow()
         
         self._pubsubs = []
+        
+    
+    def _ZeroJournal( self ):
+    
+        if HG.db_journal_mode not in ( 'PERSIST', 'WAL' ):
+            
+            return
+            
+        
+        self._Execute( 'BEGIN IMMEDIATE;' )
+        
+        # durable_temp is not excluded here
+        db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        
+        for db_name in db_names:
+            
+            self._Execute( 'PRAGMA {}.journal_size_limit = {};'.format( db_name, 0 ) )
+            
+        
+        self._Execute( 'COMMIT;' )
+        
+        for db_name in db_names:
+            
+            self._Execute( 'PRAGMA {}.journal_size_limit = {};'.format( db_name, JOURNAL_SIZE_LIMIT ) )
+            
         
     
     def BeginImmediate( self ):
@@ -398,14 +432,23 @@ class DBCursorTransactionWrapper( DBBase ):
             self._in_transaction = False
             self._transaction_contains_writes = False
             
-            if HG.db_journal_mode == 'WAL' and HydrusData.TimeHasPassed( self._last_wal_checkpoint_time + 1800 ):
+            if HG.db_journal_mode == 'WAL' and HydrusData.TimeHasPassed( self._last_wal_passive_checkpoint_time + WAL_PASSIVE_CHECKPOINT_PERIOD ):
                 
-                self._Execute( 'PRAGMA wal_checkpoint(PASSIVE);' )
+                if HydrusData.TimeHasPassed( self._last_wal_truncate_checkpoint_time + WAL_TRUNCATE_CHECKPOINT_PERIOD ):
+                    
+                    self._Execute( 'PRAGMA wal_checkpoint(TRUNCATE);' )
+                    
+                    self._last_wal_truncate_checkpoint_time = HydrusData.GetNow()
+                    
+                else:
+                    
+                    self._Execute( 'PRAGMA wal_checkpoint(PASSIVE);' )
+                    
                 
-                self._last_wal_checkpoint_time = HydrusData.GetNow()
+                self._last_wal_passive_checkpoint_time = HydrusData.GetNow()
                 
             
-            if HydrusData.TimeHasPassed( self._last_mem_refresh_time + 600 ):
+            if HydrusData.TimeHasPassed( self._last_mem_refresh_time + MEM_REFRESH_PERIOD ):
                 
                 self._Execute( 'DETACH mem;' )
                 self._Execute( 'ATTACH ":memory:" AS mem;' )
@@ -413,6 +456,13 @@ class DBCursorTransactionWrapper( DBBase ):
                 TemporaryIntegerTableNameCache.instance().Clear()
                 
                 self._last_mem_refresh_time = HydrusData.GetNow()
+                
+            
+            if HG.db_journal_mode == 'PERSIST' and HydrusData.TimeHasPassed( self._last_journal_zero_time + JOURNAL_ZERO_PERIOD ):
+                
+                self._ZeroJournal()
+                
+                self._last_journal_zero_time = HydrusData.GetNow()
                 
             
         else:
@@ -505,5 +555,4 @@ class DBCursorTransactionWrapper( DBBase ):
         
         return self._in_transaction and self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
         
-    
     

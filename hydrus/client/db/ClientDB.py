@@ -252,12 +252,13 @@ class DB( HydrusDB.HydrusDB ):
             
             valid_rows = [ ( hash_id, timestamp ) for ( hash_id, timestamp ) in rows if hash_id in new_hash_ids ]
             
-            # if we are adding to a local file domain, either an import or an undelete, remove any from the trash and add to combined local file service if needed
+            # if we are adding to a local file domain, either an import or an undelete, remove any from the trash and add to the umbrella services if needed
             
             if service_type == HC.LOCAL_FILE_DOMAIN:
                 
                 self._DeleteFiles( self.modules_services.trash_service_id, new_hash_ids )
                 
+                self._AddFiles( self.modules_services.combined_local_media_service_id, valid_rows )
                 self._AddFiles( self.modules_services.combined_local_file_service_id, valid_rows )
                 
             
@@ -386,9 +387,6 @@ class DB( HydrusDB.HydrusDB ):
         if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
             
             self.modules_files_storage.GenerateFilesTables( service_id )
-            
-        
-        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
             
             tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
             
@@ -1316,6 +1314,7 @@ class DB( HydrusDB.HydrusDB ):
             ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ),
             ( CC.COMBINED_DELETED_FILE_SERVICE_KEY, HC.COMBINED_DELETED_FILE, 'all deleted files' ),
             ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ),
+            ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files' ),
             ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ),
             ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ),
             ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ),
@@ -1503,9 +1502,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteFiles( self, service_id, hash_ids, only_if_current = False ):
         
-        # the gui sometimes gets out of sync and sends a DELETE FROM TRASH call before the SEND TO TRASH call
-        # in this case, let's make sure the local file domains are clear before deleting from the umbrella domain
-        
         local_file_service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
         
         if service_id == self.modules_services.combined_local_file_service_id:
@@ -1516,6 +1512,14 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._DeleteFiles( self.modules_services.trash_service_id, hash_ids )
+            
+        
+        if service_id == self.modules_services.combined_local_media_service_id:
+            
+            for local_file_service_id in local_file_service_ids:
+                
+                self._DeleteFiles( local_file_service_id, hash_ids, only_if_current = True )
+                
             
         
         service = self.modules_services.GetService( service_id )
@@ -1602,7 +1606,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
                 
             
-            # if any files are no longer in any local file services, send them to the trash
+            # if any files are no longer in any local file services, remove from the umbrella and send them to the trash
             
             if service_id in local_file_service_ids:
                 
@@ -1616,6 +1620,8 @@ class DB( HydrusDB.HydrusDB ):
                 trashed_hash_ids = existing_hash_ids.difference( hash_ids_still_in_another_service )
                 
                 if len( trashed_hash_ids ) > 0:
+                    
+                    self._DeleteFiles( self.modules_services.combined_local_media_service_id, trashed_hash_ids )
                     
                     now = HydrusData.GetNow()
                     
@@ -2917,49 +2923,28 @@ class DB( HydrusDB.HydrusDB ):
         
         boned_stats = {}
         
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_hash_id_table_name:
+        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        ( num_total, size_total ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
+        ( num_inbox, size_inbox ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN {} NATURAL JOIN file_inbox;'.format( current_files_table_name ) ).fetchone()
+        
+        if size_total is None:
             
-            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            self._Execute( 'INSERT INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( temp_hash_id_table_name, current_files_table_name ) )
-            
-            for service_id in ( self.modules_services.trash_service_id, self.modules_services.local_update_service_id ):
-                
-                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-                
-                self._Execute( 'DELETE FROM {} WHERE hash_id IN ( SELECT hash_id FROM {} );'.format( temp_hash_id_table_name, current_files_table_name ) )
-                
-            
-            ( num_total, size_total ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_id_table_name ) ).fetchone()
-            ( num_inbox, size_inbox ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN {} NATURAL JOIN file_inbox;'.format( temp_hash_id_table_name ) ).fetchone()
-            
-            if size_total is None:
-                
-                size_total = 0
-                
-            
-            if size_inbox is None:
-                
-                size_inbox = 0
-                
+            size_total = 0
             
         
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_hash_id_table_name:
+        if size_inbox is None:
             
-            deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+            size_inbox = 0
             
-            self._Execute( 'INSERT INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( temp_hash_id_table_name, deleted_files_table_name ) )
+        
+        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
+        
+        ( num_deleted, size_deleted ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( deleted_files_table_name ) ).fetchone()
+        
+        if size_deleted is None:
             
-            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
-            
-            self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) SELECT hash_id FROM {};'.format( temp_hash_id_table_name, current_files_table_name ) )
-            
-            ( num_deleted, size_deleted ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_id_table_name ) ).fetchone()
-            
-            if size_deleted is None:
-                
-                size_deleted = 0
-                
+            size_deleted = 0
             
         
         num_archive = num_total - num_inbox
@@ -2990,7 +2975,7 @@ class DB( HydrusDB.HydrusDB ):
         
         earliest_import_time = 0
         
-        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
         
         result = self._Execute( 'SELECT MIN( timestamp ) FROM {};'.format( current_files_table_name ) ).fetchone()
         
@@ -2999,7 +2984,7 @@ class DB( HydrusDB.HydrusDB ):
             earliest_import_time = result[0]
             
         
-        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
         
         result = self._Execute( 'SELECT MIN( original_timestamp ) FROM {};'.format( deleted_files_table_name ) ).fetchone()
         
@@ -3027,7 +3012,7 @@ class DB( HydrusDB.HydrusDB ):
         total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;' ) if count > 1 ) )
         total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( 'SELECT media_id, COUNT( * ) FROM duplicate_file_members GROUP BY media_id;' ) if count > 1 ) )
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
         
@@ -5849,7 +5834,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        if service_type in ( HC.COMBINED_LOCAL_FILE, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
+        if service_type in ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
             
@@ -6974,7 +6959,7 @@ class DB( HydrusDB.HydrusDB ):
                                     content_update.SetRow( hashes )
                                     
                                 
-                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ):
+                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE ):
                                     
                                     if content_update.HasReason():
                                         
@@ -6995,6 +6980,13 @@ class DB( HydrusDB.HydrusDB ):
                                     # shouldn't be called anymore, but just in case someone fidgets a trash delete with client api or something
                                     
                                     self._DeleteFiles( self.modules_services.combined_local_file_service_id, hash_ids )
+                                    
+                                elif service_id == self.modules_services.combined_local_media_service_id:
+                                    
+                                    for s_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                                        
+                                        self._DeleteFiles( s_id, hash_ids, only_if_current = True )
+                                        
                                     
                                 else:
                                     
@@ -8769,131 +8761,165 @@ class DB( HydrusDB.HydrusDB ):
         
         # caches
         
-        existing_cache_tables = self._STS( self._Execute( 'SELECT name FROM external_caches.sqlite_master WHERE type = ?;', ( 'table', ) ) )
+        tag_service_ids_we_have_regenned_storage_for = set()
+        tag_service_ids_we_have_regenned_display_for = set()
         
-        mappings_cache_tables = set()
+        # mappings
         
-        for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+        missing_service_pairs = self.modules_mappings_cache_specific_storage.GetMissingServicePairs()
+        
+        missing_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_service_pairs if tag_service_id not in tag_service_ids_we_have_regenned_storage_for }
+        
+        if len( missing_tag_service_ids ) > 0:
             
-            if version >= 465:
-                
-                mappings_cache_tables.update( ( name.split( '.' )[1] for name in ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ) ) )
-                mappings_cache_tables.update( ( name.split( '.' )[1] for name in ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id ) ) )
-                
+            missing_tag_service_ids = sorted( missing_tag_service_ids )
             
-        
-        we_did_a_full_regen = False
-        
-        missing_main_tables = sorted( mappings_cache_tables.difference( existing_cache_tables ) )
-        
-        if len( missing_main_tables ) > 0:
-            
-            HydrusData.DebugPrint( 'The missing mapping cache tables were:' )
-            HydrusData.DebugPrint( os.linesep.join( missing_main_tables ) )
-            
-            message = 'On boot, {} mapping caches tables were missing! This could be due to the entire \'caches\' database file being missing or due to some other problem. All of this data can be regenerated.'.format( len( missing_main_tables ) )
+            message = 'On boot, some important tag mapping tables for the storage context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
             message += os.linesep * 2
-            message += 'If you wish, click ok on this message and the client will recreate and repopulate these tables with the correct data. This may take a few minutes. But if you want to solve this problem otherwise, kill the hydrus process now.'
+            message += os.linesep.join( ( str( t ) for t in missing_tag_service_ids ) )
             message += os.linesep * 2
-            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
+            message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
             
             BlockingSafeShowMessage( message )
             
-            self._RegenerateTagMappingsCache()
-            
-            we_did_a_full_regen = True
+            for tag_service_id in missing_tag_service_ids:
+                
+                tag_service_key = self.modules_services.GetServiceKey( tag_service_id )
+                
+                self._RegenerateTagMappingsCache( tag_service_key = tag_service_key )
+                
+                tag_service_ids_we_have_regenned_storage_for.add( tag_service_id )
+                
+                self.modules_db_maintenance.TouchAnalyzeNewTables()
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
+                
             
         
-        if not we_did_a_full_regen:
+        #
+        
+        missing_service_pairs = self.modules_mappings_cache_specific_display.GetMissingServicePairs()
+        
+        missing_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_service_pairs if tag_service_id not in tag_service_ids_we_have_regenned_storage_for and tag_service_id not in tag_service_ids_we_have_regenned_display_for }
+        
+        if len( missing_tag_service_ids ) > 0:
             
-            # autocomplete
+            missing_tag_service_ids = sorted( missing_tag_service_ids )
             
-            ( missing_storage_tag_count_service_pairs, missing_display_tag_count_service_pairs ) = self.modules_mappings_counts.GetMissingTagCountServicePairs()
+            message = 'On boot, some important tag mapping tables for the display context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( str( t ) for t in missing_tag_service_ids ) )
+            message += os.linesep * 2
+            message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
             
-            # unfortunately, for now, due to display maintenance being tag service wide, I can't regen individual lads here
-            # maybe in future I can iterate all sibs/parents and just do it here and now with addimplication
+            BlockingSafeShowMessage( message )
             
-            missing_storage_tag_count_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_storage_tag_count_service_pairs }
-            missing_display_tag_count_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_display_tag_count_service_pairs }
-            
-            # a storage regen will cover a display regen
-            
-            missing_display_tag_count_tag_service_ids = missing_display_tag_count_tag_service_ids.difference( missing_storage_tag_count_tag_service_ids )
-            
-            if len( missing_display_tag_count_tag_service_ids ) > 0:
+            for tag_service_id in missing_tag_service_ids:
                 
-                missing_display_tag_count_tag_service_ids = sorted( missing_display_tag_count_tag_service_ids )
+                tag_service_key = self.modules_services.GetServiceKey( tag_service_id )
                 
-                message = 'On boot, some important tag count tables for the display context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
-                message += os.linesep * 2
-                message += os.linesep.join( ( str( t ) for t in missing_display_tag_count_tag_service_ids ) )
-                message += os.linesep * 2
-                message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+                self._RegenerateTagDisplayMappingsCache( tag_service_key = tag_service_key )
                 
-                BlockingSafeShowMessage( message )
+                tag_service_ids_we_have_regenned_display_for.add( tag_service_id )
                 
-                for tag_service_id in missing_display_tag_count_tag_service_ids:
-                    
-                    tag_service_key = self.modules_services.GetService( tag_service_id ).GetServiceKey()
-                    
-                    self._RegenerateTagDisplayMappingsCache( tag_service_key = tag_service_key )
-                    
-                    self.modules_db_maintenance.TouchAnalyzeNewTables()
-                    
-                    self._cursor_transaction_wrapper.CommitAndBegin()
-                    
+                self.modules_db_maintenance.TouchAnalyzeNewTables()
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
                 
             
-            if len( missing_storage_tag_count_tag_service_ids ) > 0:
+        
+        # autocomplete
+        
+        ( missing_storage_tag_count_service_pairs, missing_display_tag_count_service_pairs ) = self.modules_mappings_counts.GetMissingTagCountServicePairs()
+        
+        # unfortunately, for now, due to display maintenance being tag service wide, I can't regen individual lads here
+        # maybe in future I can iterate all sibs/parents and just do it here and now with addimplication
+        
+        missing_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_storage_tag_count_service_pairs if tag_service_id not in tag_service_ids_we_have_regenned_storage_for }
+        
+        if len( missing_tag_service_ids ) > 0:
+            
+            missing_tag_service_ids = sorted( missing_tag_service_ids )
+            
+            message = 'On boot, some important tag count tables for the storage context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( str( t ) for t in missing_tag_service_ids ) )
+            message += os.linesep * 2
+            message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+            
+            BlockingSafeShowMessage( message )
+            
+            for tag_service_id in missing_tag_service_ids:
                 
-                missing_storage_tag_count_tag_service_ids = sorted( missing_storage_tag_count_tag_service_ids )
+                tag_service_key = self.modules_services.GetService( tag_service_id ).GetServiceKey()
                 
-                message = 'On boot, some important tag count tables for the storage context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
-                message += os.linesep * 2
-                message += os.linesep.join( ( str( t ) for t in missing_storage_tag_count_tag_service_ids ) )
-                message += os.linesep * 2
-                message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+                self._RegenerateTagMappingsCache( tag_service_key = tag_service_key )
                 
-                BlockingSafeShowMessage( message )
+                tag_service_ids_we_have_regenned_storage_for.add( tag_service_id )
                 
-                for tag_service_id in missing_storage_tag_count_tag_service_ids:
-                    
-                    tag_service_key = self.modules_services.GetService( tag_service_id ).GetServiceKey()
-                    
-                    self._RegenerateTagMappingsCache( tag_service_key = tag_service_key )
-                    
-                    self.modules_db_maintenance.TouchAnalyzeNewTables()
-                    
-                    self._cursor_transaction_wrapper.CommitAndBegin()
-                    
+                self.modules_db_maintenance.TouchAnalyzeNewTables()
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
                 
             
-            # tag search, this requires autocomplete and siblings/parents in place
+        
+        #
+        
+        missing_tag_service_ids = { tag_service_id for ( file_service_id, tag_service_id ) in missing_display_tag_count_service_pairs if tag_service_id not in tag_service_ids_we_have_regenned_storage_for and tag_service_id not in tag_service_ids_we_have_regenned_display_for }
+        
+        if len( missing_tag_service_ids ) > 0:
             
-            missing_tag_search_service_pairs = self.modules_tag_search.GetMissingTagSearchServicePairs()
+            missing_tag_service_ids = sorted( missing_tag_service_ids )
             
-            if len( missing_tag_search_service_pairs ) > 0:
+            message = 'On boot, some important tag count tables for the display context were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The services about to be worked on are:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( str( t ) for t in missing_tag_service_ids ) )
+            message += os.linesep * 2
+            message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+            
+            BlockingSafeShowMessage( message )
+            
+            for tag_service_id in missing_tag_service_ids:
                 
-                missing_tag_search_service_pairs = sorted( missing_tag_search_service_pairs )
+                tag_service_key = self.modules_services.GetService( tag_service_id ).GetServiceKey()
                 
-                message = 'On boot, some important tag search tables were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The service pairs about to be worked on are:'
-                message += os.linesep * 2
-                message += os.linesep.join( ( str( t ) for t in missing_tag_search_service_pairs ) )
-                message += os.linesep * 2
-                message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+                self._RegenerateTagDisplayMappingsCache( tag_service_key = tag_service_key )
                 
-                BlockingSafeShowMessage( message )
+                tag_service_ids_we_have_regenned_display_for.add( tag_service_id )
                 
-                for ( file_service_id, tag_service_id ) in missing_tag_search_service_pairs:
-                    
-                    self.modules_tag_search.Drop( file_service_id, tag_service_id )
-                    self.modules_tag_search.Generate( file_service_id, tag_service_id )
-                    self._CacheTagsPopulate( file_service_id, tag_service_id )
-                    
-                    self.modules_db_maintenance.TouchAnalyzeNewTables()
-                    
-                    self._cursor_transaction_wrapper.CommitAndBegin()
-                    
+                self.modules_db_maintenance.TouchAnalyzeNewTables()
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
+                
+            
+        
+        # tag search, this requires autocomplete and siblings/parents in place
+        
+        missing_tag_search_service_pairs = self.modules_tag_search.GetMissingTagSearchServicePairs()
+        
+        missing_tag_search_service_pairs = [ ( file_service_id, tag_service_id ) for ( file_service_id, tag_service_id ) in missing_tag_search_service_pairs if tag_service_id not in tag_service_ids_we_have_regenned_storage_for ]
+        
+        if len( missing_tag_search_service_pairs ) > 0:
+            
+            missing_tag_search_service_pairs = sorted( missing_tag_search_service_pairs )
+            
+            message = 'On boot, some important tag search tables were missing! You should have already had a notice about this. You may have had other problems earlier, but this particular problem is completely recoverable and results in no lost data. The relevant tables have been recreated and will now be repopulated. The service pairs about to be worked on are:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( str( t ) for t in missing_tag_search_service_pairs ) )
+            message += os.linesep * 2
+            message += 'If you want to go ahead, click ok on this message and the client will fill these tables with the correct data. It may take some time. If you want to solve this problem otherwise, kill the hydrus process now.'
+            
+            BlockingSafeShowMessage( message )
+            
+            for ( file_service_id, tag_service_id ) in missing_tag_search_service_pairs:
+                
+                self.modules_tag_search.Drop( file_service_id, tag_service_id )
+                self.modules_tag_search.Generate( file_service_id, tag_service_id )
+                self._CacheTagsPopulate( file_service_id, tag_service_id )
+                
+                self.modules_db_maintenance.TouchAnalyzeNewTables()
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
                 
             
         
@@ -9823,11 +9849,23 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UndeleteFiles( self, service_id, hash_ids ):
         
-        rows = self.modules_files_storage.GetUndeleteRows( service_id, hash_ids )
-        
-        if len( rows ) > 0:
+        if service_id in ( self.modules_services.combined_local_file_service_id, self.modules_services.combined_local_media_service_id, self.modules_services.trash_service_id ):
             
-            self._AddFiles( service_id, rows )
+            service_ids_to_do = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
+            
+        else:
+            
+            service_ids_to_do = ( service_id, )
+            
+        
+        for service_id_to_do in service_ids_to_do:
+            
+            rows = self.modules_files_storage.GetUndeleteRows( service_id_to_do, hash_ids )
+            
+            if len( rows ) > 0:
+                
+                self._AddFiles( service_id_to_do, rows )
+                
             
         
     
@@ -11500,6 +11538,150 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 485:
+            
+            result = self._Execute( 'SELECT service_id FROM services WHERE service_type = ?;', ( HC.COMBINED_LOCAL_MEDIA, ) ).fetchone()
+            
+            if result is None:
+                
+                message = 'Your database is going to calculate some new data so it can refer to multiple local services more efficiently. If you have a large client, this may take a few minutes.'
+                message += os.linesep * 2
+                message += 'If you do not have the time at the moment, please force kill the hydrus process now. Otherwise, continue!'
+                
+                BlockingSafeShowMessage( message )
+                
+                client_caches_path = os.path.join( self._db_dir, 'client.caches.db' )
+                
+                expected_space_needed = os.path.getsize( client_caches_path ) // 4
+                
+                try:
+                    
+                    HydrusDBBase.CheckHasSpaceForDBTransaction( self._db_dir, expected_space_needed )
+                    
+                except Exception as e:
+                    
+                    message = 'Hey, this update is going to expand your database cache. It requires some free space, but I think there is a problem and I am not sure it can be done safely. I recommend you kill the hydrus process now and free up some space. If you think the check is mistaken, click ok and it will try anyway. Full error:'
+                    message += os.linesep * 2
+                    message += str( e )
+                    
+                    BlockingSafeShowMessage( message )
+                    
+                
+                self._controller.frame_splash_status.SetText( 'creating "all my files" virtual service' )
+                self._controller.frame_splash_status.SetSubtext( 'gathering current file records' )
+                
+                dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.COMBINED_LOCAL_MEDIA )
+                
+                self._AddService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files', dictionary )
+                
+                self._UnloadModules()
+                
+                self._LoadModules()
+                
+                # services module is now aware of the new guy
+                
+                # note we do not have to populate the mappings cache--we just have to add files naturally!
+                
+                # current files
+                
+                all_media_hash_ids = set()
+                
+                for service_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                    
+                    all_media_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( service_id ) )
+                    
+                
+                num_to_do = len( all_media_hash_ids )
+                
+                BLOCK_SIZE = 500
+                
+                for ( i, block_of_hash_ids ) in enumerate( HydrusData.SplitIteratorIntoChunks( all_media_hash_ids, BLOCK_SIZE ) ):
+                    
+                    block_of_hash_ids_to_timestamps = self.modules_files_storage.GetCurrentHashIdsToTimestamps( self.modules_services.combined_local_file_service_id, block_of_hash_ids )
+                    
+                    rows = list( block_of_hash_ids_to_timestamps.items() )
+                    
+                    self._AddFiles( self.modules_services.combined_local_media_service_id, rows )
+                    
+                    self._controller.frame_splash_status.SetSubtext( 'making current file records: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
+                    
+                
+                # deleted files
+                
+                self._controller.frame_splash_status.SetSubtext( 'gathering deleted file records' )
+                
+                all_media_hash_ids = set()
+                
+                hash_ids_to_deletion_timestamps = {}
+                
+                for service_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                    
+                    deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                    
+                    results = self._Execute( 'SELECT hash_id, timestamp FROM {};'.format( deleted_files_table_name ) ).fetchall()
+                    
+                    for ( hash_id, timestamp ) in results:
+                        
+                        all_media_hash_ids.add( hash_id )
+                        
+                        if timestamp is not None:
+                            
+                            if hash_id in hash_ids_to_deletion_timestamps:
+                                
+                                hash_ids_to_deletion_timestamps[ hash_id ] = max( timestamp, hash_ids_to_deletion_timestamps[ hash_id ] )
+                                
+                            else:
+                                
+                                hash_ids_to_deletion_timestamps[ hash_id ] = timestamp
+                                
+                            
+                        
+                    
+                
+                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                
+                hash_ids_to_original_timestamps = dict( self._Execute( 'SELECT hash_id, original_timestamp FROM {};'.format( deleted_files_table_name ) ) )
+                
+                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+                
+                hash_ids_to_original_timestamps.update( dict( self._Execute( 'SELECT hash_id, timestamp FROM {};'.format( current_files_table_name ) ) ) )
+                
+                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
+                
+                for ( i, hash_id ) in enumerate( all_media_hash_ids ):
+                    
+                    # no need to fake the service info number updates--that will calculate from raw on next review services open
+                    
+                    if hash_id not in hash_ids_to_deletion_timestamps:
+                        
+                        timestamp = None
+                        
+                    else:
+                        
+                        timestamp = hash_ids_to_deletion_timestamps[ hash_id ]
+                        
+                    
+                    if hash_id not in hash_ids_to_original_timestamps:
+                        
+                        continue
+                        
+                    else:
+                        
+                        original_timestamp = hash_ids_to_original_timestamps[ hash_id ]
+                        
+                    
+                    self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id, timestamp, original_timestamp ) VALUES ( ?, ?, ? );'.format( deleted_files_table_name ), ( hash_id, timestamp, original_timestamp ) )
+                    
+                    if i % 500 == 0:
+                        
+                        self._controller.frame_splash_status.SetSubtext( 'making deleted file records: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) ) )
+                        
+                    
+                
+                self._controller.frame_splash_status.SetSubtext( '' )
                 
             
         

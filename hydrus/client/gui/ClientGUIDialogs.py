@@ -521,7 +521,9 @@ class DialogInputTags( Dialog ):
         
         default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, default_location_context, service_key, null_entry_callable = self.OK, show_paste_button = True )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, default_location_context, service_key, show_paste_button = True )
+        
+        self._tag_autocomplete.nullEntered.connect( self.OK )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )

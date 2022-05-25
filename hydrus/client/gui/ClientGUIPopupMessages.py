@@ -293,7 +293,7 @@ class PopupMessage( PopupWindow ):
             
             ( popup_files, popup_files_name ) = result
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
             HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = popup_files, page_name = popup_files_name )
             

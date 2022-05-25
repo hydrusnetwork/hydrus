@@ -22,7 +22,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     *   _Note if you run <Win10, you may need [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145), if you don't already have it for vidya. If you run Win7, you will need some/all core OS updates released before 2017._
     *   If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check [here](https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions).  
     *   **Third parties (not maintained by Hydrus Developer)**:  
-    [Chocolatey](https://community.chocolatey.org/packages/hydrus-network), Scoop, and winget. If these cause problems or are out of date contact the package maintainers.
+        * [Chocolatey](https://community.chocolatey.org/packages/hydrus-network)
+        * [Scoop](https://github.com/ScoopInstaller/Scoop) (`hydrus-network` in the 'Extras' bucket)    
+        * Winget. The command is `winget install --id=HydrusNetwork.HydrusNetwork  -e --location "\PATH\TO\INSTALL\HERE"`, which can, if you know what you are doing, be `winget install --id=HydrusNetwork.HydrusNetwork  -e --location ".\"`, maybe rolled into a batch file.
 
 === "macOS"
 
@@ -58,9 +60,6 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
 
 !!! warning "Network Install"
     Unless you are an expert, do not install your client to a network location (i.e. on a different computer's hard drive)! The database is sensitive to interruption and requires good file locking, which network storage often fakes. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
-
-!!! warning "USB Drives and OS sleep"
-    Also be careful putting your client on an external USB drive if you mean to have it always on, through OS sleep. Some users have reported that Windows can damage a running database on a USB drive if it goes to sleep during a busy period. Apparently disabling write caching for the drive can fix it, but best not to mess around here unless you know what you are doing and have a backup. Much easier just to install the database to a system drive!
 
 !!! info "For macOS users"
     The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.

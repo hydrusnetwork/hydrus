@@ -256,6 +256,12 @@ Response:
       "service_key": "616c6c206c6f63616c2066696c6573"
     }
   ],
+  'all_local_media': [
+    {
+      'name': 'all my files',
+      'service_key': '616c6c206c6f63616c206d65646961'
+    }
+  ],
   "all_known_files": [
     {
       "name": "all known files",

@@ -3,6 +3,46 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 486](https://github.com/hydrusnetwork/hydrus/releases/tag/v486)
+
+* **This week's release is for advanced users only! I make a big change, and I want to make sure the update is fast and there are no unusual problems before rolling it out to all users.**
+### all my files
+* the client adds a new virtual file service this week, 'all my files', which is an umbrella covering all your local file domains. if you do not engage the multiple local file services system, you won't see it much, but if you do, you'll now have a convenient tool for saying 'all my stuff' without including trash and repository updates
+* **it will take a minute or two to generate this new service on update. if you have a client with millions of files, it may take a while**
+* 'all my files' now appears in the file domain selector button on your tag entry box if you have more than one local file domain. selecting this searches the union of all your local file domains with fast and precise count (as opposed to 'multiple locations' of the full union, which will have imprecise counts and be slower). it also does duplicate file work laser-fast (again, unlike 'multiple locations', which is often slow due to UNION complexity)
+* 'all my files' also appears in review and manage services, very similarly to 'all local files'
+* a heap of hacks I instituted when getting multiple local file services ready are now replaced with this clean 'yeah this file is valued and worth looking at' domain. for instance, downloader pages now view files in this way.
+* mr bones and the file history chart also use 'all my files', and are significantly faster to calculate. the chart also excludes repo update files and trash now
+* calls to delete or undelete on 'all my files' (this is mostly Client API and some 'default' situations) will be converted to a blanket 'force send to trash' and 'force undelete all deleted records'
+* the 'undelete files?' dialog is now a button selection dialog. it also now has an 'all the above' option when more than one local service may apply, which tells the client to undelete to all services the files have been deleted from
+* updated multiple local file services help to talk a little about the new domain
+* rearranged the sort in a couple of places where the different local file services appear. they should now be: local file domains, all my files, trash, repo updates, all local files
+* ADVANCED: the 'presentation import options' under 'file import options' now allows a full-fledged location context using the new multiple local file services system rather than the previous 'in your files(and trash too)' choice. it defaults to the new 'all my files' domain
+
+### misc
+* thanks to a user, the 'getting started with downloading' help has had a full pass. if you have had trouble with downloaders, particularly if you are unsure about what file import options are for, or what subscriptions are, please check it out!
+* the 'media viewers' shortcut set gets three new zoom actions: 'switch between 100% and max', 'switch between canvas and max', and 'zoom to max' (issue #1141)
+* if a media type is set to do 'exact zooms', it will now not exceed the otherwise specified max zoom
+* the file sort widget will now preserve ascending/descending status on sort type changes (rather than resetting to default) if the asc/desc strings do not change. so, if you are on 'import time'/'oldest first', and switch to 'archive time', it will now stay on 'oldest' rather than resetting to 'newest'
+* the manage tag siblings dialog now tries to automatically break loops for you, just like it will automatically break A->B, A->C conflicts. this works on manual entry or mass import
+* the manage tag siblings dialog now shows the stated 'reason' for any pair change (e.g. "AUTO-PETITION TO BREAK LOOP") in the 'note' column
+* the 'short' animation scanbar--when your mouse is away--now keeps a short disabled volume button beside it. I found it very annoying how the scan nub would jump a few pixels left/right as this popped up and down, so now it is the same width big and small
+* right-clicking on files when in pages with 'multiple locations' file domains is now much much faster
+* the filename tagging dialog now starts with the 'tags for all' focused, and the 'press up/down on empty input' shortcuts are now plugged in, so pressing up/down will change service
+* I believe I may have completely eliminated the additional superlag that sometimes occurs when adding or deleting a service. it was a database maintenance routine getting carried away with other outstanding work
+* move/add actions in the new multiple local file system now operate asynchronously and politely, spreading their work time out when the client is busy, and for large jobs they will also make a cancellable progress popup
+* cleaned up how the autocomplete entry sends some of its signals to other parts of the program
+* did some misc help and code edits/refactoring, including brushing up the Windows install section with more advanced options
+* removed the 'hydrus zooms big bad' warning from the 'media' options page. hydrus zooms big good now!
+
+### some database stuff
+* tl;dr: database cleans up after itself better now
+* some users have had trouble with database journal files (the 'wal' files in your db directory) on certain clients getting huge after lots of work, multiple GB, and causing the OS a headache if the journal is doing work through a computer sleep. these journals are 'supposed' to checkpoint and clean themselves up naturally, but I think a busy database chokes them. therefore, I have improved the hydrus maintenance this week: 1) the 'journal size limit' PRAGMA, which applies softly after every 30 seconds or so, is now 128MB down from 1GB. 2) databases in PERSIST (rare) mode will now specifically zero out their journal fifteen minutes. 3) databases in WAL mode (the default), in addition to regular PASSIVE checkpointing now every five minutes, will force an additional TRUNCATE checkpoint every fifteen. this should force a regular full flush and maybe help some other problems like gigantic memory bloat the same users sometimes saw. if you are a very advanced user and do active debug on the database while hydrus is using it, please note this new TRUNCATE command is aggressive and may block itself or you inconveniently. let me know how you get on!
+* moved the recent 'be careful of usb drives' section in 'installing' help to 'help my db is broke.txt'. it is very likely this problem was related to the above WAL stuff, and it was not just usb drives, I rewrote it as generalised help for anyone who gets 'delayed write failed' errors at the OS level
+* massively optimised several critical duplicate files filtering methods if the current location context has more than one file domain, and I think I cleared out the basic 'get duplicate info for this file' call of all slow calls in complex location contexts
+* the repair routine that regenerates mapping caches if any tables are missing on boot is now more reliable and covers the entirety of the mappings cache system using the new modules system. it also now regenerates just for the tag services with missing tables, not the whole cache
+* if multiple types of mapping cache tables are missing on boot, and multiple waves of regenerations covering different areas are planned, duplicate regenerations will now be skipped
+
 ## [Version 485](https://github.com/hydrusnetwork/hydrus/releases/tag/v485)
 
 ### multiple local file services
@@ -318,42 +358,3 @@
 * added a 'BUGFIX' checkbox to 'gui pages' options page that forces a 'hide page' signal to the current page when creating a new page. we'll see if this patches a weird error or if more work is needed
 * added some protections against viewing files when the image/video file has (incorrectly) 0 width or height
 * added support for viewing non-image/video files in the duplicate filter. there are advanced ways to get unusual files in here, and until now a pdf or something would throw an error about having 0 width
-
-## [Version 475](https://github.com/hydrusnetwork/hydrus/releases/tag/v475)
-
-### new help docs
-* the hydrus help is now built from markup using MkDocs! it now looks nicer and has search and automatically generated tables of contents and so on. please check it out. a user converted _all_ my old handwritten html to markup and figured out a migration process. thank you very much to this user.
-* the help has pretty much the same structure, but online it has moved up a directory from https://hydrusnetwork.github.io/hydrus/help to https://hydrusnetwork.github.io/hydrus. all the old links should redirect in any case, so it isn't a big deal, but I have updated the various places in the program and my social media that have direct links. let me know if you have any trouble
-* if you run from source and want a local copy of the help, you can build your own as here: https://hydrusnetwork.github.io/hydrus/about_docs.html . it is super simple, it just takes one extra step. Or just download and extract one of the archive builds
-* if you run from source, hit _help->open help_, and don't have help built, the client now gives you a dialog to open the online help or see the guide to build your help
-* the help got another round of updates in the second week, some fixed URLs and things and the start of the integration of the 'simple help' written by a user
-* I added a screenshot and a bit more text to the 'backing up' help to show how to set up FreeFileSync for a good simple backup
-* I added a list of some quick links back in to the main index page of the help
-* I wrote an unlinked 'after_distaster' page for the help that collects my 'ok we finished recovering your broken database, now use your pain to maintain a backup in future' spiel, which I will point people to in future
-
-### misc
-* fixed a bug where changes to the search space in a duplicate filter page were not sticking after the first time they were changed. this was related to a recent 'does page have changes?' optimisation--it was giving a false negative for this page type (issue #1079)
-* fixed a bug when searching for both 'media' and 'preview' view count/viewtime simultaneously (issue #1089, issue #1090)
-* added support for audio-only mp4 files. these would previously generally fail, sometimes be read as m4a. all m4as are scheduled for a metadata regen scan
-* improved some mpeg-4 container parsing to better differentiate these types
-* now we have great apng detection, all pngs with apparent 'bitrate' over 0.85 bits/pixel will be scheduled for an 'is this actually an apng?' scan. this 0.85 isn't a perfect number and won't find extremely well-compressed pixel apngs, but it covers a good amount without causing a metadata regen for every png we own
-* system:hash now supports 'is' and 'is not', if you want to, say, exclude a list of hashes from a search
-* fixed some 'is not' parsing in the system predicate parser
-* when you drag and drop a thumbnail to export it from the program, the preview media viewer now pauses that file (just as the full media viewer does) rather than clears it
-* when you change the page away while previewing media with duration, the client now remembers if you were paused or playing and restores that state when you return to that page
-* folded in a new and improved Deviant Art page parser written by a user. it should be better about getting the highest quality image in unusual situations
-* running a search with a large file pool and multiple negated tags, negated namespaces, and/or negated wildcards should be significantly faster. an optimisation that was previously repeated for each negated tag search is now performed for all of them as a group with a little inter-job overhead added. should make '(big) system:inbox -character x, -character y, -character z' like lightning compared to before
-* added a 'unless namespace is a number' to 'tag presentation' options, which will show the full tag for tags like '16:9' when you have 'show namespaces' unticked
-* altered a path normalisation check when you add a file or thumbnail location in 'migrate database'--if it fails to normalise symlinks, it now just gives a warning and lets you continue. fingers crossed, this permits rclone mounts for file storage (issue #1084)
-* when a 'check for missing/invalid file' maintenance job runs, it now prints all the hashes of missing or invalid files to a nice simple newline-separated list .txt in the error directory. this is an easy to work with hash record, useful for later recovery
-* fixed numerous instances where logs and texts I was writing could create too many newline characters on Windows. it was confusing some reader software and showing as double-spaced taglists and similar for exported sidecar files and profile logs
-* I think I fixed a bug, when crawling for file paths, where on Windows some network file paths were being detected incorrectly as directories and causing parse errors
-* fixed a broken command in the release build so the windows installer executable should correctly get 'v475' as its version metadata (previously this was blank), which should help some software managers that use this info to decide to do updates (issue #1071)
-
-### some cleanup
-* replaced last instances of EVT_CLOSE wx wrapper with proper Qt code
-* did a heap of very minor code cleanup jobs all across the program, mostly just to get into pycharm
-* clarified the help text in _options->external programs_ regarding %path% variable
-
-### pycharm
-* as a side note, I finally moved from my jank old WingIDE IDE to PyCharm in this release. I am overall happy with it--it is clearly very powerful and customisable--but adjusting after about ten or twelve years of Wing was a bit awkward. I am very much a person of habit, and it will take me a little while to get fully used to the new shortcuts and UI and so on, but PyCharm does everything that is critical for me, supports many modern coding concepts, and will work well as we move to python 3.9 and beyond

@@ -861,6 +861,15 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return count
         
     
+    def GetDeletedHashIdsList( self, service_id ):
+        
+        deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
+        
+        hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( deleted_files_table_name ) ) )
+        
+        return hash_ids
+        
+    
     def GetDeletionStatus( self, service_id, hash_id ):
         
         # can have a value here and just be in trash, so we fetch it whatever the end result

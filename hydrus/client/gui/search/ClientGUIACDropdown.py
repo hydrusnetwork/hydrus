@@ -688,8 +688,8 @@ class CloseACDropdownCatcher( QC.QObject ):
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
-    selectUp = QC.Signal()
-    selectDown = QC.Signal()
+    movePageLeft = QC.Signal()
+    movePageRight = QC.Signal()
     showNext = QC.Signal()
     showPrevious = QC.Signal()
     
@@ -1153,11 +1153,11 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                     if event.angleDelta().y() > 0:
                         
-                        self.selectUp.emit()
+                        self.movePageLeft.emit()
                         
                     else:
                         
-                        self.selectDown.emit()
+                        self.movePageRight.emit()
                         
                     
                     event.accept()
@@ -1317,11 +1317,11 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                 elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT:
                     
-                    self.selectUp.emit()
+                    self.movePageLeft.emit()
                     
                 elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT:
                     
-                    self.selectDown.emit()
+                    self.movePageRight.emit()
                     
                 elif everything_is_empty and action == CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS:
                     
@@ -2496,12 +2496,13 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, null_entry_callable = None, tag_service_key_changed_callable = None, show_paste_button = False ):
+    nullEntered = QC.Signal()
+    
+    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, tag_service_key_changed_callable = None, show_paste_button = False ):
         
         self._display_tag_service_key = tag_service_key
         
         self._chosen_tag_callable = chosen_tag_callable
-        self._null_entry_callable = null_entry_callable
         self._tag_service_key_changed_callable = tag_service_key_changed_callable
         
         service = HG.client_controller.services_manager.GetService( tag_service_key )
@@ -2687,10 +2688,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if parsed_autocomplete_text.IsEmpty() and self._dropdown_notebook.currentWidget() == self._search_results_list:
             
-            if self._null_entry_callable is not None:
-                
-                self._null_entry_callable()
-                
+            self.nullEntered.emit()
             
         else:
             

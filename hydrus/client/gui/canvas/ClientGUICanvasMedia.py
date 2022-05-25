@@ -1237,7 +1237,10 @@ class MediaContainer( QW.QWidget ):
             
             controls_bar_rect = self.GetIdealControlsBarRect( full_size = self._controls_bar_show_full )
             
-            self._controls_bar.setFixedSize( controls_bar_rect.size() )
+            if controls_bar_rect.size() != self._controls_bar.size():
+                
+                self._controls_bar.setFixedSize( controls_bar_rect.size() )
+                
             self._controls_bar.move( controls_bar_rect.topLeft() )
             
         
@@ -1514,7 +1517,7 @@ class MediaContainer( QW.QWidget ):
             return False
             
         
-        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio() and self._controls_bar_show_full
+        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio()
         
     
     def StopForSlideshow( self, value ):
@@ -1553,6 +1556,8 @@ class MediaContainer( QW.QWidget ):
                 self._controls_bar_show_full = should_show_full
                 
                 self._animation_bar.SetShowText( self._controls_bar_show_full )
+                
+                self._volume_control.setEnabled( self._controls_bar_show_full )
                 
                 self._SizeAndPositionChildren()
                 

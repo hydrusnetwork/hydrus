@@ -187,7 +187,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.setMinimumWidth( asc_width )
         
         self._UpdateSortTypeLabel()
-        self._UpdateAscLabels()
+        self._UpdateAscDescLabelsAndDefault()
         
         #
         
@@ -286,7 +286,7 @@ class MediaSortControl( QW.QWidget ):
                 
                 label = CC.sort_type_basic_string_lookup[ system_sort_type ]
                 
-                menu_item = ClientGUIMenus.AppendMenuItem( menu_to_add_to, label, 'Select this sort type.', self._SetSortType, sort_type )
+                menu_item = ClientGUIMenus.AppendMenuItem( menu_to_add_to, label, 'Select this sort type.', self._SetSortTypeFromUser, sort_type )
                 
                 menu_items_and_sort_types.append( ( menu_item, sort_type ) )
                 
@@ -313,7 +313,7 @@ class MediaSortControl( QW.QWidget ):
                 
                 label = example_sort.GetSortTypeString()
                 
-                menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortTypeFromUser, sort_type )
                 
                 menu_items_and_sort_types.append( ( menu_item, sort_type ) )
                 
@@ -321,7 +321,7 @@ class MediaSortControl( QW.QWidget ):
         
         if menu is not None:
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'custom', 'Set a custom namespace sort', self._SetCustomNamespaceSort )
+            ClientGUIMenus.AppendMenuItem( submenu, 'custom', 'Set a custom namespace sort', self._SetCustomNamespaceSortFromUser )
             
         
         rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
@@ -347,7 +347,7 @@ class MediaSortControl( QW.QWidget ):
                     
                     label = example_sort.GetSortTypeString()
                     
-                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortType, sort_type )
+                    menu_item = ClientGUIMenus.AppendMenuItem( submenu, label, 'Select this sort type.', self._SetSortTypeFromUser, sort_type )
                     
                     menu_items_and_sort_types.append( ( menu_item, sort_type ) )
                     
@@ -369,7 +369,7 @@ class MediaSortControl( QW.QWidget ):
         return sort_types
         
     
-    def _SetCustomNamespaceSort( self ):
+    def _SetCustomNamespaceSortFromUser( self ):
         
         if self._sort_type[0] == 'namespaces':
             
@@ -386,31 +386,11 @@ class MediaSortControl( QW.QWidget ):
             
             sort_type = ( 'namespaces', sort_data )
             
-            self._SetSortType( sort_type )
+            self._SetSortTypeFromUser( sort_type )
             
         except HydrusExceptions.VetoException:
             
             return
-            
-        
-    
-    def EventTagDisplayTypeChoice( self ):
-        
-        tag_display_type = self._sort_tag_display_type_button.GetValue()
-        
-        ( sort_metatype, sort_data ) = self._sort_type
-        
-        if sort_metatype == 'namespaces':
-            
-            ( namespaces, current_tag_display_type ) = sort_data
-            
-            sort_data = ( namespaces, tag_display_type )
-            
-            self._sort_type = ( sort_metatype, sort_data )
-            
-            self._UserChoseASort()
-            
-            self._BroadcastSort()
             
         
     
@@ -428,14 +408,19 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type = sort_type
         
         self._UpdateSortTypeLabel()
-        self._UpdateAscLabels( set_default_asc = True )
+        self._UpdateAscDescLabelsAndDefault()
+        
+    
+    def _SetSortTypeFromUser( self, sort_type ):
+        
+        self._SetSortType( sort_type )
         
         self._UserChoseASort()
         
         self._BroadcastSort()
         
     
-    def _UpdateAscLabels( self, set_default_asc = False ):
+    def _UpdateAscDescLabelsAndDefault( self ):
         
         media_sort = self._GetCurrentSort()
         
@@ -450,18 +435,14 @@ class MediaSortControl( QW.QWidget ):
                 ( desc_str, CC.SORT_DESC )
             ]
             
-            self._sort_order_choice.SetChoiceTuples( choice_tuples )
-            
-            if set_default_asc:
+            if choice_tuples != self._sort_order_choice.GetChoiceTuples():
                 
-                sort_order_to_set = default_sort_order
+                self._sort_order_choice.SetChoiceTuples( choice_tuples )
                 
-            else:
-                
-                sort_order_to_set = media_sort.sort_order
+                self._sort_order_choice.SetValue( default_sort_order )
                 
             
-            self._sort_order_choice.SetValue( sort_order_to_set )
+            # if there are no changes to asc/desc texts, then we'll keep the previous value
             
         else:
             
@@ -548,6 +529,26 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
+    def EventTagDisplayTypeChoice( self ):
+        
+        tag_display_type = self._sort_tag_display_type_button.GetValue()
+        
+        ( sort_metatype, sort_data ) = self._sort_type
+        
+        if sort_metatype == 'namespaces':
+            
+            ( namespaces, current_tag_display_type ) = sort_data
+            
+            sort_data = ( namespaces, tag_display_type )
+            
+            self._sort_type = ( sort_metatype, sort_data )
+            
+            self._UserChoseASort()
+            
+            self._BroadcastSort()
+            
+        
+    
     def GetSort( self ) -> ClientMedia.MediaSort:
         
         return self._GetCurrentSort()
@@ -574,7 +575,7 @@ class MediaSortControl( QW.QWidget ):
             
             new_sort_type = sort_types[ new_index ]
             
-            self._SetSortType( new_sort_type )
+            self._SetSortTypeFromUser( new_sort_type )
             
         
         event.accept()
@@ -582,10 +583,7 @@ class MediaSortControl( QW.QWidget ):
     
     def SetSort( self, media_sort: ClientMedia.MediaSort ):
         
-        self._sort_type = media_sort.sort_type
-        
-        self._UpdateSortTypeLabel()
-        self._UpdateAscLabels()
+        self._SetSortType( media_sort.sort_type )
         
         # put this after 'asclabels', since we may transition from one-state to two-state
         self._sort_order_choice.SetValue( media_sort.sort_order )

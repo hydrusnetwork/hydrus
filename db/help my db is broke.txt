@@ -216,6 +216,17 @@ If you are absolutely certain you restored your database files to the point wher
 If you are in this situation, I am happy to help you figure things out, but you know your system's hardware better than I do. As far as I know, I cannot create a 'malformed' error with my database access routines even if wanted to--it can only come from an external fault.
 
 
+*** a note on Write Caching and 'Delayed Write Failed' ***
+
+Some users encountered 'malformed' problems alongside Windows OS errors about 'Delayed Write Failed' on the hydrus directory, usually after sleeping and then waking the computer.
+
+This seems to be something to do with Write Caching failing for certain very large WAL journal files. I believe I have the underlying cause of large WAL files fixed, but if you nonetheless get this specific error, the two things to try seem to be:
+
+1) Disable Write Caching on the drive. This sucks, since write caching is normally really useful, but it seems to help/fix it completely, so it may be ok for a hydrus-exclusive drive.
+
+2) Launch the program with "--db_journal_mode TRUNCATE" argument, turning off WAL journaling. Check the 'launch arguments' article in the help for more info.
+
+
 *** lastly, if you did not have any backup before this ***
 
 I say this to everyone who goes through this: losing data sucks, I know. I lost a drive when I was younger and tens of thousands of cool files with it. It feels shit, but there is an excellent lesson to learn: almost all the pain would have been avoided if you had a backup. This pain will be your drive to correct the situation.

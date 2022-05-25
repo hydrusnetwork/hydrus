@@ -1263,6 +1263,8 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = self._new_options.GetMediaZoomOptions( self._current_media.GetMime() )
             
+            possible_zooms = self._new_options.GetMediaZooms()
+            
             if exact_zooms_only:
                 
                 exact_zoom = 1.0
@@ -1282,11 +1284,16 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                         
                     
                 
-                possible_zooms = [ exact_zoom ]
-                
-            else:
-                
                 possible_zooms = self._new_options.GetMediaZooms()
+                
+                max_zoom = max( possible_zooms )
+                
+                if exact_zoom > max_zoom:
+                    
+                    return
+                    
+                
+                possible_zooms = [ exact_zoom ]
                 
             
             possible_zooms.append( self._canvas_zoom )
@@ -1298,6 +1305,37 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 new_zoom = min( bigger_zooms )
                 
                 self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
+                
+            
+        
+    
+    def _ZoomMax( self ):
+        
+        if self._current_media is not None and self._IsZoomable():
+            
+            possible_zooms = self._new_options.GetMediaZooms()
+            
+            max_zoom = max( possible_zooms )
+            
+            ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = self._new_options.GetMediaZoomOptions( self._current_media.GetMime() )
+            
+            if exact_zooms_only:
+                
+                exact_zoom = 1.0
+                
+                while exact_zoom * 2 <= max_zoom:
+                    
+                    exact_zoom *= 2
+                    
+                
+                max_zoom = exact_zoom
+                
+            
+            new_zoom = max_zoom
+            
+            if self._current_zoom != new_zoom:
+                
+                self._TryToChangeZoom( new_zoom )
                 
             
         
@@ -1368,6 +1406,46 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
             
             if new_zoom <= self._canvas_zoom:
+                
+                self._ResetMediaWindowCenterPosition()
+                
+            
+        
+    
+    def _ZoomSwitchMax( self, switch_base: float ):
+        
+        if self._current_media is not None and self._IsZoomable():
+            
+            if self._current_zoom == switch_base:
+                
+                possible_zooms = self._new_options.GetMediaZooms()
+                
+                max_zoom = max( possible_zooms )
+                
+                ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = self._new_options.GetMediaZoomOptions( self._current_media.GetMime() )
+                
+                if exact_zooms_only:
+                    
+                    exact_zoom = 1.0
+                    
+                    while exact_zoom * 2 <= max_zoom:
+                        
+                        exact_zoom *= 2
+                        
+                    
+                    max_zoom = exact_zoom
+                    
+                
+                new_zoom = max_zoom
+                
+            else:
+                
+                new_zoom = switch_base
+                
+            
+            self._TryToChangeZoom( new_zoom )
+            
+            if new_zoom == switch_base:
                 
                 self._ResetMediaWindowCenterPosition()
                 
@@ -1653,6 +1731,18 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM:
                 
                 self._ZoomSwitch()
+                
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_MAX_ZOOM:
+                
+                self._ZoomSwitchMax( 1.0 )
+                
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_CANVAS_AND_MAX_ZOOM:
+                
+                self._ZoomSwitchMax( self._canvas_zoom )
+                
+            elif action == CAC.SIMPLE_ZOOM_MAX:
+                
+                self._ZoomMax()
                 
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
                 

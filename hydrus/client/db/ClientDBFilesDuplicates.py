@@ -336,6 +336,33 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return allowed_hash_ids.difference( all_non_king_hash_ids )
         
     
+    def DuplicatesFilterMediaIdPairs( self, db_location_context: ClientDBFilesStorage.DBLocationContext, media_id_pairs ):
+        
+        if len( media_id_pairs ) == 0:
+            
+            return []
+            
+        
+        # this is pretty wonked out due to me not wanting to force db_location_context to make a single table
+        
+        all_media_ids = { i for i in itertools.chain.from_iterable( media_id_pairs ) }
+        
+        with self._MakeTemporaryIntegerTable( all_media_ids, 'media_id' ) as temp_media_ids_table_name:
+            
+            hash_ids_to_media_ids = dict( self._Execute( 'SELECT hash_id, media_id FROM {} CROSS JOIN {} USING ( media_id );'.format( temp_media_ids_table_name, 'duplicate_file_members' ) ) )
+            
+        
+        all_hash_ids = set( hash_ids_to_media_ids.keys() )
+        
+        good_hash_ids = self.modules_files_storage.FilterHashIds( db_location_context.location_context, all_hash_ids )
+        
+        good_media_ids = { hash_ids_to_media_ids[ hash_id ] for hash_id in good_hash_ids }
+        
+        good_media_id_pairs = [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id ) in media_id_pairs if smaller_media_id in good_media_ids and larger_media_id in good_media_ids ]
+        
+        return good_media_id_pairs
+        
+    
     def DuplicatesGetAlternatesGroupId( self, media_id, do_not_create = False ):
         
         result = self._Execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()
@@ -413,6 +440,15 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if db_location_context is not None:
             
+            if not db_location_context.SingleTableIsFast():
+                
+                hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE media_id = ?;'.format( table_join ), ( media_id, ) ) )
+                
+                hash_ids = self.modules_files_storage.FilterHashIds( db_location_context.location_context, hash_ids )
+                
+                return hash_ids
+                
+            
             table_join = db_location_context.GetTableJoinLimitedByFileDomain( table_join )
             
         
@@ -469,13 +505,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
             
-            table_join = self.DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
+            all_potential_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id, ) ).fetchall()
             
-            ( num_potentials, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} WHERE smaller_media_id = ? OR larger_media_id = ? );'.format( table_join ), ( media_id, media_id, ) ).fetchone()
+            potential_pairs = self.DuplicatesFilterMediaIdPairs( db_location_context, all_potential_pairs )
             
-            if num_potentials > 0:
+            if len( potential_pairs ) > 0:
                 
-                counter[ HC.DUPLICATE_POTENTIAL ] = num_potentials
+                counter[ HC.DUPLICATE_POTENTIAL ] = len( potential_pairs )
                 
             
             king_hash_id = self.DuplicatesGetKingHashId( media_id )

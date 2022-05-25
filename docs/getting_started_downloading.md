@@ -93,10 +93,10 @@ _Note that some sites only serve 25 or 50 pages of results, despite their indice
 
 **In general, particularly when starting out, artist searches are best.** They are usually fewer than a thousand files and have fairly uniform quality throughout.
 
-## Subscriptions
-Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. When you are comfortable with downloaders and have an idea of what you like, come back and read the subscription help, which is [here](getting_started_subscriptions.md).
+## Subscriptions { id="subscriptions" }
+Let's say you found an artist you like. You downloaded everything of theirs from some site, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
 
-Subscriptions are a way of telling the client to regularly and quietly repeat a gallery search. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.
+Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.
 
 Subscriptions only work for booru-like galleries that put the newest files first, and they only keep up with new content--once they have done their first sync, which usually gets the most recent hundred files or so, they will never reach further into the past. Getting older files, as you will see later, is a job best done with a normal download page.
 
@@ -126,6 +126,8 @@ Despite all the controls, the basic idea is simple: Up top, I have selected the 
 
 !!! warning
     Subscriptions syncs are somewhat fragile. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--if you want everything for a query, run it in the manual downloader and get everything, then set up a normal sub for new stuff. There is no benefit to having a 'large' subscription, and it will trim itself down in time anyway.
+
+You might want to put subscriptions off until you are more comfortable with galleries. There is more help [here](getting_started_subscriptions.md).
 
 ## Watchers
 If you are an imageboard user, try going to a thread you like and drag-and-drop its URL (straight from your web browser's address bar) onto the hydrus client. It should open up a new 'watcher' page and import the thread's files!

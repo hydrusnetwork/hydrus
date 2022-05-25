@@ -826,7 +826,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
         if location_context is None:
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
         
         if tag_search_context is None:

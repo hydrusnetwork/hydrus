@@ -998,7 +998,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Default local file search location: ', self._default_local_location_context ) )
-            rows.append( ( 'When copying a file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
+            rows.append( ( 'When copying file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
@@ -2052,15 +2052,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             vbox = QP.VBoxLayout()
-            
-            text = 'Please be warned that hydrus does not currently zoom in very efficiently at high zooms!'
-            text += os.linesep
-            text += 'Just be careful at >400%, particularly for already large files--it can lag out and eat a chunk of memory.'
-            
-            st = ClientGUICommon.BetterStaticText( self, text )
-            st.setObjectName( 'HydrusWarning' )
-            
-            QP.AddToLayout( vbox, st )
             
             rows = []
             

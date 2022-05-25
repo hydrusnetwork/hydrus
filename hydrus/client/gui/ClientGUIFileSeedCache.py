@@ -194,7 +194,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
     
     if len( hashes ) > 0:
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
@@ -659,7 +659,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( hashes ) > 0:
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
             HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             

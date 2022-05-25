@@ -283,6 +283,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                 entries.append( ( 'page_query', service_key ) )
                 
             
+            if len( entries ) > 1:
+                
+                entries.append( ( 'page_query', CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+                
+            
             entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
@@ -3347,7 +3352,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if page is None:
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
             page = self.NewPageQuery( location_context, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
             

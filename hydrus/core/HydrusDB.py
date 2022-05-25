@@ -527,7 +527,12 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             if HG.db_journal_mode in ( 'PERSIST', 'WAL' ):
                 
-                self._Execute( 'PRAGMA {}.journal_size_limit = {};'.format( db_name, 1024 ** 3 ) ) # 1GB for now
+                # We tried 1GB here, but I have reports of larger ones that don't seem to truncate ever?
+                # Not sure what that is about, but I guess the db sometimes doesn't want to (expensively?) recover pages from the journal and just appends more data
+                # In any case, this pragma is not a 'don't allow it to grow larger than', it's a 'after commit, truncate back to this', so no need to make it so large
+                # default is -1, which means no limit
+                
+                self._Execute( 'PRAGMA {}.journal_size_limit = {};'.format( db_name, HydrusDBBase.JOURNAL_SIZE_LIMIT ) )
                 
             
             self._Execute( 'PRAGMA {}.synchronous = {};'.format( db_name, HG.db_synchronous ) )

@@ -16,7 +16,7 @@ You can also add --help to your program path, like this:
 - `server.exe --help`
 - `./server --help`
 
-Which gives you a full listing of all below arguments, however this will not work with the built client executables, which are bundled as a non-console programs and will not give you text results to any console they are launched from. As client.exe is the most commonly run version of the program, here is the list, with some more help about each command:
+Which gives you a full listing of all below arguments, however this will not work with the built client executables, which are bundled as a non-console programs and will not give you text output to any console they are launched from. As client.exe is the most commonly run version of the program, here is the list, with some more help about each command:
 
 ##**`-d DB_DIR, --db_dir DB_DIR`**
 

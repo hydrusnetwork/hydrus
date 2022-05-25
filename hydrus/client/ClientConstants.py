@@ -599,6 +599,7 @@ CLIENT_API_SERVICE_KEY = b'client api'
 
 TRASH_SERVICE_KEY = b'trash'
 
+COMBINED_LOCAL_MEDIA_SERVICE_KEY = b'all local media'
 COMBINED_LOCAL_FILE_SERVICE_KEY = b'all local files'
 
 COMBINED_FILE_SERVICE_KEY = b'all known files'

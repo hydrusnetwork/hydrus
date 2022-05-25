@@ -72,11 +72,11 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         
         # first let's do current files. we increment when added, decrement when we know removed
         
-        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
         
         current_timestamps = self._STL( self._Execute( 'SELECT timestamp FROM {};'.format( current_files_table_name ) ) )
         
-        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
         
         since_deleted = self._STL( self._Execute( 'SELECT original_timestamp FROM {} WHERE original_timestamp IS NOT NULL;'.format( deleted_files_table_name ) ) )
         
@@ -174,9 +174,10 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         
         ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
         total_current_files = len( current_timestamps )
-
-        total_update_files = self.modules_files_storage.GetCurrentFilesCount( self.modules_services.local_update_service_id, HC.CONTENT_STATUS_CURRENT )
-        total_trash_files = self.modules_files_storage.GetCurrentFilesCount( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        # I now exclude updates and trash my searching 'all my files'
+        total_update_files = 0 #self.modules_files_storage.GetCurrentFilesCount( self.modules_services.local_update_service_id, HC.CONTENT_STATUS_CURRENT )
+        total_trash_files = 0 #self.modules_files_storage.GetCurrentFilesCount( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
         
         total_archive_files = ( total_current_files - total_update_files - total_trash_files ) - total_inbox_files
         

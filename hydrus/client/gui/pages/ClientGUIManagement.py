@@ -110,7 +110,7 @@ def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_
     
     presentation_import_options = PresentationImportOptions.PresentationImportOptions()
     
-    presentation_import_options.SetPresentationLocation( PresentationImportOptions.PRESENTATION_LOCATION_IN_TRASH_TOO )
+    presentation_import_options.SetLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
     
     sets_of_options.append( presentation_import_options )
     
@@ -124,17 +124,13 @@ def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_
         ClientGUIMenus.AppendMenuItem( submenu, presentation_import_options.GetSummary(), description, callable, presentation_import_options = presentation_import_options )
         
     
-    importer_label_template = '{}s\'' if single_selected_presentation_import_options is None else '{}\'s'
-    
-    importer_label = importer_label_template.format( importer_name )
-    
-    ClientGUIMenus.AppendMenu( menu, submenu, 'show {} files'.format( importer_label ) )
+    ClientGUIMenus.AppendMenu( menu, submenu, 'show files' )
     
 def CreateManagementController( page_name, management_type, location_context = None ):
     
     if location_context is None:
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
     
     new_options = HG.client_controller.new_options
@@ -2048,7 +2044,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         media_results = []
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         self._SetLocationContext( location_context )
         
@@ -2525,7 +2521,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
             self._SetLocationContext( location_context )
             
@@ -2877,7 +2873,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._ClearExistingHighlight()
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         media_results = []
         
@@ -3385,7 +3381,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
             self._SetLocationContext( location_context )
             

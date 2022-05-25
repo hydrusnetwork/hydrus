@@ -84,7 +84,7 @@ try:
             
             self._current_files_series = QCh.QtCharts.QLineSeries()
             
-            self._current_files_series.setName( 'files in storage' )
+            self._current_files_series.setName( 'all my files' )
             
             self._max_num_files_current = 0
             

@@ -678,11 +678,17 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, involves_physical_delete, text ) ) )
                     
-                    deletee_file_service_key = 'straight_to_trash'
+                    deletee_file_service_key = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+                    
+                    h = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
+                    
+                    chunks_of_hashes = HydrusData.SplitListIntoChunks( h, 64 )
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                    
+                    list_of_service_keys_to_content_updates = [ { deletee_file_service_key : [ content_update ] } for content_update in content_updates ]
                     
                     text = 'Delete from all local services? (force send to trash)'
-                    
-                    list_of_service_keys_to_content_updates = all_local_jobs
                     
                     save_reason = True
                     
@@ -2391,16 +2397,11 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._presentation_inbox.setToolTip( tt )
         
-        self._presentation_location = ClientGUICommon.BetterChoice( self )
+        self._presentation_location = ClientGUILocation.LocationSearchContextButton( self, presentation_import_options.GetLocationContext() )
         
-        tt = 'This is mostly for technical purposes on hydev\'s end, but if you want you can show what is currently in the trash as well.'
+        tt = 'This is mostly for technical purposes on hydev\'s end, but if you want, you can filter the presented files based on a location context.'
         
         self._presentation_location.setToolTip( tt )
-        
-        for value in ( PresentationImportOptions.PRESENTATION_LOCATION_IN_LOCAL_FILES, PresentationImportOptions.PRESENTATION_LOCATION_IN_TRASH_TOO ):
-            
-            self._presentation_location.addItem( PresentationImportOptions.presentation_location_enum_str_lookup[ value ], value )
-            
         
         #
         
@@ -2409,7 +2410,6 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateInboxChoices()
         
         self._presentation_inbox.SetValue( presentation_import_options.GetPresentationInbox() )
-        self._presentation_location.SetValue( presentation_import_options.GetPresentationLocation() )
         
         #
         
@@ -2501,7 +2501,7 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         presentation_import_options.SetPresentationStatus( self._presentation_status.GetValue() )
         presentation_import_options.SetPresentationInbox( self._presentation_inbox.GetValue() )
-        presentation_import_options.SetPresentationLocation( self._presentation_location.GetValue() )
+        presentation_import_options.SetLocationContext( self._presentation_location.GetValue() )
         
         return presentation_import_options
         

@@ -1856,11 +1856,11 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
+        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
+        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
         
         #
         
@@ -1876,7 +1876,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        NUM_DEFAULT_SERVICES = 13
+        NUM_DEFAULT_SERVICES = 14
         
         services = self._read( 'services' )
         

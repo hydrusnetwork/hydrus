@@ -368,6 +368,7 @@ def GenerateNormieEris( service ):
         server_summary_texts[4]
     )
     
+
 hydrus_favicon = FileResource( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), defaultType = 'image/x-icon' )
 
 class HydrusDomain( object ):

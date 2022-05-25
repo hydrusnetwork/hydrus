@@ -2301,7 +2301,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them. Also, files in storage includes trash and any repository updates, so inbox and archive may not add up to 100% of it.'
+        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them.'
         
         st = ClientGUICommon.BetterStaticText( self, label = label )
         
@@ -2635,7 +2635,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_all_media_files.setEnabled( False )
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
         

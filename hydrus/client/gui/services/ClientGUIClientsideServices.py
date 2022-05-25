@@ -2169,7 +2169,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
         
-        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
             
             num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
             
@@ -3306,7 +3306,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             try:
                 
-                location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
                 
                 for ( multihash, num_files, total_size, note ) in shares:
                     
@@ -3589,7 +3589,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
     
     def _OpenSearch( self ):
         
-        location_context = ClientLocation.GetLocationContextForAllLocalMedia()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         for share_key in self._booru_shares.GetData( only_selected = True ):
             
@@ -4005,7 +4005,20 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         notebook_dict = {}
         
-        services = self._controller.services_manager.GetServices()
+        service_types = list( HC.ALL_SERVICES )
+        
+        # we want these in exactly this order, so a bit of shuffling
+        for service_type in HC.LOCAL_FILE_SERVICES_IN_NICE_ORDER:
+            
+            if service_type in service_types:
+                
+                service_types.remove( service_type )
+                
+            
+        
+        service_types = list( HC.LOCAL_FILE_SERVICES_IN_NICE_ORDER ) + service_types
+        
+        services = self._controller.services_manager.GetServices( service_types )
         
         for service in services:
             

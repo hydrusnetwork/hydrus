@@ -298,5 +298,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         # just a little thing to run after creating and populating tables that will scan any actual new stuff
         
-        self.GetTableNamesDueAnalysis()
+        # TODO: Actually lmao, this didn't do what I wanted and often caused megalag
+        pass
+        
+        # self.GetTableNamesDueAnalysis()
         

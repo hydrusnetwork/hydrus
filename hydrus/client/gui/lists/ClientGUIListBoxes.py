@@ -2116,7 +2116,7 @@ class ListBoxTags( ListBox ):
     
     def _GetCurrentLocationContext( self ):
         
-        return ClientLocation.GetLocationContextForAllLocalMedia()
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
     
     def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:

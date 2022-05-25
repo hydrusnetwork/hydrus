@@ -3343,13 +3343,6 @@ class ServicesManager( object ):
             
         
     
-    def GetLocalMediaLocationContextUmbrella( self ) -> ClientLocation.LocationContext:
-        
-        service_keys = [ service.GetServiceKey() for service in self.GetLocalMediaFileServices() ]
-        
-        return ClientLocation.LocationContext( current_service_keys = service_keys )
-        
-    
     def GetName( self, service_key: bytes ):
         
         with self._lock:

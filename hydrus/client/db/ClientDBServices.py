@@ -75,6 +75,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self.local_update_service_id = None
         self.trash_service_id = None
         self.combined_local_file_service_id = None
+        self.combined_local_media_service_id = None
         self.combined_file_service_id = None
         self.combined_deleted_file_service_id = None
         self.combined_tag_service_id = None
@@ -121,10 +122,11 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             try:
                 
                 self.combined_deleted_file_service_id = self.GetServiceId( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
+                self.combined_local_media_service_id = self.GetServiceId( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
                 
             except HydrusExceptions.DataMissing:
                 
-                # version 465 it might not be in yet
+                # version 465/486 it might not be in yet
                 
                 pass
                 
@@ -157,6 +159,10 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
             
             self.combined_local_file_service_id = service_id
+            
+        elif service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+            
+            self.combined_local_media_service_id = service_id
             
         elif service_key == CC.COMBINED_FILE_SERVICE_KEY:
             
@@ -284,6 +290,11 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     def GetServiceIdsToServiceKeys( self ) -> typing.Dict[ int, bytes ]:
         
         return { service_id : service_key for ( service_key, service_id ) in self._service_keys_to_service_ids.items() }
+        
+    
+    def GetServiceKey( self, service_id: int ) -> bytes:
+        
+        return self.GetService( service_id ).GetServiceKey()
         
     
     def GetServiceKeys( self ) -> typing.Set[ bytes ]:
