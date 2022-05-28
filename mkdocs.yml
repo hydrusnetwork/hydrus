@@ -21,7 +21,6 @@ nav:
       - PTR.md
       - petitionPractices.md
     - Next Steps:
-      - getting_started_exporting.md
       - adding_new_downloaders.md
       - getting_started_subscriptions.md
       - filtering duplicates: duplicates.md
