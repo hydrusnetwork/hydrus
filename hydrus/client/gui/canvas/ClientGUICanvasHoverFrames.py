@@ -1549,6 +1549,8 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
 class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
+    showPairInPage = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, right_notes_hover: CanvasHoverFrameRightNotes, canvas_key: bytes ):
         
         CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
@@ -1560,6 +1562,10 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._current_index_string = ''
         
         self._comparison_media = None
+        
+        self._show_in_a_page_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, self.showPairInPage.emit )
+        self._show_in_a_page_button.setToolTip( 'send pair to the duplicates media page, for later processing' )
+        self._show_in_a_page_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( 'send to trash' )
@@ -1665,6 +1671,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         top_button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( top_button_hbox, self._next_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( top_button_hbox, self._show_in_a_page_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_CENTER_PERPENDICULAR )

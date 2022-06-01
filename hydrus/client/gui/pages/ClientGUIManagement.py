@@ -1396,6 +1396,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
         
+        canvas_window.showPairInPage.connect( self._ShowPairInPage )
+        
         canvas_frame.SetCanvas( canvas_window )
         
     
@@ -1499,6 +1501,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._search_distance_spinctrl.setValue( value )
         
         self._UpdateMaintenanceStatus()
+        
+    
+    def _ShowPairInPage( self, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
+        
+        media_results = [ m.GetMediaResult() for m in media ]
+        
+        self._page.GetMediaPanel().AddMediaResults( self._page_key, media_results )
         
     
     def _ShowPotentialDupes( self, hashes ):
@@ -2249,23 +2258,18 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             if len( hashes ) > 0:
                 
-                media_results = HG.client_controller.Read( 'media_results', hashes )
+                media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
                 
             else:
                 
-                hashes = []
                 media_results = []
                 
-            
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
             location_context = self._highlighted_gallery_import.GetFileImportOptions().GetDestinationLocationContext()
             
             self._SetLocationContext( location_context )
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, sorted_media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, media_results )
             
             panel.SetEmptyPageStatusOverride( 'no files for this query and its publishing settings' )
             
@@ -3111,23 +3115,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             if len( hashes ) > 0:
                 
-                media_results = HG.client_controller.Read( 'media_results', hashes )
+                media_results = HG.client_controller.Read( 'media_results', hashes, sorted = True )
                 
             else:
                 
-                hashes = []
                 media_results = []
                 
-            
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
             
             location_context = self._highlighted_watcher.GetFileImportOptions().GetDestinationLocationContext()
             
             self._SetLocationContext( location_context )
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, sorted_media_results )
+            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, media_results )
             
             panel.SetEmptyPageStatusOverride( 'no files for this watcher and its publishing settings' )
             

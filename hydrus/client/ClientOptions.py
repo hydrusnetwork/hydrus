@@ -971,7 +971,25 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'default_local_location_context' ]
+            location_context = self._dictionary[ 'default_local_location_context' ]
+            
+            try:
+                
+                location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+                
+                if location_context.IsEmpty():
+                    
+                    from hydrus.client import ClientLocation
+                    
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    
+                
+            except:
+                
+                pass
+                
+            
+            return location_context
             
         
     

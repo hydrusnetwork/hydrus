@@ -574,6 +574,8 @@ class Page( QW.QSplitter ):
                 return
                 
             
+            old_panel.CleanBeforeDestroy()
+            
             old_panel.deleteLater()
             
         
@@ -609,6 +611,8 @@ class Page( QW.QSplitter ):
         self._management_panel.CleanBeforeDestroy()
         
         self._preview_canvas.CleanBeforeDestroy()
+        
+        self._media_panel.CleanBeforeDestroy()
         
         self._controller.ReleasePageKey( self._page_key )
         

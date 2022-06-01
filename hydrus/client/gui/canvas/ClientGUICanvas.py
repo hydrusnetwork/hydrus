@@ -491,7 +491,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
         
     
-    def _Delete( self, media = None, default_reason = None, file_service_key = None ):
+    def _Delete( self, media = None, default_reason = None, file_service_key = None, just_get_jobs = False ):
         
         if media is None:
             
@@ -538,9 +538,16 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
             
         
-        HG.client_controller.CallToThread( do_it, jobs )
-        
-        return True
+        if just_get_jobs:
+            
+            return jobs
+            
+        else:
+            
+            HG.client_controller.CallToThread( do_it, jobs )
+            
+            return True
+            
         
     
     def _DoEdgePan( self, pan_type ):
@@ -2880,6 +2887,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
     
+    showPairInPage = QC.Signal( list )
+    
     def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
         
         location_context = file_search_context.GetLocationContext()
@@ -2888,6 +2897,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._right_notes_hover, self._canvas_key )
         
+        hover.showPairInPage.connect( self._ShowPairInPage )
         hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._hovers.append( hover )
@@ -2933,9 +2943,29 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         pair_info = []
         
-        for ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+        for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
             
-            if duplicate_type is None or was_auto_skipped:
+            if duplicate_type is None:
+                
+                if len( list_of_service_keys_to_content_updates ) > 0:
+                    
+                    for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                        
+                        if blocking:
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        else:
+                            
+                            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                            
+                        
+                    
+                
+                continue
+                
+            
+            if was_auto_skipped:
                 
                 continue # it was a 'skip' decision
                 
@@ -2943,7 +2973,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
+            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
             
         
         if len( pair_info ) > 0:
@@ -2975,6 +3005,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
+        first_media = self._current_media
+        second_media = self._media_list.GetNext( self._current_media )
+        
         text = 'Delete just this file, or both?'
         
         yes_tuples = []
@@ -2990,13 +3023,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if value == 'current':
                     
-                    media = [ self._current_media ]
+                    media = [ first_media ]
                     
                     default_reason = 'Deleted manually in Duplicate Filter.'
                     
                 elif value == 'both':
                     
-                    media = [ self._current_media, self._media_list.GetNext( self._current_media ) ]
+                    media = [ first_media, second_media ]
                     
                     default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
                     
@@ -3011,14 +3044,25 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        deleted = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key )
+        jobs = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_jobs = True )
+        
+        deleted = isinstance( jobs, list ) and len( jobs ) > 0
         
         if deleted:
             
-            self._SkipPair()
+            for m in media:
+                
+                self._hashes_due_to_be_deleted_in_this_batch.update( m.GetHashes() )
+                
+            
+            was_auto_skipped = False
+            
+            self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, jobs, was_auto_skipped ) )
+            
+            self._ShowNextPair()
             
         
-        return True
+        return deleted
         
     
     def _DoCustomAction( self ):
@@ -3190,7 +3234,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None and not was_auto_skipped ] )
+        return len( [ 1 for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if len( list_of_service_keys_to_content_updates ) > 0 ] )
         
     
     def _GetNumRemainingDecisions( self ):
@@ -3201,7 +3245,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         number_of_decisions_after_the_current = last_decision_index - self._current_pair_index
         
-        return 1 + number_of_decisions_after_the_current
+        return max( 0, 1 + number_of_decisions_after_the_current )
         
     
     def _GoBack( self ):
@@ -3352,9 +3396,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             file_deletion_reason = None
             
         
-        service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, file_deletion_reason = file_deletion_reason )
+        list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, file_deletion_reason = file_deletion_reason ) ]
         
-        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) )
         
         self._ShowNextPair()
         
@@ -3363,7 +3407,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._current_pair_index > 0:
             
-            ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+            ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
             
             self._current_pair_index -= 1
             
@@ -3382,7 +3426,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return False
                     
                 
-                ( media_result_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
                 self._current_pair_index -= 1
                 
@@ -3469,75 +3513,81 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         #
         
-        num_committable = self._GetNumCommittableDecisions()
-        num_remaining = self._GetNumRemainingDecisions()
+        def pair_is_good( pair ):
+            
+            ( first_media_result, second_media_result ) = pair
+            
+            first_hash = first_media_result.GetHash()
+            second_hash = second_media_result.GetHash()
+            
+            if first_hash in self._hashes_processed_in_this_batch or second_hash in self._hashes_processed_in_this_batch:
+                
+                return False
+                
+            
+            if first_hash in self._hashes_due_to_be_deleted_in_this_batch or second_hash in self._hashes_due_to_be_deleted_in_this_batch:
+                
+                return False
+                
+            
+            first_media = ClientMedia.MediaSingleton( first_media_result )
+            second_media = ClientMedia.MediaSingleton( second_media_result )
+            
+            if not self._CanDisplayMedia( first_media ) or not self._CanDisplayMedia( second_media ):
+                
+                return False
+                
+            
+            return True
+            
         
-        if num_remaining == 0 and num_committable > 0:
+        while True:
             
-            label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
+            num_remaining = self._GetNumRemainingDecisions()
             
-            result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
-            
-            if result == QW.QDialog.Accepted:
+            if num_remaining == 0:
                 
-                self._CommitProcessed( blocking = True )
+                num_committable = self._GetNumCommittableDecisions()
                 
-            else:
-                
-                it_went_ok = self._RewindProcessing()
-                
-                if not it_went_ok:
+                if num_committable > 0:
                     
-                    return
+                    label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
                     
-                
-            
-        
-        num_remaining = self._GetNumRemainingDecisions()
-        
-        if num_remaining == 0:
-            
-            self._LoadNextBatchOfPairs()
-            
-        else:
-            
-            def pair_is_good( pair ):
-                
-                ( first_media_result, second_media_result ) = pair
-                
-                first_hash = first_media_result.GetHash()
-                second_hash = second_media_result.GetHash()
-                
-                if first_hash in self._hashes_processed_in_this_batch or second_hash in self._hashes_processed_in_this_batch:
+                    result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
                     
-                    return False
+                    if result == QW.QDialog.Accepted:
+                        
+                        self._CommitProcessed( blocking = True )
+                        
+                    else:
+                        
+                        it_went_ok = self._RewindProcessing()
+                        
+                        if it_went_ok:
+                            
+                            self._ShowCurrentPair()
+                            
+                        
+                        return
+                        
                     
-                
-                if first_hash in self._hashes_due_to_be_deleted_in_this_batch or second_hash in self._hashes_due_to_be_deleted_in_this_batch:
+                else:
                     
-                    return False
+                    # nothing to commit, so let's see if we have a big problem here or if user just skipped all
                     
-                
-                first_media = ClientMedia.MediaSingleton( first_media_result )
-                second_media = ClientMedia.MediaSingleton( second_media_result )
-                
-                if not self._CanDisplayMedia( first_media ) or not self._CanDisplayMedia( second_media ):
+                    we_saw_a_non_auto_skip = False
                     
-                    return False
+                    for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+                        
+                        if not was_auto_skipped:
+                            
+                            we_saw_a_non_auto_skip = True
+                            
+                            break
+                            
+                        
                     
-                
-                return True
-                
-            
-            while not pair_is_good( self._batch_of_pairs_to_process[ self._current_pair_index ] ):
-                
-                was_auto_skipped = True
-                
-                self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, {}, was_auto_skipped ) )
-                
-                if self._GetNumRemainingDecisions() == 1: # we are at the end of the queue, this decision we just appended is the last
-                    
-                    if self._GetNumCommittableDecisions() == 0:
+                    if not we_saw_a_non_auto_skip:
                         
                         HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                         
@@ -3547,21 +3597,40 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         return
                         
-                    else:
-                        
-                        self._ShowNextPair() # there are no useful decisions left in the queue, so let's reset
-                        
-                        return
-                        
-                    
-                else:
-                    
-                    self._current_pair_index += 1
                     
                 
+                self._LoadNextBatchOfPairs()
+                
+                return
+                
             
-            self._ShowCurrentPair()
+            current_pair = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
+            if pair_is_good( current_pair ):
+                
+                self._ShowCurrentPair()
+                
+                return
+                
+            else:
+                
+                was_auto_skipped = True
+                
+                self._processed_pairs.append( ( current_pair, None, None, None, [], was_auto_skipped ) )
+                
+                self._current_pair_index += 1
+                
+            
+        
+    
+    def _ShowPairInPage( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        self.showPairInPage.emit( [ self._current_media, self._media_list.GetNext( self._current_media ) ] )
         
     
     def _SkipPair( self ):
@@ -3573,7 +3642,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, {}, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, [], was_auto_skipped ) )
         
         self._ShowNextPair()
         
@@ -4047,26 +4116,22 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
-def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.LocationContext, kept_hashes: typing.Collection[ bytes ], deleted_hashes: typing.Collection[ bytes ] ):
+def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.LocationContext, kept: typing.Collection[ ClientMedia.MediaSingleton ], deleted: typing.Collection[ ClientMedia.MediaSingleton ] ):
+    
+    kept = list( kept )
+    deleted = list( deleted )
+    
+    kept_hashes = [ m.GetHash() for m in kept ]
+    deleted_hashes = [ m.GetHash() for m in deleted ]
     
     if HC.options[ 'remove_filtered_files' ]:
         
         all_hashes = set()
         
-        all_hashes.update( deleted_hashes )
         all_hashes.update( kept_hashes )
+        all_hashes.update( deleted_hashes )
         
         HG.client_controller.pub( 'remove_media', page_key, all_hashes )
-        
-    
-    if not isinstance( deleted_hashes, list ):
-        
-        deleted_hashes = list( deleted_hashes )
-        
-    
-    if not isinstance( kept_hashes, list ):
-        
-        kept_hashes = list( kept_hashes )
         
     
     location_context = location_context.Duplicate()
@@ -4080,16 +4145,18 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
     else:
         
         # if we are in a weird search domain, then just say 'delete from all local'
-        deletee_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        deletee_file_service_keys = [ CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ]
         
     
-    for block_of_deleted_hashes in HydrusData.SplitListIntoChunks( deleted_hashes, 64 ):
+    for block_of_deleted in HydrusData.SplitListIntoChunks( deleted, 64 ):
         
         service_keys_to_content_updates = {}
         
         reason = 'Deleted in Archive/Delete filter.'
         
         for deletee_file_service_key in deletee_file_service_keys:
+            
+            block_of_deleted_hashes = [ m.GetHash() for m in block_of_deleted if deletee_file_service_key in m.GetLocationsManager().GetCurrent() ]
             
             service_keys_to_content_updates[ deletee_file_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) ]
             
@@ -4099,6 +4166,8 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         # we do a second set of removes to deal with late processing and a quick F5ing user
         
         if HC.options[ 'remove_filtered_files' ]:
+            
+            block_of_deleted_hashes = [ m.GetHash() for m in block_of_deleted ]
             
             HG.client_controller.pub( 'remove_media', page_key, block_of_deleted_hashes )
             
@@ -4161,22 +4230,46 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def TryToDoPreClose( self ):
         
-        kept_hashes = [ media.GetHash() for media in self._kept ]
+        kept = list( self._kept )
         
         delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
         
         if delete_lock_for_archived_files:
             
-            deleted_hashes = [ media.GetHash() for media in self._deleted if not media.HasArchive() ]
+            deleted = [ media.GetHash() for media in self._deleted if not media.HasArchive() ]
             
         else:
             
-            deleted_hashes = [ media.GetHash() for media in self._deleted ]
+            deleted = list( self._deleted )
             
         
-        if len( kept_hashes ) > 0 or len( deleted_hashes ) > 0:
+        if len( kept ) > 0 or len( deleted ) > 0:
             
-            label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
+            label_components = []
+            
+            if len( kept ) > 0:
+                
+                label_components.append( 'keep {}'.format( HydrusData.ToHumanInt( len( kept ) ) ) )
+                
+            
+            if len( deleted ) > 0:
+                
+                if self._location_context.IncludesCurrent():
+                    
+                    location_context_label = self._location_context.ToString( HG.client_controller.services_manager.GetName )
+                    
+                else:
+                    
+                    location_context_label = 'all possible local file services'
+                    
+                
+                label_components.append( 'delete (from {}) {}'.format( location_context_label, HydrusData.ToHumanInt( len( self._deleted ) ) ) )
+                
+            
+            label = '{} files?'.format( ' and '.join( label_components ) )
+            
+            # TODO: ok so ideally we should total up the deleteds' actual file services and give users UI to select what they want to delete from
+            # so like '23 files in my files, 2 in favourites' and then a 'yes' button for all or just my files or favourites
             
             ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
             
@@ -4201,7 +4294,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 self._current_media = self._GetFirst() # so the pubsub on close is better
                 
-                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, self._location_context, kept_hashes, deleted_hashes )
+                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, self._location_context, kept, deleted )
                 
             
         

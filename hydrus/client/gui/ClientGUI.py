@@ -2988,9 +2988,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
         
-        message = 'Your database is stored across multiple locations, which disables my internal backup routine. To back up, please use a third-party program that will work better than anything I can write.'
+        message = 'Your database is stored across multiple locations. The in-client backup routine can only handle simple databases (in one location), so the menu commands to backup have been hidden. To back up, please use a third-party program that will work better than anything I can write.'
         message += os.linesep * 2
-        message += 'Please check the help for more info on how best to backup manually.'
+        message += 'Check the help for more info on how best to backup manually.'
         
         self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated.', HydrusData.ShowText, message )
         
@@ -3041,6 +3041,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files', 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings', 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
         
@@ -5307,6 +5308,31 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     def _RestoreSplitterPositions( self ):
         
         self._controller.pub( 'set_splitter_positions', HC.options[ 'hpos' ], HC.options[ 'vpos' ] )
+        
+    
+    def _ResyncTagMappingsCacheFiles( self ):
+        
+        message = 'This will scan your mappings cache for surplus or missing files and correct them. This is useful if you see ghost files or if searches miss files that have the tag.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It should be much faster than the full regen options though!'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            try:
+                
+                tag_service_key = GetTagServiceKeyForMaintenance( self )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.Write( 'resync_tag_mappings_cache_files', tag_service_key = tag_service_key )
+            
         
     
     def _STARTReviewAllAccounts( self, service_key ):

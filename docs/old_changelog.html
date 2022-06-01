@@ -33,6 +33,30 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_487"><a href="#version_487">version 487</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>updated the duplicate filter 'show next pair' logic again, mostly simplification and merging of decision making. it _should_ be even more resistant to weird problems at the end of batches, particularly if you have deleted files manually</li>
+					<li>a new button on the duplicate filter right hover window now appends the current pair to the parent duplicate media page (for if you want to do more processing to them later)</li>
+					<li>if you manually delete a file in the duplicate filter, if that file appears again in the current batch of pairs, those will be auto-skipped</li>
+					<li>if you manually delete a file in the duplicate filter, the actual delete is now deferred to when you commit the batch! it also undoes if you go back!</li>
+					<li>fixed a bug when editing the external program launch paths in the options</li>
+					<li>fixed an annoying delay-and-error-popup when clearing the separator field when editing a String Splitter. now the field just turns red and vetoes an OK with a nicer error text</li>
+					<li>also improved how string splitters report actual split errors</li>
+					<li>if you are in advanced mode, the _review services_ panels now have an 'id' button that lets you fetch the database service id</li>
+					<li>wrote a new database maintenance routine under _database->check and repair->resync tag mappings cache files_, which is a lightweight way of fixing ghost files or situations where files with a tag are neither counted nor appear in file results. this fixes these problems in a couple minutes, so for this it is much better than a full regen of the cache</li>
+					<li>.</li>
+					<li>cleanup and other boring stuff:</li>
+					<li>the archive/delete filter now says which file domain it will be deleting from</li>
+					<li>if an archive/delete filter is launched on a 'multiple locations' file domain, it is now careful to only make delete records for the deleted files for the file services each one is actually in</li>
+					<li>renamed the 'default local file search location' option to 'fallback' and updated its tooltip a bit. this was really a hacky thing I needed to fill some gaps while rewriting from 'my files' to multiple local file services. the whole thing needs more attention to become more useful. I also fixed an issue where it could become invalid 'nothing' if you deleted a file service it was referring to (issue #1155)</li>
+					<li>I think I fixed a rare 'did not find info for that file' style problem when highlighting some watchers/downloaders</li>
+					<li>I think I have silenced some unhelpful BeautifulSoup (html parser) warnings that were spamming to the log in some situations</li>
+					<li>updated last week's big update to work with TRUNCATE journalling mode. I will be doing this for other big updates going forwards, since multi-GB WAL transactions cause problems for some users</li>
+					<li>last week's update also gives a time estimate in its pre-popup, based on 60k files per minute</li>
+					<li>removed some old database cache data that wasn't cleared in a previous update</li>
+					<li>a variety of misc UI text fixes and cleanup</li>
+				</ul>
 				<li><h3 id="version_486"><a href="#version_486">version 486</a></h3></li>
 				<ul>
 					<li>**This week's release is for advanced users only! I make a big change, and I want to make sure the update is fast and there are no unusual problems before rolling it out to all users.**</li>

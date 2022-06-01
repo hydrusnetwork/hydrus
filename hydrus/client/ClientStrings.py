@@ -1014,13 +1014,20 @@ class StringSplitter( StringProcessingStep ):
             raise HydrusExceptions.StringSplitterException( 'Got a bytes value in a string splitter!' )
             
         
-        if self._max_splits is None:
+        try:
             
-            results = text.split( self._separator )
+            if self._max_splits is None:
+                
+                results = text.split( self._separator )
+                
+            else:
+                
+                results = text.split( self._separator, self._max_splits )
+                
             
-        else:
+        except Exception as e:
             
-            results = text.split( self._separator, self._max_splits )
+            raise HydrusExceptions.StringSplitterException( 'Problem when splitting text: {}'.format( e ) )
             
         
         return [ result for result in results if result != '' ]

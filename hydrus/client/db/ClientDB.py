@@ -2165,9 +2165,14 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DuplicatesSetDuplicatePairStatus( self, pair_info ):
         
-        for ( duplicate_type, hash_a, hash_b, service_keys_to_content_updates ) in pair_info:
+        for ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) in pair_info:
             
-            if len( service_keys_to_content_updates ) > 0:
+            if isinstance( list_of_service_keys_to_content_updates, dict ):
+                
+                list_of_service_keys_to_content_updates = [ list_of_service_keys_to_content_updates ]
+                
+            
+            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
                 
                 self._ProcessContentUpdates( service_keys_to_content_updates )
                 
@@ -7990,6 +7995,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_directories': result = self._GetServiceDirectoriesInfo( *args, **kwargs )
         elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
+        elif action == 'service_id': result = self.modules_services.GetServiceId( *args, **kwargs )
         elif action == 'services': result = self.modules_services.GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self.modules_similar_files.GetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
@@ -9469,6 +9475,116 @@ class DB( HydrusDB.HydrusDB ):
         finally:
             
             job_key.Finish()
+            
+        
+    
+    def _ResyncTagMappingsCacheFiles( self, tag_service_key = None ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetStatusTitle( 'resyncing tag mappings cache files' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self.modules_services.GetServiceId( tag_service_key ), )
+                
+            
+            problems_found = False
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+            
+            for file_service_id in file_service_ids:
+                
+                file_service_key = self.modules_services.GetServiceKey( file_service_id )
+                
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
+                
+                for tag_service_id in tag_service_ids:
+                    
+                    message = 'resyncing caches for {}_{}'.format( file_service_id, tag_service_id )
+                    
+                    job_key.SetVariable( 'popup_text_1', message )
+                    self._controller.frame_splash_status.SetSubtext( message )
+                    
+                    if job_key.IsCancelled():
+                        
+                        break
+                        
+                    
+                    ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    hash_ids_in_this_cache = self._STS( self._Execute( 'SELECT DISTINCT hash_id FROM {};'.format( cache_current_mappings_table_name ) ) )
+                    hash_ids_in_this_cache.update( self._STL( self._Execute( 'SELECT DISTINCT hash_id FROM {};'.format( cache_current_mappings_table_name ) ) ) )
+                    
+                    hash_ids_in_this_cache_and_in_file_service = self.modules_files_storage.FilterHashIds( location_context, hash_ids_in_this_cache )
+                    
+                    # for every file in cache, if it is not in current files, remove it
+                    
+                    hash_ids_in_this_cache_but_not_in_file_service = hash_ids_in_this_cache.difference( hash_ids_in_this_cache_and_in_file_service )
+                    
+                    if len( hash_ids_in_this_cache_but_not_in_file_service ) > 0:
+                        
+                        problems_found = True
+                        
+                        HydrusData.ShowText( '{} surplus files in {}_{}!'.format( HydrusData.ToHumanInt( len( hash_ids_in_this_cache_but_not_in_file_service ) ), file_service_id, tag_service_id ) )
+                        
+                        with self._MakeTemporaryIntegerTable( hash_ids_in_this_cache_but_not_in_file_service, 'hash_id' ) as temp_hash_id_table_name:
+                            
+                            self.modules_mappings_cache_specific_storage.DeleteFiles( file_service_id, tag_service_id, hash_ids_in_this_cache_but_not_in_file_service, temp_hash_id_table_name )
+                            
+                        
+                    
+                    # for every file in current files, if it is not in cache, add it
+                    
+                    hash_ids_in_file_service = set( self.modules_files_storage.GetCurrentHashIdsList( file_service_id ) )
+                    
+                    hash_ids_in_file_service_and_not_in_cache = hash_ids_in_file_service.difference( hash_ids_in_this_cache )
+                    
+                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+                    
+                    with self._MakeTemporaryIntegerTable( hash_ids_in_file_service_and_not_in_cache, 'hash_id' ) as temp_hash_id_table_name:
+                        
+                        hash_ids_in_file_service_and_not_in_cache_that_have_tags = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( temp_hash_id_table_name, current_mappings_table_name, current_mappings_table_name, temp_hash_id_table_name ) ) )
+                        hash_ids_in_file_service_and_not_in_cache_that_have_tags.update( self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id );'.format( temp_hash_id_table_name, current_mappings_table_name, current_mappings_table_name, temp_hash_id_table_name ) ) ) )
+                        
+                    
+                    if len( hash_ids_in_file_service_and_not_in_cache_that_have_tags ) > 0:
+                        
+                        problems_found = True
+                        
+                        HydrusData.ShowText( '{} missing files in {}_{}!'.format( HydrusData.ToHumanInt( len( hash_ids_in_file_service_and_not_in_cache_that_have_tags ) ), file_service_id, tag_service_id ) )
+                        
+                        with self._MakeTemporaryIntegerTable( hash_ids_in_file_service_and_not_in_cache_that_have_tags, 'hash_id' ) as temp_hash_id_table_name:
+                            
+                            self.modules_mappings_cache_specific_storage.AddFiles( file_service_id, tag_service_id, hash_ids_in_file_service_and_not_in_cache_that_have_tags, temp_hash_id_table_name )
+                            
+                        
+                    
+                
+            
+            if not problems_found:
+                
+                HydrusData.ShowText( 'All checks ok--no desynced mapping caches!' )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
             
         
     
@@ -11547,7 +11663,38 @@ class DB( HydrusDB.HydrusDB ):
             
             if result is None:
                 
-                message = 'Your database is going to calculate some new data so it can refer to multiple local services more efficiently. If you have a large client, this may take a few minutes.'
+                warning_ptr_text = 'After looking at your database, I think this will be quick, maybe a couple minutes at most.'
+                
+                nums_mappings = self._STL( self._Execute( 'SELECT info FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_MAPPINGS, ) ) )
+                
+                if len( nums_mappings ) > 0:
+                    
+                    we_ptr = max( nums_mappings ) > 1000000000
+                    
+                    if we_ptr:
+                        
+                        result = self._Execute( 'SELECT info FROM service_info WHERE info_type = ? AND service_id = ?;', ( HC.SERVICE_INFO_NUM_FILES, self.modules_services.combined_local_file_service_id ) ).fetchone()
+                        
+                        if result is not None:
+                            
+                            ( num_files, ) = result
+                            
+                            warning_ptr_text = 'For most users, this update works at about 25-100k files per minute, so with {} files I expect it to take ~{} minutes for you.'.format( HydrusData.ToHumanInt( num_files ), max( 1, int( num_files / 60000 ) ) )
+                            
+                        else:
+                            
+                            we_ptr = False
+                            
+                        
+                    
+                else:
+                    
+                    we_ptr = False
+                    
+                
+                message = 'Your database is going to calculate some new data so it can refer to multiple local services more efficiently. It could take a while.'
+                message += os.linesep * 2
+                message += warning_ptr_text
                 message += os.linesep * 2
                 message += 'If you do not have the time at the moment, please force kill the hydrus process now. Otherwise, continue!'
                 
@@ -11572,6 +11719,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.frame_splash_status.SetText( 'creating "all my files" virtual service' )
                 self._controller.frame_splash_status.SetSubtext( 'gathering current file records' )
+                
+                self._cursor_transaction_wrapper.Commit()
+                
+                self._Execute( 'PRAGMA journal_mode = TRUNCATE;' )
+                
+                self._cursor_transaction_wrapper.BeginImmediate()
                 
                 dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.COMBINED_LOCAL_MEDIA )
                 
@@ -11651,6 +11804,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
                 
+                num_to_do = len( all_media_hash_ids )
+                
                 for ( i, hash_id ) in enumerate( all_media_hash_ids ):
                     
                     # no need to fake the service info number updates--that will calculate from raw on next review services open
@@ -11681,7 +11836,38 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
+                self._cursor_transaction_wrapper.Commit()
+                
+                self._Execute( 'PRAGMA journal_mode = {};'.format( HG.db_journal_mode ) )
+                
+                self._cursor_transaction_wrapper.BeginImmediate()
+                
                 self._controller.frame_splash_status.SetSubtext( '' )
+                
+            
+        
+        if version == 486:
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                # some users still have a few of these floating around, they are not needed
+                
+                suffix = '{}_{}'.format( file_service_id, tag_service_id )
+                
+                cache_files_table_name = 'external_caches.specific_files_cache_{}'.format( suffix )
+                
+                result = self._Execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( cache_files_table_name.split( '.', 1 )[1], ) ).fetchone()
+                
+                if result is None:
+                    
+                    continue
+                    
+                
+                self._Execute( 'DROP TABLE {};'.format( cache_files_table_name ) )
                 
             
         
@@ -12222,6 +12408,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_repository_processing': self._ResetRepositoryProcessing( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PerceptualHashesResetSearchFromHashes( *args, **kwargs )
+        elif action == 'resync_tag_mappings_cache_files': self._ResyncTagMappingsCacheFiles( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable': self.modules_serialisable.SetJSONDump( *args, **kwargs )
         elif action == 'serialisable_atomic': self.modules_serialisable.SetJSONComplex( *args, **kwargs )

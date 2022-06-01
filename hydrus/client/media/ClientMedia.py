@@ -1044,6 +1044,9 @@ class MediaList( object ):
         self._singleton_media.difference_update( singleton_media )
         self._collected_media.difference_update( collected_media )
         
+        self._selected_media.difference_update( singleton_media )
+        self._selected_media.difference_update( collected_media )
+        
         self._sorted_media.remove_items( singleton_media.union( collected_media ) )
         
         self._RecalcAfterMediaRemove()
@@ -1076,6 +1079,17 @@ class MediaList( object ):
         self._sorted_media.append_items( addable_media )
         
         return new_media
+        
+    
+    def Clear( self ):
+        
+        self._singleton_media = set()
+        self._collected_media = set()
+        
+        self._selected_media = set()
+        self._sorted_media = []
+        
+        self._RecalcAfterMediaRemove()
         
     
     def Collect( self, media_collect = None ):
@@ -2500,7 +2514,7 @@ class MediaSingleton( Media ):
                 
                 timestamp = locations_manager.GetCurrentTimestamp( local_file_service.GetServiceKey() )
                 
-                lines.append( ( True, 'added to {} {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) ) )
+                lines.append( ( True, 'added to {}: {}'.format( local_file_service.GetName(), ClientData.TimestampToPrettyTimeDelta( timestamp ) ) ) )
                 
                 seen_local_file_service_timestamps.add( timestamp )
                 
@@ -2513,7 +2527,7 @@ class MediaSingleton( Media ):
             # if we haven't already printed this timestamp somewhere
             line_is_interesting = False not in ( timestamp_is_interesting( t, import_timestamp ) for t in seen_local_file_service_timestamps )
             
-            lines.append( ( line_is_interesting, 'imported {}'.format( ClientData.TimestampToPrettyTimeDelta( import_timestamp ) ) ) )
+            lines.append( ( line_is_interesting, 'imported: {}'.format( ClientData.TimestampToPrettyTimeDelta( import_timestamp ) ) ) )
             
             if line_is_interesting:
                 

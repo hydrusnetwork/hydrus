@@ -672,7 +672,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._duplicate_comparison_score_nicer_ratio.setToolTip( 'For instance, 16:9 vs 640:357.')
             
-            self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( self, min = 10, max = 1024 )
+            self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( self, min = 5, max = 1024 )
             
             #
             
@@ -864,9 +864,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             self._mime_launch_listctrl.DeleteDatas( [ ( mime, launch_path ) ] )
                             
-                            edited_data = [ ( mime, new_launch_path ) ]
+                            edited_data = ( mime, new_launch_path )
                             
-                            self._mime_launch_listctrl.AddDatas( edited_data )
+                            self._mime_launch_listctrl.AddDatas( [ edited_data ] )
                             
                             edited_datas.append( edited_data )
                             
@@ -914,7 +914,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             location_context = self._new_options.GetDefaultLocalLocationContext()
             
             self._default_local_location_context = ClientGUILocation.LocationSearchContextButton( self, location_context )
-            self._default_local_location_context.setToolTip( 'This initialised into a bunch of dialogs across the program. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' )
+            self._default_local_location_context.setToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' )
             
             self._default_local_location_context.SetOnlyImportableDomainsAllowed( True )
             
@@ -997,7 +997,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default local file search location: ', self._default_local_location_context ) )
+            rows.append( ( 'Fallback local file search location: ', self._default_local_location_context ) )
             rows.append( ( 'When copying file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )

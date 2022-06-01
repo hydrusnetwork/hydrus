@@ -6,6 +6,7 @@ import os
 import re
 import time
 import urllib.parse
+import warnings
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -363,7 +364,14 @@ def GetSoup( html ):
         raise HydrusExceptions.ParseException( message )
         
     
-    return bs4.BeautifulSoup( html, parser )
+    with warnings.catch_warnings():
+        
+        # bs4 goes bananas with MarkupResemblesLocatorWarning warnings to the log at times, basically when you throw something that looks like a file at it, which I presume sometimes means stuff like '/'
+        
+        warnings.simplefilter( 'ignore' )
+        
+        return bs4.BeautifulSoup( html, parser )
+        
     
 def GetTagsFromParseResults( results ):
     

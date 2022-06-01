@@ -1867,14 +1867,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             if duplicate_action_options is None:
                 
-                service_keys_to_content_updates = {}
+                list_of_service_keys_to_content_updates = []
                 
             else:
                 
-                service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason )
+                list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason ) ]
                 
             
-            pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
+            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
             
         
         if len( pair_info ) > 0:
@@ -2147,6 +2147,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             return result
             
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        self.Clear()
         
     
     def ClearPageKey( self ):
@@ -3219,9 +3224,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         MediaPanel._RemoveMediaDirectly( self, singleton_media, collected_media )
-        
-        self._selected_media.difference_update( singleton_media )
-        self._selected_media.difference_update( collected_media )
         
         self._EndShiftSelect()
         

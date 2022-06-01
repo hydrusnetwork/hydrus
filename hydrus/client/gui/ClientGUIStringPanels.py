@@ -1744,9 +1744,20 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateControls( self ):
         
-        string_splitter = self._GetValue()
-        
-        results = string_splitter.Split( self._example_string.text() )
+        if self._separator.text() == '':
+            
+            self._separator.setObjectName( 'HydrusInvalid' )
+            
+            results = []
+            
+        else:
+            
+            self._separator.setObjectName( '' )
+            
+            string_splitter = self._GetValue()
+            
+            results = string_splitter.Split( self._example_string.text() )
+            
         
         self._example_string_splits.clear()
         
@@ -1755,8 +1766,15 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._example_string_splits.addItem( result )
             
         
+        self._separator.style().polish( self._separator )
+        
     
     def GetValue( self ):
+        
+        if self._separator.text() == '':
+            
+            raise HydrusExceptions.VetoException( 'Sorry, you have to have a value in the separator field!' )
+            
         
         string_splitter = self._GetValue()
         
