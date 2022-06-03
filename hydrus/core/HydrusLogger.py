@@ -45,12 +45,12 @@ class HydrusLogger( object ):
         return False
         
     
-    def _CloseLog( self ):
+    def _CloseLog( self ) -> None:
         
         self._log_file.close()
         
     
-    def _GetLogPath( self ):
+    def _GetLogPath( self ) -> os.PathLike:
         
         current_time_struct = time.localtime()
         
@@ -63,7 +63,7 @@ class HydrusLogger( object ):
         return log_path
         
     
-    def _OpenLog( self ):
+    def _OpenLog( self ) -> None:
         
         self._log_path = self._GetLogPath()
         
@@ -77,7 +77,7 @@ class HydrusLogger( object ):
             
         
     
-    def _SwitchToANewLogFileIfDue( self ):
+    def _SwitchToANewLogFileIfDue( self ) -> None:
         
         correct_log_path = self._GetLogPath()
         
@@ -89,7 +89,7 @@ class HydrusLogger( object ):
             
         
     
-    def flush( self ):
+    def flush( self ) -> None:
         
         if self._log_closed:
             
@@ -116,12 +116,12 @@ class HydrusLogger( object ):
             
         
     
-    def isatty( self ):
+    def isatty( self ) -> bool:
         
         return False
         
     
-    def write( self, value ):
+    def write( self, value ) -> None:
         
         if self._log_closed:
             
