@@ -153,7 +153,7 @@ def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
     
     return pil_image.crop( box = ( x, y, x + clip_width, y + clip_height ) )
     
-def ConvertToPNGIfBMP( path ):
+def ConvertToPNGIfBMP( path ) -> None:
     
     with open( path, 'rb' ) as f:
         
@@ -897,7 +897,7 @@ def IsDecompressionBomb( path ) -> bool:
     
     return False
     
-def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ):
+def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.Image:
     
     try:
         
@@ -953,7 +953,7 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ):
     
     return pil_image
     
-def NormalisePILImageToRGB( pil_image: PILImage.Image ):
+def NormalisePILImageToRGB( pil_image: PILImage.Image ) -> PILImage.Image:
     
     if PILImageHasAlpha( pil_image ):
         
@@ -978,7 +978,7 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ):
     
     return pil_image
     
-def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ):
+def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
     
     shape = numpy_image.shape
     
@@ -1003,7 +1003,7 @@ def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ):
     
     return False
     
-def PILImageHasAlpha( pil_image: PILImage.Image ):
+def PILImageHasAlpha( pil_image: PILImage.Image ) -> bool:
     
     return pil_image.mode in ( 'LA', 'RGBA' ) or ( pil_image.mode == 'P' and 'transparency' in pil_image.info )
     
@@ -1040,7 +1040,7 @@ def ResizeNumPyImage( numpy_image: numpy.array, target_resolution ) -> numpy.arr
     
     return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
     
-def RotateEXIFPILImage( pil_image: PILImage.Image ):
+def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
     
     if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
         
