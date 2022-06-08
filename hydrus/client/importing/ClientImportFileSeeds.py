@@ -2264,7 +2264,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ], dupe_try_again = True ):
+    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ], dupe_try_again = False ):
         
         if len( file_seeds ) == 0:
             

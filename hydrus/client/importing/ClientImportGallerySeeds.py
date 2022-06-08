@@ -760,7 +760,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = True
         
     
-    def AddGallerySeeds( self, gallery_seeds, dupe_try_again = False ):
+    def AddGallerySeeds( self, gallery_seeds ):
         
         if len( gallery_seeds ) == 0:
             
