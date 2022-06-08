@@ -32,7 +32,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
-          cp static/build_files/linux/requirements.txt requirements.txt
+          cp static/build_files/macos/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release
