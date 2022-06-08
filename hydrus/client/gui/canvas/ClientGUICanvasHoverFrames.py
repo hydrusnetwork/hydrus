@@ -1585,6 +1585,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
         self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
+        self._cog_button.setFocusPolicy( QC.Qt.TabFocus )
         
         close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close_button.setToolTip( 'close filter' )

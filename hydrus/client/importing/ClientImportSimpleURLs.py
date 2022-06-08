@@ -1155,7 +1155,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             if len( file_seeds ) > 0:
                 
-                self._file_seed_cache.AddFileSeeds( file_seeds )
+                self._file_seed_cache.AddFileSeeds( file_seeds, dupe_try_again = True )
                 
                 ClientImporting.WakeRepeatingJob( self._files_repeating_job )
                 

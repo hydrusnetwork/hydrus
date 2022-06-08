@@ -696,28 +696,25 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         yes_tuples.append( ( 'run for 1 hour', 3600 ) )
         yes_tuples.append( ( 'run indefinitely', None ) )
         
-        with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                value = dlg.GetValue()
-                
-                if value is None:
-                    
-                    stop_time = None
-                    
-                else:
-                    
-                    stop_time = HydrusData.GetNow() + value
-                    
-                
-                job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
-                
-            else:
-                
-                return
-                
+            result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if result is None:
+            
+            stop_time = None
+            
+        else:
+            
+            stop_time = HydrusData.GetNow() + result
+            
+        
+        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
         
         HG.client_controller.pub( 'do_file_storage_rebalance', job_key )
         

@@ -562,6 +562,14 @@ def GetMime( path ):
             return HC.AUDIO_WMA
             
         
+    elif mime_text == 'wav':
+        
+        return HC.AUDIO_WAVE
+        
+    elif mime_text == 'wv':
+        
+        return HC.AUDIO_WAVPACK
+        
     
     return HC.APPLICATION_UNKNOWN
     

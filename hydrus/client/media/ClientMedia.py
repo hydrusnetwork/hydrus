@@ -1658,13 +1658,17 @@ class MediaList( object ):
                         trashed = service_key in local_file_domains
                         deleted_from_our_domain = self._location_context.IsOneDomain() and service_key in self._location_context.current_service_keys
                         
+                        we_are_looking_at_trash = self._location_context.IsOneDomain() and CC.TRASH_SERVICE_KEY in self._location_context.current_service_keys
                         our_view_is_all_local = self._location_context.IncludesCurrent() and not self._location_context.IncludesDeleted() and self._location_context.current_service_keys.issubset( all_local_file_services )
                         
+                        # case one, disappeared from hard drive and we are looking at local files
                         physically_deleted_and_local_view = physically_deleted and our_view_is_all_local
                         
-                        user_says_remove_and_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and trashed and our_view_is_all_local and CC.TRASH_SERVICE_KEY not in self._location_context.current_service_keys
-                        
+                        # case two, disappeared from repo hard drive while we are looking at it
                         deleted_from_repo_and_repo_view = service_key not in all_local_file_services and deleted_from_our_domain
+                        
+                        # case three, user asked for this to happen
+                        user_says_remove_and_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and trashed and not we_are_looking_at_trash
                         
                         if physically_deleted_and_local_view or user_says_remove_and_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view:
                             

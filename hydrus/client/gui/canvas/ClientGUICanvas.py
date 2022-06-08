@@ -3002,46 +3002,39 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._current_media is None:
             
-            return
+            return False
             
         
         first_media = self._current_media
         second_media = self._media_list.GetNext( self._current_media )
         
-        text = 'Delete just this file, or both?'
+        message = 'Delete just this file, or both?'
         
         yes_tuples = []
         
         yes_tuples.append( ( 'delete just this one', 'current' ) )
         yes_tuples.append( ( 'delete both', 'both' ) )
         
-        with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                value = dlg.GetValue()
-                
-                if value == 'current':
-                    
-                    media = [ first_media ]
-                    
-                    default_reason = 'Deleted manually in Duplicate Filter.'
-                    
-                elif value == 'both':
-                    
-                    media = [ first_media, second_media ]
-                    
-                    default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
-                    
-                else:
-                    
-                    return False
-                    
-                
-            else:
-                
-                return False
-                
+            result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return False
+            
+        
+        if result == 'current':
+            
+            media = [ first_media ]
+            
+            default_reason = 'Deleted manually in Duplicate Filter.'
+            
+        elif result == 'both':
+            
+            media = [ first_media, second_media ]
+            
+            default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
             
         
         jobs = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_jobs = True )
@@ -3112,7 +3105,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             duplicate_action_options = None
             
         
-        text = 'Delete any of the files?'
+        message = 'Delete any of the files?'
         
         yes_tuples = []
         
@@ -3121,35 +3114,30 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         yes_tuples.append( ( 'delete the other', 'delete_second' ) )
         yes_tuples.append( ( 'delete both', 'delete_both' ) )
         
+        try:
+            
+            result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         delete_first = False
         delete_second = False
         delete_both = False
         
-        with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+        if result == 'delete_first':
             
-            result = dlg.exec()
+            delete_first = True
             
-            if result == QW.QDialog.Accepted:
-                
-                value = dlg.GetValue()
-                
-                if value == 'delete_first':
-                    
-                    delete_first = True
-                    
-                elif value == 'delete_second':
-                    
-                    delete_second = True
-                    
-                elif value == 'delete_both':
-                    
-                    delete_both = True
-                    
-                
-            else:
-                
-                return
-                
+        elif result == 'delete_second':
+            
+            delete_second = True
+            
+        elif result == 'delete_both':
+            
+            delete_both = True
             
         
         self._ProcessPair( duplicate_type, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, duplicate_action_options = duplicate_action_options )

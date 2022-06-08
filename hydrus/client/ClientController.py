@@ -1006,6 +1006,14 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetText( 'initialising managers' )
         
+        self.frame_splash_status.SetSubtext( 'image caches' )
+        
+        # careful: outside of qt since they don't need qt for init, seems ok _for now_
+        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
+        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        self.bitmap_manager = ClientManagers.BitmapManager( self )
+        
         self.frame_splash_status.SetSubtext( 'services' )
         
         self.services_manager = ClientServices.ServicesManager( self )
@@ -1191,14 +1199,6 @@ class Controller( HydrusController.HydrusController ):
         #
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
-        
-        self.frame_splash_status.SetSubtext( 'image caches' )
-        
-        # careful: outside of qt since they don't need qt for init, seems ok _for now_
-        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
-        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
-        self.bitmap_manager = ClientManagers.BitmapManager( self )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
         
@@ -2281,14 +2281,20 @@ class Controller( HydrusController.HydrusController ):
     
     def WaitUntilThumbnailsFree( self ):
         
-        self._caches[ 'thumbnail' ].WaitUntilFree()
+        if 'thumbnail' in self._caches:
+            
+            self._caches[ 'thumbnail' ].WaitUntilFree()
+            
         
     
     def Write( self, action, *args, **kwargs ):
         
         if action == 'content_updates':
             
-            self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+            if 'undo' in self._managers:
+                
+                self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+                
             
         
         return HydrusController.HydrusController.Write( self, action, *args, **kwargs )

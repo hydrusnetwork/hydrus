@@ -1575,59 +1575,45 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                 
-                text = 'This will reparse the {} selected files\' metadata.'.format( HydrusData.ToHumanInt( num_files ) )
-                text += os.linesep * 2
-                text += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
+                message = 'This will reparse the {} selected files\' metadata.'.format( HydrusData.ToHumanInt( num_files ) )
+                message += os.linesep * 2
+                message += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
                 
             elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                 
-                text = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
+                message = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
                 
             elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                 
-                text = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
+                message = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
                 
             
             do_it_now = True
             
             if num_files > 50:
                 
-                text += os.linesep * 2
-                text += 'You have selected {} files, so this job may take some time. You can run it all now or schedule it to the overall file maintenance queue for later spread-out processing.'.format( HydrusData.ToHumanInt( num_files ) )
+                message += os.linesep * 2
+                message += 'You have selected {} files, so this job may take some time. You can run it all now or schedule it to the overall file maintenance queue for later spread-out processing.'.format( HydrusData.ToHumanInt( num_files ) )
                 
                 yes_tuples = []
                 
                 yes_tuples.append( ( 'do it now', 'now' ) )
                 yes_tuples.append( ( 'do it later', 'later' ) )
                 
-                with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        value = dlg.GetValue()
-                        
-                        if value == 'now':
-                            
-                            do_it_now = True
-                            
-                        elif value == 'later':
-                            
-                            do_it_now = False
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    else:
-                        
-                        return
-                        
+                    result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                do_it_now = result == 'now'
                 
             else:
                 
-                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
                 if result != QW.QDialog.Accepted:
                     

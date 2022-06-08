@@ -1200,34 +1200,35 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             yes_tuples.append( ( 'save to file', 'file' ) )
             yes_tuples.append( ( 'copy to clipboard', 'clipboard' ) )
             
-            with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                result = ClientGUIDialogsQuick.GetYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if result == 'file':
+                
+                with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as f_dlg:
                     
-                    value = dlg.GetValue()
-                    
-                    if value == 'file':
+                    if f_dlg.exec() == QW.QDialog.Accepted:
                         
-                        with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as f_dlg:
+                        path = f_dlg.GetPath()
+                        
+                        with open( path, 'wb' ) as f:
                             
-                            if f_dlg.exec() == QW.QDialog.Accepted:
-                                
-                                path = f_dlg.GetPath()
-                                
-                                with open( path, 'wb' ) as f:
-                                    
-                                    f.write( content )
-                                    
-                                
+                            f.write( content )
                             
                         
-                    elif value == 'clipboard':
-                        
-                        text = network_job.GetContentText()
-                        
-                        self._controller.pub( 'clipboard', 'text', text )
-                        
                     
+                
+            elif result == 'clipboard':
+                
+                text = network_job.GetContentText()
+                
+                self._controller.pub( 'clipboard', 'text', text )
                 
             
         
@@ -4849,27 +4850,25 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             yes_tuples.append( ( 'open online help', 0 ) )
             yes_tuples.append( ( 'open how to build guide', 1 ) )
             
-            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    value = dlg.GetValue()
-                    
-                    if value == 0:
-                        
-                        url = 'https://hydrusnetwork.github.io/hydrus/'
-                        
-                    elif value == 1:
-                        
-                        url = 'https://hydrusnetwork.github.io/hydrus/about_docs.html'
-                        
-                    else:
-                        
-                        return
-                        
-                    ClientPaths.LaunchURLInWebBrowser( url )
-                    
+                result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
                 
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if result == 0:
+                
+                url = 'https://hydrusnetwork.github.io/hydrus/'
+                
+            elif result == 1:
+                
+                url = 'https://hydrusnetwork.github.io/hydrus/about_docs.html'
+                
+            
+            ClientPaths.LaunchURLInWebBrowser( url )
             
         
     

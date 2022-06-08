@@ -347,12 +347,32 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self.modules_services.AddService( service_key, service_type, name, dictionary )
         
-        self._AddServiceCreateFiles( service_id, service_type )
+        self._AddServiceCreateFilesTables( service_id, service_type )
         
         if service_type in HC.REPOSITORIES:
             
             self.modules_repositories.GenerateRepositoryTables( service_id )
             
+        
+        self._AddServiceCreateMappingsTables( service_id, service_type )
+        
+    
+    def _AddServiceCreateFilesTables( self, service_id, service_type ):
+        
+        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
+            
+            self.modules_files_storage.GenerateFilesTables( service_id )
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self.modules_mappings_cache_specific_storage.Generate( service_id, tag_service_id )
+                
+            
+        
+    
+    def _AddServiceCreateMappingsTables( self, service_id, service_type ):
         
         if service_type in HC.REAL_TAG_SERVICES:
             
@@ -368,39 +388,6 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_tag_parents.Generate( service_id )
             self.modules_tag_siblings.Generate( service_id )
             
-        
-        self._AddServiceCreateMappings( service_id, service_type )
-        
-        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES:
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for tag_service_id in tag_service_ids:
-                
-                self.modules_tag_search.Generate( service_id, tag_service_id )
-                
-            
-        
-    
-    def _AddServiceCreateFiles( self, service_id, service_type ):
-        
-        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
-            
-            self.modules_files_storage.GenerateFilesTables( service_id )
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for tag_service_id in tag_service_ids:
-                
-                self.modules_mappings_cache_specific_storage.Generate( service_id, tag_service_id )
-                
-            
-        
-    
-    def _AddServiceCreateMappings( self, service_id, service_type ):
-        
-        if service_type in HC.REAL_TAG_SERVICES:
-            
             self.modules_mappings_storage.GenerateMappingsTables( service_id )
             
             self.modules_mappings_cache_combined_files_storage.Generate( service_id )
@@ -410,6 +397,16 @@ class DB( HydrusDB.HydrusDB ):
             for file_service_id in file_service_ids:
                 
                 self.modules_mappings_cache_specific_storage.Generate( file_service_id, service_id )
+                
+            
+        
+        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES:
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self.modules_tag_search.Generate( service_id, tag_service_id )
                 
             
         
@@ -1631,18 +1628,25 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            # if we are deleting from repo updates, do a physical delete now
+            
+            if service_id == self.modules_services.local_update_service_id:
+                
+                self._DeleteFiles( self.modules_services.combined_local_file_service_id, existing_hash_ids )
+                
+            
             # if the files are being fully deleted, then physically delete them
             
             if service_id == self.modules_services.combined_local_file_service_id:
                 
-                self._ArchiveFiles( hash_ids )
+                self._ArchiveFiles( existing_hash_ids )
                 
-                for hash_id in hash_ids:
+                for hash_id in existing_hash_ids:
                     
                     self.modules_similar_files.StopSearchingFile( hash_id )
                     
                 
-                self.modules_files_maintenance_queue.CancelFiles( hash_ids )
+                self.modules_files_maintenance_queue.CancelFiles( existing_hash_ids )
                 
                 self.modules_hashes_local_cache.DropHashIdsFromCache( existing_hash_ids )
                 
@@ -1699,16 +1703,76 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
         self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
         
-        self._DeleteServiceDropFiles( service_id, service_type )
+        self._DeleteServiceDropFilesTables( service_id, service_type )
         
         if service_type in HC.REPOSITORIES:
             
             self.modules_repositories.DropRepositoryTables( service_id )
             
         
-        self._DeleteServiceDropMappings( service_id, service_type )
+        self._DeleteServiceDropMappingsTables( service_id, service_type )
+        
+        self.modules_services.DeleteService( service_id )
+        
+        service_update = HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
+        
+        service_keys_to_service_updates = { service_key : [ service_update ] }
+        
+        self.pub_service_updates_after_commit( service_keys_to_service_updates )
+        
+    
+    def _DeleteServiceDirectory( self, service_id, dirname ):
+        
+        directory_id = self.modules_texts.GetTextId( dirname )
+        
+        self._Execute( 'DELETE FROM service_directories WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
+        self._Execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
+        
+    
+    def _DeleteServiceDropFilesTables( self, service_id, service_type ):
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            self._Execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        if service_type == HC.IPFS:
+            
+            self._Execute( 'DELETE FROM service_filenames WHERE service_id = ?;', ( service_id, ) )
+            self._Execute( 'DELETE FROM service_directories WHERE service_id = ?;', ( service_id, ) )
+            self._Execute( 'DELETE FROM service_directory_file_map WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
+            
+            self.modules_files_storage.DropFilesTables( service_id )
+            
+        
+        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                self.modules_mappings_cache_specific_storage.Drop( service_id, tag_service_id )
+                
+            
+        
+    
+    def _DeleteServiceDropMappingsTables( self, service_id, service_type ):
         
         if service_type in HC.REAL_TAG_SERVICES:
+            
+            self.modules_mappings_storage.DropMappingsTables( service_id )
+            
+            self.modules_mappings_cache_combined_files_storage.Drop( service_id )
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+            
+            for file_service_id in file_service_ids:
+                
+                self.modules_mappings_cache_specific_storage.Drop( file_service_id, service_id )
+                
             
             interested_service_ids = set( self.modules_tag_display.GetInterestedServiceIds( service_id ) )
             
@@ -1740,69 +1804,6 @@ class DB( HydrusDB.HydrusDB ):
             for tag_service_id in tag_service_ids:
                 
                 self.modules_tag_search.Drop( service_id, tag_service_id )
-                
-            
-        
-        self.modules_services.DeleteService( service_id )
-        
-        service_update = HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
-        
-        service_keys_to_service_updates = { service_key : [ service_update ] }
-        
-        self.pub_service_updates_after_commit( service_keys_to_service_updates )
-        
-    
-    def _DeleteServiceDirectory( self, service_id, dirname ):
-        
-        directory_id = self.modules_texts.GetTextId( dirname )
-        
-        self._Execute( 'DELETE FROM service_directories WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
-        self._Execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
-        
-    
-    def _DeleteServiceDropFiles( self, service_id, service_type ):
-        
-        if service_type == HC.FILE_REPOSITORY:
-            
-            self._Execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
-            
-        
-        if service_type == HC.IPFS:
-            
-            self._Execute( 'DELETE FROM service_filenames WHERE service_id = ?;', ( service_id, ) )
-            self._Execute( 'DELETE FROM service_directories WHERE service_id = ?;', ( service_id, ) )
-            self._Execute( 'DELETE FROM service_directory_file_map WHERE service_id = ?;', ( service_id, ) )
-            
-        
-        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
-            
-            self.modules_files_storage.DropFilesTables( service_id )
-            
-        
-        if service_type in HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES:
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for tag_service_id in tag_service_ids:
-                
-                self.modules_mappings_cache_specific_storage.Drop( service_id, tag_service_id )
-                
-            
-        
-    
-    def _DeleteServiceDropMappings( self, service_id, service_type ):
-        
-        if service_type in HC.REAL_TAG_SERVICES:
-            
-            self.modules_mappings_storage.DropMappingsTables( service_id )
-            
-            self.modules_mappings_cache_combined_files_storage.Drop( service_id )
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
-            
-            for file_service_id in file_service_ids:
-                
-                self.modules_mappings_cache_specific_storage.Drop( file_service_id, service_id )
                 
             
         

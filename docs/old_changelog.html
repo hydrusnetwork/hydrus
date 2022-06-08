@@ -33,6 +33,21 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_488"><a href="#version_488">version 488</a></h3></li>
+				<ul>
+					<li>the client now supports 'wavpack' files. these are basically a kind of compressed wav. mpv seems to play them fine too!</li>
+					<li>added a new file maintenance action, 'if file is missing, note it in log', which records the metadata about missing files to the database directory but makes no other action</li>
+					<li>the 'file is missing/incorrect' file maintenance jobs now also export the files' tags to the database directory, to further help identify them</li>
+					<li>simplified the logic behind the 'remove files if they are trashed' option. it should fire off more reliably now, even if you have a weird multiple-domain location for the current page, and still not fire if you are actually looking at the trash</li>
+					<li>if you paste an URL into the normal 'urls' downloader page, and it already has that URL and the URL has status 'failed', that existing URL will now be tried again. let's see how this works IRL, maybe it needs an option, maybe this feels natural when it comes up</li>
+					<li>the default bandwidth rules are boosted. the client is more efficient these days and doesn't need so many forced breaks on big import lists, and the internet has generally moved on. thanks to the users who helped talk out what the new limits should aim at. if you are an existing user, you can change your current defaults under _network->data->review bandwidth usage and edit rules_--there's even a button to revert your defaults 'back' to these new rules</li>
+					<li>now like all its neighbours, the cog icon on the duplicate right-side hover no longer annoyingly steals keyboard focus on a click.</li>
+					<li>did some code and logic cleanup around 'delete files', particularly to improve repository update deletes now we have multiple local file services, and in planning for future maintenance in this area</li>
+					<li>all the 'yes yes no' dialogs--the ones with multiple yes options--are moved to the newer panel system and will render their size and layout a bit more uniformly</li>
+					<li>may have fixed an issue with a very slow to boot client trying to politely wait on the thumbnail cache before it instantiates</li>
+					<li>misc UI text rewording and layout flag fixes</li>
+					<li>fixed some jank formatting on database migration help</li>
+				</ul>
 				<li><h3 id="version_487"><a href="#version_487">version 487</a></h3></li>
 				<ul>
 					<li>misc:</li>

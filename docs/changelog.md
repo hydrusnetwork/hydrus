@@ -5,6 +5,22 @@
 
 ## [Version 487](https://github.com/hydrusnetwork/hydrus/releases/tag/v487)
 
+### all misc this week
+* the client now supports 'wavpack' files. these are basically a kind of compressed wav. mpv seems to play them fine too!
+* added a new file maintenance action, 'if file is missing, note it in log', which records the metadata about missing files to the database directory but makes no other action
+* the 'file is missing/incorrect' file maintenance jobs now also export the files' tags to the database directory, to further help identify them
+* simplified the logic behind the 'remove files if they are trashed' option. it should fire off more reliably now, even if you have a weird multiple-domain location for the current page, and still not fire if you are actually looking at the trash
+* if you paste an URL into the normal 'urls' downloader page, and it already has that URL and the URL has status 'failed', that existing URL will now be tried again. let's see how this works IRL, maybe it needs an option, maybe this feels natural when it comes up
+* the default bandwidth rules are boosted. the client is more efficient these days and doesn't need so many forced breaks on big import lists, and the internet has generally moved on. thanks to the users who helped talk out what the new limits should aim at. if you are an existing user, you can change your current defaults under _network->data->review bandwidth usage and edit rules_--there's even a button to revert your defaults 'back' to these new rules
+* now like all its neighbours, the cog icon on the duplicate right-side hover no longer annoyingly steals keyboard focus on a click.
+* did some code and logic cleanup around 'delete files', particularly to improve repository update deletes now we have multiple local file services, and in planning for future maintenance in this area
+* all the 'yes yes no' dialogs--the ones with multiple yes options--are moved to the newer panel system and will render their size and layout a bit more uniformly
+* may have fixed an issue with a very slow to boot client trying to politely wait on the thumbnail cache before it instantiates
+* misc UI text rewording and layout flag fixes
+* fixed some jank formatting on database migration help
+
+## [Version 487](https://github.com/hydrusnetwork/hydrus/releases/tag/v487)
+
 ### misc
 * updated the duplicate filter 'show next pair' logic again, mostly simplification and merging of decision making. it _should_ be even more resistant to weird problems at the end of batches, particularly if you have deleted files manually
 * a new button on the duplicate filter right hover window now appends the current pair to the parent duplicate media page (for if you want to do more processing to them later)

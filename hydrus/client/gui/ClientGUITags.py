@@ -326,9 +326,14 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        message = 'While a tag service normally applies its own siblings and parents to itself, it does not have to. If you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings or parents at all.'
+        warning = 'THIS IS COMPLICATED, THINK CAREFULLY'
+        
+        self._warning = ClientGUICommon.BetterStaticText( self, label = warning )
+        self._warning.setObjectName( 'HydrusWarning' )
+        
+        message = 'While a tag service normally only applies its own siblings and parents to itself, it does not have to. You can have other services\' rules apply (e.g. putting the PTR\'s siblings on your "my tags"), or no siblings/parents at all.'
         message += os.linesep * 2
-        message += 'If there are conflicts, the services at the top of the list have precedence. Parents are collapsed by sibling rules before they are applied.'
+        message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -359,6 +364,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         self._sync_status.style().polish( self._sync_status )
         
+        QP.AddToLayout( vbox, self._warning, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )

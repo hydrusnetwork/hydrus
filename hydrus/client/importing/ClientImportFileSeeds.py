@@ -1919,6 +1919,21 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return latest_timestamp
         
     
+    def _GetMyFileSeed( self, file_seed: FileSeed ) -> typing.Optional[ FileSeed ]:
+        
+        search_file_seeds = file_seed.GetSearchFileSeeds()
+        
+        for f_s in self._file_seeds:
+            
+            if f_s in search_file_seeds:
+                
+                return f_s
+                
+            
+        
+        return None
+        
+    
     def _GetNextFileSeed( self, status: int ) -> typing.Optional[ FileSeed ]:
         
         # the problem with this is if a file seed recently changed but 'notifyupdated' hasn't had a chance to go yet
@@ -2249,20 +2264,35 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ] ):
+    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ], dupe_try_again = True ):
         
         if len( file_seeds ) == 0:
             
             return 0 
             
         
-        new_file_seeds = []
+        updated_or_new_file_seeds = []
         
         with self._lock:
             
             for file_seed in file_seeds:
                 
                 if self._HasFileSeed( file_seed ):
+                    
+                    if dupe_try_again:
+                        
+                        f_s = self._GetMyFileSeed( file_seed )
+                        
+                        if f_s is not None:
+                            
+                            if f_s.status == CC.STATUS_ERROR:
+                                
+                                f_s.SetStatus( CC.STATUS_UNKNOWN )
+                                
+                                updated_or_new_file_seeds.append( f_s )
+                                
+                            
+                        
                     
                     continue
                     
@@ -2278,7 +2308,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                new_file_seeds.append( file_seed )
+                updated_or_new_file_seeds.append( file_seed )
                 
                 self._file_seeds.append( file_seed )
                 
@@ -2295,9 +2325,9 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             self._SetStatusDirty()
             
         
-        self.NotifyFileSeedsUpdated( new_file_seeds )
+        self.NotifyFileSeedsUpdated( updated_or_new_file_seeds )
         
-        return len( new_file_seeds )
+        return len( updated_or_new_file_seeds )
         
     
     def AdvanceFileSeed( self, file_seed: FileSeed ):

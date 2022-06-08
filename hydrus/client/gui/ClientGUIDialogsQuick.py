@@ -97,6 +97,25 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
             
         
     
+def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesYesNoPanel( dlg, message, yes_tuples = yes_tuples, no_label = no_label )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            return panel.GetValue()
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
+            
+        
+    
+
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
     
     if len( choice_tuples ) == 1:

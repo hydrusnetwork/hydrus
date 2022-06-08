@@ -2191,40 +2191,37 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             yes_tuples.append( ( 'do them all', 'all' ) )
             yes_tuples.append( ( 'select which to do', 'select' ) )
             
-            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() != QW.QDialog.Accepted:
+                result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if result == 'all':
+                
+                query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
+                
+            else:
+                
+                selected = True
+                
+                choice_tuples = [ ( query_text, query_text, selected ) for query_text in potential_dupe_query_texts ]
+                
+                try:
+                    
+                    query_texts_we_want_to_dedupe_now = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'Select which query texts to dedupe', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
                     
                     return
                     
-                else:
+                
+                if len( query_texts_we_want_to_dedupe_now ) == 0:
                     
-                    value = dlg.GetValue()
-                    
-                    if value == 'all':
-                        
-                        query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
-                        
-                    else:
-                        
-                        selected = True
-                        
-                        choice_tuples = [ ( query_text, query_text, selected ) for query_text in potential_dupe_query_texts ]
-                        
-                        try:
-                            
-                            query_texts_we_want_to_dedupe_now = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'Select which query texts to dedupe', choice_tuples )
-                            
-                        except HydrusExceptions.CancelledException:
-                            
-                            return
-                            
-                        
-                        if len( query_texts_we_want_to_dedupe_now ) == 0:
-                            
-                            return
-                            
-                        
+                    return
                     
                 
             
@@ -2643,16 +2640,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message = 'Are you sure you want to separate the selected subscriptions? Separating breaks merged subscriptions apart into smaller pieces.'
             yes_tuples = [ ( 'break it in half', 'half' ), ( 'break it all into single-query subscriptions', 'whole' ), ( 'only extract some of the subscription', 'part' ) ]
             
-            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    action = dlg.GetValue()
-                    
-                else:
-                    
-                    return
-                    
+                action = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
                 
             
         else:
@@ -2687,16 +2681,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'Do you want the extracted queries to be a new merged subscription, or many subscriptions with only one query?'
                 
-                with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        want_post_merge = dlg.GetValue()
-                        
-                    else:
-                        
-                        return
-                        
+                    want_post_merge = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             
