@@ -21,4 +21,4 @@ Send2Trash>=1.5.0
 service-identity>=18.1.0
 six>=1.14.0
 Twisted>=20.3.0
-https://files.pythonhosted.org/packages/ee/c8/e6c9686e035b387267524932cdd6f3f11acddc943bfcdaedb8c44c103a14/opencv_python_headless-4.5.3.56-cp39-cp39-macosx_10_15_x86_64.whl==4.5.3.56
+https://files.pythonhosted.org/packages/ee/c8/e6c9686e035b387267524932cdd6f3f11acddc943bfcdaedb8c44c103a14/opencv_python_headless-4.5.3.56-cp39-cp39-macosx_10_15_x86_64.whl
