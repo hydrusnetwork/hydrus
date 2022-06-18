@@ -1,10 +1,8 @@
 ---
-title: files
+title: Files
 ---
 
-# getting started with files
-
-If any of this is confusing, a simpler guide is [here](https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md), and some video guides are [here](https://github.com/CuddleBear92/Hydrus-guides)!
+# Getting started with files
 
 !!! warning
 
@@ -12,7 +10,7 @@ If any of this is confusing, a simpler guide is [here](https://github.com/Zweiba
 
 	There are no limits and few brakes on your behaviour. It is possible to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. Take things slow and figure out good processing workflows that work for your schedule before you start adding 500 subscriptions.
 
-## the problem { id="hellmode_dot_exe" }
+## The problem
 
 If you have ever seen something like this--
 
@@ -22,9 +20,9 @@ If you have ever seen something like this--
 
 Finding the right picture quickly can be difficult. Finding everything by a particular artist at a particular resolution is unthinkable. Integrating new files into the whole nested-folder mess is a further pain, and most operating systems bug out when displaying 10,000+ thumbnails.
 
-## so, what does the hydrus client do? { id="the_client" }
+## The client
 
-Let's first focus on _importing_ files.
+Let's first focus on [_importing_ files](getting_started_importing.md).
 
 When you first boot the client, you will see a blank page. There are no files in the database and so there is nothing to search. To get started, I suggest you simply drag-and-drop a folder with a hundred or so images onto the main window. A dialog will appear affirming what you want to import. Ok that, and a new page will open. Thumbnails will stream in as the software processes each file.
 
@@ -67,7 +65,7 @@ Now:
 *   Play with the system tags more if you like, and the sort-by dropdown. The collect-by dropdown is advanced, so wait until you understand _namespaces_ before expecting it to do anything.
 *   To close a page, middle-click its tab.
 
-The client can currently import the following mimetypes:
+### The client can currently import the following mimetypes:
 
 *   **image/bmp** (.bmp - converted to image/png on import)
 *   **image/gif** (.gif)
@@ -100,7 +98,7 @@ Although some support is imperfect for the complicated filetypes. For the Window
 
 The client can also download files from several websites, including 4chan and other imageboards, many boorus, and gallery sites like deviant art and hentai foundry. You will learn more about this later.
 
-## inbox and archiving { id="inbox" }
+## Inbox and archive
 
 The client sends newly imported files to an **inbox**, just like your email. Inbox acts like a tag, matched by 'system:inbox'. A small envelope icon is drawn in the top corner of all inbox files:
 
@@ -116,11 +114,11 @@ A trashed file will not appear in subsequent normal searches, although you can s
 
 A quick way of processing new files is&ndash;
 
-## filtering { id="filtering_inbox" }
+### Filtering your inbox
 
 Lets say you just downloaded a good thread, or perhaps you just imported an old folder of miscellany. You now have a whole bunch of files in your inbox--some good, some awful. You probably want to quickly go through them, saying _yes, yes, yes, no, yes, no, no, yes_, where _yes_ means 'keep and archive' and _no_ means 'delete this trash'. **Filtering** is the solution.
 
-Select some thumbnails, and either choose _filter->archive/delete_ from the right-click menu or hit F12. You will see them in a special version of the media viewer, with the following controls:
+Select some thumbnails, and either choose _filter->archive/delete_ from the right-click menu or hit F12. You will see them in a special version of the media viewer, with the following default controls:
 
 *   ++left-button++, ++space++, or ++f7++: **keep and archive the file, move on**
 *   ++right-button++ or ++delete++: **delete the file, move on**
@@ -132,11 +130,11 @@ Your choices will not be committed until you finish filtering.
 
 This saves time.
 
-## lastly { id="what_hydrus_is_for" }
+## What Hydrus is for
 
 The hydrus client's workflows are not designed for half-finished files that you are still working on. Think of it as a giant archive for everything excellent you have decided to store away. It lets you find and remember these things quickly.
 
-In general, hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.
+In general, Hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.
 
 If you are looking for a comic manager to supplement hydrus, check out this user-made guide to other archiving software [here](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)!
 
