@@ -17,14 +17,14 @@ NEXT_THREAD_CLEAROUT = 0
 THREADS_TO_THREAD_INFO = {}
 THREAD_INFO_LOCK = threading.Lock()
 
-def CheckIfThreadShuttingDown():
+def CheckIfThreadShuttingDown()-> None:
     
     if IsThreadShuttingDown():
         
         raise HydrusExceptions.ShutdownException( 'Thread is shutting down!' )
         
     
-def ClearOutDeadThreads():
+def ClearOutDeadThreads() -> None:
     
     with THREAD_INFO_LOCK:
         
@@ -69,7 +69,7 @@ def GetThreadInfo( thread = None ):
         return THREADS_TO_THREAD_INFO[ thread ]
         
     
-def IsThreadShuttingDown():
+def IsThreadShuttingDown() -> bool:
     
     if HG.controller.DoingFastExit():
         
@@ -97,7 +97,7 @@ def IsThreadShuttingDown():
     
     return thread_info[ 'shutting_down' ]
     
-def ShutdownThread( thread ):
+def ShutdownThread( thread ) -> None:
     
     thread_info = GetThreadInfo( thread )
     
@@ -159,7 +159,7 @@ class DAEMON( threading.Thread ):
             
         
     
-    def GetCurrentJobSummary( self ):
+    def GetCurrentJobSummary( self ) -> str:
         
         return 'unknown job'
         
@@ -176,7 +176,7 @@ class DAEMON( threading.Thread ):
         self.wake()
         
     
-    def wake( self ):
+    def wake( self ) -> None:
         
         self._event.set()
         
@@ -206,17 +206,17 @@ class DAEMONWorker( DAEMON ):
         self.start()
         
     
-    def _CanStart( self ):
+    def _CanStart( self ) -> bool:
         
         return self._ControllerIsOKWithIt()
         
     
-    def _ControllerIsOKWithIt( self ):
+    def _ControllerIsOKWithIt( self ) -> bool:
         
         return True
         
     
-    def _DoAWait( self, wait_time, event_can_wake = True ):
+    def _DoAWait( self, wait_time, event_can_wake = True )-> None:
         
         time_to_start = HydrusData.GetNow() + wait_time
         
@@ -257,7 +257,7 @@ class DAEMONWorker( DAEMON ):
         return self._callable
         
     
-    def run( self ):
+    def run( self ) -> None:
         
         try:
             
@@ -309,7 +309,7 @@ class DAEMONWorker( DAEMON ):
 # Big stuff like DB maintenance that we don't want to run while other important stuff is going on, like user interaction or vidya on another process
 class DAEMONBackgroundWorker( DAEMONWorker ):
     
-    def _ControllerIsOKWithIt( self ):
+    def _ControllerIsOKWithIt( self ) -> bool:
         
         return self._controller.GoodTimeToStartBackgroundWork()
         
@@ -317,7 +317,7 @@ class DAEMONBackgroundWorker( DAEMONWorker ):
 # Big stuff that we want to run when the user sees, but not at the expense of something else, like laggy session load
 class DAEMONForegroundWorker( DAEMONWorker ):
     
-    def _ControllerIsOKWithIt( self ):
+    def _ControllerIsOKWithIt( self ) -> bool:
         
         return self._controller.GoodTimeToStartForegroundWork()
         
@@ -335,7 +335,7 @@ class THREADCallToThread( DAEMON ):
         self._currently_working = True # start off true so new threads aren't used twice by two quick successive calls
         
     
-    def CurrentlyWorking( self ):
+    def CurrentlyWorking( self ) -> bool:
         
         return self._currently_working
         
@@ -345,7 +345,7 @@ class THREADCallToThread( DAEMON ):
         return self._callable
         
     
-    def put( self, callable, *args, **kwargs ):
+    def put( self, callable, *args, **kwargs ) -> None:
         
         self._currently_working = True
         
@@ -354,7 +354,7 @@ class THREADCallToThread( DAEMON ):
         self._event.set()
         
     
-    def run( self ):
+    def run( self ) -> None:
         
         try:
             
@@ -476,7 +476,7 @@ class JobScheduler( threading.Thread ):
         return min( 1.0, time_delta_until_due )
         
     
-    def _NoWorkToStart( self ):
+    def _NoWorkToStart( self ) -> bool:
         
         with self._waiting_lock:
             
@@ -498,7 +498,7 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def _SortWaiting( self ):
+    def _SortWaiting( self ) -> bool:
         
         # sort the waiting jobs in ascending order of expected work time
         
@@ -508,7 +508,7 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def _StartWork( self ):
+    def _StartWork( self ) -> None:
         
         jobs_started = 0
         
@@ -561,7 +561,7 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def AddJob( self, job ):
+    def AddJob( self, job ) -> None:
         
         with self._waiting_lock:
             
@@ -571,7 +571,7 @@ class JobScheduler( threading.Thread ):
         self._new_job_arrived.set()
         
     
-    def ClearOutDead( self ):
+    def ClearOutDead( self ) -> None:
         
         with self._waiting_lock:
             
@@ -579,12 +579,12 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def GetName( self ):
+    def GetName( self ) -> str:
         
         return 'Job Scheduler'
         
     
-    def GetCurrentJobSummary( self ):
+    def GetCurrentJobSummary( self ) -> str:
         
         with self._waiting_lock:
             
@@ -600,7 +600,7 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def GetPrettyJobSummary( self ):
+    def GetPrettyJobSummary( self ) -> str:
         
         with self._waiting_lock:
             
@@ -616,24 +616,24 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def JobCancelled( self ):
+    def JobCancelled( self ) -> None:
         
         self._cancel_filter_needed.set()
         
     
-    def shutdown( self ):
+    def shutdown( self ) -> None:
         
         ShutdownThread( self )
         
         self._new_job_arrived.set()
         
     
-    def WorkTimesHaveChanged( self ):
+    def WorkTimesHaveChanged( self ) -> None:
         
         self._sort_needed.set()
         
     
-    def run( self ):
+    def run( self ) -> None:
         
         while True:
             
@@ -727,19 +727,19 @@ class SchedulableJob( object ):
         self._controller.CallToThread( self.Work )
         
     
-    def Cancel( self ):
+    def Cancel( self ) -> None:
         
         self._is_cancelled.set()
         
         self._scheduler.JobCancelled()
         
     
-    def CurrentlyWorking( self ):
+    def CurrentlyWorking( self ) -> None:
         
         return self._currently_working.is_set()
         
     
-    def GetDueString( self ):
+    def GetDueString( self ) -> str:
         
         due_delta = self._next_work_time - HydrusData.GetNowFloat()
         
@@ -772,37 +772,37 @@ class SchedulableJob( object ):
         return HydrusData.GetTimeDeltaUntilTimeFloat( self._next_work_time )
         
     
-    def IsCancelled( self ):
+    def IsCancelled( self ) -> bool:
         
         return self._is_cancelled.is_set()
         
     
-    def IsDead( self ):
+    def IsDead( self ) -> bool:
         
         return False
         
     
-    def IsDue( self ):
+    def IsDue( self ) -> bool:
         
         return HydrusData.TimeHasPassedFloat( self._next_work_time )
         
     
-    def PubSubWake( self, *args, **kwargs ):
+    def PubSubWake( self, *args, **kwargs ) -> None:
         
         self.Wake()
         
     
-    def SetThreadSlotType( self, thread_type ):
+    def SetThreadSlotType( self, thread_type ) -> None:
         
         self._thread_slot_type = thread_type
         
     
-    def ShouldDelayOnWakeup( self, value ):
+    def ShouldDelayOnWakeup( self, value ) -> None:
         
         self._should_delay_on_wakeup = value
         
     
-    def SlotOK( self ):
+    def SlotOK( self ) -> bool:
         
         if self._thread_slot_type is not None:
             
@@ -821,7 +821,7 @@ class SchedulableJob( object ):
         return True
         
     
-    def StartWork( self ):
+    def StartWork( self ) -> None:
         
         if self._is_cancelled.is_set():
             
@@ -833,7 +833,7 @@ class SchedulableJob( object ):
         self._BootWorker()
         
     
-    def Wake( self, next_work_time = None ):
+    def Wake( self, next_work_time = None ) -> None:
         
         if next_work_time is None:
             
@@ -845,12 +845,12 @@ class SchedulableJob( object ):
         self._scheduler.WorkTimesHaveChanged()
         
     
-    def WakeOnPubSub( self, topic ):
+    def WakeOnPubSub( self, topic ) -> None:
         
         HG.controller.sub( self, 'PubSubWake', topic )
         
     
-    def Work( self ):
+    def Work( self ) -> None:
         
         try:
             
@@ -894,12 +894,12 @@ class SingleJob( SchedulableJob ):
         self._work_complete = threading.Event()
         
     
-    def IsWorkComplete( self ):
+    def IsWorkComplete( self ) -> bool:
         
         return self._work_complete.is_set()
         
     
-    def Work( self ):
+    def Work( self ) -> None:
         
         SchedulableJob.Work( self )
         
@@ -919,26 +919,26 @@ class RepeatingJob( SchedulableJob ):
         self._stop_repeating = threading.Event()
         
     
-    def Cancel( self ):
+    def Cancel( self ) -> None:
         
         SchedulableJob.Cancel( self )
         
         self._stop_repeating.set()
         
     
-    def Delay( self, delay ):
+    def Delay( self, delay ) -> None:
         
         self._next_work_time = HydrusData.GetNowFloat() + delay
         
         self._scheduler.WorkTimesHaveChanged()
         
     
-    def IsRepeatingWorkFinished( self ):
+    def IsRepeatingWorkFinished( self ) -> bool:
         
         return self._stop_repeating.is_set()
         
     
-    def StartWork( self ):
+    def StartWork( self ) -> None:
         
         if self._stop_repeating.is_set():
             
@@ -948,7 +948,7 @@ class RepeatingJob( SchedulableJob ):
         SchedulableJob.StartWork( self )
         
     
-    def Work( self ):
+    def Work( self ) -> None:
         
         SchedulableJob.Work( self )
         
