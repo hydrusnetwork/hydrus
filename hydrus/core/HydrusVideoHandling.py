@@ -4,7 +4,7 @@ import os
 import re
 import struct
 import subprocess
-from typing import Optional
+from typing import Optional,Tuple
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
@@ -28,7 +28,7 @@ if not os.path.exists( FFMPEG_PATH ):
     
     FFMPEG_PATH = os.path.basename( FFMPEG_PATH )
     
-def CheckFFMPEGError( lines ):
+def CheckFFMPEGError( lines ) -> None:
     
     if len( lines ) == 0:
         
@@ -100,7 +100,7 @@ def GetAPNGDuration( apng_bytes: bytes ) -> float:
     
     chunks = GetAPNGChunks( apng_bytes )
     
-    total_duration = 0
+    total_duration :float = 0
     
     for ( chunk_name, chunk_data ) in chunks:
         
@@ -984,7 +984,7 @@ def ParseFFMPEGVideoLine( lines, png_ok = False ) -> str:
     
     return line
     
-def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> tuple[int,int]:
+def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> Tuple[int,int]:
     
     try:
         
@@ -1075,7 +1075,7 @@ def VideoHasAudio( path, info_lines ) -> bool:
     # every now and then, you'll get a couple ffs for some reason, but this is not legit audio data
     
     try:
-        
+        assert(process.stdout is not None)
         chunk_of_pcm_data = process.stdout.read( 65536 )
         
         while len( chunk_of_pcm_data ) > 0:
@@ -1096,7 +1096,10 @@ def VideoHasAudio( path, info_lines ) -> bool:
         
         process.terminate()
         
+        assert(process.stdout is not None)
         process.stdout.close()
+        
+        assert(process.stderr is not None)
         process.stderr.close()
         
     

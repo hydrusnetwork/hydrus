@@ -2815,7 +2815,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_without_siblings = list( tag_ids )
         
-        seen_ideal_tag_ids = collections.defaultdict( set )
+        seen_ideal_tag_ids : dict = collections.defaultdict( set )
         
         for batch_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
             
@@ -4001,7 +4001,7 @@ class DB( HydrusDB.HydrusDB ):
         #
         
         def do_or_preds( or_predicates, query_hash_ids ) -> set:
-            
+            query_hash_ids=set()
             # better typically to sort by fewest num of preds first, establishing query_hash_ids for longer chains
             def or_sort_key( p ):
                 
@@ -4414,7 +4414,7 @@ class DB( HydrusDB.HydrusDB ):
                     include_files_info = True
                     
                 
-                file_info_query_hash_ids = set()
+                file_info_query_hash_ids : set = set()
                 
                 for files_table_name in db_location_context.GetMultipleFilesTableNames():
                     

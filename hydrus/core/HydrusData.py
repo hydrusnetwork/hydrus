@@ -1403,7 +1403,7 @@ def SampleSetByGettingFirst( s: set, n ):
     
     n = min( len( s ), n )
     
-    sample = set()
+    sample : set = set()
     
     if n == 0:
         
