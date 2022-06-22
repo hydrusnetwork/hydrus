@@ -1952,31 +1952,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
                 ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.global_pixmaps().gallery_pause )
                 
             
-            if gallery_paused:
-                
-                if gallery_status == '':
-                    
-                    gallery_status = 'paused'
-                    
-                else:
-                    
-                    gallery_status = 'paused - ' + gallery_status
-                    
-                
-            
             self._gallery_status.setText( gallery_status )
-            
-            if files_paused:
-                
-                if file_status == '':
-                    
-                    file_status = 'paused'
-                    
-                else:
-                    
-                    file_status = 'pausing - ' + file_status
-                    
-                
             
             self._file_status.setText( file_status )
             
@@ -2554,15 +2530,6 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
             if files_paused:
                 
-                if file_status == '':
-                    
-                    file_status = 'paused'
-                    
-                else:
-                    
-                    file_status = 'pausing, ' + file_status
-                    
-                
                 ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.global_pixmaps().file_play )
                 
             else:
@@ -2575,11 +2542,6 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             self._file_velocity_status.setText( file_velocity_status )
             
             if checking_paused:
-                
-                if watcher_status == '':
-                    
-                    watcher_status = 'paused'
-                    
                 
                 ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.global_pixmaps().gallery_play )
                 

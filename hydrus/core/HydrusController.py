@@ -373,7 +373,7 @@ class HydrusController( object ):
     
     def ClearCaches( self ) -> None:
         
-        for cache in list(self._caches.values()): cache.Clear()
+        for cache in self._caches.values(): cache.Clear()
         
     
     def CurrentlyIdle( self ) -> bool:

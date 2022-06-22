@@ -1,13 +1,15 @@
 import typing
 
-from hydrus.core import HydrusData
-
-def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: int ):
+def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: typing.Optional[ int ] ) -> bool:
     
-    # assume anything too early is a meme and a timestamp parsing conversion error
-    if new_timestamp <= 86400 * 7:
+    if not TimestampIsSensible( new_timestamp ):
         
         return False
+        
+    
+    if not TimestampIsSensible( existing_timestamp ):
+        
+        return True
         
     
     # only go backwards, in general
@@ -20,14 +22,14 @@ def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: int 
     
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:
     
-    if existing_timestamp is None:
+    if not TimestampIsSensible( existing_timestamp ):
         
-        return new_timestamp
+        existing_timestamp = None
         
     
-    if new_timestamp is None:
+    if not TimestampIsSensible( new_timestamp ):
         
-        return existing_timestamp
+        new_timestamp = None
         
     
     if ShouldUpdateDomainModifiedTime( existing_timestamp, new_timestamp ):
@@ -38,4 +40,20 @@ def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestam
         
         return existing_timestamp
         
+    
+
+def TimestampIsSensible( timestamp: typing.Optional[ int ] ) -> bool:
+    
+    if timestamp is None:
+        
+        return False
+        
+    
+    # assume anything too early is a meme and a timestamp parsing conversion error
+    if timestamp <= 86400 * 7:
+        
+        return False
+        
+    
+    return True
     

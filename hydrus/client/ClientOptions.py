@@ -361,6 +361,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'max_network_jobs' ] = 15
         self._dictionary[ 'integers' ][ 'max_network_jobs_per_domain' ] = 3
         
+        self._dictionary[ 'integers' ][ 'max_connection_attempts_allowed' ] = 5
+        self._dictionary[ 'integers' ][ 'max_request_attempts_allowed_get' ] = 5
+        
         from hydrus.core import HydrusImageHandling
         
         self._dictionary[ 'integers' ][ 'thumbnail_scale_type' ] = HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY

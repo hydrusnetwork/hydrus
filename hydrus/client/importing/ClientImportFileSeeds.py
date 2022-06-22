@@ -364,7 +364,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             source_timestamp = min( HydrusData.GetNow() - 30, source_timestamp )
             
-            self.source_time = source_timestamp
+            self.source_time = ClientTime.MergeModifiedTimes( self.source_time, source_timestamp )
             
         
         self._UpdateModified()

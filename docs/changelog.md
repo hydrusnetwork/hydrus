@@ -3,7 +3,36 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
-## [Version 488](https://github.com/hydrusnetwork/hydrus/releases/tag/v487)
+## [Version 489](https://github.com/hydrusnetwork/hydrus/releases/tag/v489)
+
+### downloader pages
+* greatly improved the status reporting for downloader pages. the way the little text updates on your file and gallery progress are generated and presented is overhauled, and tests are unified across the different downloader pages. you now get specific texts on all possible reasons the queue cannot currently process, such as the emergency pause states under the _network_ menu or specific info like hitting the file limit, and all the code involved here is much cleaner
+* the 'working/pending' status, when you have a whole bunch of galleries or watchers wanting to run at the same time, is now calculated more reliably, and the UI will report 'waiting for a work slot' on pending jobs. no more blank pending!
+* when you pause mid-job, the 'pausing - status' text is generated is a little neater too
+* with luck, we'll also have fewer examples of 64KB of 503 error html spamming the UI
+* any critical unhandled errors during importing proper now stop that queue until a client restart and make an appropriate status text and popup (in some situations, they previously could spam every thirty seconds)
+* the simple downloader and urls downloader now support the 'delay work until later' error system. actual UI for status reporting on these downloaders remains limited, however
+* a bunch of misc downloader page cleanup
+
+### archive/delete
+* the final 'commit/forget/back' confirmation dialog on the archive/delete filter now lists all the possible local file domains you could delete from with separate file counts and 'commit' buttons, including 'all my files' if there are multiple, defaulting to the parent page's location at the top of the list. this let's you do a 'yes, purge all these from everywhere' delete or a 'no, just from here' delete as needed and generally makes what is going on more visible
+* fixed archive/delete commit for users with the 'archived file delete lock' turned on
+
+### misc
+* fixed a bug in the parsing sanity check that makes sure bad 'last modified' timestamps are not added. some ~1970-01-01 results were slipping through. on update, all modified dates within a week of this epoch will be retroactively removed
+* the 'connection' panel in the options now lets you configure how many times a network request can retry connections and requests. the logic behind these values is improved, too--network jobs now count connection and request errors separately
+* optimised the master tag update routine when you petition tags
+* the Client API help for /add_tags/add_tags now clarifies that deleting a tag that does not exist _will_ make a change--it makes a deletion record
+* thanks to a user, the 'getting started with files' help has had a pass
+* I looked into memory bloat some users are seeing after media viewer use, but I couldn't reproduce it locally. I am now making a plan to finally integrate a memory profiler and add some memory debug UI so we can better see what is going on when a couple gigs suddenly appear
+
+### important repository processing fixes
+* I've been trying to chase down a persistent processing bug some users got, where no matter what resyncs or checks they do, a content update seems to be cast as a definition update. fingers crossed, I have finally fixed it this week. it turns out there was a bug near my 'is this a definition or a content update?' check that is used for auto-repair maintenance here (long story short, ffmpeg was false-positive discovering mpegs in json). whatever the case, I have scheduled all users for a repository update file metadata check, so with luck anyone with a bad record will be fixed automatically in the background within a few hours of background work. anyone who encounters this problem in future should be fixed by the automatic repair too. thank you very much to the patient users who sent in reports about this and worked with me to figure this out. please try processing again, and let me know if you still have any issues
+* I also cleaned some of the maintenance code, and made it more aggressive, so 'do a full metadata resync' is now be even more uncompromising
+* also, the repository updates file service gets a bit of cleanup. it seems some ghost files have snuck in there over time, and today their records are corrected. the bug that let this happen in the first place is also fixed
+* there remains an issue where some users' clients have tried to hit the PTR with 404ing update file hashes. I am still investigating this
+
+## [Version 488](https://github.com/hydrusnetwork/hydrus/releases/tag/v488)
 
 ### all misc this week
 * the client now supports 'wavpack' files. these are basically a kind of compressed wav. mpv seems to play them fine too!
@@ -311,38 +340,3 @@
 * cleaned up an old wx label patch
 * cleaned up an old wx system colour patch
 * cleaned up some misc initialisation code
-
-## [Version 478](https://github.com/hydrusnetwork/hydrus/releases/tag/v478)
-
-### misc
-* if a file note text is crazy and can't be displayed, this is now handled and the best visual approximation is displayed (and saved back on ok) instead
-* fixed an error in the cloudflare problem detection calls for the newer versions of cloudscraper (>=1.2.60) while maintaining support for the older versions. fingers crossed, we also shouldn't repeat this specific error if they refactor again
-
-### file history chart updates
-* fixed the 'inbox' line in file history, which has to be calculated in an odd way and was not counting on file imports adding to the inbox
-* the file history chart now expands its y axis range to show all data even if deleted_files is huge. we'll see how nice this actually is IRL
-* bumped the file history resolution up from 1,000 to 2,000 steps
-* the y axis _should_ now show localised numbers, 5,000 instead of 5000, but the method by which this occurs involves fox tongues and the breath of a slighted widow, so it may just not work for some machines
-
-### cleanup, mostly file location stuff
-* I believe I have replaced all the remaining surplus static 'my files' references with code compatible with multiple local file services. when I add the capability to create new local file services, there now won't be a problem trying to display thumbnails or generate menu actions etc... if they aren't in 'my files'
-* pulled the autocomplete dropdown file domain button code out to its own class and refactored it and the multiple location context panel to their own file
-* added a 'default file location' option to 'files and trash' page, and a bunch of dialogs (e.g. the search panel when you make a new export folder) and similar now pull it to initialise. for most users this will stay 'my files' forever, but when we hit multiple local file services, it may want to change
-* the file domain override options in 'manage tag display and search' now work on the new location system and support multple file services
-* in downloaders, when highlighting, a database job that does the 'show files' filter (e.g. to include those in trash or not) now works on the new location context system and will handle files that will be imported to places other than my files
-* refactored client api file service parsing
-* refactored client api hashes parsing
-* cleaned a whole heap of misc location code
-* cleaned misc basic code across hydrus and client constant files
-* gave 'you don't want the server' help page a very quick pass
-
-### client api
-* in prep for multiple local file services, delete_files now takes an optional file_service_key or file_service_name. by default, it now deletes from all appropriate local services, so behaviour is unchanged from before without the parameter if you just want to delete m8
-* undelete files is the same. when we have multiple local file services, an undelete without a file service will undelete to all locations that have a delete record
-* delete_files also now takes an optional 'reason' parameter
-* the 'set_notes' command now checks the type of the notes Object. it obviously has to be string-to-string
-* the 'get_thumbnail' command should now never 404. if you ask for a pdf thumb, it gives the pdf default thumb, and if there is no thumb for whatever reason, you get the hydrus fallback thumbnail. just like in the client itself
-* updated client api help to talk about these
-* updated the unit tests to handle them too
-* did a pass over the client api help to unify indent style and fix other small formatting issues
-* client api version is now 28

@@ -19,6 +19,7 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientTime
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -165,7 +166,8 @@ class NetworkJob( object ):
         self._url = url
         
         self._current_connection_attempt_number = 1
-        self._max_connection_attempts_allowed = 5
+        self._current_request_attempt_number = 1
+        self._this_is_a_one_shot_request = False
         self._we_tried_cloudflare_once = False
         
         self._domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self._url )
@@ -245,21 +247,33 @@ class NetworkJob( object ):
     
     def _CanReattemptConnection( self ):
         
-        return self._current_connection_attempt_number <= self._max_connection_attempts_allowed
+        if self._this_is_a_one_shot_request:
+            
+            return False
+            
+        
+        max_connection_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_connection_attempts_allowed' )
+        
+        return self._current_connection_attempt_number <= max_connection_attempts_allowed
         
     
     def _CanReattemptRequest( self ):
         
+        if self._this_is_a_one_shot_request:
+            
+            return False
+            
+        
         if self._method == 'GET':
             
-            max_attempts_allowed = 5
+            max_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_request_attempts_allowed_get' )
             
-        elif self._method == 'POST':
+        else:
             
             max_attempts_allowed = 1
             
         
-        return self._current_connection_attempt_number <= max_attempts_allowed
+        return self._current_request_attempt_number <= max_attempts_allowed
         
     
     def _GenerateModifiedDate( self, response: requests.Response ):
@@ -281,7 +295,12 @@ class NetworkJob( object ):
             
                 # the given struct is in GMT, so calendar.timegm is appropriate here
                 
-                self._response_last_modified = int( calendar.timegm( struct_time ) )
+                last_modified_time = int( calendar.timegm( struct_time ) )
+                
+                if ClientTime.TimestampIsSensible( last_modified_time ):
+                    
+                    self._response_last_modified = last_modified_time
+                    
                 
             except:
                 
@@ -613,9 +632,9 @@ class NetworkJob( object ):
         self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
         
     
-    def _ResetForAnotherConnectionAttempt( self ):
+    def _ResetForAnotherAttempt( self ):
         
-        self._current_connection_attempt_number += 1
+        self._current_request_attempt_number += 1
         
         self._content_type = None
         self._response_mime = None
@@ -629,6 +648,14 @@ class NetworkJob( object ):
         self._num_bytes_to_read = 1
         self._num_bytes_read_is_accurate = True
         self._number_of_concurrent_empty_chunks = 0
+        
+    
+    def _ResetForAnotherConnectionAttempt( self ):
+        
+        self._ResetForAnotherAttempt()
+        
+        self._current_connection_attempt_number += 1
+        self._current_request_attempt_number = 1
         
     
     def _SendRequestAndGetResponse( self ) -> requests.Response:
@@ -974,7 +1001,9 @@ class NetworkJob( object ):
         
         serverside_bandwidth_wait_time = HG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
         
-        self._serverside_bandwidth_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * serverside_bandwidth_wait_time )
+        problem_rating = ( self._current_connection_attempt_number + self._current_request_attempt_number ) - 1
+        
+        self._serverside_bandwidth_wake_time = HydrusData.GetNow() + ( problem_rating * serverside_bandwidth_wait_time )
         
         while not HydrusData.TimeHasPassed( self._serverside_bandwidth_wake_time ) and not self._IsCancelled():
             
@@ -1070,7 +1099,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if self._max_connection_attempts_allowed == 1:
+            if self._this_is_a_one_shot_request:
                 
                 return True
                 
@@ -1328,7 +1357,7 @@ class NetworkJob( object ):
     
     def OnlyTryConnectionOnce( self ):
         
-        self._max_connection_attempts_allowed = 1
+        self._this_is_a_one_shot_request = True
         
     
     def OverrideBandwidth( self, delay = None ):
@@ -1589,7 +1618,7 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.BandwidthException as e:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if self._CanReattemptRequest():
                         
@@ -1604,7 +1633,7 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1615,7 +1644,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ChunkedEncodingError:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1649,7 +1678,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ReadTimeout:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         

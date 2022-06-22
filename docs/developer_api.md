@@ -647,7 +647,14 @@ Response description:
 :  200 and no content.
 
 !!! note
-    Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended and not worry about an error--it will be discarded. The same for other reasonable logical scenarios: deleting a tag that does not exist will silently make no change, pending a tag that is already 'current' will again be passed over. It is fine to just throw 'process this' tags at every file import you add and not have to worry about checking which files you already added it to.
+    Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.
+    
+    It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.
+
+!!! danger "HOWEVER"
+    When you delete a tag, a deletion record is made _even if the tag does not exist on the file_. This is important if you expect to add the tags again via parsing, because, in general, when hydrus adds tags through a downloader, it will not overwrite a previously 'deleted' tag record (this is to stop re-downloads overwriting the tags you hand-removed previously). Undeletes usually have to be done manually by a human.  
+    
+    So, _do_ be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.
 
 ## Adding URLs
 

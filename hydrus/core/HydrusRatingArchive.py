@@ -44,7 +44,7 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 
 class HydrusRatingArchive( object ):
     
-    def __init__( self, path : os.PathLike ) -> None:
+    def __init__( self, path : str ) -> None:
         
         self._path = path
         

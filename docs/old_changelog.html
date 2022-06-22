@@ -33,6 +33,35 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_489"><a href="#version_489">version 489</a></h3></li>
+				<ul>
+					<li>downloader pages:</li>
+					<li>greatly improved the status reporting for downloader pages. the way the little text updates on your file and gallery progress are generated and presented is overhauled, and tests are unified across the different downloader pages. you now get specific texts on all possible reasons the queue cannot currently process, such as the emergency pause states under the _network_ menu or specific info like hitting the file limit, and all the code involved here is much cleaner</li>
+					<li>the 'working/pending' status, when you have a whole bunch of galleries or watchers wanting to run at the same time, is now calculated more reliably, and the UI will report 'waiting for a work slot' on pending jobs. no more blank pending!</li>
+					<li>when you pause mid-job, the 'pausing - status' text is generated is a little neater too</li>
+					<li>with luck, we'll also have fewer examples of 64KB of 503 error html spamming the UI</li>
+					<li>any critical unhandled errors during importing proper now stop that queue until a client restart and make an appropriate status text and popup (in some situations, they previously could spam every thirty seconds)</li>
+					<li>the simple downloader and urls downloader now support the 'delay work until later' error system. actual UI for status reporting on these downloaders remains limited, however</li>
+					<li>a bunch of misc downloader page cleanup</li>
+					<li>.</li>
+					<li>archive/delete:</li>
+					<li>the final 'commit/forget/back' confirmation dialog on the archive/delete filter now lists all the possible local file domains you could delete from with separate file counts and 'commit' buttons, including 'all my files' if there are multiple, defaulting to the parent page's location at the top of the list. this let's you do a 'yes, purge all these from everywhere' delete or a 'no, just from here' delete as needed and generally makes what is going on more visible</li>
+					<li>fixed archive/delete commit for users with the 'archived file delete lock' turned on</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>fixed a bug in the parsing sanity check that makes sure bad 'last modified' timestamps are not added. some ~1970-01-01 results were slipping through. on update, all modified dates within a week of this epoch will be retroactively removed</li>
+					<li>the 'connection' panel in the options now lets you configure how many times a network request can retry connections and requests. the logic behind these values is improved, too--network jobs now count connection and request errors separately</li>
+					<li>optimised the master tag update routine when you petition tags</li>
+					<li>the Client API help for /add_tags/add_tags now clarifies that deleting a tag that does not exist _will_ make a change--it makes a deletion record</li>
+					<li>thanks to a user, the 'getting started with files' help has had a pass</li>
+					<li>I looked into memory bloat some users are seeing after media viewer use, but I couldn't reproduce it locally. I am now making a plan to finally integrate a memory profiler and add some memory debug UI so we can better see what is going on when a couple gigs suddenly appear</li>
+					<li>.</li>
+					<li>important repository processing fixes:</li>
+					<li>I've been trying to chase down a persistent processing bug some users got, where no matter what resyncs or checks they do, a content update seems to be cast as a definition update. fingers crossed, I have finally fixed it this week. it turns out there was a bug near my 'is this a definition or a content update?' check that is used for auto-repair maintenance here (long story short, ffmpeg was false-positive discovering mpegs in json). whatever the case, I have scheduled all users for a repository update file metadata check, so with luck anyone with a bad record will be fixed automatically in the background within a few hours of background work. anyone who encounters this problem in future should be fixed by the automatic repair too. thank you very much to the patient users who sent in reports about this and worked with me to figure this out. please try processing again, and let me know if you still have any issues</li>
+					<li>I also cleaned some of the maintenance code, and made it more aggressive, so 'do a full metadata resync' is now be even more uncompromising</li>
+					<li>also, the repository updates file service gets a bit of cleanup. it seems some ghost files have snuck in there over time, and today their records are corrected. the bug that let this happen in the first place is also fixed</li>
+					<li>there remains an issue where some users' clients have tried to hit the PTR with 404ing update file hashes. I am still investigating this</li>
+				</ul>
 				<li><h3 id="version_488"><a href="#version_488">version 488</a></h3></li>
 				<ul>
 					<li>the client now supports 'wavpack' files. these are basically a kind of compressed wav. mpv seems to play them fine too!</li>

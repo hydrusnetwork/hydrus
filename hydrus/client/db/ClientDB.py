@@ -262,6 +262,11 @@ class DB( HydrusDB.HydrusDB ):
                 self._AddFiles( self.modules_services.combined_local_file_service_id, valid_rows )
                 
             
+            if service_type == HC.LOCAL_FILE_UPDATE_DOMAIN:
+                
+                self._AddFiles( self.modules_services.combined_local_file_service_id, valid_rows )
+                
+            
             # insert the files
             
             pending_changed = self.modules_files_storage.AddFiles( service_id, valid_rows )
@@ -2349,7 +2354,12 @@ class DB( HydrusDB.HydrusDB ):
         
         culled_mappings_ids = []
         
-        for ( tag_id, hash_ids ) in mappings_ids:
+        for row in mappings_ids:
+            
+            # mappings_ids here can have 'reason_id' for petitions, so we'll index our values here
+            
+            tag_id = row[0]
+            hash_ids = row[1]
             
             if len( hash_ids ) == 0:
                 
@@ -2420,6 +2430,36 @@ class DB( HydrusDB.HydrusDB ):
                         valid_hash_ids = hash_ids
                         
                     
+                elif action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        continue
+                        
+                    else:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    
+                else:
+                    
+                    valid_hash_ids = set()
+                    
                 
             else:
                 
@@ -2439,7 +2479,9 @@ class DB( HydrusDB.HydrusDB ):
                         
                     elif action == HC.CONTENT_UPDATE_PEND:
                         
+                        # prohibited hash_ids
                         existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( tag_id, ) ) )
+                        # existing_hash_ids
                         existing_hash_ids.update( self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) ) )
                         
                         valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
@@ -2448,12 +2490,36 @@ class DB( HydrusDB.HydrusDB ):
                         
                         valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) )
                         
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        # we are technically ok with deleting tags that don't exist yet!
+                        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) )
+                        
+                        valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
+                        
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                        
+                        valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) )
+                        
+                    else:
+                        
+                        valid_hash_ids = set()
+                        
                     
                 
             
             if len( valid_hash_ids ) > 0:
                 
-                culled_mappings_ids.append( ( tag_id, valid_hash_ids ) )
+                if action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    reason_id = row[2]
+                    
+                    culled_mappings_ids.append( ( tag_id, valid_hash_ids, reason_id ) )
+                    
+                else:
+                    
+                    culled_mappings_ids.append( ( tag_id, valid_hash_ids ) )
+                    
                 
             
         
@@ -11872,6 +11938,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 488:
+            
+            # clearing up some garbo 1970-01-01 timestamps that got saved
+            self._Execute( 'DELETE FROM file_domain_modified_timestamps WHERE file_modified_timestamp < ?;', ( 86400 * 7, ) )
+            
+            #
+            
+            # mysterious situation where repo updates domain had some ghost files that were not in all local files!
+            
+            hash_ids_in_repo_updates = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.local_update_service_id ) )
+            
+            hash_ids_in_all_files = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), hash_ids_in_repo_updates )
+            
+            orphan_hash_ids = hash_ids_in_repo_updates.difference( hash_ids_in_all_files )
+            
+            if len( orphan_hash_ids ) > 0:
+                
+                hash_ids_to_timestamps = self.modules_files_storage.GetCurrentHashIdsToTimestamps( self.modules_services.local_update_service_id, orphan_hash_ids )
+                
+                rows = list( hash_ids_to_timestamps.items() )
+                
+                self.modules_files_storage.AddFiles( self.modules_services.combined_local_file_service_id, rows )
+                
+            
+            # turns out ffmpeg was detecting some updates as mpegs, so this wasn't always working right!
+            self.modules_files_maintenance_queue.AddJobs( hash_ids_in_repo_updates, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            
+            self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( self.modules_services.local_update_service_id, ) )
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11892,6 +11988,8 @@ class DB( HydrusDB.HydrusDB ):
         deleted_mappings_ids = self._FilterExistingUpdateMappings( tag_service_id, deleted_mappings_ids, HC.CONTENT_UPDATE_DELETE )
         pending_mappings_ids = self._FilterExistingUpdateMappings( tag_service_id, pending_mappings_ids, HC.CONTENT_UPDATE_PEND )
         pending_rescinded_mappings_ids = self._FilterExistingUpdateMappings( tag_service_id, pending_rescinded_mappings_ids, HC.CONTENT_UPDATE_RESCIND_PEND )
+        petitioned_mappings_ids = self._FilterExistingUpdateMappings( tag_service_id, petitioned_mappings_ids, HC.CONTENT_UPDATE_PETITION )
+        petitioned_rescinded_mappings_ids = self._FilterExistingUpdateMappings( tag_service_id, petitioned_rescinded_mappings_ids, HC.CONTENT_UPDATE_RESCIND_PETITION )
         
         tag_ids_to_filter_chained = { tag_id for ( tag_id, hash_ids ) in itertools.chain.from_iterable( ( mappings_ids, deleted_mappings_ids, pending_mappings_ids, pending_rescinded_mappings_ids ) ) }
         

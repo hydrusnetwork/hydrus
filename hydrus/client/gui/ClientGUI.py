@@ -3313,7 +3313,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
-        ClientGUIMenus.AppendMenuItem( memory_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+        ClientGUIMenus.AppendMenuItem( memory_actions, 'clear all rendering caches', 'Tell the image rendering system to forget all current images, tiles, and thumbs. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )

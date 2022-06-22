@@ -4,6 +4,7 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
@@ -15,6 +16,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
+from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
@@ -70,7 +72,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         self._file_import_options = file_import_options
         self._delete_after_success = delete_after_success
         
-        self._current_action = ''
+        self._page_key = b'initialising page key'
+        
+        self._files_status = ''
         self._paused = False
         
         self._lock = threading.Lock()
@@ -131,7 +135,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _WorkOnFiles( self, page_key ):
+    def _WorkOnFiles( self ):
         
         file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
         
@@ -140,39 +144,28 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        did_substantial_work = False
-        
         path = file_seed.file_seed_data
         
         with self._lock:
             
-            self._current_action = 'importing'
+            self._files_status = 'importing'
             
         
         def status_hook( text ):
             
             with self._lock:
                 
-                if len( text ) > 0:
-                    
-                    text = text.splitlines()[0]
-                    
-                
-                self._current_action = text
+                self._file_status = ClientImportControl.NeatenStatusText( text )
                 
             
         
         file_seed.ImportPath( self._file_seed_cache, self._file_import_options, status_hook = status_hook )
         
-        did_substantial_work = True
-        
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
             if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
                 
-                file_seed.PresentToPage( page_key )
-                
-                did_substantial_work = True
+                file_seed.PresentToPage( self._page_key )
                 
             
             if self._delete_after_success:
@@ -206,13 +199,10 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._current_action = ''
+            self._files_status = ''
             
         
-        if did_substantial_work:
-            
-            time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
-            
+        time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
         
     
     def CurrentlyWorking( self ):
@@ -264,7 +254,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._current_action, self._paused )
+            text = ClientImportControl.GenerateLiveStatusText( self._files_status, self._paused, 0, '' )
+            
+            return ( text, self._paused )
             
         
     
@@ -321,69 +313,55 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
+        self._page_key = page_key
+        
+        self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
         
         self._files_repeating_job.SetThreadSlotType( 'misc' )
         
     
-    def CanDoFileWork( self, page_key ):
+    def CheckCanDoFileWork( self ):
         
         with self._lock:
             
-            if ClientImporting.PageImporterShouldStopWorking( page_key ):
+            try:
+                
+                ClientImportControl.CheckImporterCanDoWorkBecauseStopped( self._page_key )
+                
+            except HydrusExceptions.VetoException:
                 
                 self._files_repeating_job.Cancel()
                 
-                return False
+                raise
                 
             
-            paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
-            
-            if paused:
-                
-                return False
-                
-            
-            try:
-                
-                self._file_import_options.CheckReadyToImport()
-                
-            except Exception as e:
-                
-                self._current_action = str( e )
-                
-                HydrusData.ShowText( str( e ) )
-                
-                self._paused = True
-                
-                return False
-                
-            
-            work_to_do = self._file_seed_cache.WorkToDo()
-            
-            if not work_to_do:
-                
-                return False
-                
-            
-            page_shown = not HG.client_controller.PageClosedButNotDestroyed( page_key )
-            
-            if not page_shown:
-                
-                return False
-                
+            ClientImportControl.CheckImporterCanDoFileWorkBecausePaused( self._paused, self._file_seed_cache, self._page_key )
             
         
         return True
         
     
-    def REPEATINGWorkOnFiles( self, page_key ):
+    def REPEATINGWorkOnFiles( self ):
         
-        while self.CanDoFileWork( page_key ):
+        while True:
             
             try:
                 
-                self._WorkOnFiles( page_key )
+                try:
+                    
+                    self.CheckCanDoFileWork()
+                    
+                except HydrusExceptions.VetoException as e:
+                    
+                    with self._lock:
+                        
+                        self._file_status = str( e )
+                        
+                    
+                    break
+                    
+                
+                self._WorkOnFiles()
                 
                 HG.client_controller.WaitUntilViewFree()
                 
@@ -391,7 +369,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
             except Exception as e:
                 
+                with self._lock:
+                    
+                    self._file_status = 'stopping work: {}'.format( str( e ) )
+                    
+                
                 HydrusData.ShowException( e )
+                
+                return
                 
             
         

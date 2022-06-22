@@ -1121,9 +1121,9 @@ def LastShutdownWasBad( db_path, instance ):
         return False
         
 
-def MassUnion( lists ):
+def MassUnion( iterables ):
     
-    return { item for item in itertools.chain.from_iterable( lists ) }
+    return { item for item in itertools.chain.from_iterable( iterables ) }
     
 def MedianPop( population ):
     

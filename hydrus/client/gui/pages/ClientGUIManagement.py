@@ -1830,18 +1830,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
             ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_pause )
             
         
-        if paused:
-            
-            if current_action == '':
-                
-                current_action = 'paused'
-                
-            else:
-                
-                current_action = 'pausing - ' + current_action
-                
-            
-        
         self._current_action.setText( current_action )
         
     
@@ -3862,17 +3850,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             self._pending_jobs_listbox.SelectData( selected_jobs )
             
         
-        if queue_paused:
-            
-            parser_status = 'paused'
-            
-        
         self._parser_status.setText( parser_status )
-        
-        if current_action == '' and files_paused:
-            
-            current_action = 'paused'
-            
         
         self._current_action.setText( current_action )
         

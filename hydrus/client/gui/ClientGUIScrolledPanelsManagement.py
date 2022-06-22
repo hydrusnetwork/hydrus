@@ -304,8 +304,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 max_network_jobs_per_domain_max = 5
                 
             
+            self._max_connection_attempts_allowed = ClientGUICommon.BetterSpinBox( general, min = 1, max = 10 )
+            self._max_connection_attempts_allowed.setToolTip( 'This refers to timeouts when actually making the initial connection.' )
+            
+            self._max_request_attempts_allowed_get = ClientGUICommon.BetterSpinBox( general, min = 1, max = 10 )
+            self._max_request_attempts_allowed_get.setToolTip( 'This refers to timeouts when waiting for a response to our GET requests, whether that is the start or an interruption part way through.' )
+            
             self._network_timeout = ClientGUICommon.BetterSpinBox( general, min = network_timeout_min, max = network_timeout_max )
-            self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
+            self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, once started, it experiences inactivity for six times this duration, it will be considered dead and retried or abandoned.' )
             
             self._connection_error_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
             self._connection_error_wait_time.setToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' )
@@ -334,6 +340,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
             self._no_proxy.SetValue( self._new_options.GetNoneableString( 'no_proxy' ) )
             
+            self._max_connection_attempts_allowed.setValue( self._new_options.GetInteger( 'max_connection_attempts_allowed' ) )
+            self._max_request_attempts_allowed_get.setValue( self._new_options.GetInteger( 'max_request_attempts_allowed_get' ) )
             self._network_timeout.setValue( self._new_options.GetInteger( 'network_timeout' ) )
             self._connection_error_wait_time.setValue( self._new_options.GetInteger( 'connection_error_wait_time' ) )
             self._serverside_bandwidth_wait_time.setValue( self._new_options.GetInteger( 'serverside_bandwidth_wait_time' ) )
@@ -362,6 +370,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'max connection attempts allowed per request: ', self._max_connection_attempts_allowed ) )
+            rows.append( ( 'max retries allowed per request: ', self._max_request_attempts_allowed_get ) )
             rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
             rows.append( ( 'connection error retry wait (seconds): ', self._connection_error_wait_time ) )
             rows.append( ( 'serverside bandwidth retry wait (seconds): ', self._serverside_bandwidth_wait_time ) )
@@ -425,7 +435,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
             self._new_options.SetNoneableString( 'no_proxy', self._no_proxy.GetValue() )
             
-            self._new_options.SetInteger( 'network_timeout', self._network_timeout.value() )
+            self._new_options.SetInteger( 'max_connection_attempts_allowed', self._max_connection_attempts_allowed.value() )
+            self._new_options.SetInteger( 'max_request_attempts_allowed_get', self._max_request_attempts_allowed_get.value() )
             self._new_options.SetInteger( 'connection_error_wait_time', self._connection_error_wait_time.value() )
             self._new_options.SetInteger( 'serverside_bandwidth_wait_time', self._serverside_bandwidth_wait_time.value() )
             self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )

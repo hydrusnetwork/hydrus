@@ -4224,7 +4224,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if delete_lock_for_archived_files:
             
-            deleted = [ media.GetHash() for media in self._deleted if not media.HasArchive() ]
+            deleted = [ media for media in self._deleted if not media.HasArchive() ]
             
         else:
             
@@ -4233,33 +4233,70 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if len( kept ) > 0 or len( deleted ) > 0:
             
-            label_components = []
-            
             if len( kept ) > 0:
                 
-                label_components.append( 'keep {}'.format( HydrusData.ToHumanInt( len( kept ) ) ) )
+                kept_label = 'keep {}'.format( HydrusData.ToHumanInt( len( kept ) ) )
                 
+            else:
+                
+                kept_label = None
+                
+            
+            deletion_options = []
             
             if len( deleted ) > 0:
                 
-                if self._location_context.IncludesCurrent():
+                location_contexts_to_present_options_for = [ self._location_context ]
+                
+                current_local_service_keys = HydrusData.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
+                
+                local_file_domain_service_keys = [ service_key for service_key in current_local_service_keys if HG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
+                
+                location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
+                
+                if len( local_file_domain_service_keys ) > 1:
                     
-                    location_context_label = self._location_context.ToString( HG.client_controller.services_manager.GetName )
-                    
-                else:
-                    
-                    location_context_label = 'all possible local file services'
+                    location_contexts_to_present_options_for.append( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
                     
                 
-                label_components.append( 'delete (from {}) {}'.format( location_context_label, HydrusData.ToHumanInt( len( self._deleted ) ) ) )
+                specific_local_service_keys = [ service_key for service_key in current_local_service_keys if HG.client_controller.services_manager.GetServiceType( service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES ]
+                
+                if len( specific_local_service_keys ) > len( local_file_domain_service_keys ): # we have some trash or I guess repo updates
+                    
+                    location_contexts_to_present_options_for.append( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                    
+                
+                location_contexts_to_present_options_for = HydrusData.DedupeList( location_contexts_to_present_options_for )
+                
+                for location_context in location_contexts_to_present_options_for:
+                    
+                    file_service_keys = location_context.current_service_keys
+                    
+                    num_deletable = len( [ m for m in deleted if len( m.GetLocationsManager().GetCurrent().intersection( file_service_keys ) ) > 0 ] )
+                    
+                    if num_deletable > 0:
+                        
+                        if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ):
+                            
+                            location_label = 'all local file domains'
+                            
+                        elif location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
+                            
+                            location_label = 'my hard disk'
+                            
+                        else:
+                            
+                            location_label = location_context.ToString( HG.client_controller.services_manager.GetName )
+                            
+                        
+                        delete_label = 'delete {} from {}'.format( HydrusData.ToHumanInt( num_deletable ), location_label )
+                        
+                        deletion_options.append( ( location_context, delete_label ) )
+                        
+                    
                 
             
-            label = '{} files?'.format( ' and '.join( label_components ) )
-            
-            # TODO: ok so ideally we should total up the deleteds' actual file services and give users UI to select what they want to delete from
-            # so like '23 files in my files, 2 in favourites' and then a 'yes' button for all or just my files or favourites
-            
-            ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            ( result, deletee_location_context, cancelled ) = ClientGUIDialogsQuick.GetFinishArchiveDeleteFilteringAnswer( self, kept_label, deletion_options )
             
             if cancelled:
                 
@@ -4282,7 +4319,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 self._current_media = self._GetFirst() # so the pubsub on close is better
                 
-                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, self._location_context, kept, deleted )
+                HG.client_controller.CallToThread( CommitArchiveDelete, self._page_key, deletee_location_context, kept, deleted )
                 
             
         

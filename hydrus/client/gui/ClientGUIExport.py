@@ -234,7 +234,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
         
-        self._page_key = 'export folders placeholder'
+        self._page_key = b'export folders placeholder'
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         

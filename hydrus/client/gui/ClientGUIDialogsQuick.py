@@ -37,6 +37,21 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             
         
     
+def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, 'filtering done?' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionArchiveDeleteFinishFilteringPanel( dlg, kept_label, deletion_options )
+        
+        dlg.SetPanel( panel )
+        
+        result = dlg.exec()
+        location_context = panel.GetLocationContext()
+        was_cancelled = dlg.WasCancelled()
+        
+        return ( result, location_context, was_cancelled )
+        
+    
 def GetFinishFilteringAnswer( win, label ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:

@@ -2142,7 +2142,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def ClearPageKey( self ):
         
-        self._page_key = 'dead media panel page key'
+        self._page_key = b'dead media panel page key'
         
     
     def Collect( self, page_key, media_collect = None ):

@@ -112,6 +112,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _DelayWork( self, time_delta, reason ):
         
+        if len( reason ) > 0:
+            
+            reason = reason.splitlines()[0]
+            
+        
         self._no_work_until = HydrusData.GetNow() + time_delta
         self._no_work_until_reason = reason
         

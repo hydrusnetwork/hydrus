@@ -50,7 +50,7 @@ class HydrusLogger( object ):
         self._log_file.close()
         
     
-    def _GetLogPath( self ) -> os.PathLike:
+    def _GetLogPath( self ) -> str:
         
         current_time_struct = time.localtime()
         

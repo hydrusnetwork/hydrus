@@ -327,6 +327,32 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
+    if ok_to_look_for_hydrus_updates and size < 64 * 1024 * 1024:
+        
+        with open( path, 'rb' ) as f:
+            
+            update_network_bytes = f.read()
+            
+        
+        try:
+            
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            
+            if isinstance( update, HydrusNetwork.ContentUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
+                
+            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
+                
+            
+        except:
+            
+            pass
+            
+        
+    
     with open( path, 'rb' ) as f:
         
         bit_to_check = f.read( 256 )
@@ -360,6 +386,13 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
         
     
+    if HydrusText.LooksLikeHTML( bit_to_check ):
+        
+        return HC.TEXT_HTML
+        
+    
+    # it is important this goes at the end, because ffmpeg has a billion false positives!
+    # for instance, it once thought some hydrus update files were mpegs
     try:
         
         mime = HydrusVideoHandling.GetMime( path )
@@ -377,37 +410,6 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         HydrusData.Print( 'FFMPEG had trouble with: ' + path )
         HydrusData.PrintException( e, do_wait = False )
-        
-    
-    if ok_to_look_for_hydrus_updates:
-        
-        with open( path, 'rb' ) as f:
-            
-            update_network_bytes = f.read()
-            
-        
-        try:
-            
-            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
-            
-            if isinstance( update, HydrusNetwork.ContentUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
-                
-            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
-                
-            
-        except:
-            
-            pass
-            
-        
-    
-    if HydrusText.LooksLikeHTML( bit_to_check ):
-        
-        return HC.TEXT_HTML
         
     
     return HC.APPLICATION_UNKNOWN

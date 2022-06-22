@@ -309,9 +309,17 @@ def ParseClientAPIPOSTArgs( request ):
             
             json_string = str( json_bytes, 'utf-8' )
             
-            args = json.loads( json_string )
+            try:
+                
+                args = json.loads( json_string )
+                
+            except json.decoder.JSONDecodeError as e:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand the JSON you gave me: {}'.format( str( e ) ) )
+                
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
+            
         
         elif request_content_type_mime == HC.APPLICATION_CBOR:
             

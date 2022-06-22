@@ -20,13 +20,13 @@ DOWNLOADER_SIMPLE_STATUS_PENDING = 2
 DOWNLOADER_SIMPLE_STATUS_PAUSED = 3
 DOWNLOADER_SIMPLE_STATUS_DEFERRED = 4
 
-downloader_enum_sort_lookup = {}
-
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_DONE ] = 0
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_WORKING ] = 1
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_PENDING ] = 2
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_DEFERRED ] = 3
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_PAUSED ] = 4
+downloader_enum_sort_lookup = {
+    DOWNLOADER_SIMPLE_STATUS_DONE : 0,
+    DOWNLOADER_SIMPLE_STATUS_WORKING : 1,
+    DOWNLOADER_SIMPLE_STATUS_PENDING : 2,
+    DOWNLOADER_SIMPLE_STATUS_DEFERRED : 3,
+    DOWNLOADER_SIMPLE_STATUS_PAUSED : 4
+}
 
 DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
@@ -105,10 +105,6 @@ def GenerateSinglePopupNetworkJobPresentationContextFactory( job_key ):
 def GetRepeatingJobInitialDelay():
     
     return 0.5 + ( random.random() * 0.5 )
-    
-def PageImporterShouldStopWorking( page_key ):
-    
-    return HG.started_shutdown or not HG.client_controller.PageAlive( page_key )
     
 def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button, publish_files_to_page ):
     
