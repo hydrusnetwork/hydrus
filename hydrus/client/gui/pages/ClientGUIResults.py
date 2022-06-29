@@ -44,6 +44,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+from hydrus.client.gui.search import ClientGUILocation
 
 def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
     
@@ -1586,6 +1587,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                 
                 message = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
+                
+            else:
+                
+                message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
                 
             
             do_it_now = True
@@ -3909,6 +3914,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # valid commands for the files
             
+            current_file_service_keys = set()
+            
             uploadable_file_service_keys = set()
             
             downloadable_file_service_keys = set()
@@ -3931,6 +3938,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 deleted = locations_manager.GetDeleted()
                 pending = locations_manager.GetPending()
                 petitioned = locations_manager.GetPetitioned()
+                
+                # ALL
+                
+                current_file_service_keys.update( current )
                 
                 # FILE REPOS
                 
@@ -4129,7 +4140,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            for file_service_key in all_local_file_domains_sorted:
+            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( local_media_file_service_keys ), key = HG.client_controller.services_manager.GetName )
+            
+            for file_service_key in local_file_service_keys_we_are_in:
                 
                 ClientGUIMenus.AppendMenuItem( menu, '{} from {}'.format( local_delete_phrase, HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete the selected files.', self._Delete, file_service_key )
                 
@@ -4180,6 +4193,10 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'similar files data', 'Regenerated the selected files\' perceptual hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'duplicate pixel data', 'Regenerated the selected files\' pixel hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'full presence check', 'Check file presence and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'full integrity check', 'Check file integrity and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
             
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
             
@@ -4667,24 +4684,9 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            all_specific_file_domains = list( all_specific_file_domains )
+            all_specific_file_domains = ClientLocation.SortFileServiceKeysNicely( all_specific_file_domains )
             
-            if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                
-                all_specific_file_domains.remove( CC.TRASH_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
-                
-            
-            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
-                
-                service_key = service.GetServiceKey()
-                
-                if service_key in all_specific_file_domains:
-                    
-                    all_specific_file_domains.remove( service_key )
-                    all_specific_file_domains.insert( 0, service_key )
-                    
-                
+            all_specific_file_domains = ClientLocation.FilterOutRedundantMetaServices( all_specific_file_domains )
             
             for file_service_key in all_specific_file_domains:
                 
@@ -4757,24 +4759,9 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            all_specific_file_domains = list( all_specific_file_domains )
+            all_specific_file_domains = ClientLocation.SortFileServiceKeysNicely( all_specific_file_domains )
             
-            if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                
-                all_specific_file_domains.remove( CC.TRASH_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
-                
-            
-            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
-                
-                service_key = service.GetServiceKey()
-                
-                if service_key in all_specific_file_domains:
-                    
-                    all_specific_file_domains.remove( service_key )
-                    all_specific_file_domains.insert( 0, service_key )
-                    
-                
+            all_specific_file_domains = ClientLocation.FilterOutRedundantMetaServices( all_specific_file_domains )
             
             for file_service_key in all_specific_file_domains:
                 
@@ -4880,6 +4867,9 @@ class Thumbnail( Selectable ):
                 
             
         
+        # this isn't a Qt object, we need to set the font explitly to get font size changes from QSS etc..
+        painter.setFont( HG.client_controller.gui.font() )
+        
         painter.setPen( QC.Qt.NoPen )
         
         painter.setBrush( QG.QBrush( new_options.GetColour( background_colour_type ) ) )
@@ -4930,8 +4920,6 @@ class Thumbnail( Selectable ):
                     
                     text_colour_with_alpha = upper_tag_summary_generator.GetTextColour()
                     
-                    painter.setFont( QW.QApplication.font() )
-                    
                     background_colour_with_alpha = upper_tag_summary_generator.GetBackgroundColour()
                     
                     painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
@@ -4958,8 +4946,6 @@ class Thumbnail( Selectable ):
                 if len( lower_summary ) > 0:
                     
                     text_colour_with_alpha = lower_tag_summary_generator.GetTextColour()
-                    
-                    painter.setFont( QW.QApplication.font() )
                     
                     background_colour_with_alpha = lower_tag_summary_generator.GetBackgroundColour()
                     
@@ -5088,8 +5074,6 @@ class Thumbnail( Selectable ):
             painter.drawPixmap( icon_x, icon_y, icon )
             
             num_files_str = HydrusData.ToHumanInt( self.GetNumFiles() )
-            
-            painter.setFont( QW.QApplication.font() )
             
             ( text_size, num_files_str ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, num_files_str )
             

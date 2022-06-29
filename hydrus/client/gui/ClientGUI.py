@@ -1097,7 +1097,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
         text += os.linesep * 2
-        text += 'This will instruct the database to review its file records and delete any orphans. You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
+        text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain (e.g. my files) but not an umbrella domain (e.g. all my files), or vice versa, it will be removed.'
+        text += os.linesep * 2
+        text += 'You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly and may break other maintenance routines. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
         text += os.linesep * 2
         text += 'It will create a popup message while it works and inform you of the number of orphan records found.'
         
@@ -3020,6 +3022,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
         
+        ClientGUIMenus.AppendSeparator( file_maintenance_menu )
+        
+        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
+        
         ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
         
         maintenance_submenu = QW.QMenu( menu )
@@ -3029,7 +3035,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( maintenance_submenu )
         
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
         
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )

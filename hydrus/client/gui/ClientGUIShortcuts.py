@@ -6,6 +6,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
@@ -931,6 +932,34 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return s
         
     
+    def TryToIncrementKey( self ):
+        
+        if self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+            
+            new_shortcut_key = self.shortcut_key + 1
+            
+            if ClientData.OrdIsAlphaLower( new_shortcut_key ) or ClientData.OrdIsNumber( new_shortcut_key ):
+                
+                self.shortcut_key = new_shortcut_key
+                
+                return
+                
+            
+        elif self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_SPECIAL:
+            
+            new_shortcut_key = self.shortcut_key + 1
+            
+            if new_shortcut_key in special_key_shortcut_str_lookup:
+                
+                self.shortcut_key = new_shortcut_key
+                
+                return
+                
+            
+        
+        raise HydrusExceptions.VetoException( 'Sorry, cannot increment that shortcut!' )
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
 
 class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
@@ -1074,6 +1103,11 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         return shortcuts
+        
+    
+    def GetShortcutsAndCommands( self ):
+        
+        return list( self )
         
     
     def SetCommand( self, shortcut, command ):

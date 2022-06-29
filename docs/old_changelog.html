@@ -33,6 +33,31 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_490"><a href="#version_490">version 490</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed a stupid bug that meant the image caches were initialising with default values (as under _speed and memory_) until you opened and OKed the options dialog (or did some other options-refresh events). sorry for the trouble, please enjoy some smoother image browsing.</li>
+					<li>mr bones now shows more numbers, and in a neater table. it should be clearer what the percentages are for now, too</li>
+					<li>the _manage->regenerate_ thumbnail menu has additional quick maintenance commands for presence and integrity checks and regenerating data in the similar files system</li>
+					<li>wrote a new 'special duplicate' button for the edit shortcut set dialog. the list on this dialog doesn't allow duplicates (which meant the old 'duplicate' button was doing nothing), so this duplicates the current actions with 'incremented' shortcut keys. 'a' becomes 'b', 'ctrl+5' becomes 'ctrl+6', and so on. it doesn't always work, but if you want to make ten shortcuts for setting rating 1-10, this should help</li>
+					<li>fixed an issue where the thumbnail banner text and the media viewer background text was not changing size or font according to QSS stylesheet rules (issue #1173)</li>
+					<li>SIGTERM should now cause a clean program exit (previously it killed the GUI App but left some daemon threads alive for thirty seconds or more). unlike SIGINT, it will not ask you if you are sure you want to exit or if you would like to do shutdown maintenance--it just closes the client promptly</li>
+					<li>fixed a bug in last week's importer page status improvements--the hard drive import page wasn't showing all the updates it should have</li>
+					<li>brushed up some backup help</li>
+					<li>.</li>
+					<li>file services:</li>
+					<li>fixed a bug where advanced users could set 'all known files'/'all known tags' on a search dropdown. this search domain is not supported</li>
+					<li>in the archive/delete filter, if the current location is 'all my files' and the files being deleted are only in one local file domain, the surplus 'all my files' will no longer appear at the top of the filter's commit dialog</li>
+					<li>the file services in the thumbnail select/remove menu are now sorted in the same order as the file domain button in search dropdowns</li>
+					<li>the thumbnail select/remove menus now exclude 'all my files' and 'all local files' if those choices are redundant (e.g. if you only have files in 'my files', 'all my files' will be hidden)</li>
+					<li>fixed some incorrect 'delete from x' actions appearing in thumbnail right-click menus</li>
+					<li>.</li>
+					<li>orphan files:</li>
+					<li>there's a persistent processing bug some users have where some update files are missing but they won't redownload correctly. I think I fix that this week naturally so existing maintenance routines will now be able to fix it themselves after another round</li>
+					<li>fixed some issues related to deleting files from the repository updates file domain.</li>
+					<li>the 'clear orphan file records' maintenance command now fixes the 'all my files' umbrella services as well as the 'all local files' one. it also has nicer description, does some additional file-removal cleanup, and triggers a file recount if problems are found</li>
+					<li>moved 'clear orphan files' to the 'files' maintenance menu</li>
+				</ul>
 				<li><h3 id="version_489"><a href="#version_489">version 489</a></h3></li>
 				<ul>
 					<li>downloader pages:</li>

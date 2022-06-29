@@ -547,7 +547,7 @@ class Controller( HydrusController.HydrusController ):
             
         elif sig == signal.SIGTERM:
             
-            QP.CallAfter( QW.QApplication.instance().quit )
+            self.Exit()
             
         
     
@@ -1004,20 +1004,6 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
-        self.frame_splash_status.SetText( 'initialising managers' )
-        
-        self.frame_splash_status.SetSubtext( 'image caches' )
-        
-        # careful: outside of qt since they don't need qt for init, seems ok _for now_
-        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
-        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
-        self.bitmap_manager = ClientManagers.BitmapManager( self )
-        
-        self.frame_splash_status.SetSubtext( 'services' )
-        
-        self.services_manager = ClientServices.ServicesManager( self )
-        
         self.frame_splash_status.SetSubtext( 'options' )
         
         self.options = self.Read( 'options' )
@@ -1032,6 +1018,22 @@ class Controller( HydrusController.HydrusController ):
                 HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
                 
             
+        
+        self.frame_splash_status.SetSubtext( 'image caches' )
+        
+        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
+        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        
+        self.frame_splash_status.SetText( 'initialising managers' )
+        
+        # careful: outside of qt since they don't need qt for init, seems ok _for now_
+        
+        self.bitmap_manager = ClientManagers.BitmapManager( self )
+        
+        self.frame_splash_status.SetSubtext( 'services' )
+        
+        self.services_manager = ClientServices.ServicesManager( self )
         
         # important this happens before repair, as repair dialog has a column list lmao
         

@@ -1857,7 +1857,7 @@ class StaticBox( QW.QFrame ):
         
         self._sizer = QP.VBoxLayout()
         
-        normal_font = QW.QApplication.font()
+        normal_font = self.font()
         
         normal_font_size = normal_font.pointSize()
         normal_font_family = normal_font.family()

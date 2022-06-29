@@ -38,14 +38,14 @@ But you can also check it in _help->about_. A handful of database operations (PT
     
 ##**`--db_journal_mode {WAL,TRUNCATE,PERSIST,MEMORY}`**
 
-Change the _journal_ mode of the SQLite database. The default is WAL, which works great for SSD drives, but if you have a very old or slow drive, a different mode _may_ work better. Full docs are [here](https://sqlite.org/pragma.html#pragma_journal_mode).
+Change the _journal_ mode of the SQLite database. The default is WAL, which works great for almost all SSD drives, but if you have a very old or slow drive, or if you encounter 'disk I/O error' errors on Windows with an NVMe drive, try TRUNCATE. Full docs are [here](https://sqlite.org/pragma.html#pragma_journal_mode).
 
 Briefly:
 
 *   WAL - Clever write flushing that takes advantage of new drive synchronisation tools to maintain integrity and reduce total writes.
 *   TRUNCATE - Compatibility mode. Use this if your drive cannot launch WAL.
 *   PERSIST - This is newly added to hydrus. The ideal is that if you have a high latency HDD drive and want sync with the PTR, this will work more efficiently than WAL journals, which will be regularly wiped and recreated and be fraggy. Unfortunately, with hydrus's multiple database file system, SQLite ultimately treats this as DELETE, which in our situation is basically the same as TRUNCATE, so does not increase performance. Hopefully this will change in future.
-*   MEMORY - Danger mode. Extremely fast, but you had better guarantee a lot of free ram.
+*   MEMORY - Danger mode. Extremely fast, but you had better guarantee a lot of free ram and no unclean exits.
 
 ##**`--db_transaction_commit_period DB_TRANSACTION_COMMIT_PERIOD`**
     

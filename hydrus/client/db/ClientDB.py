@@ -1122,71 +1122,92 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'modal_message', job_key )
         
+        orphans_found = False
+        
         try:
             
             job_key.SetVariable( 'popup_text_1', 'looking for orphans' )
             
-            local_file_service_ids = self.modules_services.GetServiceIds( HC.SPECIFIC_LOCAL_FILE_SERVICES )
+            jobs = [
+                ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'my files umbrella' ),
+                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.combined_local_file_service_id, 'local files umbrella' )
+            ]
             
-            local_hash_ids = set()
-            
-            for local_file_service_id in local_file_service_ids:
+            for ( umbrella_components_service_types, umbrella_master_service_id, description ) in jobs:
                 
-                some_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( local_file_service_id )
+                umbrella_components_service_ids = self.modules_services.GetServiceIds( umbrella_components_service_types )
                 
-                local_hash_ids.update( some_hash_ids )
+                umbrella_components_hash_ids = set()
                 
-            
-            combined_local_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id ) )
-            
-            in_local_not_in_combined = local_hash_ids.difference( combined_local_hash_ids )
-            in_combined_not_in_local = combined_local_hash_ids.difference( local_hash_ids )
-            
-            if job_key.IsCancelled():
-                
-                return
-                
-            
-            job_key.SetVariable( 'popup_text_1', 'deleting orphans' )
-            
-            if len( in_local_not_in_combined ) > 0:
-                
-                # these files were deleted from the umbrella service without being cleared from a specific file domain
-                # they are most likely deleted from disk
-                # pushing the 'delete combined' call will flush from the local services as well
-                
-                self._DeleteFiles( self.modules_services.combined_local_file_service_id, in_local_not_in_combined )
-                
-                for hash_id in in_local_not_in_combined:
+                for umbrella_components_service_id in umbrella_components_service_ids:
                     
-                    self.modules_similar_files.StopSearchingFile( hash_id )
+                    umbrella_components_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( umbrella_components_service_id ) )
                     
                 
-                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_local_not_in_combined ) ) + ' local domain orphan file records.' )
+                umbrella_master_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( umbrella_master_service_id ) )
                 
-            
-            if job_key.IsCancelled():
+                in_components_not_in_master = umbrella_components_hash_ids.difference( umbrella_master_hash_ids )
+                in_master_not_in_components = umbrella_master_hash_ids.difference( umbrella_components_hash_ids )
                 
-                return
-                
-            
-            if len( in_combined_not_in_local ) > 0:
-                
-                # these files were deleted from all specific services but not from the combined service
-                # I have only ever seen one example of this and am not sure how it happened
-                # in any case, the same 'delete combined' call will do the job
-                
-                self._DeleteFiles( self.modules_services.combined_local_file_service_id, in_combined_not_in_local )
-                
-                for hash_id in in_combined_not_in_local:
+                if job_key.IsCancelled():
                     
-                    self.modules_similar_files.StopSearchingFile( hash_id )
+                    return
                     
                 
-                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_combined_not_in_local ) ) + ' combined domain orphan file records.' )
+                job_key.SetVariable( 'popup_text_1', 'deleting orphans' )
+                
+                if len( in_components_not_in_master ) > 0:
+                    
+                    orphans_found = True
+                    
+                    # these files were deleted from the umbrella service without being cleared from a specific file domain
+                    # they are most likely deleted from disk
+                    # pushing the master's delete call will flush from the components as well
+                    
+                    self._DeleteFiles( umbrella_master_service_id, in_components_not_in_master )
+                    
+                    # we spam this stuff since it won't trigger if the files don't exist on master!
+                    self._ArchiveFiles( in_components_not_in_master )
+                    
+                    for hash_id in in_components_not_in_master:
+                        
+                        self.modules_similar_files.StopSearchingFile( hash_id )
+                        
+                    
+                    self.modules_files_maintenance_queue.CancelFiles( in_components_not_in_master )
+                    
+                    self.modules_hashes_local_cache.DropHashIdsFromCache( in_components_not_in_master )
+                    
+                    HydrusData.ShowText( 'Found and deleted {} files that were in components but not the master {}.'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                    
+                
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
+                if len( in_master_not_in_components ) > 0:
+                    
+                    orphans_found = True
+                    
+                    # these files were deleted from all specific services but not from the combined service
+                    # I have only ever seen one example of this and am not sure how it happened
+                    # in any case, the same 'delete combined' call will do the job
+                    
+                    self._DeleteFiles( umbrella_master_service_id, in_master_not_in_components )
+                    
+                    HydrusData.ShowText( 'Found and deleted {} files that were in the master {} but not it its components.'.format( HydrusData.ToHumanInt( len( in_master_not_in_components ) ), description ) )
+                    
                 
             
-            if len( in_local_not_in_combined ) == 0 and len( in_combined_not_in_local ) == 0:
+            if orphans_found:
+                
+                for service_id in self.modules_services.GetServiceIds( HC.LOCAL_FILE_SERVICES ):
+                    
+                    self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+                    
+                
+            else:
                 
                 HydrusData.ShowText( 'No orphan file records found!' )
                 
@@ -1506,6 +1527,8 @@ class DB( HydrusDB.HydrusDB ):
         
         local_file_service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
         
+        # we go nuclear on the umbrella services, being very explicit to catch every possible problem
+        
         if service_id == self.modules_services.combined_local_file_service_id:
             
             for local_file_service_id in local_file_service_ids:
@@ -1513,7 +1536,10 @@ class DB( HydrusDB.HydrusDB ):
                 self._DeleteFiles( local_file_service_id, hash_ids, only_if_current = True )
                 
             
-            self._DeleteFiles( self.modules_services.trash_service_id, hash_ids )
+            self._DeleteFiles( self.modules_services.combined_local_media_service_id, hash_ids, only_if_current = True )
+            
+            self._DeleteFiles( self.modules_services.local_update_service_id, hash_ids, only_if_current = True )
+            self._DeleteFiles( self.modules_services.trash_service_id, hash_ids, only_if_current = True )
             
         
         if service_id == self.modules_services.combined_local_media_service_id:
@@ -1540,18 +1566,20 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type not in HC.FILE_SERVICES_WITH_NO_DELETE_RECORD:
             
+            # make a deletion record
+            
             if only_if_current:
                 
-                deletee_hash_ids = existing_hash_ids
+                deletion_record_hash_ids = existing_hash_ids
                 
             else:
                 
-                deletee_hash_ids = hash_ids
+                deletion_record_hash_ids = hash_ids
                 
             
-            if len( deletee_hash_ids ) > 0:
+            if len( deletion_record_hash_ids ) > 0:
                 
-                insert_rows = [ ( hash_id, existing_hash_ids_to_timestamps[ hash_id ] if hash_id in existing_hash_ids_to_timestamps else None ) for hash_id in deletee_hash_ids ]
+                insert_rows = [ ( hash_id, existing_hash_ids_to_timestamps[ hash_id ] if hash_id in existing_hash_ids_to_timestamps else None ) for hash_id in deletion_record_hash_ids ]
                 
                 num_new_deleted_files = self.modules_files_storage.RecordDeleteFiles( service_id, insert_rows )
                 
@@ -1559,7 +1587,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if len( existing_hash_ids_to_timestamps ) > 0:
+        if len( existing_hash_ids ) > 0:
             
             # remove them from the service
             
@@ -5900,6 +5928,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetServiceInfo( self, service_key ):
         
+        # TODO: move this to a clever module, and add a 'clear/recalc service info' func so I'm not doing that manually every time
+        
         service_id = self.modules_services.GetServiceId( service_key )
         
         service = self.modules_services.GetService( service_id )
@@ -10055,317 +10085,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
-        
-        if version == 429:
-            
-            try:
-                
-                tag_service_ids = set( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
-                
-                file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES )
-                file_service_ids.add( self.modules_services.combined_file_service_id )
-                
-                for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                    
-                    subtags_searchable_map_table_name = self.modules_tag_search.GetSubtagsSearchableMapTableName( file_service_id, tag_service_id )
-                    
-                    self._Execute( 'CREATE TABLE IF NOT EXISTS {} ( subtag_id INTEGER PRIMARY KEY, searchable_subtag_id INTEGER );'.format( subtags_searchable_map_table_name ) )
-                    self._CreateIndex( subtags_searchable_map_table_name, [ 'searchable_subtag_id' ] )
-                    
-                
-                self._RegenerateTagCacheSearchableSubtagMaps()
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                raise Exception( 'The v430 subtag searchable map generation routine failed! The error has been printed to the log, please let hydev know!' )
-                
-            
-        
-        if version == 430:
-            
-            try:
-                
-                # due to a bug in over-eager deletion from the tag definition cache, we'll need to resync chained tag ids
-                
-                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-                
-                for tag_service_id in tag_service_ids:
-                    
-                    message = 'fixing up some desynchronised tag definitions: {}'.format( tag_service_id )
-                    
-                    self._controller.frame_splash_status.SetSubtext( message )
-                    
-                    ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
-                    ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
-                    
-                    tag_ids_in_dispute = set()
-                    
-                    tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT bad_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
-                    tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT ideal_tag_id FROM {};'.format( cache_actual_tag_siblings_lookup_table_name ) ) ) )
-                    tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT child_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
-                    tag_ids_in_dispute.update( self._STS( self._Execute( 'SELECT DISTINCT ancestor_tag_id FROM {};'.format( cache_actual_tag_parents_lookup_table_name ) ) ) )
-                    
-                    if len( tag_ids_in_dispute ) > 0:
-                        
-                        self._CacheTagsSyncTags( tag_service_id, tag_ids_in_dispute )
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to resync some tag definitions failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    '8chan.moe thread api parser',
-                    'e621 file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 431:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                old_options = self._GetOptions()
-                
-                SORT_BY_LEXICOGRAPHIC_ASC = 8
-                SORT_BY_LEXICOGRAPHIC_DESC = 9
-                SORT_BY_INCIDENCE_ASC = 10
-                SORT_BY_INCIDENCE_DESC = 11
-                SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC = 12
-                SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC = 13
-                SORT_BY_INCIDENCE_NAMESPACE_ASC = 14
-                SORT_BY_INCIDENCE_NAMESPACE_DESC = 15
-                SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC = 16
-                SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC = 17
-                
-                old_default_tag_sort = old_options[ 'default_tag_sort' ]
-                
-                from hydrus.client.metadata import ClientTagSorting
-                
-                sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG
-                
-                if old_default_tag_sort in ( SORT_BY_LEXICOGRAPHIC_ASC, SORT_BY_LEXICOGRAPHIC_DESC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
-                    
-                    sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG
-                    
-                elif old_default_tag_sort in ( SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC ):
-                    
-                    sort_type = ClientTagSorting.SORT_BY_HUMAN_SUBTAG
-                    
-                elif old_default_tag_sort in ( SORT_BY_INCIDENCE_ASC, SORT_BY_INCIDENCE_DESC, SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_INCIDENCE_NAMESPACE_DESC ):
-                    
-                    sort_type = ClientTagSorting.SORT_BY_COUNT
-                    
-                
-                if old_default_tag_sort in ( SORT_BY_INCIDENCE_ASC, SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_ASC, SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
-                    
-                    sort_order = CC.SORT_ASC
-                    
-                else:
-                    
-                    sort_order = CC.SORT_DESC
-                    
-                
-                use_siblings = True
-                
-                if old_default_tag_sort in ( SORT_BY_INCIDENCE_NAMESPACE_ASC, SORT_BY_INCIDENCE_NAMESPACE_DESC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
-                    
-                    group_by = ClientTagSorting.GROUP_BY_NAMESPACE
-                    
-                else:
-                    
-                    group_by = ClientTagSorting.GROUP_BY_NOTHING
-                    
-                
-                tag_sort = ClientTagSorting.TagSort(
-                    sort_type = sort_type,
-                    sort_order = sort_order,
-                    use_siblings = use_siblings,
-                    group_by = group_by
-                )
-                
-                new_options.SetDefaultTagSort( tag_sort )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to convert your old default tag sort to the new format failed! Please set it again in the options.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 432:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [
-                    'twitter syndication profile lookup (limited) (with replies)',
-                    'twitter syndication profile lookup (limited)'
-                ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'twitter syndication api profile',
-                    'twitter syndication api tweet',
-                    'twitter tweet'
-                ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'twitter syndication api profile parser',
-                    'twitter syndication api tweet parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to add the twitter downloader failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 435:
-            
-            try:
-                
-                self._RegenerateTagPendingMappingsCache()
-                
-                types_to_delete = (
-                    HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
-                    HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
-                    HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS,
-                    HC.SERVICE_INFO_NUM_PENDING_FILES,
-                    HC.SERVICE_INFO_NUM_PETITIONED_FILES
-                )
-                
-                self._DeleteServiceInfo( types_to_delete = types_to_delete )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to regenerate the pending tag cache failed! This is not a big deal, but you might still have a bad pending count for your pending menu. Error information has been written to the log. Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 436:
-            
-            result = self._Execute( 'SELECT sql FROM sqlite_master WHERE name = ?;', ( 'deleted_files', ) ).fetchone()
-            
-            if result is None:
-                
-                raise Exception( 'No deleted_files table!!!' )
-                
-            
-            ( s, ) = result
-            
-            if 'timestamp' not in s:
-                
-                self._Execute( 'ALTER TABLE deleted_files ADD COLUMN timestamp INTEGER;' )
-                self._Execute( 'ALTER TABLE deleted_files ADD COLUMN original_timestamp INTEGER;' )
-                
-                self._Execute( 'UPDATE deleted_files SET timestamp = ?, original_timestamp = ?;', ( None, None ) )
-                
-                my_files_service_id = self.modules_services.GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
-                
-                self._Execute( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id, timestamp, original_timestamp ) SELECT ?, hash_id, timestamp, original_timestamp FROM deleted_files WHERE service_id = ?;', ( my_files_service_id, self.modules_services.combined_local_file_service_id ) )
-                self._Execute( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id, timestamp, original_timestamp ) SELECT ?, hash_id, ?, timestamp FROM current_files WHERE service_id = ?;', ( my_files_service_id, None, self.modules_services.trash_service_id ) )
-                
-                self._CreateIndex( 'deleted_files', [ 'timestamp' ] )
-                self._CreateIndex( 'deleted_files', [ 'original_timestamp' ] )
-                
-                self._Execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_DELETED_FILES, ) )
-                
-                self.modules_db_maintenance.AnalyzeTable( 'deleted_files' )
-                
-            
-        
-        if version == 438:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'imgur single media file url', ) )
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 440:
             

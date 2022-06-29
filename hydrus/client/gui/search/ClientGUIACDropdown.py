@@ -1459,6 +1459,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._RestoreTextCtrlFocus()
         
+        if location_context.IsAllKnownFiles() and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            top_local_tag_service_key = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_TAG, ) ) )[0]
+            
+            self._SetTagService( top_local_tag_service_key )
+            
+        
         self.locationChanged.emit( location_context )
         
         self._SetListDirty()

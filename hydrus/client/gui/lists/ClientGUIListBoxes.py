@@ -964,10 +964,6 @@ class ListBox( QW.QScrollArea ):
         self._async_text_info_shared_data = dict()
         self._async_text_info_updater = self._InitialiseAsyncTextInfoUpdater()
         
-        #
-        
-        self.setFont( QW.QApplication.font() )
-        
     
     def __len__( self ):
         

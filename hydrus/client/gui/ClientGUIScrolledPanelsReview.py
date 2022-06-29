@@ -2756,7 +2756,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
             
         
-        if num_supertotal == 0:
+        if num_total == 0:
             
             nothing_label = 'You have yet to board the ride.'
             
@@ -2766,6 +2766,48 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
+            supertotal_average_filesize = size_supertotal // num_supertotal
+            
+            current_num_percent = num_total / num_supertotal
+            current_size_percent = size_total / size_supertotal
+            current_average_filesize = size_total // num_total
+            
+            inbox_num_percent = num_inbox / num_total
+            inbox_size_percent = size_inbox / size_total
+            
+            if num_inbox > 0:
+                
+                inbox_average_filesize = size_inbox // num_inbox
+                
+            else:
+                
+                inbox_average_filesize = 0
+                
+            
+            archive_num_percent = num_archive / num_total
+            archive_size_percent = size_archive / size_total
+            
+            if num_archive > 0:
+                
+                archive_average_filesize = size_archive // num_archive
+                
+            else:
+                
+                archive_average_filesize = 0
+                
+            
+            deleted_num_percent = num_deleted / num_supertotal
+            deleted_size_percent = size_deleted / size_supertotal
+            
+            if num_deleted > 0:
+                
+                deleted_average_filesize = size_deleted // num_deleted
+                
+            else:
+                
+                deleted_average_filesize = 0
+                
+            
             notebook = ClientGUICommon.BetterNotebook( self )
             
             #
@@ -2774,40 +2816,64 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
             panel_vbox = QP.VBoxLayout()
             
-            average_filesize = size_total // num_total
+            # spacing to make the weird unicode characters join up neater
+            text_table_layout = QP.GridLayout( cols = 4, spacing = 0 )
             
-            summary_label = 'Total: {} files, totalling {}, averaging {}'.format( HydrusData.ToHumanInt( num_total ), HydrusData.ToHumanBytes( size_total ), HydrusData.ToHumanBytes( average_filesize ) )
+            text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
             
-            summary_st = ClientGUICommon.BetterStaticText( panel, label = summary_label )
+            text_table_layout.setColumnStretch( 0, 1 )
             
-            QP.AddToLayout( panel_vbox, summary_st, CC.FLAGS_CENTER )
+            #
             
-            num_archive_percent = num_archive / num_total
-            size_archive_percent = size_archive / size_total
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Files' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Size' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Average' ), CC.FLAGS_CENTER )
             
-            num_inbox_percent = num_inbox / num_total
-            size_inbox_percent = size_inbox / size_total
+            #
             
-            num_deleted_percent = num_deleted / num_supertotal
-            size_deleted_percent = size_deleted / size_supertotal
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Total Ever Imported:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( supertotal_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            archive_label = 'Archive: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_archive ), ClientData.ConvertZoomToPercentage( num_archive_percent ), HydrusData.ToHumanBytes( size_archive ), ClientData.ConvertZoomToPercentage( size_archive_percent ) )
+            #
             
-            archive_st = ClientGUICommon.BetterStaticText( panel, label = archive_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u251cAll My Files:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_total ), ClientData.ConvertZoomToPercentage( current_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_total ), ClientData.ConvertZoomToPercentage( current_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            inbox_label = 'Inbox: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_inbox ), ClientData.ConvertZoomToPercentage( num_inbox_percent ), HydrusData.ToHumanBytes( size_inbox ), ClientData.ConvertZoomToPercentage( size_inbox_percent ) )
+            #
             
-            inbox_st = ClientGUICommon.BetterStaticText( panel, label = inbox_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_inbox ), ClientData.ConvertZoomToPercentage( inbox_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_inbox ), ClientData.ConvertZoomToPercentage( inbox_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            deleted_label = 'Deleted: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_deleted ), ClientData.ConvertZoomToPercentage( num_deleted_percent ), HydrusData.ToHumanBytes( size_deleted ), ClientData.ConvertZoomToPercentage( size_deleted_percent ) )
+            #
             
-            deleted_st = ClientGUICommon.BetterStaticText( panel, label = deleted_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_archive ), ClientData.ConvertZoomToPercentage( archive_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_archive ), ClientData.ConvertZoomToPercentage( archive_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            QP.AddToLayout( panel_vbox, archive_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, inbox_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, deleted_st, CC.FLAGS_CENTER )
+            #
+            
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_deleted ), ClientData.ConvertZoomToPercentage( deleted_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_deleted ), ClientData.ConvertZoomToPercentage( deleted_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+            
+            #
+            
+            QP.AddToLayout( panel_vbox, text_table_layout, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
             
             if 'earliest_import_time' in boned_stats:
+                
+                panel_vbox.addSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
                 
                 eit = boned_stats[ 'earliest_import_time' ]
                 

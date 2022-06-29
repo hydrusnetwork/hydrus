@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -13,47 +15,6 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 
-def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_local_file_domains_allowed: bool ):
-    
-    services_manager = HG.client_controller.services_manager
-    
-    service_types_in_order = [ HC.LOCAL_FILE_DOMAIN ]
-    
-    if not only_local_file_domains_allowed:
-        
-        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
-        if len( services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) ) > 1 or advanced_mode:
-            
-            service_types_in_order.append( HC.COMBINED_LOCAL_MEDIA )
-            
-        
-        service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
-        
-        if advanced_mode:
-            
-            service_types_in_order.append( HC.LOCAL_FILE_UPDATE_DOMAIN )
-            
-        
-        if advanced_mode:
-            
-            service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
-            
-        
-        service_types_in_order.append( HC.FILE_REPOSITORY )
-        service_types_in_order.append( HC.IPFS )
-        
-        if all_known_files_allowed:
-            
-            service_types_in_order.append( HC.COMBINED_FILE )
-            
-        
-    
-    services = services_manager.GetServices( service_types_in_order )
-    
-    return services
-    
-
 class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool, only_local_file_domains_allowed: bool ):
@@ -66,7 +27,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._location_list = ClientGUICommon.BetterCheckBoxList( self )
         
-        services = GetPossibleFileDomainServicesInOrder( all_known_files_allowed, only_local_file_domains_allowed )
+        services = ClientLocation.GetPossibleFileDomainServicesInOrder( all_known_files_allowed, only_local_file_domains_allowed )
         
         for service in services:
             
@@ -179,7 +140,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
     
     def _EditLocation( self ):
         
-        services = GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed )
+        services = ClientLocation.GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed )
         
         menu = QW.QMenu()
         

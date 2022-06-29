@@ -2362,8 +2362,6 @@ class CanvasWithDetails( Canvas ):
         
         original_pen = painter.pen()
         
-        painter.setFont( QW.QApplication.font() )
-        
         tags_manager = self._current_media.GetTagsManager()
         
         current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
@@ -4254,9 +4252,18 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
                 
+                all_my_files_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                
                 if len( local_file_domain_service_keys ) > 1:
                     
-                    location_contexts_to_present_options_for.append( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+                    location_contexts_to_present_options_for.append( all_my_files_location_context )
+                    
+                elif len( local_file_domain_service_keys ) == 1:
+                    
+                    if all_my_files_location_context in location_contexts_to_present_options_for:
+                        
+                        location_contexts_to_present_options_for.remove( all_my_files_location_context )
+                        
                     
                 
                 specific_local_service_keys = [ service_key for service_key in current_local_service_keys if HG.client_controller.services_manager.GetServiceType( service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES ]

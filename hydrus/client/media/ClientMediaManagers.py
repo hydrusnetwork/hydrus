@@ -15,23 +15,30 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
 
-class DuplicatesManager( object ):
+class FileDuplicatesManager( object ):
     
-    def __init__( self, service_keys_to_dupe_statuses_to_counts ):
+    def __init__( self, media_group_king_hash, alternates_group_id, dupe_statuses_to_counts ):
         
-        self._service_keys_to_dupe_statuses_to_counts = service_keys_to_dupe_statuses_to_counts
+        self.media_group_king_hash = media_group_king_hash
+        self.alternates_group_id = alternates_group_id
+        self.dupe_statuses_to_count = dupe_statuses_to_counts
         
     
     def Duplicate( self ):
         
-        service_keys_to_dupe_statuses_to_counts = collections.defaultdict( collections.Counter )
+        dupe_statuses_to_count = dict( self.dupe_statuses_to_count )
         
-        return DuplicatesManager( service_keys_to_dupe_statuses_to_counts )
+        return FileDuplicatesManager( self.media_group_king_hash, self.alternates_group_id, dupe_statuses_to_count )
         
     
-    def GetDupeStatusesToCounts( self, service_key ):
+    def GetDupeCount( self, dupe_type: int ):
         
-        return self._service_keys_to_dupe_statuses_to_counts[ service_key ]
+        if dupe_type not in self.dupe_statuses_to_count:
+            
+            return 0
+            
+        
+        return self.dupe_statuses_to_count[ dupe_type ]
         
     
 class FileInfoManager( object ):

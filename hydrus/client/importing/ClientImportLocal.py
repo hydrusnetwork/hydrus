@@ -155,7 +155,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._file_status = ClientImportControl.NeatenStatusText( text )
+                self._files_status = ClientImportControl.NeatenStatusText( text )
                 
             
         
@@ -355,7 +355,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     
                     with self._lock:
                         
-                        self._file_status = str( e )
+                        self._files_status = str( e )
                         
                     
                     break
@@ -371,7 +371,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
-                    self._file_status = 'stopping work: {}'.format( str( e ) )
+                    self._files_status = 'stopping work: {}'.format( str( e ) )
                     
                 
                 HydrusData.ShowException( e )

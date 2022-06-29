@@ -1,7 +1,6 @@
 import typing
 
 import numpy
-import numpy.typing
 import os
 import re
 import struct
@@ -1255,7 +1254,7 @@ class VideoRendererFFMPEG( object ):
             
         
     
-    def read_frame( self ) -> numpy.typing.ArrayLike:
+    def read_frame( self ):
         
         if self.pos == self._num_frames:
             

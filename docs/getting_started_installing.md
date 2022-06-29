@@ -160,17 +160,22 @@ _All that said, and while updating is complex and every client is different, one
 
 Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cannot work in a faulty environment. Ways in which users of hydrus have damaged/lost their database:
 
-*   Hard drive hardware failure (age, bad ventilation, bad cables, etc...)
-*   Lightning strike on non-protected socket or rough power cut on non-UPS'd power supply
-*   RAM failure
-*   Motherboard/PSU power problems
-*   Accidental deletion
-*   Accidental overwrite (usually during a borked update)
-*   Encrypted partition auto-dismount/other borked settings
-*   Cloud backup interfering with ongoing writes
-*   Network drive location not guaranteeing accurate file locks
+* Hard drive hardware failure (age, bad ventilation, bad cables, etc...)
+* Lightning strike on non-protected socket or rough power cut on non-UPS'd power supply
+* RAM failure
+* Motherboard/PSU power problems
+* Accidental deletion
+* Accidental overwrite (usually during a borked update)
+* Encrypted partition auto-dismount/other borked settings
+* Cloud backup interfering with ongoing writes
+* A laptop that incorrectly and roughly disconnected an external USB drive on every sleep
+* Network drive location not guaranteeing accurate file locks
+* Windows NVMe driver bugs necessitating a different SQLite journalling method
 
 Some of those you can mitigate (don't run the database over a network!) and some will always be a problem, but if you have a backup, none of them can kill you.
+
+!!! note "This mostly means your database, not your files"
+    Note that nearly all the serious and difficult-to-fix problems occur to the _database_, which is four large .db files, not your media. All your images and movies are read-only in hydrus, and there's less worry if they are on a network share with bad locks or a machine that suddenly loses power. The database, however, maintains a live connection, with regular complex writes, and here a hardware failure can lead to corruption (Basically the failure scrambles the data that is written, so when you try to boot back up, a small section of the database is incomprehensible garbage).
 
 If you do not already have a backup routine for your files, this is a great time to start. I now run a backup every week of all my data so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it felt awful. If you are new to saving a lot of media, I hope you can avoid what I felt. ;\_;
 
@@ -184,7 +189,7 @@ By default, hydrus stores all your user data in one location, so backing up is s
 
     Once you have your location set up, you can thereafter hit _database->update database backup_. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.
 
-    Advanced users who have migrated their database across multiple locations will not have this option--use an external program in this case.
+    Advanced users who have migrated their database and files across multiple locations will not have this option--use an external program in this case.
     
 #### the powerful (and best) way - using an external program
 :   
@@ -200,7 +205,7 @@ By default, hydrus stores all your user data in one location, so backing up is s
 
     Note it has 'file time and size' and 'mirror' as the main settings. This quickly ensures that changes to the left-hand side are copied to the right-hand side, adding new files and removing since-deleted files and overwriting modified files. You can save a backup profile like that and it should only take a few minutes every week to stay safely backed up, even if you have hundreds of thousands of files.
 
-    Shut the client down while you run the backup, obviously.
+    **Shut the client down while you run the backup, obviously.**
 
     
 ##### A few options
@@ -223,12 +228,12 @@ Almost every OS you can name.
 
 There is significantly more information about the database structure [here](database_migration.md).
 
-I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
+I recommend you always backup before you update, just in case there is a problem with my update code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
 
 ## backing up with not much space { id="backing_up_small" }
 
 If you decide not to maintain a backup because you cannot afford drive space for all your files, please please at least back up your actual database files. Use FreeFileSync or a similar program to back up the four 'client*.db' files in install_dir/db when the client is not running. Just make sure you have a copy of those files, and then if your main install becomes damaged, we will have a reference to either roll back to or manually restore data from. Even if you lose a bunch of media files in this case, with an intact database we'll be able to schedule recovery of anything with a URL.
 
-If you are really short on space, note also that the database files are very compressible. A very large database where the four files add up to 70GB can compress down to 17GB zip with 7zip on default settings. This obviously takes some additional time to do, but if you are really short on space it may be the only way it fits, and if your only backup drive is a slow USB stick, then you might actually save time from not having to transfer the other 53GB! Media files (jpegs, webms, etc...) are generally not very compressible, usually 5% at best, so it is usually not worth trying.
+If you are really short on space, note also that the database files are very compressible. A very large database where the four files add up to 70GB can compress down to 17GB zip with 7zip on default settings. Better compression ratios are possible if you make sure to put all four files in the same archive and turn up the quality. This obviously takes some additional time to do, but if you are really short on space it may be the only way it fits, and if your only backup drive is a slow USB stick, then you might actually save time from not having to transfer the other 53GB! Media files (jpegs, webms, etc...) are generally not very compressible, usually 5% at best, so it is usually not worth trying.
 
 It is best to have all four database files. It is generally easy and quick to fix problems if you have a backup of all four. If client.caches.db is missing, you can recover but it might take ten or more hours of CPU work to regenerate. If client.mappings.db is missing, you might be able to recover tags for your local files from a mirror in an intact client.caches.db. However, client.master.db and client.db are the most important. If you lose either of those, or they become too damaged to read and you have no backup, then your database is essentially dead and likely every single archive and view and tag and note and url record you made is lost. This has happened before, do not let it be you.

@@ -3,6 +3,31 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 490](https://github.com/hydrusnetwork/hydrus/releases/tag/v490)
+
+### misc
+* fixed a stupid bug that meant the image caches were initialising with default values (as under _speed and memory_) until you opened and OKed the options dialog (or did some other options-refresh events). sorry for the trouble, please enjoy some smoother image browsing.
+* mr bones now shows more numbers, and in a neater table. it should be clearer what the percentages are for now, too
+* the _manage->regenerate_ thumbnail menu has additional quick maintenance commands for presence and integrity checks and regenerating data in the similar files system
+* wrote a new 'special duplicate' button for the edit shortcut set dialog. the list on this dialog doesn't allow duplicates (which meant the old 'duplicate' button was doing nothing), so this duplicates the current actions with 'incremented' shortcut keys. 'a' becomes 'b', 'ctrl+5' becomes 'ctrl+6', and so on. it doesn't always work, but if you want to make ten shortcuts for setting rating 1-10, this should help
+* fixed an issue where the thumbnail banner text and the media viewer background text was not changing size or font according to QSS stylesheet rules (issue #1173)
+* SIGTERM should now cause a clean program exit (previously it killed the GUI App but left some daemon threads alive for thirty seconds or more). unlike SIGINT, it will not ask you if you are sure you want to exit or if you would like to do shutdown maintenance--it just closes the client promptly
+* fixed a bug in last week's importer page status improvements--the hard drive import page wasn't showing all the updates it should have
+* brushed up some backup help
+
+### file services
+* fixed a bug where advanced users could set 'all known files'/'all known tags' on a search dropdown. this search domain is not supported
+* in the archive/delete filter, if the current location is 'all my files' and the files being deleted are only in one local file domain, the surplus 'all my files' will no longer appear at the top of the filter's commit dialog
+* the file services in the thumbnail select/remove menu are now sorted in the same order as the file domain button in search dropdowns
+* the thumbnail select/remove menus now exclude 'all my files' and 'all local files' if those choices are redundant (e.g. if you only have files in 'my files', 'all my files' will be hidden)
+* fixed some incorrect 'delete from x' actions appearing in thumbnail right-click menus
+
+### orphan files
+* there's a persistent processing bug some users have where some update files are missing but they won't redownload correctly. I think I fix that this week naturally so existing maintenance routines will now be able to fix it themselves after another round
+* fixed some issues related to deleting files from the repository updates file domain.
+* the 'clear orphan file records' maintenance command now fixes the 'all my files' umbrella services as well as the 'all local files' one. it also has nicer description, does some additional file-removal cleanup, and triggers a file recount if problems are found
+* moved 'clear orphan files' to the 'files' maintenance menu
+
 ## [Version 489](https://github.com/hydrusnetwork/hydrus/releases/tag/v489)
 
 ### downloader pages
@@ -297,46 +322,3 @@
 * if you have a really really huge session, the client is now more careful about not booting delayed background tasks like subscriptions until the session is in place
 * on 'migrate database', the thumbnail size estimate now has a min-max range and a tooltip to clarify that it is an estimate
 * fixed a bug in the new 'sort by file hash' pre-sort when applying system:limit
-
-## [Version 479](https://github.com/hydrusnetwork/hydrus/releases/tag/v479)
-
-### misc
-* when shift-selecting some thumbnails, you can now reverse the direction of the select and what you just selected will be deselected, basically a full undo (issue #1105)
-* when ctrl-selecting thumbnails, if you add to the selection, the file you click is now focused and always previewed (previously this only happened if there was no focused file already). this is related to the shift-select logic above, but it may be annoying when making a big ctrl-selection of videos etc.. so let me know and I can make this more clever if needed
-* added file sort 'file->hash', which sorts pseudorandomly but repeatably. it sounds not super clever, but it will be useful for certain comparison operations across clients
-* when you hit 'copy->hash' on a file right-click, it now shows the sha256 hash for quick review
-* in the duplicate filter, the zoom locking tech now works better™ when one of the pair is portrait and the other landscape. it now tries to select either width or height to lock both when going AB and BA. it also chooses the 'better' of width or height by choosing the zoom that'll change the size less radically. previously, it could do width on AB and height on BA, which lead to a variety of odd situations. there are probably still some issues here, most likely when one of the files almost exactly fills the whole canvas, so let me know how you get on
-* webps with transparency should now load correct! previously they were going crazy in the transparent area. all webps are scheduled a thumbnail regen this week
-* when import folders run, the count on their progress bar now ignores previous failed and ignored entries. it should always start 0, like 0/100, rather than 20/120 etc...
-* when import folders run, any imports where the status type is set to 'leave the file alone' is now still scanned at the end of a job. if the path does not exist any more, it is removed from the import list
-* fixed a typo bug in the recent delete code cleanup that meant 'delete files after export' after a manual export was only working on the last file in the selection. sorry for the trouble!
-* the delete files dialog now starts with keyboard focus on the action radiobox (it was defaulting to ok button since I added the recent panel disable tech)
-* if a network job has a connection error or serverside bandwidth block and then waits before retrying, it now checks if all network jobs have just been paused and will not reattempt the connection if so (issue #1095)
-* fixed a bug in thumbnail fallback rendering
-* fixed another problem with cloudscraper's new method names. it should work for users still on an old version
-* wrote a little 'extract version' sql and bat file for the db folder that simply pull the version from the client.db file in the same directory. I removed the extract options/subscriptions sql scripts since they are super old and out of date, but this general system may return in future
-
-### file history chart
-* added 'archive' line to the file history chart. this isn't exactly (current_count - inbox_count), but it pretty much is
-* added a 'show deleted' checkbox to the file history chart. it will recalculate the y axis range on click, so if you have loads of deleted files, you can now hide them to see current better
-* improved the way data is aggregated in the file history chart. diagonal lines should be reduced during any periods of client import-inactivity, and spikes should show better
-* also bumped the number of steps up to 8,000, so it should look nice maximised on a 4k
-* the file history chart now remembers its last size and position--it has an entry under options->gui
-
-### client api
-* thanks to a user, the Client API now accepts any file_id, file_ids, hash, or hashes as arguments in any place where you need to specify a file or files
-* like 'return_hashes', the 'search_files' command in the Client API now takes an optional 'return_file_ids' parameter, default true, to turn off the file ids if you only want hashes
-* added 'only_return_basic_information' parameter, default false, to 'get_metadata' call, which is fast for first-time requests (it is slim but not well cached) and just delivers the basics like resolution and file size
-* added unit tests and updated the help to reflect the above
-* client api version is now 29
-
-### help
-* split up the 'more files' help section into 'powerful searching' and 'exporting files', both still under the 'next steps' section
-* moved the semi-advanced 'OR' section from 'tags' to 'searching'
-* brushed up misc help
-* a couple of users added some misc help updates too, thank you!
-
-### misc boring cleanup
-* cleaned up an old wx label patch
-* cleaned up an old wx system colour patch
-* cleaned up some misc initialisation code
