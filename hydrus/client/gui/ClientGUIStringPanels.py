@@ -1,3 +1,4 @@
+import os
 import re
 import typing
 
@@ -15,6 +16,7 @@ from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
+from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -1792,6 +1794,134 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
+class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        message = 'This works the same as any tag filter elsewhere in the program. Note that it converts your texts to valid hydrus tags, so everything is coming out lowercase with trimmed whitespace, and invalid tags will never pass.'
+        
+        tag_filter = string_tag_filter.GetTagFilter()
+        
+        self._tag_filter_button = ClientGUITags.TagFilterButton( self, message, tag_filter )
+        
+        self._example_string = QW.QLineEdit( self )
+        
+        self._example_string_matches = ClientGUICommon.BetterStaticText( self )
+        
+        #
+        
+        if test_data is not None:
+            
+            if len( test_data.texts ) > 0:
+                
+                self._example_string.setText( list( test_data.texts )[0] )
+                
+            
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'tag filter: ', self._tag_filter_button ) )
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._tag_filter_button.valueChanged.connect( self._UpdateTestResult )
+        self._example_string.textChanged.connect( self._UpdateTestResult )
+        
+        self._UpdateTestResult()
+        
+    
+    def _GetValue( self ):
+        
+        tag_filter = self._tag_filter_button.GetValue()
+        
+        example_string = self._example_string.text()
+        
+        string_tag_filter = ClientStrings.StringTagFilter( tag_filter = tag_filter, example_string = example_string )
+        
+        return string_tag_filter
+        
+    
+    def _UpdateTestResult( self ):
+        
+        string_tag_filter = self._GetValue()
+        
+        try:
+            
+            string_tag_filter.Test( self._example_string.text() )
+            
+            self._example_string_matches.setText( 'Example matches ok!' )
+            self._example_string_matches.setObjectName( 'HydrusValid' )
+            
+        except HydrusExceptions.StringMatchException as e:
+            
+            reason = str( e )
+            
+            self._example_string_matches.setText( 'Example does not match - '+reason )
+            self._example_string_matches.setObjectName( 'HydrusInvalid' )
+            
+        
+        self._example_string_matches.style().polish( self._example_string_matches )
+        
+    
+    def GetValue( self ):
+        
+        string_match = self._GetValue()
+        
+        try:
+            
+            string_match.Test( string_match.GetExampleString() )
+            
+        except HydrusExceptions.StringMatchException:
+            
+            raise HydrusExceptions.VetoException( 'Please enter an example text that matches the given rules!' )
+            
+        
+        return string_match
+        
+    
+    def SetValue( self, string_match: ClientStrings.StringMatch ):
+        
+        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
+        
+        self._match_type.SetValue( match_type )
+        
+        self._match_value_flexible_input.SetValue( ClientStrings.ALPHA )
+        
+        if match_type == ClientStrings.STRING_MATCH_FIXED:
+            
+            self._match_value_fixed_input.setText( match_value )
+            
+        elif match_type == ClientStrings.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_flexible_input.SetValue( match_value )
+            
+        elif match_type == ClientStrings.STRING_MATCH_REGEX:
+            
+            self._match_value_regex_input.setText( match_value )
+            
+        
+        self._min_chars.SetValue( min_chars )
+        self._max_chars.SetValue( max_chars )
+        
+        self._example_string.setText( example_string )
+        
+        self._UpdateControlVisibility()
+        
+    
 class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data: ClientParsing.ParsingTestData ):
@@ -1853,6 +1983,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         choice_tuples = [
             ( 'String Match', ClientStrings.StringMatch, 'An object that filters strings.' ),
+            ( 'String Tag Filter', ClientStrings.StringTagFilter, 'An object that filters strings using tag rules.' ),
             ( 'String Converter', ClientStrings.StringConverter, 'An object that converts strings from one thing to another.' ),
             ( 'String Splitter', ClientStrings.StringSplitter, 'An object that breaks strings into smaller strings.' ),
             ( 'String Sorter', ClientStrings.StringSorter, 'An object that sorts strings.' ),
@@ -1868,15 +1999,15 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             raise HydrusExceptions.VetoException()
             
         
-        if string_processing_step_type == ClientStrings.StringMatch:
+        if string_processing_step_type in ( ClientStrings.StringMatch, ClientStrings.StringTagFilter ):
             
             example_text = self._single_test_panel.GetStartingText()
             
-            string_processing_step = ClientStrings.StringMatch( example_string = example_text )
+            string_processing_step = string_processing_step_type( example_string = example_text )
             
             example_text = self._GetExampleTextForStringProcessingStep( string_processing_step )
             
-            string_processing_step = ClientStrings.StringMatch( example_string = example_text )
+            string_processing_step = string_processing_step_type( example_string = example_text )
             
         else:
             
@@ -1917,6 +2048,12 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
                 test_data = self._GetExampleTextsForStringSorter( string_processing_step )
                 
                 panel = EditStringSlicerPanel( dlg, string_processing_step, test_data = test_data )
+                
+            elif isinstance( string_processing_step, ClientStrings.StringTagFilter ):
+                
+                test_data = ClientParsing.ParsingTestData( {}, ( example_text, ) )
+                
+                panel = EditStringTagFilterPanel( dlg, string_processing_step, test_data = test_data )
                 
             
             dlg.SetPanel( panel )

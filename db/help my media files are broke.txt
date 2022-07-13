@@ -1,3 +1,10 @@
+*** The purpose of this document ***
+
+If you have missing files or missing file records, this document will walk you through the specific steps on how to fix it. If you have encountered a related problem, such as losing one of your 'fxx' sub-folders, it may also help as background reading.
+
+
+*** Missing Files ***
+
 If you have lost lots of media files due to a mistake or a drive failing, or if you have rolled back to an older backup and now your file structure is out of sync with your database record, there are several things to do.
 
 First off, make sure you are running on good hard drives now. Check the 'help my db is broke' help document for info here. If your .db files were also on a failing disk, you'll want to run through that whole document to make sure your database itself is ok--there's no point trying to fix the file record on a malformed database.

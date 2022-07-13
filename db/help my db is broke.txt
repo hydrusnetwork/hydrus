@@ -1,3 +1,12 @@
+*** The purpose of this document ***
+
+This is mostly an explainer for a specific error some databases encounter, 'database image is malformed'. The cloning and repair steps only relate to this specific problem, but as this problem is caused by hard drive damage, users who have other hard drive problems are pointed here as background reading.
+
+Please take a breath and read carefully. Search online if there is anything you don't understand, and plan out what you are going to do. Whatever the problem, do not try to rush it while you are stressed out, since that often causes mistakes.
+
+
+*** Malformed Database ***
+
 If you are getting weird but serious-sounding errors like 'database image is malformed', your database may be corrupt!
 
 If your first language is not english, 'db' means 'database'.
@@ -91,7 +100,7 @@ The four files are separate, so if one is broken but the other three are fine, y
 
 *** fix the problem ***
 
-There are three known repair operations. Try one and see if you can pass an integrity_check on the broken file. Clone works well for most simple problems, but the others have better success in different situations.
+There are three known repair operations. Try one and see if you can pass an integrity_check on the broken file. Clone works well for almost all simple problems, but the others have better success in different situations.
 
 ** clone **
 
@@ -127,7 +136,7 @@ Do not delete your original files for now. Just rename them to 'old' and move th
 
 ** repair **
 
-This command tries to fix a database file in place. It works very very slowly. While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
+This command tries to fix a database file in place. I do not recommend it as it works very very slowly. While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
 
 It is very important you have a backup copy of the broken file(s) here, as this edits the file in place.
 
@@ -216,15 +225,15 @@ If you are absolutely certain you restored your database files to the point wher
 If you are in this situation, I am happy to help you figure things out, but you know your system's hardware better than I do. As far as I know, I cannot create a 'malformed' error with my database access routines even if wanted to--it can only come from an external fault.
 
 
-*** a note on Write Caching and 'Delayed Write Failed' ***
+*** a note on Write Caching and 'Delayed Write Failed' on NVMe drives ***
 
-Some users encountered 'malformed' problems alongside Windows OS errors about 'Delayed Write Failed' on the hydrus directory, usually after sleeping and then waking the computer.
+Some users encountered 'malformed' or 'disk I/O error' problems alongside Windows OS errors about 'Delayed Write Failed' on the hydrus directory, usually after sleeping and then waking the computer, but also after the database has finished a lot of work.
 
-This seems to be something to do with Write Caching failing for certain very large WAL journal files. I believe I have the underlying cause of large WAL files fixed, but if you nonetheless get this specific error, the two things to try seem to be:
+This seems to be something to do with Write Caching failing for certain very large WAL journal files, and particularly affects some NVMe drive(r)s. I have attempted to relieve the large WAL files, but 'disk I/O error' is still happening for some users. The two things to try seem to be:
 
-1) Disable Write Caching on the drive. This sucks, since write caching is normally really useful, but it seems to help/fix it completely, so it may be ok for a hydrus-exclusive drive.
+1) Launch the program with "--db_journal_mode TRUNCATE" argument, turning off WAL journaling. Check the 'launch arguments' article in the help for more info. This generally fixes the problem completely.
 
-2) Launch the program with "--db_journal_mode TRUNCATE" argument, turning off WAL journaling. Check the 'launch arguments' article in the help for more info.
+2) Disable Write Caching on the drive. This sucks, since write caching is normally really useful, but it seems to help/fix it completely, so it may be ok for a hydrus-exclusive drive.
 
 
 *** lastly, if you did not have any backup before this ***

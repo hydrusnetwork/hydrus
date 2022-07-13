@@ -409,8 +409,15 @@ class FileSystemPredicates( object ):
                     
                     # convert this dt, which is in local time, to a gmt timestamp
                     
-                    day_dt = datetime.datetime( year, month, day )
-                    timestamp = int( time.mktime( day_dt.timetuple() ) )
+                    try:
+                        
+                        day_dt = datetime.datetime( year, month, day )
+                        timestamp = int( time.mktime( day_dt.timetuple() ) )
+                        
+                    except:
+                        
+                        timestamp = HydrusData.GetNow()
+                        
                     
                     if operator == '<':
                         
@@ -2263,8 +2270,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         dt = datetime.datetime( year, month, day )
                         
-                        # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
-                        timestamp = int( time.mktime( dt.timetuple() ) )
+                        try:
+                            
+                            # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
+                            timestamp = int( time.mktime( dt.timetuple() ) )
+                            
+                        except:
+                            
+                            timestamp = HydrusData.GetNow()
+                            
                         
                         if operator == '<':
                             
@@ -2429,7 +2443,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                         else:
                             
-                            pretty_value = service.ConvertRatingToString( value )
+                            pretty_value = service.ConvertNoneableRatingToString( value )
                             
                             base += ' for {} {} {}'.format( service.GetName(), operator, pretty_value )
                             

@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -184,6 +186,8 @@ class RatingLike( QW.QWidget ):
         
         self._service_key = service_key
         
+        self._rating_state = ClientRatings.NULL
+        
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
         self._widget_event_filter.EVT_LEFT_DOWN( self.EventLeftDown )
@@ -195,10 +199,37 @@ class RatingLike( QW.QWidget ):
         
         self._dirty = True
         
+        self._UpdateTooltip()
+        
     
     def _Draw( self, painter ):
         
         raise NotImplementedError()
+        
+    
+    def _SetRating( self, rating: typing.Optional[ float ] ):
+        
+        self._rating_state = rating
+        
+        self._UpdateTooltip()
+        
+    
+    def _UpdateTooltip( self ):
+        
+        text = HG.client_controller.services_manager.GetName( self._service_key )
+        
+        try:
+            
+            service = HG.client_controller.services_manager.GetService( self._service_key )
+            
+            tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateToString( self._rating_state ) )
+            
+        except HydrusExceptions.DataMissing:
+            
+            tt = 'service missing'
+            
+        
+        self.setToolTip( tt )
         
     
     def EventLeftDown( self, event ):
@@ -218,19 +249,17 @@ class RatingLike( QW.QWidget ):
         raise NotImplementedError()
         
     
+    def GetRatingState( self ):
+        
+        return self._rating_state
+        
+    
     def GetServiceKey( self ):
         
         return self._service_key
         
     
 class RatingLikeDialog( RatingLike ):
-    
-    def __init__( self, parent, service_key ):
-        
-        RatingLike.__init__( self, parent, service_key )
-        
-        self._rating_state = ClientRatings.NULL
-        
     
     def _Draw( self, painter ):
         
@@ -247,8 +276,8 @@ class RatingLikeDialog( RatingLike ):
     
     def EventLeftDown( self, event ):
         
-        if self._rating_state == ClientRatings.LIKE: self._rating_state = ClientRatings.NULL
-        else: self._rating_state = ClientRatings.LIKE
+        if self._rating_state == ClientRatings.LIKE: self._SetRating( ClientRatings.NULL )
+        else: self._SetRating( ClientRatings.LIKE )
         
         self._dirty = True
         
@@ -257,22 +286,17 @@ class RatingLikeDialog( RatingLike ):
     
     def EventRightDown( self, event ):
         
-        if self._rating_state == ClientRatings.DISLIKE: self._rating_state = ClientRatings.NULL
-        else: self._rating_state = ClientRatings.DISLIKE
+        if self._rating_state == ClientRatings.DISLIKE: self._SetRating( ClientRatings.NULL )
+        else: self._SetRating( ClientRatings.DISLIKE )
         
         self._dirty = True
         
         self.update()
         
     
-    def GetRatingState( self ):
-        
-        return self._rating_state
-        
-    
     def SetRatingState( self, rating_state ):
         
-        self._rating_state = rating_state
+        self._SetRating( rating_state )
         
         self._dirty = True
         
@@ -303,14 +327,18 @@ class RatingNumerical( QW.QWidget ):
         
         self.setMinimumSize( QC.QSize( my_width, 16 ) )
         
-        self._last_rating_set = None
+        self._rating_state = ClientRatings.NULL
+        self._rating = 0.0
         
         self._dirty = True
         
     
     def _ClearRating( self ):
         
-        self._last_rating_set = None
+        self._rating_state = ClientRatings.NULL
+        self._rating = 0.0
+        
+        self._UpdateTooltip()
         
     
     def _Draw( self, painter ):
@@ -318,18 +346,19 @@ class RatingNumerical( QW.QWidget ):
         raise NotImplementedError()
         
     
-    def _GetRatingFromClickEvent( self, event ):
+    def _GetRatingStateAndRatingFromClickEvent( self, event ):
         
         click_pos = event.pos()
         
         x = event.pos().x()
-        y = event.pos().y()
         
         BORDER = 1
         
         my_active_size = self.size() - QC.QSize( BORDER * 2, BORDER * 2 )
         
         adjusted_click_pos = click_pos - QC.QPoint( BORDER, BORDER )
+        
+        adjusted_click_pos.setY( BORDER + 1 )
         
         my_active_rect = QC.QRect( QC.QPoint( 0, 0 ), my_active_size )
         
@@ -355,22 +384,57 @@ class RatingNumerical( QW.QWidget ):
             
             rating = self._service.ConvertStarsToRating( stars )
             
-            return rating
+            return ( ClientRatings.SET, rating )
             
         
-        return None
+        return ( ClientRatings.NULL, 0.0 )
         
     
     def _SetRating( self, rating ):
         
-        self._last_rating_set = rating
+        if rating is None:
+            
+            self._ClearRating()
+            
+        else:
+            
+            self._rating_state = ClientRatings.SET
+            self._rating = rating
+            
+            self._UpdateTooltip()
+            
+        
+    
+    def _UpdateTooltip( self ):
+        
+        text = HG.client_controller.services_manager.GetName( self._service_key )
+        
+        try:
+            
+            service = HG.client_controller.services_manager.GetService( self._service_key )
+            
+            tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
+            
+        except HydrusExceptions.DataMissing:
+            
+            tt = 'service missing'
+            
+        
+        self.setToolTip( tt )
         
     
     def EventLeftDown( self, event ):
         
-        rating = self._GetRatingFromClickEvent( event )
+        ( rating_state, rating ) = self._GetRatingStateAndRatingFromClickEvent( event )
         
-        self._SetRating( rating )
+        if rating_state == ClientRatings.NULL:
+            
+            self._ClearRating()
+            
+        elif rating_state == ClientRatings.SET:
+            
+            self._SetRating( rating )
+            
         
     
     def EventRightDown( self, event ):
@@ -387,11 +451,14 @@ class RatingNumerical( QW.QWidget ):
         
         if event.buttons() & QC.Qt.LeftButton:
             
-            rating = self._GetRatingFromClickEvent( event )
+            ( rating_state, rating ) = self._GetRatingStateAndRatingFromClickEvent( event )
             
-            if rating != self._last_rating_set:
+            if rating_state != self._rating_state or rating != self._rating:
                 
-                self._SetRating( rating )
+                if rating_state == ClientRatings.SET:
+                    
+                    self._SetRating( rating )
+                    
                 
             
         
@@ -404,14 +471,6 @@ class RatingNumerical( QW.QWidget ):
         
     
 class RatingNumericalDialog( RatingNumerical ):
-    
-    def __init__( self, parent, service_key ):
-        
-        RatingNumerical.__init__( self, parent, service_key )
-        
-        self._rating_state = ClientRatings.NULL
-        self._rating = None
-        
     
     def _ClearRating( self ):
         
@@ -477,5 +536,7 @@ class RatingNumericalDialog( RatingNumerical ):
         self._dirty = True
         
         self.update()
+        
+        self._UpdateTooltip()
         
     

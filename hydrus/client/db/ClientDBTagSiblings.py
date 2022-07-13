@@ -262,7 +262,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
             
-            self._Execute( create_query_without_name.format( table_name ) )
+            self._CreateTable( create_query_without_name, table_name )
             
         
         index_generation_dict = self._GetServiceIndexGenerationDict( tag_service_id )

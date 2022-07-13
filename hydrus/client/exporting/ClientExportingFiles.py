@@ -1,6 +1,7 @@
 import collections
 import os
 import re
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -12,10 +13,9 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFiles
-from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
+from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -277,10 +277,24 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
-    SERIALISABLE_VERSION = 4
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
-    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, run_regularly = True, period = 3600, phrase = None, last_checked = 0, paused = False, run_now = False, last_error = '' ):
+    def __init__(
+        self,
+        name,
+        path = '',
+        export_type = HC.EXPORT_FOLDER_TYPE_REGULAR,
+        delete_from_client_after_export = False,
+        file_search_context = None,
+        metadata_routers = None,
+        run_regularly = True,
+        period = 3600,
+        phrase = None,
+        last_checked = 0,
+        paused = False,
+        run_now = False,
+        last_error = ''
+    ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
@@ -296,6 +310,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
             
         
+        if metadata_routers is None:
+            
+            metadata_routers = []
+            
+        
         if phrase is None:
             
             phrase = HG.client_controller.new_options.GetString( 'export_phrase' )
@@ -305,6 +324,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._export_type = export_type
         self._delete_from_client_after_export = delete_from_client_after_export
         self._file_search_context = file_search_context
+        self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         self._run_regularly = run_regularly
         self._period = period
         self._phrase = phrase
@@ -317,13 +337,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     def _GetSerialisableInfo( self ):
         
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
+        serialisable_metadata_routers = self._metadata_routers.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
+        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
+        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
@@ -331,6 +352,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context )
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -379,6 +401,19 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
             
             return ( 5, new_serialisable_info )
+            
+        
+        if version == 5:
+            
+            ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now, last_error ) = old_serialisable_info
+            
+            metadata_routers = HydrusSerialisable.SerialisableList()
+            
+            serialisable_metadata_routers = metadata_routers.GetSerialisableTuple()
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
+            
+            return ( 6, new_serialisable_info )
             
         
     
@@ -471,6 +506,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                     
+                
+            
+            for metadata_router in self._metadata_routers:
+                
+                metadata_router.Work( media_result, dest_path )
                 
             
             sync_paths.add( dest_path )
@@ -622,6 +662,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return self._last_error
         
     
+    def GetMetadataRouters( self ) -> typing.Collection[ ClientExportingMetadata.SingleFileMetadataRouter ]:
+        
+        return self._metadata_routers
+        
+    
     def RunNow( self ):
         
         self._paused = False
@@ -634,82 +679,3 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder
-
-class SidecarExporter( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SIDECAR_EXPORTER
-    SERIALISABLE_NAME = 'Sidecar Exporter'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, service_keys_to_tag_data = None ):
-        
-        if service_keys_to_tag_data is None:
-            
-            service_keys_to_tag_data = {}
-            
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self._service_keys_to_tag_data = service_keys_to_tag_data
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_service_keys_and_tag_data = [ ( service_key.hex(), tag_filter.GetSerialisableTuple(), tag_display_type ) for ( service_key, ( tag_filter, tag_display_type ) ) in self._service_keys_to_tag_data.items() ]
-        
-        return serialisable_service_keys_and_tag_data
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        serialisable_service_keys_and_tag_data = serialisable_info
-        
-        self._service_keys_to_tag_data = { bytes.fromhex( service_key_hex ) : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ), tag_display_type ) for ( service_key_hex, serialisable_tag_filter, tag_display_type ) in serialisable_service_keys_and_tag_data }
-        
-    
-    def ExportSidecar( self, directory: str, filename: str, tags_manager: ClientMediaManagers.TagsManager ):
-        
-        my_service_keys = set( self._service_keys_to_tag_data.keys() )
-        
-        for service_key in my_service_keys:
-            
-            if not HG.client_controller.services_manager.ServiceExists( service_key ):
-                
-                del self._service_keys_to_tag_data[ service_key ]
-                
-            
-        
-        all_tags = set()
-        
-        for ( service_key, ( tag_filter, tag_display_type ) ) in self._service_keys_to_tag_data.items():
-            
-            tags = tags_manager.GetCurrent( service_key, tag_display_type )
-            
-            tags = tag_filter.Filter( tags )
-            
-            all_tags.update( tags )
-            
-        
-        if len( all_tags ) > 0:
-            
-            all_tags = list( all_tags )
-            
-            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-            
-            ClientTagSorting.SortTags( tag_sort, all_tags )
-            
-            txt_path = os.path.join( directory, filename + '.txt' )
-            
-            with open( txt_path, 'w', encoding = 'utf-8' ) as f:
-                
-                f.write( '\n'.join( tags ) )
-                
-            
-        
-    
-    def GetTagData( self ):
-        
-        return dict( self._service_keys_to_tag_data )
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIDECAR_EXPORTER ] = SidecarExporter

@@ -29,6 +29,45 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return tuples
         
     
+    def _CreateTable( self, create_query_without_name: str, table_name: str ):
+        
+        if 'fts4(' in create_query_without_name.lower():
+            
+            # when we want to repair a missing fts4 table, the damaged old virtual table sometimes still has some sub-tables hanging around, which breaks the new create
+            # so, let's route all table creation through here and check for and clear any subtables beforehand!
+            
+            if '.' in table_name:
+                
+                ( schema, raw_table_name ) = table_name.split( '.', 1 )
+                
+                sqlite_master_table = '{}.sqlite_master'.format( schema )
+                
+            else:
+                
+                raw_table_name = table_name
+                sqlite_master_table = 'sqlite_master'
+                
+            
+            # little test here to make sure we stay idempotent if the primary table actually already exists--don't want to delete things that are actually good!
+            if self._Execute( 'SELECT 1 FROM {} WHERE name = ?;'.format( sqlite_master_table ), ( raw_table_name, ) ).fetchone() is None:
+                
+                possible_suffixes = [ '_content', '_docsize', '_segdir', '_segments', '_stat' ]
+                
+                possible_subtable_names = [ '{}{}'.format( raw_table_name, suffix ) for suffix in possible_suffixes ]
+                
+                for possible_subtable_name in possible_subtable_names:
+                    
+                    if self._Execute( 'SELECT 1 FROM {} WHERE name = ?;'.format( sqlite_master_table ), ( possible_subtable_name, ) ).fetchone() is not None:
+                        
+                        self._Execute( 'DROP TABLE {};'.format( possible_subtable_name ) )
+                        
+                    
+                
+            
+        
+        self._Execute( create_query_without_name.format( table_name ) )
+        
+    
     def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
         return set()
@@ -119,7 +158,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         
         for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
             
-            self._Execute( create_query_without_name.format( table_name ) )
+            self._CreateTable( create_query_without_name, table_name )
             
         
     
@@ -217,7 +256,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
             for ( table_name, create_query_without_name ) in missing_table_rows:
                 
-                self._Execute( create_query_without_name.format( table_name ) )
+                self._CreateTable( create_query_without_name, table_name )
                 
                 cursor_transaction_wrapper.CommitAndBegin()
                 
@@ -259,7 +298,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
             for ( table_name, create_query_without_name ) in missing_table_rows:
                 
-                self._Execute( create_query_without_name.format( table_name ) )
+                self._CreateTable( create_query_without_name, table_name )
                 
                 cursor_transaction_wrapper.CommitAndBegin()
                 

@@ -1517,6 +1517,8 @@ class ReviewServicePanel( QW.QWidget ):
         
         self._id_button.setFixedWidth( width )
         
+        self._service_key_button = ClientGUICommon.BetterButton( self, 'copy service key', HG.client_controller.pub, 'clipboard', 'text', service.GetServiceKey().hex() )
+        
         self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshButton )
         
         service_type = self._service.GetServiceType()
@@ -1585,6 +1587,7 @@ class ReviewServicePanel( QW.QWidget ):
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             self._id_button.hide()
+            self._service_key_button.hide()
             
         
         vbox = QP.VBoxLayout()
@@ -1592,6 +1595,7 @@ class ReviewServicePanel( QW.QWidget ):
         hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._id_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._service_key_button, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._refresh_button, CC.FLAGS_CENTER )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )

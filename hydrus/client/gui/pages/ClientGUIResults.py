@@ -1183,7 +1183,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def _Inbox( self ):
         
-        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_ARCHIVE )
+        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_ARCHIVE, is_in_file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY  )
         
         if len( hashes ) > 0:
             
@@ -3749,7 +3749,7 @@ class MediaPanelThumbnails( MediaPanel ):
         selection_has_local_file_domain = True in ( locations_manager.IsLocal() and not locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
-        selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
+        selection_has_archive = True in ( media.HasArchive() and media.GetLocationsManager().IsLocal() for media in self._selected_media )
         
         all_file_domains = HydrusData.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )

@@ -23,7 +23,7 @@ Which gives you a full listing of all below arguments, however this will not wor
 Lets you customise where hydrus should use for its base database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described [here](database_migration.md). When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:
 
 ```
--d="E:\\my hydrus\\hydrus db"
+-d="E:\my hydrus\hydrus db"
 ```
 
 ##**`--temp_dir TEMP_DIR`**
@@ -31,7 +31,7 @@ Lets you customise where hydrus should use for its base database directory. This
 This tells all aspects of the client, including the SQLite database, to use a different path for temp operations. This would be by default your system temp path, such as:
 
 ```
-C:\\Users\\You\\AppData\\Local\\Temp
+C:\Users\You\AppData\Local\Temp
 ```
 
 But you can also check it in _help->about_. A handful of database operations (PTR tag processing, vacuums) require a lot of free space, so if your system drive is very full, or you have unusual ramdisk-based temp storage limits, you may want to relocate to another location or drive.

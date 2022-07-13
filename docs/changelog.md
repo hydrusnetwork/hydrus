@@ -3,6 +3,53 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 491](https://github.com/hydrusnetwork/hydrus/releases/tag/v491)
+
+### system predicates
+* the advanced OR input, where you can type tags in complicated logical expressions, now supports system predicates! most system predicates are supported using their typical display strings. it uses the same engine as the client api, so check the examples here https://hydrusnetwork.github.io/hydrus/developer_api.html#get_files_search_files sorry for the delay here
+* the advanced input also runs tags better through the hydrus tag 'cleaning' process, so things like whitespace between the namespace colon and the subtag are cleaned up correctly, and invalid tags should be excluded
+* it also starts with the keyboard focus in the text input
+* and I think I fixed an issue with '!'', 'not', or '-' negation prefixes not parsing
+* highlighted the example parseable system predicate texts in the Client API help, and added 'last viewed' to it
+
+### misc
+* altering your services in _manage services_ no longer causes a full page refresh for all currently open search pages
+* in a related thing, if you click the file or tag domain of a file search page to be the same as it just was, you no longer get a page refresh
+* the rating widgets now show their current rating value on their tooltips
+* when setting a numerical rating by a drag, it no longer matters if your mouse strays above or below the widget--it will still set
+* the String Processing system has a new 'String Tag Filter' processing step. this applies the normal tag filtering object to your list of strings and also performs the hydrus 'tag cleaning' process on them, making them all lowercase and trimming whitespace and so on
+* the sibling/parent sync is now even more polite when told to do work in 'normal' time. this has been hitting a lot of new users really hard, so it should now really trickle work during normal time, throttling down when it hits a bump to avoid stunlocking you but also responding quickly to recent changes if you are fully synced
+* the database repair code is now better at healing damaged fast-text-search (FTS) tables. previously, in cases of partial damage to the virtual table, the repair code would error out
+* fixed a bug where certain search predicate calendar dates that are acceptable in Linux but not in Windows caused Windows to fail to load the session. if you put in 1965 as a search date, it should now revert to the current time one next load etc...
+* the test to see if a directory is writeable-to is improved and now handles Windows's Program Files directory correctly
+* improved how the boot scripts handle incorrect/bad database directory paths. the error handling works better, and it figures out a fallback location for crash.log better
+* a new button on 'review services' now lets advanced users copy the service key to the clipboard
+* the migrate tags dialog now lists file repositories, ipfs services, and 'all my files' as potential file filter domains
+* when checking it has space for a large transaction like a vacuum, hydrus now tries to check if you are running on a ramdisk or other severely space-limited temp dir and offers more text if this is true
+* updated the '4chan style thread api parser' to handle posts with multiple files, which fixes tvchan.moe and probably anything else running NPFchan
+* some logic testing around showing 'return to inbox' and the actual operation is fixed so it only applies to local files. in some weird advanced situations, you could previously send deleted files to inbox
+
+### new import/export framework
+* started a new modular metadata import/export pipeline. this thing starts out today by doing the work of newline-separated tags in a .txt sidecar file and will expand to do all sorts of metadata in other formats like JSON and XML. it will also, eventually, support arbitrary cross-type conversions like tags to urls or ratings to tags
+* export folders now support '.txt' sidecar tag exporting!
+* the '.txt' sidecar tag importing in import folders or manual imports is now handled by the new pipeline
+* the '.txt' sidecar exporting in the manual export dialog is now handled by the new pipeline
+* please expect the UI around '.txt' sidecar importing and exporting to change significantly in future. you'll be selecting different metadata types to import or export, make string processing steps to alter or filter what you get, and of course be able to compile it all into more complicated filetypes
+
+### cleanup and refactoring
+* mr bones gets two new columns to line up the numbers better
+* a bunch of export code got moved around. created a new module 'exporting', and moved ClientExporting.py to it, renaming to ClientExportingFiles.py
+* removed an old prototype for sidecar exporting and related plans for UI
+* the 'missing file folders on boot' dialog now points users to 'help my media files are broke.txt'
+* brushed up the 'help my x is broke.txt' documents in the database directory a little
+* fixed some surplus double backslashes in the help
+* a secret tiny label change/fix, let's see if anyone notices
+* cleaned up how the rating widgets manage and update rating state. it was ancient bad code
+* updated how different rating values are converted to UI text
+* misc cleanup of some free space checking code
+* fixed some bad quote characters in client api help JSON examples
+* improved some error handling for uploading pending content and sped up file uploads a little
+
 ## [Version 490](https://github.com/hydrusnetwork/hydrus/releases/tag/v490)
 
 ### misc
@@ -293,32 +340,3 @@
 * added a unit test to test this
 * added archive timestamp and hash hex sort enum definitions to the 'search_files' client api help
 * client api version is now 31
-
-## [Version 480](https://github.com/hydrusnetwork/hydrus/releases/tag/v480)
-
-### file notes and media viewer hover windows
-* file notes are now shown on the media viewer! this is a first version, pretty ugly, and may have font layout bugs for some systems, but it works. they hang just below the top-right hover, both in the canvas background and with their own hover if you mouseover. clicking on any note will open 'edit notes' on that note
-* the duplicate filter's always-on hover _should_ slide out of the way when there are many notes
-* furthermore, I rewrote the backend of hover windows. they are now embedded into the media viewer rather than being separate frameless toolbar windows. this should relieve several problems different users had--for instance, if you click a hover, you now no longer lose focus on the main media viewer window. I hacked some of this to get it to work, but along the way I undid three other hacks, so overall it should be better. please let me know how this works for you!
-* fixed a long time hover window positioning bug where the top-right window would sometimes pop in for a frame the first time you moved the mouse to the top middle before repositioning and hiding itself again
-* removed the 'notes' icon from the top right hover window
-* refactored a bunch of canvas background code
-
-### client api
-* search_files/get_thumbnail now returns image/jpeg or image/png Content-Type. it _should_ be super fast, but let me know if it lags after 3k thumbs or something
-* you can now ask for CBOR or JSON specifically by using the 'Accept' request header, regardless of your own request Content-Type (issue #1110)
-* if you send or ask for CBOR but it is not available for that client, you now get a new 'Not Acceptable' 406 response (previously it would 500 or 200 but in JSON)
-* updated the help regarding the above and wrote some unit tests to check CBOR/JSON requests and responses
-* client api version is now 30
-
-### misc
-* added a link to 'Hyshare', at https://github.com/floogulinc/hyshare, to the Client API help. it is a neat way to share galleries with friends, just like the the old 'local booru'
-* building on last week's shift-select improvement, I tweaked it and shift-select and ctrl-select are back to not setting the preview focus. you can ctrl-click a bunch of vids in quick silence again
-* the menu on the 'file log' button is now attached to the downloader page lists and the menu when you right-click on the file log panel. you can now access these actions without having to highlight a big query
-* the same is also true of the search/check log!
-* when you select a new downloader in the gallery download page, the keyboard focus now moves immediately to the query text input box
-* tweaked the zoom locking code in the duplicate filter again. the 'don't lock that way if there is spillover' test, which is meant to stop garbage site banners from being hidden just offscreen, is much more strict. it now only cares about 10% or so spillover, assuming that with a large 'B' the spillover will be obvious. this should improve some odd zoom locking situations where the first pair change was ok and the rest were weird
-* if you exit the client before the first session loads (either it is really huge or a problem breaks/delays your boot) the client will not save any 'last/exit session' (previously, it was saving empty here, requiring inconvenient load from a backup)
-* if you have a really really huge session, the client is now more careful about not booting delayed background tasks like subscriptions until the session is in place
-* on 'migrate database', the thumbnail size estimate now has a min-max range and a tooltip to clarify that it is an estimate
-* fixed a bug in the new 'sort by file hash' pre-sort when applying system:limit

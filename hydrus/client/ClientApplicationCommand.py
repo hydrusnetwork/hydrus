@@ -675,7 +675,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                             
                             service = HG.client_controller.services_manager.GetService( service_key )
                             
-                            value_string = service.ConvertRatingToString( value )
+                            value_string = service.ConvertNoneableRatingToString( value )
                             
                         except HydrusExceptions.DataMissing:
                             

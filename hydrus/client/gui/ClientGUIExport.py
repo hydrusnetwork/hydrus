@@ -11,13 +11,13 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientExporting
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
+from hydrus.client.exporting import ClientExportingFiles
+from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -81,7 +81,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         period = 15 * 60
         
-        export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
+        export_folder = ClientExportingFiles.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
             
@@ -100,7 +100,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExporting.ExportFolder ):
+    def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExportingFiles.ExportFolder ):
         
         ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
         
@@ -206,7 +206,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, export_folder: ClientExporting.ExportFolder ):
+    def __init__( self, parent, export_folder: ClientExportingFiles.ExportFolder ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -232,14 +232,6 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
-        
-        self._page_key = b'export folders placeholder'
-        
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
-        
-        #
-        
         self._period_box = ClientGUICommon.StaticBox( self, 'export period' )
         
         self._period = ClientGUITime.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
@@ -252,11 +244,29 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
+        
+        self._page_key = b'export folders placeholder'
+        
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
+        
+        #
+        
         self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
         
         self._pattern = QW.QLineEdit( self._phrase_box )
         
         self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
+        
+        #
+        
+        self._metadata_routers_box = ClientGUICommon.StaticBox( self, 'metadata export' )
+        
+        self._current_metadata_routers = list( export_folder.GetMetadataRouters() )
+        
+        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
+        
+        self._export_tag_txts_services_button = ClientGUICommon.BetterButton( self._metadata_routers_box, 'set tag .txt services', self._SetTxtServices )
         
         #
         
@@ -332,20 +342,97 @@ If you select synchronise, be careful!'''
         
         self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
+        self._metadata_routers_box.Add( self._export_tag_txts_services_button, CC.FLAGS_ON_RIGHT )
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._metadata_routers_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
         self._UpdateTypeDeleteUI()
         
+        self._UpdateTxtButton()
+        
         self._type.currentIndexChanged.connect( self._UpdateTypeDeleteUI )
         self._delete_from_client_after_export.clicked.connect( self.EventDeleteFilesAfterExport )
+        
+    
+    def _GetCurrentTxtTagServiceKeys( self ):
+        
+        current_txt_tag_service_keys = set()
+        
+        if len( self._current_metadata_routers ) > 0:
+            
+            metadata_router = self._current_metadata_routers[0]
+            
+            for importer in metadata_router.GetImporters():
+                
+                if isinstance( importer, ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags ):
+                    
+                    service_key = importer.GetServiceKey()
+                    
+                    current_txt_tag_service_keys.add( service_key )
+                    
+                
+            
+        
+        return current_txt_tag_service_keys
+        
+    
+    def _SetTxtServices( self ):
+        
+        # TODO: obviously replace all this, and elsewhere, with a unified metadata router edit UI panel/button
+        
+        current_txt_tag_service_keys = self._GetCurrentTxtTagServiceKeys()
+        
+        services_manager = HG.client_controller.services_manager
+        
+        tag_services = services_manager.GetServices( HC.REAL_TAG_SERVICES )
+        
+        choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in current_txt_tag_service_keys ) for service in tag_services ]
+        
+        try:
+            
+            neighbouring_txt_tag_service_keys = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select tag services', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        importers = [ ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags( service_key ) for service_key in neighbouring_txt_tag_service_keys ]
+        
+        exporter = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
+        
+        metadata_router = ClientExportingMetadata.SingleFileMetadataRouter( importers = importers, exporter = exporter )
+        
+        self._current_metadata_routers = [ metadata_router ]
+        
+        self._UpdateTxtButton()
+        
+    
+    def _UpdateTxtButton( self ):
+        
+        current_txt_tag_service_keys = self._GetCurrentTxtTagServiceKeys()
+        
+        if len( current_txt_tag_service_keys ) == 0:
+            
+            tt = 'No services set.'
+            
+        else:
+            
+            names = sorted( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in current_txt_tag_service_keys ] )
+            
+            tt = ', '.join( names )
+            
+        
+        self._export_tag_txts_services_button.setToolTip( tt )
         
     
     def _UpdateTypeDeleteUI( self ):
@@ -415,7 +502,7 @@ If you select synchronise, be careful!'''
         
         try:
             
-            ClientExporting.ParseExportPhrase( phrase )
+            ClientExportingFiles.ParseExportPhrase( phrase )
             
         except Exception as e:
             
@@ -428,12 +515,13 @@ If you select synchronise, be careful!'''
         
         last_error = self._export_folder.GetLastError()
         
-        export_folder = ClientExporting.ExportFolder(
+        export_folder = ClientExportingFiles.ExportFolder(
             name,
             path = path,
             export_type = export_type,
             delete_from_client_after_export = delete_from_client_after_export,
             file_search_context = file_search_context,
+            metadata_routers = self._current_metadata_routers,
             run_regularly = run_regularly,
             period = period,
             phrase = phrase,
@@ -444,86 +532,6 @@ If you select synchronise, be careful!'''
         )
         
         return export_folder
-        
-    
-class EditSidecarExporterPanel( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, sidecar_exporter: ClientExporting.SidecarExporter ):
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        self._service_keys_to_tag_data = dict( sidecar_exporter.GetTagData() )
-        
-        #
-        
-        # ok, I guess a multi-column list of services, then tag filter and display type options
-        # open it, you make a new edit panel type
-        
-        # add (with test for remaining services), edit, delete
-        
-        #
-        
-        # populate that lad
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        #QP.AddToLayout( vbox, self._tag_data_listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def GetValue( self ):
-        
-        sidecar_exporter = ClientExporting.SidecarExporter( service_keys_to_tag_data = self._service_keys_to_tag_data )
-        
-        return sidecar_exporter
-        
-    
-class EditSidecarExporterTagDataPanel( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, tag_filter: HydrusTags.TagFilter, tag_display_type: int ):
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        #
-        
-        message = 'Filter the tags you want to export here. Anything that passes this filter is exported.'
-        
-        self._tag_filter = ClientGUITags.TagFilterButton( self, message, tag_filter )
-        
-        self._tag_display_type = ClientGUICommon.BetterChoice( self )
-        
-        self._tag_display_type.addItem( 'with siblings and parents applied', ClientTags.TAG_DISPLAY_ACTUAL )
-        self._tag_display_type.addItem( 'as the tags are actually stored', ClientTags.TAG_DISPLAY_STORAGE )
-        
-        #
-        
-        self._tag_display_type.SetValue( tag_display_type )
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        rows = []
-        
-        rows.append( ( 'Tags to export: ', self._tag_filter ) )
-        rows.append( ( 'Type to export: ', self._tag_display_type ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def GetValue( self ):
-        
-        tag_filter = self._tag_filter.GetValue()
-        tag_display_type = self._tag_display_type.GetValue()
-        
-        return ( tag_filter, tag_display_type )
         
     
 class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -591,7 +599,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        export_path = ClientExporting.GetExportPath()
+        export_path = ClientExportingFiles.GetExportPath()
         
         if export_path is not None:
             
@@ -763,7 +771,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         try:
             
-            terms = ClientExporting.ParseExportPhrase( pattern )
+            terms = ClientExportingFiles.ParseExportPhrase( pattern )
             
         except Exception as e:
             
@@ -817,6 +825,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             pauser = HydrusData.BigJobPauser()
             
+            importers = [ ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags( service_key ) for service_key in neighbouring_txt_tag_service_keys ]
+            exporter = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
+            
+            metadata_router = ClientExportingMetadata.SingleFileMetadataRouter( importers = importers, exporter = exporter )
+            
             for ( index, ( ordering_index, media, path ) ) in enumerate( to_do ):
                 
                 if job_key.IsCancelled():
@@ -849,25 +862,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     if export_tag_txts:
                         
-                        tags_manager = media.GetTagsManager()
-                        
-                        tags = set()
-                        
-                        for service_key in neighbouring_txt_tag_service_keys:
-                            
-                            current_tags = tags_manager.GetCurrent( service_key, ClientTags.TAG_DISPLAY_ACTUAL )
-                            
-                            tags.update( current_tags )
-                            
-                        
-                        tags = sorted( tags )
-                        
-                        txt_path = path + '.txt'
-                        
-                        with open( txt_path, 'w', encoding = 'utf-8' ) as f:
-                            
-                            f.write( '\n'.join( tags ) )
-                            
+                        metadata_router.Work( media.GetMediaResult(), path )
                         
                     
                     source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
@@ -908,6 +903,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     deletee_medias = { media for ( ordering_index, media, path ) in to_do }
                     
                 
+                local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                
                 chunks_of_deletee_medias = HydrusData.SplitListIntoChunks( list( deletee_medias ), 64 )
                 
                 for chunk_of_deletee_medias in chunks_of_deletee_medias:
@@ -918,7 +915,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     for media in chunk_of_deletee_medias:
                         
-                        for service_key in media.GetLocationsManager().GetCurrent():
+                        for service_key in media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys ):
                             
                             service_keys_to_hashes[ service_key ].add( media.GetHash() )
                             
@@ -963,9 +960,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         pattern = self._pattern.text()
         
-        terms = ClientExporting.ParseExportPhrase( pattern )
+        terms = ClientExportingFiles.ParseExportPhrase( pattern )
         
-        filename = ClientExporting.GenerateExportFilename( directory, media, terms, do_not_use_filenames = self._existing_filenames )
+        filename = ClientExportingFiles.GenerateExportFilename( directory, media, terms, do_not_use_filenames = self._existing_filenames )
         
         path = os.path.join( directory, filename )
         
@@ -1058,7 +1055,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            names = [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self._neighbouring_txt_tag_service_keys ]
+            names = sorted( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self._neighbouring_txt_tag_service_keys ] )
             
             tt = ', '.join( names )
             

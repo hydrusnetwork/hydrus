@@ -33,6 +33,53 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_491"><a href="#version_491">version 491</a></h3></li>
+				<ul>
+					<li>system predicates:</li>
+					<li>the advanced OR input, where you can type tags in complicated logical expressions, now supports system predicates! most system predicates are supported using their typical display strings. it uses the same engine as the client api, so check the examples here https://hydrusnetwork.github.io/hydrus/developer_api.html#get_files_search_files sorry for the delay here</li>
+					<li>the advanced input also runs tags better through the hydrus tag 'cleaning' process, so things like whitespace between the namespace colon and the subtag are cleaned up correctly, and invalid tags should be excluded</li>
+					<li>it also starts with the keyboard focus in the text input</li>
+					<li>and I think I fixed an issue with '!'', 'not', or '-' negation prefixes not parsing</li>
+					<li>highlighted the example parseable system predicate texts in the Client API help, and added 'last viewed' to it</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>altering your services in _manage services_ no longer causes a full page refresh for all currently open search pages</li>
+					<li>in a related thing, if you click the file or tag domain of a file search page to be the same as it just was, you no longer get a page refresh</li>
+					<li>the rating widgets now show their current rating value on their tooltips</li>
+					<li>when setting a numerical rating by a drag, it no longer matters if your mouse strays above or below the widget--it will still set</li>
+					<li>the String Processing system has a new 'String Tag Filter' processing step. this applies the normal tag filtering object to your list of strings and also performs the hydrus 'tag cleaning' process on them, making them all lowercase and trimming whitespace and so on</li>
+					<li>the sibling/parent sync is now even more polite when told to do work in 'normal' time. this has been hitting a lot of new users really hard, so it should now really trickle work during normal time, throttling down when it hits a bump to avoid stunlocking you but also responding quickly to recent changes if you are fully synced</li>
+					<li>the database repair code is now better at healing damaged fast-text-search (FTS) tables. previously, in cases of partial damage to the virtual table, the repair code would error out</li>
+					<li>fixed a bug where certain search predicate calendar dates that are acceptable in Linux but not in Windows caused Windows to fail to load the session. if you put in 1965 as a search date, it should now revert to the current time one next load etc...</li>
+					<li>the test to see if a directory is writeable-to is improved and now handles Windows's Program Files directory correctly</li>
+					<li>improved how the boot scripts handle incorrect/bad database directory paths. the error handling works better, and it figures out a fallback location for crash.log better</li>
+					<li>a new button on 'review services' now lets advanced users copy the service key to the clipboard</li>
+					<li>the migrate tags dialog now lists file repositories, ipfs services, and 'all my files' as potential file filter domains</li>
+					<li>when checking it has space for a large transaction like a vacuum, hydrus now tries to check if you are running on a ramdisk or other severely space-limited temp dir and offers more text if this is true</li>
+					<li>updated the '4chan style thread api parser' to handle posts with multiple files, which fixes tvchan.moe and probably anything else running NPFchan</li>
+					<li>some logic testing around showing 'return to inbox' and the actual operation is fixed so it only applies to local files. in some weird advanced situations, you could previously send deleted files to inbox</li>
+					<li>.</li>
+					<li>new import/export framework:</li>
+					<li>started a new modular metadata import/export pipeline. this thing starts out today by doing the work of newline-separated tags in a .txt sidecar file and will expand to do all sorts of metadata in other formats like JSON and XML. it will also, eventually, support arbitrary cross-type conversions like tags to urls or ratings to tags</li>
+					<li>export folders now support '.txt' sidecar tag exporting!</li>
+					<li>the '.txt' sidecar tag importing in import folders or manual imports is now handled by the new pipeline</li>
+					<li>the '.txt' sidecar exporting in the manual export dialog is now handled by the new pipeline</li>
+					<li>please expect the UI around '.txt' sidecar importing and exporting to change significantly in future. you'll be selecting different metadata types to import or export, make string processing steps to alter or filter what you get, and of course be able to compile it all into more complicated filetypes</li>
+					<li>.</li>
+					<li>cleanup and refactoring:</li>
+					<li>mr bones gets two new columns to line up the numbers better</li>
+					<li>a bunch of export code got moved around. created a new module 'exporting', and moved ClientExporting.py to it, renaming to ClientExportingFiles.py</li>
+					<li>removed an old prototype for sidecar exporting and related plans for UI</li>
+					<li>the 'missing file folders on boot' dialog now points users to 'help my media files are broke.txt'</li>
+					<li>brushed up the 'help my x is broke.txt' documents in the database directory a little</li>
+					<li>fixed some surplus double backslashes in the help</li>
+					<li>a secret tiny label change/fix, let's see if anyone notices</li>
+					<li>cleaned up how the rating widgets manage and update rating state. it was ancient bad code</li>
+					<li>updated how different rating values are converted to UI text</li>
+					<li>misc cleanup of some free space checking code</li>
+					<li>fixed some bad quote characters in client api help JSON examples</li>
+					<li>improved some error handling for uploading pending content and sped up file uploads a little</li>
+				</ul>
 				<li><h3 id="version_490"><a href="#version_490">version 490</a></h3></li>
 				<ul>
 					<li>misc:</li>

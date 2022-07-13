@@ -4867,7 +4867,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
 
                 ClientGUIMenus.AppendMenuItem( menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
                 
-            elif self._current_media.HasArchive():
+            elif self._current_media.HasArchive() and self._current_media.GetLocationsManager().IsLocal():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
                 

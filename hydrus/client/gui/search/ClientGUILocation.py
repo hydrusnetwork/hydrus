@@ -127,7 +127,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext ):
         
-        self._location_context = location_context
+        self._location_context = ClientLocation.LocationContext()
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._EditLocation )
         
@@ -215,6 +215,11 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         location_context = location_context.Duplicate()
         
         location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        if location_context == self._location_context:
+            
+            return
+            
         
         self._location_context = location_context
         

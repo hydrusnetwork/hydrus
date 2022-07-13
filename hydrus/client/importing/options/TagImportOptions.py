@@ -12,6 +12,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -105,43 +106,27 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._load_from_neighbouring_txt_files:
             
-            txt_path = path + '.txt'
+            # TODO: this needs more work, making an actual Router object with an Exporter, grinding things towards flexible conversion with different types and actually firing off content updates vs 'get example tags for UI'
+            # I'm pretty sure we could also make a 'FilenameImporter' and pipe all the following gubbins into the same system lad
             
-            if os.path.exists( txt_path ):
+            importer = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
+            
+            try:
                 
-                try:
+                txt_tags = importer.Import( path )
+                
+                if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
                     
-                    with open( txt_path, 'r', encoding = 'utf-8' ) as f:
-                        
-                        txt_tags_string = f.read()
-                        
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
-                    
-                    tags.add( '___had problem reading .txt file--is it not in utf-8?' )
+                    raise Exception( 'Tags were too long--I think this was not a regular text file!' )
                     
                 
-                try:
-                    
-                    txt_tags = [ tag for tag in HydrusText.DeserialiseNewlinedTexts( txt_tags_string ) ]
-                    
-                    if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
-                        
-                        HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
-                        
-                        raise Exception()
-                        
-                    
-                    tags.update( txt_tags )
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
-                    
-                    tags.add( '___had problem parsing .txt file' )
-                    
+                tags.update( txt_tags )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'Problem getting tags from a txt sidecar! {}'.format( e ) )
+                
+                tags.add( '___had problem parsing .txt file' )
                 
             
         

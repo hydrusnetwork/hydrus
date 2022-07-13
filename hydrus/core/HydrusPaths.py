@@ -223,45 +223,34 @@ def DirectoryIsWriteable( path ):
             
         
     
-    return os.access( path, os.W_OK | os.X_OK )
-    
-    # old crazy method:
-    '''
-    # testing access bits on directories to see if we can make new files is multiplatform hellmode
-    # so, just try it and see what happens
-    
-    temp_path = os.path.join( path, 'hydrus_temp_test_top_jej' )
-    
-    if os.path.exists( temp_path ):
+    if not os.access( path, os.W_OK | os.X_OK ):
         
-        try:
-            
-            os.unlink( temp_path )
-            
-        except:
-            
-            return False
-            
+        return False
         
+    
+    # we'll actually do a file, since Program Files passes the above test lmaoooo
     
     try:
         
-        # using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
+        # also, using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
         # so, just do it manually!
         
-        f = open( temp_path, 'wb' )
+        test_path = os.path.join( path, 'hydrus_permission_test' )
         
-        f.close()
+        with open( test_path, 'wb' ) as f:
+            
+            f.write( b'If this file still exists, this directory can be written to but not deleted from.' )
+            
         
-        os.unlink( temp_path )
-        
-        return True
+        os.unlink( test_path )
         
     except:
         
         return False
         
-    '''
+    
+    return True
+    
 def FileisWriteable( path: str ):
     
     return os.access( path, os.W_OK )
@@ -339,6 +328,12 @@ def GetFreeSpace( path ):
     disk_usage = psutil.disk_usage( path )
     
     return disk_usage.free
+    
+def GetTotalSpace( path ):
+    
+    disk_usage = psutil.disk_usage( path )
+    
+    return disk_usage.total
     
 def LaunchDirectory( path ):
     

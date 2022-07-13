@@ -11,6 +11,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 
 STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING = 0
 STRING_CONVERSION_REMOVE_TEXT_FROM_END = 1
@@ -244,7 +245,14 @@ class StringConverter( StringProcessingStep ):
                         
                         # the given struct is in local time, so time.mktime is correct
                         
-                        timestamp = int( time.mktime( struct_time ) )
+                        try:
+                            
+                            timestamp = int( time.mktime( struct_time ) )
+                            
+                        except:
+                            
+                            timestamp = HydrusData.GetNow()
+                            
                         
                     elif timezone == HC.TIMEZONE_OFFSET:
                         
@@ -1057,6 +1065,134 @@ class StringSplitter( StringProcessingStep ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter
 
+class StringTagFilter( StringProcessingStep ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_TAG_FILTER
+    SERIALISABLE_NAME = 'String Tag Filter'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, tag_filter = None, example_string = 'blue eyes' ):
+        
+        StringProcessingStep.__init__( self )
+        
+        if tag_filter is None:
+            
+            tag_filter = HydrusTags.TagFilter()
+            
+        
+        self._tag_filter = tag_filter
+        
+        self._example_string = example_string
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_tag_filter = self._tag_filter.GetSerialisableTuple()
+        
+        return ( serialisable_tag_filter, self._example_string )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_tag_filter, self._example_string ) = serialisable_info
+        
+        self._tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter )
+        
+    
+    def ConvertAndFilter( self, tag_texts ):
+        
+        tags = HydrusTags.CleanTags( tag_texts )
+        
+        tags = self._tag_filter.Filter( tags, apply_unnamespaced_rules_to_namespaced_tags = True )
+        
+        tags = sorted( tags, key = HydrusTags.ConvertTagToSortable )
+        
+        return tags
+        
+    
+    def GetExampleString( self ) -> str:
+        
+        return self._example_string
+        
+    
+    def GetTagFilter( self ) -> HydrusTags.TagFilter:
+        
+        return self._tag_filter
+        
+    
+    def MakesChanges( self ) -> bool:
+        
+        # it always scans for valid tags
+        
+        return True
+        
+    
+    def Matches( self, text ):
+        
+        try:
+            
+            self.Test( text )
+            
+            return True
+            
+        except HydrusExceptions.StringMatchException:
+            
+            return False
+            
+        
+    
+    def Test( self, text ):
+        
+        if isinstance( text, bytes ):
+            
+            raise HydrusExceptions.StringMatchException( 'Got a bytes value in a string match!' )
+            
+        
+        presentation_text = '"{}"'.format( text )
+        
+        try:
+            
+            tags = HydrusTags.CleanTags( [ text ] )
+            
+            if len( tags ) == 0:
+                
+                raise Exception()
+                
+            else:
+                
+                tag = list( tags )[0]
+                
+            
+        except:
+            
+            raise HydrusExceptions.StringMatchException( '{} was not a valid tag!'.format( presentation_text ) )
+            
+        
+        if not self._tag_filter.TagOK( tag, apply_unnamespaced_rules_to_namespaced_tags = True ):
+            
+            raise HydrusExceptions.StringMatchException( '{} did not pass the tag filter!'.format( presentation_text ) )
+            
+        
+    
+    def ToString( self, simple = False, with_type = False ) -> str:
+        
+        if simple:
+            
+            return 'tag filter'
+            
+        
+        result = '{}, such as {}'.format( self._tag_filter.ToPermittedString(), self._example_string )
+        
+        if with_type:
+            
+            result = 'TAG FILTER: {}'.format( result )
+            
+        
+        return result
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_TAG_FILTER ] = StringTagFilter
+
 class StringProcessor( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR
@@ -1144,6 +1280,17 @@ class StringProcessor( StringProcessingStep ):
                         
                         next_strings = current_strings
                         
+                    
+                
+            elif isinstance( processing_step, StringTagFilter ):
+                
+                try:
+                    
+                    next_strings = processing_step.ConvertAndFilter( current_strings )
+                    
+                except:
+                    
+                    next_strings = current_strings
                     
                 
             else:

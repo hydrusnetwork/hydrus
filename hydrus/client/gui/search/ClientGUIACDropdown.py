@@ -17,6 +17,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
+from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -1408,32 +1409,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
-    def _SetTagService( self, tag_service_key ):
-        
-        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
-            
-            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._location_context_button.GetValue().IsAllKnownFiles():
-            
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
-            
-            self._SetLocationContext( default_location_context )
-            
-        
-        self._tag_service_key = tag_service_key
-        
-        self._search_results_list.SetTagServiceKey( self._tag_service_key )
-        self._favourites_list.SetTagServiceKey( self._tag_service_key )
-        
-        self._UpdateTagServiceLabel()
-        
-        self.tagServiceChanged.emit( self._tag_service_key )
-        
-        self._SetListDirty()
-        
-    
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
         
         raise NotImplementedError()
@@ -1475,6 +1450,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
+        if location_context == self._location_context_button.GetValue():
+            
+            return
+            
+        
         if location_context.IsAllKnownFiles() and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
             local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
@@ -1492,6 +1472,39 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._search_results_list.SetPredicates( results )
         
         self._current_list_parsed_autocomplete_text = parsed_autocomplete_text
+        
+    
+    def _SetTagService( self, tag_service_key ):
+        
+        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._location_context_button.GetValue().IsAllKnownFiles():
+            
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            
+            self._SetLocationContext( default_location_context )
+            
+        
+        if tag_service_key == self._tag_service_key:
+            
+            return False
+            
+        
+        self._tag_service_key = tag_service_key
+        
+        self._search_results_list.SetTagServiceKey( self._tag_service_key )
+        self._favourites_list.SetTagServiceKey( self._tag_service_key )
+        
+        self._UpdateTagServiceLabel()
+        
+        self.tagServiceChanged.emit( self._tag_service_key )
+        
+        self._SetListDirty()
+        
+        return True
         
     
     def _UpdateTagServiceLabel( self ):
@@ -2015,11 +2028,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _SetTagService( self, tag_service_key ):
         
-        AutoCompleteDropdownTags._SetTagService( self, tag_service_key )
+        it_changed = AutoCompleteDropdownTags._SetTagService( self, tag_service_key )
         
-        self._file_search_context.SetTagServiceKey( tag_service_key )
-        
-        self._SignalNewSearchState()
+        if it_changed:
+            
+            self._file_search_context.SetTagServiceKey( tag_service_key )
+            
+            self._SignalNewSearchState()
+            
         
     
     def _SetupTopListBox( self ):
@@ -2758,7 +2774,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
         summary += os.linesep * 2
-        summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
+        summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor. Many system predicates are also supported.'
         summary += os.linesep * 2
         summary += 'Parentheses work the usual way. \\ can be used to escape characters (e.g. to search for tags including parentheses)'
         
@@ -2773,6 +2789,8 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateText()
         
         self._input_text.textChanged.connect( self.EventUpdateText )
+        
+        ClientGUIFunctions.SetFocusLater( self._input_text )
         
     
     def _UpdateText( self ):
@@ -2794,9 +2812,19 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                 
                 for s in result:
                     
-                    row_preds = []
+                    tag_preds = []
+                    
+                    system_preds = []
+                    system_pred_strings = []
                     
                     for tag_string in s:
+                        
+                        if tag_string.startswith( 'system:' ):
+                            
+                            system_pred_strings.append( tag_string )
+                            
+                            continue
+                            
                         
                         if tag_string.startswith( '-' ):
                             
@@ -2807,6 +2835,17 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         else:
                             
                             inclusive = True
+                            
+                        
+                        try:
+                            
+                            tag_string = HydrusTags.CleanTag( tag_string )
+                            
+                            HydrusTags.CheckTagNotEmpty( tag_string )
+                            
+                        except Exception as e:
+                            
+                            raise ValueError( str( e ) )
                             
                         
                         if '*' in tag_string:
@@ -2827,8 +2866,22 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag_string, inclusive = inclusive )
                             
                         
-                        row_preds.append( row_pred )
+                        tag_preds.append( row_pred )
                         
+                    
+                    if len( system_pred_strings ) > 0:
+                        
+                        try:
+                            
+                            system_preds = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( system_pred_strings )
+                            
+                        except Exception as e:
+                            
+                            raise ValueError( str( e ) )
+                            
+                        
+                    
+                    row_preds = tag_preds + system_preds
                     
                     if len( row_preds ) == 1:
                         

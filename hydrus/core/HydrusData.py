@@ -1710,7 +1710,7 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
         pass
         
     
-    return '{}{}B'.format( d, suffix )
+    return '{} {}B'.format( d, suffix )
     
 ToHumanBytes = BaseToHumanBytes
 

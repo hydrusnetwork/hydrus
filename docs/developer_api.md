@@ -256,10 +256,10 @@ Response:
       "service_key": "616c6c206c6f63616c2066696c6573"
     }
   ],
-  'all_local_media': [
+  "all_local_media": [
     {
-      'name': 'all my files',
-      'service_key': '616c6c206c6f63616c206d65646961'
+      "name": "all my files",
+      "service_key": "616c6c206c6f63616c206d65646961"
     }
   ],
   "all_known_files": [
@@ -301,7 +301,7 @@ Arguments (in JSON):
 :   - `path`: (the path you want to import)
 
 ```json title="Example request body"
-{"path": "E:\\to_import\\ayanami.jpg"}
+{"path": "E:\to_import\ayanami.jpg"}
 ```
 
 Arguments (as bytes): 
@@ -1286,7 +1286,7 @@ If the access key's permissions only permit search for certain tags, at least on
 
 Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
 
-Many system predicates are also supported using a text parser! The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). Here's a big list of current formats supported:
+**Many system predicates are also supported using a text parser!** The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). **Here's a big list of examples that are supported:**
 
 ??? example "System Predicates" 
     *   system:everything
@@ -1323,8 +1323,11 @@ Many system predicates are also supported using a text parser! The parser was de
     *   system:hash = abcdef01 abcdef02 md5
     *   system:modified date < 7 years 45 days 7h
     *   system:modified date > 2011-06-04
+    *   system:last viewed time < 7 years 45 days 7h
+    *   system:last view time < 7 years 45 days 7h
     *   system:date modified > 7 years 2 months
     *   system:date modified < 0 years 1 month 1 day 1 hour
+    *   system:import time < 7 years 45 days 7h
     *   system:time imported < 7 years 45 days 7h
     *   system:time imported > 2011-06-04
     *   system:time imported > 7 years 2 months
@@ -1370,7 +1373,7 @@ Many system predicates are also supported using a text parser! The parser was de
     *   system:no note with name note name
     *   system:does not have note with name note name
 
-More system predicate types and input formats will be available in future. Please test out the system predicates you want to send. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
+Please test out the system predicates you want to send. If you are in _help-&gt;advanced mode_, you can test this parser in the advanced text input dialog when you click the OR\* button on a tag autocomplete dropdown. More system predicate types and input formats will be available in future. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
 
 Also, OR predicates are now supported! Just nest within the tag list, and it'll be treated like an OR. For instance:
 

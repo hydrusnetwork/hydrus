@@ -1049,6 +1049,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_file_filter = ClientGUICommon.BetterChoice( self._migration_panel )
         
         source_file_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.IPFS, ) ) )
+        source_file_service_keys.append( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         source_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         source_file_service_keys.append( CC.COMBINED_FILE_SERVICE_KEY )
         
@@ -2817,7 +2820,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             panel_vbox = QP.VBoxLayout()
             
             # spacing to make the weird unicode characters join up neater
-            text_table_layout = QP.GridLayout( cols = 4, spacing = 0 )
+            text_table_layout = QP.GridLayout( cols = 6, spacing = 0 )
             
             text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
             
@@ -2827,42 +2830,54 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
             QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Files' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Size' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Average' ), CC.FLAGS_CENTER )
             
             #
             
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Total Ever Imported:' ), CC.FLAGS_ON_LEFT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( supertotal_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
             #
             
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u251cAll My Files:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_total ), ClientData.ConvertZoomToPercentage( current_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_total ), ClientData.ConvertZoomToPercentage( current_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_size_percent ) ), CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
             #
             
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_inbox ), ClientData.ConvertZoomToPercentage( inbox_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_inbox ), ClientData.ConvertZoomToPercentage( inbox_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_size_percent ) ), CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
             #
             
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_archive ), ClientData.ConvertZoomToPercentage( archive_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_archive ), ClientData.ConvertZoomToPercentage( archive_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
             #
             
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanInt( num_deleted ), ClientData.ConvertZoomToPercentage( deleted_num_percent ) ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '{} ({})'.format( HydrusData.ToHumanBytes( size_deleted ), ClientData.ConvertZoomToPercentage( deleted_size_percent ) ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
             #
@@ -3691,11 +3706,11 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The content of the database is copied to a new file, which then has tightly packed pages and no empty 'free' pages.
+        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The entire database is copied contiguously to a new file, which then has tightly packed pages and no empty 'free' pages.
 
 Because the new database is tightly packed, it will generally be smaller than the original file. This is currently the only way to truncate a hydrus database file.
 
-Vacuuming is an expensive operation. It requires lots of free space on your drive(s), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
+Vacuuming is an expensive operation. It requires lots of free space on your drive(s) (including a full copy in your temp directory!), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
         
         st = ClientGUICommon.BetterStaticText( self, label = info_message )
         

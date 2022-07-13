@@ -78,7 +78,11 @@ try:
     
     if not HydrusPaths.DirectoryIsWriteable( db_dir ):
         
-        raise Exception( 'The given db path "{}" is not a writeable-to!'.format( db_dir ) )
+        message = 'The given db path "{}" is not a writeable-to!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     try:
@@ -87,12 +91,20 @@ try:
         
     except:
         
-        raise Exception( 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir ) )
+        message = 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     if not os.path.isdir( db_dir ):
         
-        raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
+        message = 'The given db path "{}" is not a directory!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     HG.db_journal_mode = result.db_journal_mode

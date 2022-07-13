@@ -576,7 +576,7 @@ class ServiceLocalRating( Service ):
         self._colours = dict( dictionary[ 'colours' ] )
         
     
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         raise NotImplementedError()
         
@@ -599,7 +599,7 @@ class ServiceLocalRating( Service ):
     
 class ServiceLocalRatingLike( ServiceLocalRating ):
     
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         if rating is None:
             
@@ -618,6 +618,30 @@ class ServiceLocalRatingLike( ServiceLocalRating ):
             
         
         return 'unknown'
+        
+    
+    def ConvertRatingStateToString( self, rating_state: int ):
+        
+        if rating_state == ClientRatings.LIKE:
+            
+            return 'like'
+            
+        elif rating_state == ClientRatings.DISLIKE:
+            
+            return 'dislike'
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
         
     
 class ServiceLocalRatingNumerical( ServiceLocalRating ):
@@ -648,21 +672,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
             
         
     
-    def ConvertRatingToStars( self, rating: float ) -> int:
-        
-        if self._allow_zero:
-            
-            stars = int( round( rating * self._num_stars ) )
-            
-        else:
-            
-            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
-            
-        
-        return stars
-        
-    
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         if rating is None:
             
@@ -677,6 +687,40 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
             
         
         return 'unknown'
+        
+    
+    def ConvertRatingStateAndRatingToString( self, rating_state: int, rating: float ):
+        
+        if rating_state == ClientRatings.SET:
+            
+            return self.ConvertNoneableRatingToString( rating )
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
+        
+    
+    def ConvertRatingToStars( self, rating: float ) -> int:
+        
+        if self._allow_zero:
+            
+            stars = int( round( rating * self._num_stars ) )
+            
+        else:
+            
+            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
+            
+        
+        return stars
         
     
     def ConvertStarsToRating( self, stars: int ) -> float:
@@ -3188,6 +3232,7 @@ class ServiceIPFS( ServiceRemote ):
             HG.client_controller.network_engine.AddJob( network_job )
             
             network_job.WaitUntilDone()
+            
             
         
         parsing_text = network_job.GetContentText()

@@ -5194,6 +5194,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class TagFilterButton( ClientGUICommon.BetterButton ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, message, tag_filter, only_show_blacklist = False, label_prefix = None ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
@@ -5230,6 +5232,8 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
                 self._tag_filter = panel.GetValue()
                 
                 self._UpdateLabel()
+                
+                self.valueChanged.emit()
                 
             
         

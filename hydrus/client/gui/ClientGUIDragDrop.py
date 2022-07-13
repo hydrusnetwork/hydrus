@@ -10,7 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
 
-from hydrus.client import ClientExporting
+from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 
@@ -83,12 +83,12 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
     elif discord_dnd_fix_possible and os.path.exists( temp_dir ):
         
-        fallback_filename_terms = ClientExporting.ParseExportPhrase( '{hash}' )
+        fallback_filename_terms = ClientExportingFiles.ParseExportPhrase( '{hash}' )
         
         try:
             
             filename_pattern = new_options.GetString( 'discord_dnd_filename_pattern' )
-            filename_terms = ClientExporting.ParseExportPhrase( filename_pattern )
+            filename_terms = ClientExportingFiles.ParseExportPhrase( filename_pattern )
             
             if len( filename_terms ) == 0:
                 
@@ -104,11 +104,11 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
         for ( m, original_path ) in media_and_original_paths:
             
-            filename = ClientExporting.GenerateExportFilename( temp_dir, m, filename_terms )
+            filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, filename_terms )
             
             if filename == HC.mime_ext_lookup[ m.GetMime() ]:
                 
-                filename = ClientExporting.GenerateExportFilename( temp_dir, m, fallback_filename_terms )
+                filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, fallback_filename_terms )
                 
             
             dnd_path = os.path.join( temp_dir, filename )

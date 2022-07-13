@@ -39,13 +39,8 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
         self._canvas_key = canvas_key
         self._current_media = None
-        self._rating_state = None
         
         service = HG.client_controller.services_manager.GetService( service_key )
-        
-        name = service.GetName()
-        
-        self.setToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
@@ -58,8 +53,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         painter.eraseRect( painter.viewport() )
         
         if self._current_media is not None:
-            
-            self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
             
             ClientGUIRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
             
@@ -109,6 +102,8 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                         
                         if HydrusData.SetsIntersect( self._hashes, hashes ):
                             
+                            self._SetRatingFromCurrentMedia()
+                            
                             self._dirty = True
                             
                             self.update()
@@ -119,6 +114,20 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                     
                 
             
+        
+    
+    def _SetRatingFromCurrentMedia( self ):
+        
+        if self._current_media is None:
+            
+            rating_state = ClientRatings.NULL
+            
+        else:
+            
+            rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
+            
+        
+        self._SetRating( rating_state )
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -135,6 +144,8 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                 
                 self._hashes = self._current_media.GetHashes()
                 
+            
+            self._SetRatingFromCurrentMedia()
             
             self._dirty = True
             
@@ -154,10 +165,6 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         self._rating = None
         
         self._hashes = set()
-        
-        name = self._service.GetName()
-        
-        self.setToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
@@ -225,6 +232,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
                             
                             self.update()
                             
+                            self._UpdateTooltip()
+                            
                             return
                             
                         
@@ -251,6 +260,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             self._dirty = True
             
             self.update()
+            
+            self._UpdateTooltip()
             
         
     

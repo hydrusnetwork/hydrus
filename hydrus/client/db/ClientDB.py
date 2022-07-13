@@ -6377,6 +6377,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _InboxFiles( self, hash_ids ):
         
+        location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) )
+        
+        hash_ids = self.modules_files_storage.FilterHashIds( location_context, hash_ids )
+        
         inboxed_hash_ids = self.modules_files_metadata_basic.InboxFiles( hash_ids )
         
         if len( inboxed_hash_ids ) > 0:
@@ -11685,6 +11689,36 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_maintenance_queue.AddJobs( hash_ids_in_repo_updates, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             
             self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( self.modules_services.local_update_service_id, ) )
+            
+        
+        if version == 490:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( '4chan-style thread api parser', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )

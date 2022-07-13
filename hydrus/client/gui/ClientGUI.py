@@ -37,12 +37,12 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientExporting
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUICore as CGC
@@ -108,6 +108,12 @@ def THREADUploadPending( service_key ):
     
     finished_all_uploads = False
     
+    paused_content_types = set()
+    unauthorised_content_types = set()
+    content_types_to_request = set()
+    
+    job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+    
     try:
         
         service = HG.client_controller.services_manager.GetService( service_key )
@@ -127,8 +133,6 @@ def THREADUploadPending( service_key ):
                 
             
         
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-        
         job_key.SetStatusTitle( 'uploading pending to ' + service_name )
         
         nums_pending = HG.client_controller.Read( 'nums_pending' )
@@ -138,10 +142,6 @@ def THREADUploadPending( service_key ):
         content_types_for_this_service = set( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
         
         if service_type in HC.REPOSITORIES:
-            
-            paused_content_types = set()
-            unauthorised_content_types = set()
-            content_types_to_request = set()
             
             content_types_to_count_types_and_permissions = {
                 HC.CONTENT_TYPE_FILES : ( ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.PERMISSION_ACTION_CREATE ), ( HC.SERVICE_INFO_NUM_PETITIONED_FILES, HC.PERMISSION_ACTION_PETITION ) ),
@@ -341,6 +341,12 @@ def THREADUploadPending( service_key ):
                             
                             continue
                             
+                        except Exception as e:
+                            
+                            HydrusData.ShowText( 'File could not be pinned: {}'.format( e ) )
+                            
+                            return
+                            
                         
                     else:
                         
@@ -360,8 +366,6 @@ def THREADUploadPending( service_key ):
                 
             
             HG.client_controller.pub( 'notify_new_pending' )
-            
-            time.sleep( 0.1 )
             
             HG.client_controller.WaitUntilViewFree()
             
@@ -389,19 +393,6 @@ def THREADUploadPending( service_key ):
         job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', 'upload done!' )
         
-        HydrusData.Print( job_key.ToString() )
-        
-        job_key.Finish()
-        
-        if len( content_types_to_request ) == 0:
-            
-            job_key.Delete()
-            
-        else:
-            
-            job_key.Delete( 5 )
-            
-        
     except Exception as e:
         
         r = re.search( '[a-fA-F0-9]{64}', str( e ) )
@@ -423,33 +414,47 @@ def THREADUploadPending( service_key ):
         
     finally:
         
-        if finished_all_uploads:
+        HydrusData.Print( job_key.ToString() )
+        
+        job_key.Finish()
+        
+        if len( content_types_to_request ) == 0:
             
-            if service_type == HC.TAG_REPOSITORY:
-                
-                types_to_delete = (
-                    HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
-                    HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
-                    HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
-                    HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS
-                )
-                
-            elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
-                
-                types_to_delete = (
-                    HC.SERVICE_INFO_NUM_PENDING_FILES,
-                    HC.SERVICE_INFO_NUM_PETITIONED_FILES
-                )
-                
+            job_key.Delete()
             
-            HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
+        else:
             
+            job_key.Delete( 5 )
+            
+        
+    
+    if finished_all_uploads:
+        
+        if service_type == HC.TAG_REPOSITORY:
+            
+            types_to_delete = (
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS
+            )
+            
+        elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+            
+            types_to_delete = (
+                HC.SERVICE_INFO_NUM_PENDING_FILES,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES
+            )
+            
+        
+        HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
         
         HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
     
+
 class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, controller ):
@@ -4826,7 +4831,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _OpenExportFolder( self ):
         
-        export_path = ClientExporting.GetExportPath()
+        export_path = ClientExportingFiles.GetExportPath()
         
         if export_path is None:
             
