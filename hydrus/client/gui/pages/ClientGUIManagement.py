@@ -1736,8 +1736,6 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = Manageme
 
 class ManagementPanelImporter( ManagementPanel ):
     
-    SHOW_COLLECT = False
-    
     def __init__( self, parent, page, controller, management_controller ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
@@ -1792,6 +1790,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
@@ -1947,7 +1946,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._highlighted_gallery_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2737,7 +2737,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._highlighted_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3658,7 +3659,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._simple_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -4056,7 +4058,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -5070,7 +5073,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
             
-            tag_service_key = file_search_context.GetTagSearchContext().service_key
+            tag_service_key = file_search_context.GetTagContext().service_key
             
             self._current_selection_tags_box.SetTagServiceKey( tag_service_key )
             

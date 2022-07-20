@@ -736,7 +736,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         good_current_hash_ids = current_update_hash_ids.intersection( all_future_update_hash_ids )
         
-        current_processed_table_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE processed = ?;'.format( repository_updates_processed_table_name ), ( True, ) ) )
+        current_processed_table_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_processed_table_name ) ) )
         
         deletee_processed_table_update_hash_ids = current_processed_table_update_hash_ids.difference( good_current_hash_ids )
         

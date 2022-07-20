@@ -669,7 +669,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_search_context = ClientSearch.TagSearchContext()
+    tag_context = ClientSearch.TagContext()
     
     predicates = []
     
@@ -683,7 +683,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
@@ -698,11 +698,11 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_search_context = ClientSearch.TagSearchContext()
+    tag_context = ClientSearch.TagContext()
     
     predicates = []
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = None

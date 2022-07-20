@@ -2775,48 +2775,98 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_cache_size = ClientGUIControls.BytesControl( thumbnail_cache_panel )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
             
+            tt = 'When thumbnails are loaded from disk, their bitmaps are saved for a while in memory so near-future access is super fast. If the total store of thumbnails exceeds this size setting, the least-recent-to-be-accessed will be discarded until the total size is less than it again.'
+            tt += os.linesep * 2
+            tt += 'Most thumbnails are RGB, which means their size here is roughly [width x height x 3].'
+            
+            self._thumbnail_cache_size.setToolTip( tt )
+            
             self._estimated_number_thumbnails = QW.QLabel( '', thumbnail_cache_panel )
             
             self._thumbnail_cache_timeout = ClientGUITime.TimeDeltaButton( thumbnail_cache_panel, min = 300, days = True, hours = True, minutes = True )
-            self._thumbnail_cache_timeout.setToolTip( 'The amount of time after which a thumbnail in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
+            
+            tt = 'The amount of not-accessed time after which a thumbnail will naturally be removed from the cache.'
+            
+            self._thumbnail_cache_timeout.setToolTip( tt )
             
             image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
             
             self._image_cache_size = ClientGUIControls.BytesControl( image_cache_panel )
             self._image_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
             
+            tt = 'When images are loaded from disk, their 100% zoom renders are saved for a while in memory so near-future access is super fast. If the total store of images exceeds this size setting, the least-recent-to-be-accessed will be discarded until the total size is less than it again.'
+            tt += os.linesep * 2
+            tt += 'Most images are RGB, which means their size here is roughly [width x height x 3], with those dimensions being at 100% zoom.'
+            
+            self._image_cache_size.setToolTip( tt )
+            
             self._estimated_number_fullscreens = QW.QLabel( '', image_cache_panel )
             
             self._image_cache_timeout = ClientGUITime.TimeDeltaButton( image_cache_panel, min = 300, days = True, hours = True, minutes = True )
-            self._image_cache_timeout.setToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
+            
+            tt = 'The amount of not-accessed time after which a rendered image will naturally be removed from the cache.'
+            
+            self._image_cache_timeout.setToolTip( tt )
+            
+            self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 20, max = 50 )
+            
+            tt = 'This option sets how much of the cache can go towards one image. If an image\'s total size (usually width x height x 3) is too large compared to the cache, it should not be cached or it will just flush everything else out in one stroke.'
+            
+            self._image_cache_storage_limit_percentage.setToolTip( tt )
+            
+            self._image_cache_storage_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
+            
+            tt = 'This represents the typical size we are talking about at this percentage level. Could be wider or taller, but overall should have the same number of pixels. Anything smaller will be saved in the cache after load, anything larger will be loaded on demand and forgotten as soon as you navigate away. If you want to have persistent fast access to images bigger than this, increase the total image cache size and/or the max % value permitted.'
+            
+            self._image_cache_storage_limit_percentage_st.setToolTip( tt )
+            
+            self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 5, max = 20 )
+            
+            tt = 'If you are browsing many big files, this option stops the prefetcher from overloading your cache by loading up seven or more gigantic images that each competitively flush each other out and need to be re-rendered over and over.'
+            
+            self._image_cache_prefetch_limit_percentage.setToolTip( tt )
+            
+            self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
+            
+            tt = 'This represents the typical size we are talking about at this percentage level. Could be wider or taller, but overall should have the same number of pixels. Anything smaller will be pre-fetched, anything larger will be loaded on demand. If you want images bigger than this to load fast as you browse, increase the total image cache size and/or the max % value permitted.'
+            
+            self._image_cache_prefetch_limit_percentage_st.setToolTip( tt )
             
             self._media_viewer_prefetch_delay_base_ms = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 2000 )
+            
             tt = 'How long to wait, after the current image is rendered, to start rendering neighbours. Does not matter so much any more, but if you have CPU lag, you can try boosting it a bit.'
+            
             self._media_viewer_prefetch_delay_base_ms.setToolTip( tt )
             
             self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
             self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
-            
-            self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 20, max = 50 )
-            
-            self._image_cache_storage_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
-            
-            self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 5, max = 20 )
-            
-            self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
             
             image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache' )
             
             self._image_tile_cache_size = ClientGUIControls.BytesControl( image_tile_cache_panel )
             self._image_tile_cache_size.valueChanged.connect( self.EventImageTilesUpdate )
             
+            tt = 'Zooming and displaying an image is expensive. When an image is rendered to screen at a particular zoom, the client breaks the virtual canvas into tiles and only scales and draws the image onto the viewable ones. As you pan around, new tiles may be needed and old ones discarded. It is all cached so you can pan and zoom over the same areas quickly.'
+            
+            self._image_tile_cache_size.setToolTip( tt )
+            
             self._estimated_number_image_tiles = QW.QLabel( '', image_tile_cache_panel )
             
+            tt = 'You do not need to go crazy here unless you do a huge amount of zooming and really need multiple zoom levels cached for 10+ files you are comparing with each other.'
+            
+            self._estimated_number_image_tiles.setToolTip( tt )
+            
             self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( image_tile_cache_panel, min = 300, hours = True, minutes = True )
-            self._image_tile_cache_timeout.setToolTip( 'The amount of time after which a rendered image tile in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit.' )
+            
+            tt = 'The amount of not-accessed time after which a rendered tile will naturally be removed from the cache.'
+            
+            self._image_tile_cache_timeout.setToolTip( tt )
             
             self._ideal_tile_dimension = ClientGUICommon.BetterSpinBox( image_tile_cache_panel, min = 256, max = 4096 )
-            self._ideal_tile_dimension.setToolTip( 'This is the square size the system will aim for. Smaller tiles are more memory efficient but prone to warping and other artifacts. Extreme values may waste CPU.' )
+            
+            tt = 'This is the screen-visible square size the system will aim for. Smaller tiles are more memory efficient but prone to warping and other artifacts. Extreme values may waste CPU.'
+            
+            self._ideal_tile_dimension.setToolTip( tt )
             
             #
             
@@ -2862,8 +2912,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thumbnails_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( thumbnails_sizer, self._thumbnail_cache_size, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( thumbnails_sizer, self._estimated_number_thumbnails, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( thumbnails_sizer, self._thumbnail_cache_size, CC.FLAGS_CENTER )
+            QP.AddToLayout( thumbnails_sizer, self._estimated_number_thumbnails, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             fullscreens_sizer = QP.HBoxLayout()
             
@@ -2877,13 +2927,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             image_cache_storage_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage_st, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage, CC.FLAGS_CENTER )
+            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             image_cache_prefetch_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage_st, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage, CC.FLAGS_CENTER )
+            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             video_buffer_sizer = QP.HBoxLayout()
             
@@ -3022,7 +3072,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_storage_limit_percentage_st.setText( 'about a {} image'.format( HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusData.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
             
             num_pixels = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 ) / 3
             
@@ -3032,7 +3082,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_prefetch_limit_percentage_st.setText( 'about a {} image'.format( HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusData.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
             
         
         def EventImageTilesUpdate( self ):

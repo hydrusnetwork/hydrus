@@ -119,9 +119,9 @@ def ReadFetch(
     force_system_everything
 ):
     
-    tag_search_context = file_search_context.GetTagSearchContext()
+    tag_context = file_search_context.GetTagContext()
     
-    tag_service_key = tag_search_context.service_key
+    tag_service_key = tag_context.service_key
     
     if not parsed_autocomplete_text.IsAcceptableForTagSearches():
         
@@ -278,8 +278,8 @@ def ReadFetch(
                 current_tags_to_count = collections.Counter()
                 pending_tags_to_count = collections.Counter()
                 
-                include_current_tags = tag_search_context.include_current_tags
-                include_pending_tags = tag_search_context.include_pending_tags
+                include_current_tags = tag_context.include_current_tags
+                include_pending_tags = tag_context.include_pending_tags
                 
                 for group_of_tags_managers in HydrusData.SplitListIntoChunks( tags_managers, 1000 ):
                     
@@ -311,7 +311,7 @@ def ReadFetch(
                     return
                     
                 
-                predicates = HG.client_controller.Read( 'media_predicates', tag_search_context, tags_to_count, parsed_autocomplete_text.inclusive, job_key = job_key )
+                predicates = HG.client_controller.Read( 'media_predicates', tag_context, tags_to_count, parsed_autocomplete_text.inclusive, job_key = job_key )
                 
                 results_cache = ClientSearch.PredicateResultsCacheMedia( predicates )
                 
@@ -412,9 +412,9 @@ def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearch.ParsedAutocomple
     
 def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, file_search_context: ClientSearch.FileSearchContext, results_cache: ClientSearch.PredicateResultsCache ):
     
-    tag_search_context = file_search_context.GetTagSearchContext()
+    tag_context = file_search_context.GetTagContext()
     
-    display_tag_service_key = tag_search_context.display_service_key
+    display_tag_service_key = tag_context.display_service_key
     
     if not parsed_autocomplete_text.IsAcceptableForTagSearches():
         
@@ -1392,8 +1392,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context )
         self._location_context_button.setMinimumWidth( 20 )
         
-        self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
-        self._tag_repo_button.setMinimumWidth( 20 )
+        tag_context = ClientSearch.TagContext( service_key = self._tag_service_key )
+        
+        self._tag_context_button = ClientGUISearch.TagContextButton( self._dropdown_window, tag_context )
+        self._tag_context_button.setMinimumWidth( 20 )
         
         self._favourites_list = self._InitFavouritesList()
         
@@ -1404,6 +1406,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         #
         
         self._location_context_button.locationChanged.connect( self._LocationContextJustChanged )
+        self._tag_context_button.valueChanged.connect( self._TagContextJustChanged )
         
         HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
@@ -1498,8 +1501,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._search_results_list.SetTagServiceKey( self._tag_service_key )
         self._favourites_list.SetTagServiceKey( self._tag_service_key )
         
-        self._UpdateTagServiceLabel()
-        
         self.tagServiceChanged.emit( self._tag_service_key )
         
         self._SetListDirty()
@@ -1507,13 +1508,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         return True
         
     
-    def _UpdateTagServiceLabel( self ):
+    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
         
-        tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
+        self._SetTagService( tag_context.service_key )
         
-        name = tag_service.GetName()
-        
-        self._tag_repo_button.setText( name )
+        self._RestoreTextCtrlFocus()
         
     
     def NotifyNewServices( self ):
@@ -1549,26 +1548,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetTagService( tag_service_key )
         
     
-    def TagButtonHit( self ):
-        
-        services_manager = HG.client_controller.services_manager
-        
-        service_types_in_order = [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ]
-        
-        services = services_manager.GetServices( service_types_in_order )
-        
-        menu = QW.QMenu()
-        
-        for service in services:
-            
-            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current tag domain to ' + service.GetName() + '.', self._SetTagService, service.GetServiceKey() )
-            
-        
-        CGC.core().PopupMenu( self._tag_repo_button, menu )
-        
-        self._RestoreTextCtrlFocus()
-        
-    
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     searchChanged = QC.Signal( ClientSearch.FileSearchContext )
@@ -1584,7 +1563,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._under_construction_or_predicate = None
         
         location_context = file_search_context.GetLocationContext()
-        tag_search_context = file_search_context.GetTagSearchContext()
+        tag_context = file_search_context.GetTagContext()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
         self._force_system_everything = force_system_everything
@@ -1597,7 +1576,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context = file_search_context
         
-        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_search_context.service_key )
+        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_context.service_key )
         
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
@@ -1617,9 +1596,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         #
         
-        self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include current tags', off_label = 'exclude current tags', start_on = tag_search_context.include_current_tags )
+        self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include current tags', off_label = 'exclude current tags', start_on = tag_context.include_current_tags )
         self._include_current_tags.setToolTip( 'select whether to include current tags in the search' )
-        self._include_pending_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = tag_search_context.include_pending_tags )
+        self._include_pending_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = tag_context.include_pending_tags )
         self._include_pending_tags.setToolTip( 'select whether to include pending tags in the search' )
         
         self._search_pause_play = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'searching immediately', off_label = 'search paused', start_on = synchronised )
@@ -1665,7 +1644,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         button_hbox_2 = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox_2, self._location_context_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( button_hbox_2, self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox_2, self._tag_context_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
         
@@ -2234,7 +2213,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
         
         self._SetLocationContext( self._file_search_context.GetLocationContext() )
-        self._SetTagService( self._file_search_context.GetTagSearchContext().service_key )
+        self._SetTagService( self._file_search_context.GetTagContext().service_key )
         
         self._SignalNewSearchState()
         
@@ -2553,7 +2532,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._location_context_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._tag_context_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2698,9 +2677,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         HG.client_controller.CallLaterQtSafe( self, 0.2, 'set stub predicates', self.SetStubPredicates, job_key, stub_predicates, parsed_autocomplete_text )
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
+        tag_context = ClientSearch.TagContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_search_context = tag_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = tag_context )
         
         HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
         

@@ -521,16 +521,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _FilterForDeleteLock( self, media, suggested_file_service_key: bytes ):
         
-        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        service = HG.client_controller.services_manager.GetService( suggested_file_service_key )
         
-        if delete_lock_for_archived_files:
+        if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
             
-            service = HG.client_controller.services_manager.GetService( suggested_file_service_key )
-            
-            if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
-                
-                media = [ m for m in media if m.HasInbox() ]
-                
+            media = ClientMedia.FilterAndReportDeleteLockFailures( media )
             
         
         return media

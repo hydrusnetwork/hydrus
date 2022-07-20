@@ -56,18 +56,32 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
             st = BetterStaticText( parent, text )
             
         
+        possible_tooltip_widget = None
+        
         if isinstance( control, QW.QLayout ):
             
             cflags = sizer_flags
+            
+            if control.count() > 0:
+                
+                possible_widget_item = control.itemAt( 0 )
+                
+                if isinstance( possible_widget_item, QW.QWidgetItem ):
+                    
+                    possible_tooltip_widget = possible_widget_item.widget()
+                    
+                
             
         else:
             
             cflags = control_flags
             
-            if control.toolTip() != '':
-                
-                st.setToolTip( control.toolTip() )
-                
+            possible_tooltip_widget = control
+            
+        
+        if possible_tooltip_widget is not None and isinstance( possible_tooltip_widget, QW.QWidget ) and possible_tooltip_widget.toolTip() != '':
+            
+            st.setToolTip( possible_tooltip_widget.toolTip() )
             
         
         QP.AddToLayout( gridbox, st, text_flags )

@@ -3123,7 +3123,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         delete_first = False
         delete_second = False
-        delete_both = False
         
         if result == 'delete_first':
             
@@ -3135,10 +3134,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         elif result == 'delete_both':
             
-            delete_both = True
+            delete_first = True
+            delete_second = True
             
         
-        self._ProcessPair( duplicate_type, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, duplicate_action_options = duplicate_action_options )
+        self._ProcessPair( duplicate_type, delete_first = delete_first, delete_second = delete_second, duplicate_action_options = duplicate_action_options )
         
     
     def _DrawBackgroundDetails( self, painter ):
@@ -3315,7 +3315,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def _ProcessPair( self, duplicate_type, delete_first = False, delete_second = False, delete_both = False, duplicate_action_options = None ):
+    def _ProcessPair( self, duplicate_type, delete_first = False, delete_second = False, duplicate_action_options = None ):
         
         if self._current_media is None:
             
@@ -3344,14 +3344,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._hashes_processed_in_this_batch.update( first_media.GetHashes() )
         self._hashes_processed_in_this_batch.update( second_media.GetHashes() )
         
-        if delete_first or delete_second or delete_both:
+        if delete_first or delete_second:
             
-            if delete_first or delete_both:
+            if delete_first:
                 
                 self._hashes_due_to_be_deleted_in_this_batch.update( first_media.GetHashes() )
                 
             
-            if delete_second or delete_both:
+            if delete_second:
                 
                 self._hashes_due_to_be_deleted_in_this_batch.update( second_media.GetHashes() )
                 
@@ -3370,7 +3370,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 file_deletion_reason = HC.duplicate_type_string_lookup[ duplicate_type ]
                 
             
-            if delete_both:
+            if delete_first and delete_second:
                 
                 file_deletion_reason += ', both files deleted'
                 
@@ -3382,7 +3382,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             file_deletion_reason = None
             
         
-        list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, file_deletion_reason = file_deletion_reason ) ]
+        list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
         
         self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) )
         
@@ -4218,16 +4218,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         kept = list( self._kept )
         
-        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
-        
-        if delete_lock_for_archived_files:
-            
-            deleted = [ media for media in self._deleted if not media.HasArchive() ]
-            
-        else:
-            
-            deleted = list( self._deleted )
-            
+        deleted = ClientMedia.FilterAndReportDeleteLockFailures( self._deleted )
         
         if len( kept ) > 0 or len( deleted ) > 0:
             
@@ -4336,6 +4327,15 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     def _Delete( self, media = None, reason = None, file_service_key = None ):
         
         if self._current_media is None:
+            
+            return False
+            
+        
+        if self._current_media.HasDeleteLocked():
+            
+            message = 'This file is delete-locked! Send it back to the inbox to delete it!'
+            
+            QW.QMessageBox.information( self, 'Locked!', message )
             
             return False
             

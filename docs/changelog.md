@@ -3,6 +3,41 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 492](https://github.com/hydrusnetwork/hydrus/releases/tag/v492)
+
+### sort and collect updates
+* for big brain users, the collect control now has a tag domain button. it only shows if you are in advanced mode (issue #572)
+* the sort control also has a tag domain button hidden behind advanced mode. it applies to system:num tags and namespace sorting
+* the collect control now appears on all import pages
+
+### archived file delete lock
+* the duplicate processing action code now no longer archives files that are due for deletion right before that deletion. this was hitting the archive delete lock
+* if archive delete lock is on and the 'other' file in the duplicate filter is archived, the option to 'this is better, delete the other' is now disabled
+* if you attempt to delete a delete-locked file during normal browsing, or if an automatic system like export folders wants to but fails on some, a popup is now made with a button to show the files that were filtered out so you can review the situation and fix it if you want
+* I am considering adding a dialog to say 'hey, this is locked, want to send back to inbox?' to fix these situations in a nice way, but I think this is probably a bad idea in terms of workflow, design, and my sanity given all the edge cases and potential future expansions of lock rules. maybe I'll add a simple 'delete and override lock checks' option, but a lock is a lock tbh. for now, I will focus on this better UI feedback of currently delete-locked files and make it simpler for humans to remove any locks
+
+### misc
+* using black magic, I have made it so the shortcuts for 'move left/right one page' 'and 'move home/end' do not dip down to the lowest level of a neighbouring page of pages for the next command. it now stays on the current tab level for three seconds after the most recent move command. this works in testing but may be jank in some IRL situations, so if this matters to you, let me know how it works out
+* fixed a bug in 'do a full metadata resync' that meant unprocessed row orphans were not being deleted, which lead to lingering 1950/2000-style processed gauges that didn't actually cause any work to be done on 'process now'
+* the duplicate filter now shows if one or both files have an icc profile. for now the score for this is always 0, neutral
+* I think I have reduced general lag on some busy clients
+
+### code cleaning and minor fixes
+* refactored file viewing stats management to a new database module
+* refactored file physical storage management to a new database module
+* cleaned up an ugly bridge that made inbox/archive work and moved it all to a clean new separate database module
+* improved some client file physical storage repair code, both in how it repairs and how it recovers in the current boot
+* updated the yes/no dialog texts when you apply 'not related' or 'alternates' to a selection
+* added a bunch of tooltips to the 'speed and memory' options panel. also clarified the example image sizes in number of pixels
+* improved how my grid layout propagates tooltips from the widget to the text when the widget is compound and in its own layout
+* consolidated where the delete lock test occurs to just one location for db, gui
+* added infrastructure to filter and report delete-locked files. callers no longer care about specific lock rules, opening this up to future expansion
+* cleaned and simplified some duplicate action processing code
+* cleaned up some file collect code, optimised it a bit too
+* the sort control now only changes sort type on mouse wheel events if the mouse is over that button
+* renamed 'tag search context' to 'tag context' across the program, mirroring a recent change with the location context, and gave it some bells and whistles. in future, the tag context will hold multiple tag services
+* wrote a new button to edit tag contexts
+
 ## [Version 491](https://github.com/hydrusnetwork/hydrus/releases/tag/v491)
 
 ### system predicates
@@ -302,41 +337,3 @@
 * migrated some ancient pause states--repository, subscriptions, import&export folders--to the newer options structure
 * migrated the image and thumbnail cache sizes to the newer options structure
 * removed some ancient db and dialog code from the retired dumper system
-
-## [Version 481](https://github.com/hydrusnetwork/hydrus/releases/tag/v481)
-
-### fixes and improvements after last week's hover and note work
-* fixed the text colour behind the top middle hover window
-* stopped clicks on the taglist and hover greyspace being duplicated up to the main canvas (this affected the archive/delete and duplicate filter shortcuts)
-* fixed the background colour of the hover windows when using non-default stylesheets
-* fixed the notes hover window--after having shown some notes--could then lurk in the top-left corner when it should have been hidden completely
-* cleaned up some old focus test logic that weas used when hovers were separate windows
-* rewrote how each note panel in the new hover is stored. a bunch of sizing and event handling code is less hacked
-* significantly improved the accuracy of the 'how high should the note window be?' calculation, so notes shouldn't spill over so much or have a bunch of greyspace below
-* right- or middle-clicking a note now hides its text. repeat on its name to restore. this should persist through an edit, although it won't be reflected in the background atm. let's see how it works as a simple way to quickly browse a whole stack of big notes
-* a new 'notes' option panel lets you choose if you want the text caret to start at the beginning or end of the document when editing
-* you can now double-click a note tab in 'edit notes' to rename the note. some styles may let you double-click in note greyspace to create a new note, but not all will handle this (yet)
-* as an experiment, all the buttons on the media viewer hover windows now do not take focus when you click them. this should let you, for instance, click a duplicate filter processing button and then use the arrow keys and space to continue to navigate. previously, clicking a button would focus it, and navigation keys would be intercepted to navigate the 'form' of the buttons on the hover window. you can still focus buttons with tab. if this affects you, let me know how this goes!
-
-### misc
-* added checkboxes to _options->gui pages_ to control whether ctrl- and shift- selects will highlight media in the preview viewer. you can choose to only do it for files with no duration if you prefer
-* the 'advanced mode' tag autocomplete dropdown now has 'OR' and 'OR*' buttons. the former opens a new empty OR search predicate in the edit dialog, the latter opens the advanced text parser as before
-* the edit OR predicate panel now starts wider and with the text box having focus
-* hydrus is now more careful about deciding whether to make a png or a jpeg thumbnail. now, only thumbnails that have an alpha channel with interesting data in it are saved to png. everything else is jpeg
-* when uploading to a repository, the client will now slow down or speed up depending on how fast things are going. previously it would work on 100 mappings at a time with a forced 0.1s wait, now it can vary between 1-1,000 weight
-* just to be clean, the current files line on the file history chart now initialises at 0 on your first file import time
-* fixed a bug in 'if file is missing, remove record' file maintenance job. if none of the files yet scanned had any urls, it could error out since the 'missing and invalid files' directory was yet to be created
-* linux users who seem to have mpv support yet are set to use the native viewer will get a one-time popup note on update this week just to let them know that mpv is stable on linux now and how to give it a go
-* the macOS App now spits out any mpv import errors when you hit _help->about_, albeit with some different text around it
-* I maybe fixed the 'hold shift to not follow a dragged page' tech for some users for whom it did not work, but maybe not
-* thanks to a user, the new website now has a darkmode-compatible hydrus favicon
-* all file import options now expose their new 'destination locations' object in a new button in the UI. you can only set one destination for now ('my files', obviously), but when we have multiple local file services, you will be able to set other/multiple destinations here. if you set 'nothing', the dialog will moan at you and stop you from ok-ing it.
-* I have updated all import queues and other importing objects in the program to pause their file work with appropriate error messages if their file import options ever has a 'nothing' destination (this could potentially happen if future after a service deletion). there are multiple layers of checks here, including at the final database level
-* misc code cleanup
-
-### client api
-* added 'create_new_file_ids' parameter to the 'file_metadata' call. this governs whether the client should make a new database entry and file_id when you ask about hashes it has never seen before. it defaults to **false**, which is a change on previous behaviour
-* added help talking about this
-* added a unit test to test this
-* added archive timestamp and hash hex sort enum definitions to the 'search_files' client api help
-* client api version is now 31

@@ -428,7 +428,12 @@ class CanvasHoverFrame( QW.QFrame ):
         
         mouse_is_over_self_or_child = False
         
-        for tlw in QW.QApplication.topLevelWidgets():
+        for tlw in list( QW.QApplication.topLevelWidgets() ):
+            
+            if not tlw.isVisible():
+                
+                continue
+                
             
             if tlw == self or ClientGUIFunctions.IsQtAncestor( tlw, self, through_tlws = True ):
                 
@@ -1636,6 +1641,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         dupe_boxes.append( ( 'other', dupe_commands ) )
         
+        self._this_is_better_and_delete_other = None
+        
         for ( panel_name, dupe_commands ) in dupe_boxes:
             
             button_panel = ClientGUICommon.StaticBox( self, panel_name )
@@ -1649,13 +1656,18 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 
                 button_panel.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
+                if command == CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER ):
+                    
+                    self._this_is_better_and_delete_other = command_button
+                    
+                
             
             QP.AddToLayout( command_button_vbox, button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'icc_profile' ]
         
         self._comparison_statements_sts = {}
         
@@ -1750,6 +1762,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
                 
             
+        
+    
+    def _EnableDisableButtons( self ):
+        
+        disabled = self._comparison_media is not None and self._comparison_media.HasDeleteLocked()
+        
+        self._this_is_better_and_delete_other.setEnabled( not disabled )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -1850,6 +1869,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             self._current_media = shown_media
             self._comparison_media = comparison_media
+            
+            self._EnableDisableButtons()
             
             self._ResetComparisonStatements()
             

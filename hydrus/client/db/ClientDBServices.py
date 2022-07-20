@@ -207,7 +207,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     def GetFileSearchContextBranch( self, file_search_context: ClientSearch.FileSearchContext ) -> FileSearchContextBranch:
         
         location_context = file_search_context.GetLocationContext()
-        tag_search_context = file_search_context.GetTagSearchContext()
+        tag_context = file_search_context.GetTagContext()
         
         ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
         
@@ -229,7 +229,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             search_file_service_ids.append( search_file_service_id )
             
         
-        if tag_search_context.IsAllKnownTags():
+        if tag_context.IsAllKnownTags():
             
             search_tag_service_ids = self.GetServiceIds( HC.REAL_TAG_SERVICES )
             
@@ -237,7 +237,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             try:
                 
-                search_tag_service_ids = ( self.GetServiceId( tag_search_context.service_key ), )
+                search_tag_service_ids = ( self.GetServiceId( tag_context.service_key ), )
                 
             except HydrusExceptions.DataMissing:
                 

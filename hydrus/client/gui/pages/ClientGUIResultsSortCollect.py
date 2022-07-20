@@ -1,6 +1,7 @@
 import typing
 
 from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -8,11 +9,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
@@ -52,6 +55,8 @@ class MediaCollectControl( QW.QWidget ):
         
         self._collect_unmatched.setMinimumWidth( width )
         
+        self._tag_context_button = ClientGUISearch.TagContextButton( self, self._media_collect.tag_context, use_short_label = True )
+        
         #
         
         self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
@@ -62,18 +67,22 @@ class MediaCollectControl( QW.QWidget ):
         
         QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._tag_context_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
         #
         
+        self._UpdateButtonsVisible()
         self._UpdateLabel()
         
         self._collect_unmatched.valueChanged.connect( self.CollectValuesChanged )
         self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
+        self._tag_context_button.valueChanged.connect( self.CollectValuesChanged )
         
         self._collect_comboctrl.installEventFilter( self )
         
+        HG.client_controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
         HG.client_controller.sub( self, 'SetCollectFromPage', 'set_page_collect' )
         
     
@@ -90,16 +99,16 @@ class MediaCollectControl( QW.QWidget ):
             
         
     
+    def _UpdateButtonsVisible( self ):
+        
+        self._tag_context_button.setVisible( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
+        
+    
     def _UpdateLabel( self ):
         
         ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
         
         self._collect_comboctrl.SetValue( description )
-        
-    
-    def GetValue( self ):
-        
-        return self._media_collect
         
     
     def CollectValuesChanged( self ):
@@ -110,7 +119,9 @@ class MediaCollectControl( QW.QWidget ):
         
         collect_unmatched = self._collect_unmatched.GetValue()
         
-        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched )
+        tag_context = self._tag_context_button.GetValue()
+        
+        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched, tag_context = tag_context )
         
         self._BroadcastCollect()
         
@@ -130,7 +141,17 @@ class MediaCollectControl( QW.QWidget ):
         return False
         
     
-    def SetCollect( self, media_collect ):
+    def GetValue( self ):
+        
+        return self._media_collect
+        
+    
+    def NotifyAdvancedMode( self ):
+        
+        self._UpdateButtonsVisible()
+        
+    
+    def SetCollect( self, media_collect: ClientMedia.MediaCollect ):
         
         self._media_collect = media_collect
         
@@ -174,6 +195,10 @@ class MediaSortControl( QW.QWidget ):
         self._sort_tag_display_type_button = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         self._sort_order_choice = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         
+        tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+        
+        self._tag_context_button = ClientGUISearch.TagContextButton( self, tag_context, use_short_label = True )
+        
         type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 14 )
         
         self._sort_type_button.setMinimumWidth( type_width )
@@ -196,6 +221,7 @@ class MediaSortControl( QW.QWidget ):
         QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._sort_tag_display_type_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sort_order_choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._tag_context_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -220,6 +246,7 @@ class MediaSortControl( QW.QWidget ):
         
         self._sort_tag_display_type_button.valueChanged.connect( self.EventTagDisplayTypeChoice )
         self._sort_order_choice.valueChanged.connect( self.EventSortAscChoice )
+        self._tag_context_button.valueChanged.connect( self._TagContextChanged )
         
     
     def _BroadcastSort( self ):
@@ -243,7 +270,9 @@ class MediaSortControl( QW.QWidget ):
             sort_order = CC.SORT_ASC
             
         
-        media_sort = ClientMedia.MediaSort( self._sort_type, sort_order )
+        tag_context = self._tag_context_button.GetValue()
+        
+        media_sort = ClientMedia.MediaSort( sort_type = self._sort_type, sort_order = sort_order, tag_context = tag_context )
         
         return media_sort
         
@@ -420,6 +449,13 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
+    def _TagContextChanged( self, tag_context: ClientSearch.TagContext ):
+        
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
+        
+    
     def _UpdateAscDescLabelsAndDefault( self ):
         
         media_sort = self._GetCurrentSort()
@@ -450,6 +486,11 @@ class MediaSortControl( QW.QWidget ):
             
         
         self._sort_order_choice.blockSignals( False )
+        
+    
+    def _UpdateButtonsVisible( self ):
+        
+        self._tag_context_button.setVisible( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
         
     
     def _UpdateSortTypeLabel( self ):
@@ -554,31 +595,9 @@ class MediaSortControl( QW.QWidget ):
         return self._GetCurrentSort()
         
     
-    def wheelEvent( self, event ):
+    def NotifyAdvancedMode( self ):
         
-        if event.angleDelta().y() > 0:
-            
-            index_delta = -1
-            
-        else:
-            
-            index_delta = 1
-            
-        
-        sort_types = self._PopulateSortMenuOrList()
-        
-        if self._sort_type in sort_types:
-            
-            index = sort_types.index( self._sort_type )
-            
-            new_index = ( index + index_delta ) % len( sort_types )
-            
-            new_sort_type = sort_types[ new_index ]
-            
-            self._SetSortTypeFromUser( new_sort_type )
-            
-        
-        event.accept()
+        self._UpdateButtonsVisible()
         
     
     def SetSort( self, media_sort: ClientMedia.MediaSort ):
@@ -587,5 +606,39 @@ class MediaSortControl( QW.QWidget ):
         
         # put this after 'asclabels', since we may transition from one-state to two-state
         self._sort_order_choice.SetValue( media_sort.sort_order )
+        
+        self._tag_context_button.SetValue( media_sort.tag_context )
+        
+        self._UpdateButtonsVisible()
+        
+    
+    def wheelEvent( self, event ):
+        
+        if self._sort_type_button.rect().contains( self._sort_type_button.mapFromGlobal( QG.QCursor.pos() ) ):
+            
+            if event.angleDelta().y() > 0:
+                
+                index_delta = -1
+                
+            else:
+                
+                index_delta = 1
+                
+            
+            sort_types = self._PopulateSortMenuOrList()
+            
+            if self._sort_type in sort_types:
+                
+                index = sort_types.index( self._sort_type )
+                
+                new_index = ( index + index_delta ) % len( sort_types )
+                
+                new_sort_type = sort_types[ new_index ]
+                
+                self._SetSortTypeFromUser( new_sort_type )
+                
+            
+        
+        event.accept()
         
     

@@ -214,9 +214,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
                     
-                    tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+                    tag_context = ClientSearch.TagContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
+                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
@@ -1151,6 +1151,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.tabBar().tabSpaceDoubleMiddleClicked.connect( self.ChooseNewPage )
         
         self._previous_page_index = -1
+        
+        self._time_of_last_move_selection_event = 0
         
         self._UpdateOptions()
         
@@ -2951,14 +2953,16 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def MoveSelection( self, delta, just_do_test = False ):
         
-        current_index = self.currentIndex()
-        current_page = self.currentWidget()
-        
-        if current_page is None or current_index is None:
+        if self.count() <= 1: # 1 is a no-op
             
             return False
             
-        elif isinstance( current_page, PagesNotebook ):
+        
+        current_page = self.currentWidget()
+        
+        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        
+        if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
             if current_page.MoveSelection( delta, just_do_test = True ):
                 
@@ -2973,6 +2977,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             if not just_do_test:
                 
                 self.setCurrentIndex( new_index )
+                
+                self._time_of_last_move_selection_event = HydrusData.GetNow()
                 
             
             return True
@@ -2990,7 +2996,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         current_page = self.currentWidget()
         
-        if isinstance( current_page, PagesNotebook ):
+        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        
+        if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
             if current_page.MoveSelectionEnd( delta, just_do_test = True ):
                 
@@ -3010,6 +3018,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if not just_do_test:
             
             self.setCurrentIndex( new_index )
+            
+            self._time_of_last_move_selection_event = HydrusData.GetNow()
             
         
         return True
@@ -3209,9 +3219,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             location_context = location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+        tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         

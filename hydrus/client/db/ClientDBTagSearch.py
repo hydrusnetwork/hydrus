@@ -472,19 +472,19 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return integer_subtags_table_name
         
     
-    def GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+    def GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearch.TagContext ):
         
-        mapping_and_tag_table_names = self.GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
+        mapping_and_tag_table_names = self.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context )
         
         mapping_table_names = [ mapping_table_name for ( mapping_table_name, tag_table_name ) in mapping_and_tag_table_names ]
         
         return mapping_table_names
         
     
-    def GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext ):
+    def GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearch.TagContext ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_key = tag_search_context.service_key
+        tag_service_key = tag_context.service_key
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -532,12 +532,12 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         table_names = []
         
-        if tag_search_context.include_current_tags:
+        if tag_context.include_current_tags:
             
             table_names.extend( current_tables )
             
         
-        if tag_search_context.include_pending_tags:
+        if tag_context.include_pending_tags:
             
             table_names.extend( pending_tables )
             

@@ -1196,7 +1196,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUI
         
-        for tlw in QW.QApplication.topLevelWidgets():
+        for tlw in list( QW.QApplication.topLevelWidgets() ):
             
             if isinstance( tlw, ClientGUI.FrameGUI ):
                 

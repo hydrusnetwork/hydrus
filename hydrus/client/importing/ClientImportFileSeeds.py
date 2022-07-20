@@ -565,7 +565,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return dict( self._hashes )
         
     
-    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> ClientImportFiles.FileImportStatus:
+    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> typing.Tuple[ bool, ClientImportFiles.FileImportStatus ]:
         
         hash_match_found = False
         

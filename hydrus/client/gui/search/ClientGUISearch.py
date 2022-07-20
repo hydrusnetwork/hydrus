@@ -812,3 +812,73 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+
+class TagContextButton( ClientGUICommon.BetterButton ):
+    
+    valueChanged = QC.Signal( ClientSearch.TagContext )
+    
+    def __init__( self, parent: QW.QWidget, tag_context: ClientSearch.TagContext, use_short_label = False ):
+        
+        self._tag_context = ClientSearch.TagContext()
+        
+        self._use_short_label = use_short_label
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._Edit )
+        
+        self.SetValue( tag_context )
+        
+    
+    def _Edit( self ):
+        
+        services_manager = HG.client_controller.services_manager
+        
+        service_types_in_order = [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ]
+        
+        services = services_manager.GetServices( service_types_in_order )
+        
+        menu = QW.QMenu()
+        
+        for service in services:
+            
+            tag_context = ClientSearch.TagContext( service_key = service.GetServiceKey() )
+            
+            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current tag domain to {}.'.format( service.GetName() ), self.SetValue, tag_context )
+            
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def GetValue( self ) -> ClientSearch.TagContext:
+        
+        return self._tag_context
+        
+    
+    def SetValue( self, tag_context: ClientSearch.TagContext ):
+        
+        original_tag_context = self._tag_context
+        
+        tag_context = tag_context.Duplicate()
+        
+        tag_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        self._tag_context = tag_context
+        
+        label = self._tag_context.ToString( HG.client_controller.services_manager.GetName )
+        
+        if self._use_short_label:
+            
+            self.setText( 'tags' )
+            
+        else:
+            
+            self.setText( label )
+            
+        
+        self.setToolTip( label )
+        
+        if self._tag_context != original_tag_context:
+            
+            self.valueChanged.emit( self._tag_context )
+            
+        
+    

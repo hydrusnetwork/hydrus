@@ -87,9 +87,9 @@ class TestClientDB( unittest.TestCase ):
         
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
-        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        tag_context = ClientSearch.TagContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
         
         TestClientDB._clear_db()
         
@@ -245,11 +245,11 @@ class TestClientDB( unittest.TestCase ):
     
     def test_export_folders( self ):
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = HydrusData.GenerateKey() )
+        tag_context = ClientSearch.TagContext( service_key = HydrusData.GenerateKey() )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( HydrusData.GenerateKey() )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' ) ] )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' ) ] )
         
         export_folder = ClientExportingFiles.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
@@ -767,7 +767,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), tag_search_context = ClientSearch.TagSearchContext() )
+        file_search_context = ClientSearch.FileSearchContext( location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), tag_context = ClientSearch.TagContext() )
         
         result = self._read( 'file_system_predicates', file_search_context )
         
@@ -1121,11 +1121,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        tag_context = ClientSearch.TagContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
-        fsc = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = [] )
+        fsc = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = [] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', fsc, False )
         

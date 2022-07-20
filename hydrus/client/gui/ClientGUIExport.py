@@ -30,6 +30,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -892,16 +893,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
-                delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+                possible_deletee_medias = { media for ( ordering_index, media, path ) in to_do }
                 
-                if delete_lock_for_archived_files:
-                    
-                    deletee_medias = { media for ( ordering_index, media, path ) in to_do if not media.HasArchive() }
-                    
-                else:
-                    
-                    deletee_medias = { media for ( ordering_index, media, path ) in to_do }
-                    
+                deletee_medias = ClientMedia.FilterAndReportDeleteLockFailures( possible_deletee_medias )
                 
                 local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 

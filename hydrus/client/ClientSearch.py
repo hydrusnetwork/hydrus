@@ -829,16 +829,16 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
         
         if location_context is None:
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
         
-        if tag_search_context is None:
+        if tag_context is None:
             
-            tag_search_context = TagSearchContext()
+            tag_context = TagContext()
             
         
         if predicates is None:
@@ -847,7 +847,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
         self._location_context = location_context
-        self._tag_search_context = tag_search_context
+        self._tag_context = tag_context
         
         self._search_type = search_type
         
@@ -863,15 +863,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
         serialisable_location_context = self._location_context.GetSerialisableTuple()
         
-        return ( serialisable_location_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
+        return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_location_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
+        ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
         self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
-        self._tag_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_search_context )
+        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
         
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
         
@@ -960,18 +960,18 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             tag_service_key = bytes.fromhex( tag_service_key_hex )
             
-            tag_search_context = TagSearchContext( service_key = tag_service_key, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags )
+            tag_context = TagContext( service_key = tag_service_key, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags )
             
-            serialisable_tag_search_context = tag_search_context.GetSerialisableTuple()
+            serialisable_tag_context = tag_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( file_service_key_hex, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
             
             return ( 4, new_serialisable_info )
             
         
         if version == 4:
             
-            ( file_service_key_hex, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
+            ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
             
             file_service_key = bytes.fromhex( file_service_key_hex )
             
@@ -979,7 +979,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             serialisable_location_context = location_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_location_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( serialisable_location_context, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
             
             return ( 5, new_serialisable_info )
             
@@ -988,7 +988,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def FixMissingServices( self, filter_method ):
         
         self._location_context.FixMissingServices( filter_method )
-        self._tag_search_context.FixMissingServices( filter_method )
+        self._tag_context.FixMissingServices( filter_method )
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -1006,9 +1006,9 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return self._system_predicates
         
     
-    def GetTagSearchContext( self ) -> "TagSearchContext":
+    def GetTagContext( self ) -> "TagContext":
         
-        return self._tag_search_context
+        return self._tag_context
         
     
     def GetTagsToExclude( self ): return self._tags_to_exclude
@@ -1043,12 +1043,12 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def SetIncludeCurrentTags( self, value ):
         
-        self._tag_search_context.include_current_tags = value
+        self._tag_context.include_current_tags = value
         
     
     def SetIncludePendingTags( self, value ):
         
-        self._tag_search_context.include_pending_tags = value
+        self._tag_context.include_pending_tags = value
         
     
     def SetPredicates( self, predicates ):
@@ -1060,15 +1060,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def SetTagServiceKey( self, tag_service_key ):
         
-        self._tag_search_context.service_key = tag_service_key
-        self._tag_search_context.display_service_key = tag_service_key
+        self._tag_context.service_key = tag_service_key
+        self._tag_context.display_service_key = tag_service_key
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
 
-class TagSearchContext( HydrusSerialisable.SerialisableBase ):
+class TagContext( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_tag_context
     SERIALISABLE_NAME = 'Tag Search Context'
     SERIALISABLE_VERSION = 2
     
@@ -1087,6 +1087,21 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             
             self.display_service_key = display_service_key
             
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, TagContext ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self.service_key, self.include_current_tags, self.include_pending_tags, self.display_service_key ).__hash__()
         
     
     def _GetSerialisableInfo( self ):
@@ -1129,7 +1144,13 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
         return self.service_key == CC.COMBINED_TAG_SERVICE_KEY
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT ] = TagSearchContext
+    def ToString( self, name_method ):
+        
+        return name_method( self.service_key )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_tag_context ] = TagContext
 
 class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     

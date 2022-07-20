@@ -33,6 +33,41 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_492"><a href="#version_492">version 492</a></h3></li>
+				<ul>
+					<li>sort and collect updates:</li>
+					<li>for big brain users, the collect control now has a tag domain button. it only shows if you are in advanced mode (issue #572)</li>
+					<li>the sort control also has a tag domain button hidden behind advanced mode. it applies to system:num tags and namespace sorting</li>
+					<li>the collect control now appears on all import pages</li>
+					<li>.</li>
+					<li>archived file delete lock:</li>
+					<li>the duplicate processing action code now no longer archives files that are due for deletion right before that deletion. this was hitting the archive delete lock</li>
+					<li>if archive delete lock is on and the 'other' file in the duplicate filter is archived, the option to 'this is better, delete the other' is now disabled</li>
+					<li>if you attempt to delete a delete-locked file during normal browsing, or if an automatic system like export folders wants to but fails on some, a popup is now made with a button to show the files that were filtered out so you can review the situation and fix it if you want</li>
+					<li>I am considering adding a dialog to say 'hey, this is locked, want to send back to inbox?' to fix these situations in a nice way, but I think this is probably a bad idea in terms of workflow, design, and my sanity given all the edge cases and potential future expansions of lock rules. maybe I'll add a simple 'delete and override lock checks' option, but a lock is a lock tbh. for now, I will focus on this better UI feedback of currently delete-locked files and make it simpler for humans to remove any locks</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>using black magic, I have made it so the shortcuts for 'move left/right one page' 'and 'move home/end' do not dip down to the lowest level of a neighbouring page of pages for the next command. it now stays on the current tab level for three seconds after the most recent move command. this works in testing but may be jank in some IRL situations, so if this matters to you, let me know how it works out</li>
+					<li>fixed a bug in 'do a full metadata resync' that meant unprocessed row orphans were not being deleted, which lead to lingering 1950/2000-style processed gauges that didn't actually cause any work to be done on 'process now'</li>
+					<li>the duplicate filter now shows if one or both files have an icc profile. for now the score for this is always 0, neutral</li>
+					<li>I think I have reduced general lag on some busy clients</li>
+					<li>.</li>
+					<li>code cleaning and minor fixes:</li>
+					<li>refactored file viewing stats management to a new database module</li>
+					<li>refactored file physical storage management to a new database module</li>
+					<li>cleaned up an ugly bridge that made inbox/archive work and moved it all to a clean new separate database module</li>
+					<li>improved some client file physical storage repair code, both in how it repairs and how it recovers in the current boot</li>
+					<li>updated the yes/no dialog texts when you apply 'not related' or 'alternates' to a selection</li>
+					<li>added a bunch of tooltips to the 'speed and memory' options panel. also clarified the example image sizes in number of pixels</li>
+					<li>improved how my grid layout propagates tooltips from the widget to the text when the widget is compound and in its own layout</li>
+					<li>consolidated where the delete lock test occurs to just one location for db, gui</li>
+					<li>added infrastructure to filter and report delete-locked files. callers no longer care about specific lock rules, opening this up to future expansion</li>
+					<li>cleaned and simplified some duplicate action processing code</li>
+					<li>cleaned up some file collect code, optimised it a bit too</li>
+					<li>the sort control now only changes sort type on mouse wheel events if the mouse is over that button</li>
+					<li>renamed 'tag search context' to 'tag context' across the program, mirroring a recent change with the location context, and gave it some bells and whistles. in future, the tag context will hold multiple tag services</li>
+					<li>wrote a new button to edit tag contexts</li>
+				</ul>
 				<li><h3 id="version_491"><a href="#version_491">version 491</a></h3></li>
 				<ul>
 					<li>system predicates:</li>
@@ -50,7 +85,7 @@
 					<li>the String Processing system has a new 'String Tag Filter' processing step. this applies the normal tag filtering object to your list of strings and also performs the hydrus 'tag cleaning' process on them, making them all lowercase and trimming whitespace and so on</li>
 					<li>the sibling/parent sync is now even more polite when told to do work in 'normal' time. this has been hitting a lot of new users really hard, so it should now really trickle work during normal time, throttling down when it hits a bump to avoid stunlocking you but also responding quickly to recent changes if you are fully synced</li>
 					<li>the database repair code is now better at healing damaged fast-text-search (FTS) tables. previously, in cases of partial damage to the virtual table, the repair code would error out</li>
-					<li>fixed a bug where certain search predicate calendar dates that are acceptable in Linux but not in Windows caused Windows to fail to load the session. if you put in 1965 as a search date, it should now revert to the current time one next load etc...</li>
+					<li>fixed a bug where certain search predicate calendar dates that are acceptable in Linux but not in Windows caused Windows to fail to load the session. if you put in 1965 as a search date, it should now revert to the current time on next load etc...</li>
 					<li>the test to see if a directory is writeable-to is improved and now handles Windows's Program Files directory correctly</li>
 					<li>improved how the boot scripts handle incorrect/bad database directory paths. the error handling works better, and it figures out a fallback location for crash.log better</li>
 					<li>a new button on 'review services' now lets advanced users copy the service key to the clipboard</li>

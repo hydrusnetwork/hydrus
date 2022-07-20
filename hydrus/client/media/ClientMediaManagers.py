@@ -85,6 +85,8 @@ class FileInfoManager( object ):
         self.has_audio = has_audio
         self.num_words = num_words
         
+        self.has_icc_profile = False
+        
     
     def Duplicate( self ):
         
@@ -1365,31 +1367,28 @@ class TagsManager( object ):
             
         
     
-    def GetComparableNamespaceSlice( self, namespaces, tag_display_type ):
+    def GetComparableNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            combined_tags = statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
-            combined = combined_current.union( combined_pending )
+            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined_tags ]
             
-            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
-            
-            slice = []
+            slice_tags = []
             
             for desired_namespace in namespaces:
                 
                 subtags = sorted( ( HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ) )
                 
-                slice.append( tuple( subtags ) )
+                slice_tags.append( tuple( subtags ) )
                 
             
-            return tuple( slice )
+            return tuple( slice_tags )
             
         
     
@@ -1429,28 +1428,25 @@ class TagsManager( object ):
             
         
     
-    def GetNamespaceSlice( self, namespaces, tag_display_type ):
+    def GetNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            combined_tags = statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
-            combined = combined_current.union( combined_pending )
+            namespaces_with_colons = [ '{}:'.format( namespace ) for namespace in namespaces ]
             
-            slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+            tag_slice = frozenset( ( tag for tag in combined_tags if True in ( tag.startswith( namespace_with_colon ) for namespace_with_colon in namespaces_with_colons ) ) )
             
-            slice = frozenset( slice )
-            
-            return slice
+            return tag_slice
             
         
     
-    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
+    def GetNumTags( self, tag_context: ClientSearch.TagContext, tag_display_type ):
         
         with self._lock:
             
@@ -1458,10 +1454,10 @@ class TagsManager( object ):
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_context.service_key ]
             
-            if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-            if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+            if tag_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+            if tag_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
             return num_tags
             

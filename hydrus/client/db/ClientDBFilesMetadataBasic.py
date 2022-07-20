@@ -14,10 +14,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         ClientDBModule.ClientDBModule.__init__( self, 'client files simple metadata', cursor )
         
-        self.inbox_hash_ids = set()
-        
-        self._InitCaches()
-        
     
     def _GetInitialIndexGenerationDict( self ) -> dict:
         
@@ -32,10 +28,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
-        index_generation_dict[ 'main.archive_timestamps' ] = [
-            ( [ 'archived_timestamp' ], False, 474 )
-        ]
-        
         index_generation_dict[ 'main.file_domain_modified_timestamps' ] = [
             ( [ 'file_modified_timestamp' ], False, 476 )
         ]
@@ -46,20 +38,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.file_inbox' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 400 ),
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
-            'main.archive_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, archived_timestamp INTEGER );', 474 ),
             'main.file_domain_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp INTEGER, PRIMARY KEY ( hash_id, domain_id ) );', 476 )
         }
-        
-    
-    def _InitCaches( self ):
-        
-        if self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'file_inbox', ) ).fetchone() is not None:
-            
-            self.inbox_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM file_inbox;' ) )
-            
         
     
     def AddFilesInfo( self, rows, overwrite = False ):
@@ -75,29 +57,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         # hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words
         self._ExecuteMany( insert_phrase + ' files_info ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', rows )
-        
-    
-    def ArchiveFiles( self, hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
-        
-        if not isinstance( hash_ids, set ):
-            
-            hash_ids = set( hash_ids )
-            
-        
-        archiveable_hash_ids = hash_ids.intersection( self.inbox_hash_ids )
-        
-        if len( archiveable_hash_ids ) > 0:
-            
-            self._ExecuteMany( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in archiveable_hash_ids ) )
-            
-            self.inbox_hash_ids.difference_update( archiveable_hash_ids )
-            
-            now = HydrusData.GetNow()
-            
-            self._ExecuteMany( 'REPLACE INTO archive_timestamps ( hash_id, archived_timestamp ) VALUES ( ?, ? );', ( ( hash_id, now ) for hash_id in archiveable_hash_ids ) )
-            
-        
-        return archiveable_hash_ids
         
     
     def ClearDomainModifiedTimestamp( self, hash_id: int, domain_id: int ):
@@ -169,10 +128,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         if content_type == HC.CONTENT_TYPE_HASH:
             
             return [
-                ( 'file_inbox', 'hash_id' ),
                 ( 'files_info', 'hash_id' ),
-                ( 'has_icc_profile', 'hash_id' ),
-                ( 'archive_timestamps', 'hash_id' )
+                ( 'has_icc_profile', 'hash_id' )
             ]
             
         
@@ -212,33 +169,11 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def GetHasICCProfileHashIds( self, hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
+    def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
         
-        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-            
-            has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( temp_hash_ids_table_name ) ) )
-            
+        has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
         return has_icc_profile_hash_ids
-        
-    
-    def InboxFiles( self, hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
-        
-        if not isinstance( hash_ids, set ):
-            
-            hash_ids = set( hash_ids )
-            
-        
-        inboxable_hash_ids = hash_ids.difference( self.inbox_hash_ids )
-        
-        if len( inboxable_hash_ids ) > 0:
-            
-            self._ExecuteMany( 'INSERT OR IGNORE INTO file_inbox VALUES ( ? );', ( ( hash_id, ) for hash_id in inboxable_hash_ids ) )
-            
-            self.inbox_hash_ids.update( inboxable_hash_ids )
-            
-        
-        return inboxable_hash_ids
         
     
     def SetDomainModifiedTimestamp( self, hash_id: int, domain_id: int, timestamp: int ):

@@ -227,3 +227,4 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         
         self.locationChanged.emit( self._location_context )
         
+    

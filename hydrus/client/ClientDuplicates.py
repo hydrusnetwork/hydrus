@@ -11,6 +11,7 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
+from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
 class DuplicatesManager( object ):
@@ -358,7 +359,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive_action, self._sync_urls_action )
         
     
-    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, delete_both = False, file_deletion_reason = None ):
+    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, file_deletion_reason = None ):
         
         if file_deletion_reason is None:
             
@@ -396,6 +397,10 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             elif service_type == HC.TAG_REPOSITORY:
                 
                 add_content_action = HC.CONTENT_UPDATE_PEND
+                
+            else:
+                
+                continue
                 
             
             first_tags = first_media.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
@@ -451,7 +456,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                service = services_manager.GetService( service_key )
+                services_manager.GetService( service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -503,24 +508,28 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         content_update_archive_first = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
         content_update_archive_second = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
         
+        # and not delete_first gubbins here to help out the delete lock lmao. don't want to archive and then try to delete
+        # TODO: this is obviously a bad solution, so better to refactor this function to return a list of service_keys_to_content_updates and stick the delete command right up top, tested for locks on current info
+        
         if self._sync_archive_action == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
             
-            if first_media.HasInbox() and second_media.HasArchive():
+            if first_media.HasInbox() and second_media.HasArchive() and not delete_first:
                 
                 service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
                 
-            elif first_media.HasArchive() and second_media.HasInbox():
+            elif first_media.HasArchive() and second_media.HasInbox() and not delete_second:
                 
                 service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
                 
             
         elif self._sync_archive_action == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
             
-            if first_media.HasInbox():
+            if first_media.HasInbox() and not delete_first:
                 
                 service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
                 
-            if second_media.HasInbox():
+            
+            if second_media.HasInbox() and not delete_second:
                 
                 service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
                 
@@ -570,24 +579,21 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         deletee_media = []
         
-        if delete_first or delete_second or delete_both:
+        if delete_first:
             
-            if delete_first or delete_both:
-                
-                deletee_media.append( first_media )
-                
-            
-            if delete_second or delete_both:
-                
-                deletee_media.append( second_media )
-                
+            deletee_media.append( first_media )
             
         
-        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        if delete_second:
+            
+            deletee_media.append( second_media )
+            
         
         for media in deletee_media:
             
-            if delete_lock_for_archived_files and not media.HasInbox():
+            if media.HasDeleteLocked():
+                
+                ClientMedia.ReportDeleteLockFailures( [ media ] )
                 
                 continue
                 

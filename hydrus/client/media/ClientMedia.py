@@ -15,6 +15,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
+from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -469,8 +470,30 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
     
+    s_has_icc = shown_media.GetMediaResult().GetFileInfoManager().has_icc_profile
+    c_has_icc = comparison_media.GetMediaResult().GetFileInfoManager().has_icc_profile
+    
+    if s_has_icc or c_has_icc:
+        
+        if s_has_icc and c_has_icc:
+            
+            icc_statement = 'both have icc profiles'
+            
+        elif s_has_icc:
+            
+            icc_statement = 'has icc profile, the other does not'
+            
+        else:
+            
+            icc_statement = 'the other has icc profile, this does not'
+            
+        
+        statements_and_scores[ 'icc_profile' ] = ( icc_statement, 0 )
+        
+    
     return statements_and_scores
     
+
 def GetMediasTags( pool, tag_service_key, tag_display_type, content_statuses ):
     
     tags_managers = []
@@ -501,12 +524,14 @@ def GetMediasTags( pool, tag_service_key, tag_display_type, content_statuses ):
     
     return tags
     
+
 def GetMediaResultsTagCount( media_results, tag_service_key, tag_display_type ):
     
     tags_managers = [ media_result.GetTagsManager() for media_result in media_results ]
     
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
+
 def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     tags_managers = []
@@ -525,6 +550,7 @@ def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
+
 def GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type ):
     
     current_tags_to_count = collections.Counter()
@@ -544,6 +570,38 @@ def GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type ):
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
+
+def FilterAndReportDeleteLockFailures( medias: typing.Collection[ "Media" ] ):
+    
+    # TODO: update this system with some texts like 'file was archived' so user can know how to fix the situation
+    
+    deletee_medias = [ media for media in medias if not media.HasDeleteLocked() ]
+    
+    if len( deletee_medias ) < len( medias ):
+        
+        locked_medias = [ media for media in medias if media.HasDeleteLocked() ]
+        
+        ReportDeleteLockFailures( locked_medias )
+        
+    
+    return deletee_medias
+    
+
+def ReportDeleteLockFailures( medias: typing.Collection[ "Media" ] ):
+    
+    job_key = ClientThreading.JobKey()
+    
+    message = 'Was unable to delete one or more files because of a delete lock!'
+    
+    job_key.SetVariable( 'popup_text_1', message )
+    
+    hashes = list( itertools.chain.from_iterable( ( media.GetHashes() for media in medias ) ) )
+    
+    job_key.SetVariable( 'popup_files', ( hashes, 'see them' ) )
+    
+    HG.client_controller.pub( 'message', job_key )
+    
+
 class Media( object ):
     
     def __init__( self ):
@@ -677,6 +735,11 @@ class Media( object ):
         raise NotImplementedError()
         
     
+    def HasDeleteLocked( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
     def HasDuration( self ) -> bool:
         
         raise NotImplementedError()
@@ -721,9 +784,9 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT
     SERIALISABLE_NAME = 'Media Collect'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, namespaces = None, rating_service_keys = None, collect_unmatched = None ):
+    def __init__( self, namespaces = None, rating_service_keys = None, collect_unmatched = None, tag_context = None ):
         
         if namespaces is None:
             
@@ -740,23 +803,49 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
             collect_unmatched = True
             
         
+        if tag_context is None:
+            
+            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            
+        
         self.namespaces = namespaces
         self.rating_service_keys = rating_service_keys
         self.collect_unmatched = collect_unmatched
+        self.tag_context = tag_context
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_rating_service_keys = [ key.hex() for key in self.rating_service_keys ]
         
-        return ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched )
+        serialisable_tag_context = self.tag_context.GetSerialisableTuple()
+        
+        return ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched ) = serialisable_info
+        ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context ) = serialisable_info
         
         self.rating_service_keys = [ bytes.fromhex( serialisable_key ) for serialisable_key in serialisable_rating_service_keys ]
+        
+        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( namespaces, serialisable_rating_service_keys, collect_unmatched ) = old_serialisable_info
+            
+            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            
+            serialisable_tag_context = tag_context.GetSerialisableTuple()
+            
+            new_serialisable_info = ( namespaces, serialisable_rating_service_keys, collect_unmatched, serialisable_tag_context )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def DoesACollect( self ):
@@ -829,18 +918,19 @@ class MediaList( object ):
         return len( self._singleton_media ) + sum( map( len, self._collected_media ) )
         
     
-    def _CalculateCollectionKeysToMedias( self, media_collect, medias ):
+    def _CalculateCollectionKeysToMedias( self, media_collect: MediaCollect, medias ):
         
         keys_to_medias = collections.defaultdict( list )
         
         namespaces_to_collect_by = list( media_collect.namespaces )
         ratings_to_collect_by = list( media_collect.rating_service_keys )
+        tag_context = media_collect.tag_context
         
         for media in medias:
             
             if len( namespaces_to_collect_by ) > 0:
                 
-                namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by, ClientTags.TAG_DISPLAY_ACTUAL )
+                namespace_key = media.GetTagsManager().GetNamespaceSlice( tag_context.service_key, namespaces_to_collect_by, ClientTags.TAG_DISPLAY_ACTUAL )
                 
             else:
                 
@@ -2289,6 +2379,11 @@ class MediaCollection( MediaList, Media ):
         return self._has_audio
         
     
+    def HasDeleteLocked( self ):
+        
+        return True in ( media.HasDeleteLocked() for media in self._sorted_media )
+        
+    
     def HasDuration( self ):
         
         return self._duration is not None
@@ -2683,6 +2778,13 @@ class MediaSingleton( Media ):
         return self._media_result.HasAudio()
         
     
+    def HasDeleteLocked( self ):
+        
+        return self._media_result.IsDeleteLocked()
+        
+    
+    IsDeleteLocked = HasDeleteLocked
+    
     def HasDuration( self ):
         
         duration = self._media_result.GetDuration()
@@ -2791,9 +2893,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT
     SERIALISABLE_NAME = 'Media Sort'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, sort_type = None, sort_order = None ):
+    def __init__( self, sort_type = None, sort_order = None, tag_context = None ):
         
         if sort_type is None:
             
@@ -2803,6 +2905,11 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         if sort_order is None:
             
             sort_order = CC.SORT_ASC
+            
+        
+        if tag_context is None:
+            
+            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
         
         ( sort_metatype, sort_data ) = sort_type
@@ -2818,6 +2925,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         self.sort_type = sort_type
         self.sort_order = sort_order
+        self.tag_context = tag_context
         
     
     def _GetSerialisableInfo( self ):
@@ -2839,12 +2947,14 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             serialisable_sort_data = service_key.hex()
             
         
-        return ( sort_metatype, serialisable_sort_data, self.sort_order )
+        serialisable_tag_context = self.tag_context.GetSerialisableTuple()
+        
+        return ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( sort_metatype, serialisable_sort_data, self.sort_order ) = serialisable_info
+        ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context ) = serialisable_info
         
         if sort_metatype == 'system':
             
@@ -2863,6 +2973,8 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         self.sort_type = ( sort_metatype, sort_data )
         
+        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
+        
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
@@ -2879,6 +2991,19 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( sort_metatype, serialisable_sort_data, sort_order )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( sort_metatype, serialisable_sort_data, sort_order ) = old_serialisable_info
+            
+            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            
+            serialisable_tag_context = tag_context.GetSerialisableTuple()
+            
+            new_serialisable_info = ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -3150,7 +3275,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     tags_manager = x.GetTagsManager()
                     
-                    return len( tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                    return len( tags_manager.GetCurrentAndPending( self.tag_context.service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MIME:
@@ -3191,7 +3316,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), tag_display_type ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( self.tag_context.service_key, ( namespace, ), tag_display_type ) for namespace in namespaces ]
                 
             
         elif sort_metadata == 'rating':

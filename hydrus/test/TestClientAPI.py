@@ -2313,7 +2313,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2366,7 +2366,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2427,7 +2427,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2476,7 +2476,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2517,7 +2517,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2563,7 +2563,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -2610,7 +2610,7 @@ class TestClientAPI( unittest.TestCase ):
         ( file_search_context, ) = args
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.TRASH_SERVICE_KEY } )
-        self.assertEqual( file_search_context.GetTagSearchContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )

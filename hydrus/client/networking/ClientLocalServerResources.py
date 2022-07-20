@@ -1727,13 +1727,13 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         if parsed_autocomplete_text.IsAcceptableForTagSearches():
             
-            tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+            tag_context = ClientSearch.TagContext( service_key = tag_service_key )
             
             autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
             
             default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_search_context = tag_search_context )
+            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = tag_context )
             
             job_key = ClientThreading.JobKey()
             
@@ -1743,7 +1743,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
             # we could even roll in parent/sibling info from the predicates I think
             predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
             
-            display_tag_service_key = tag_search_context.display_service_key
+            display_tag_service_key = tag_context.display_service_key
             
             matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
             
@@ -2152,10 +2152,10 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             raise HydrusExceptions.BadRequestException( 'Sorry, search for all known tags over all known files is not supported!' )
             
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+        tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         predicates = ParseClientAPISearchPredicates( request )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
         
         file_sort_type = CC.SORT_FILES_BY_IMPORT_TIME
         

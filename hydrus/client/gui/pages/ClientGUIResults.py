@@ -1815,25 +1815,34 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             yes_label = 'yes'
             no_label = 'no'
             
-            if len( media_pairs ) > 100 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
+            if len( media_pairs ) > 1 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                 
-                if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                media_pairs_str = HydrusData.ToHumanInt( len( media_pairs ) )
+                
+                if len( media_pairs ) > 100:
                     
-                    message = 'False positive records are complicated, and setting that relationship for {} files at once is likely a mistake.'.format( num_files_str )
-                    message += os.linesep * 2
-                    message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
+                    if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                        
+                        message = 'False positive records are complicated, and setting that relationship for {} files ({} pairs) at once is likely a mistake.'.format( num_files_str, media_pairs_str )
+                        message += os.linesep * 2
+                        message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
+                        
+                        yes_label = 'I know what I am doing'
+                        no_label = 'step back for now'
+                        
+                    elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+                        
+                        message = 'Are you certain all these {} files are alternates with every other member of the selection, and that none are duplicates?'.format( num_files_str )
+                        message += os.linesep * 2
+                        message += 'If some of them may be duplicates, I recommend you either deselect the possible duplicates and try again, or just leave this group to be processed in the normal duplicate filter.'
+                        
+                        yes_label = 'they are all alternates'
+                        no_label = 'some may be duplicates'
+                        
                     
-                    yes_label = 'I know what I am doing'
-                    no_label = 'step back for now'
+                else:
                     
-                elif duplicate_type == HC.DUPLICATE_ALTERNATE:
-                    
-                    message = 'Are you certain all these {} files are alternates with every other member of the selection, and that none are duplicates?'.format( num_files_str )
-                    message += os.linesep * 2
-                    message += 'If some of them may be duplicates, I recommend you either deselect the possible duplicates and try again, or just leave this group to be processed in the normal duplicate filter.'
-                    
-                    yes_label = 'they are all alternates'
-                    no_label = 'some may be duplicates'
+                    'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_pairs_str )
                     
                 
             else:
