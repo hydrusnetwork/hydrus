@@ -687,6 +687,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         
+        library_versions.append( ( 'qtpy', qtpy.__version__ ) )
+        
         library_versions.append( ( 'Qt', QC.__version__ ) )
         
         if qtpy.PYSIDE2:
@@ -700,11 +702,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         elif qtpy.PYQT5:
 
             from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-            from sip import SIP_VERSION_STR # pylint: disable=E0401
+            from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401
 
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
             
+        elif qtpy.PYSIDE6:
+            
+            import PySide6
+            import shiboken6
+            
+            library_versions.append( ( 'PySide6', PySide6.__version__ ) )
+            library_versions.append( ( 'shiboken6', shiboken6.__version__ ) )
+
+        elif qtpy.PYQT6:
+
+            from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401
+            from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401
+
+            library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
+            library_versions.append( ( 'sip', SIP_VERSION_STR ) )
+
         CBOR_AVAILABLE = False
         
         try:
@@ -3310,7 +3328,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
         ClientGUIMenus.AppendSeparator( data_actions )
-        ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program quit signal', 'Kill the program via a QApplication quit.', QW.QApplication.instance().quit )
+        ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program exit signal', 'Kill the program via a QApplication exit.', QW.QApplication.instance().exit )
         
         ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
         

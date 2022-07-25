@@ -193,7 +193,7 @@ class FileDropTarget( QC.QObject ):
         
         if event.type() == QC.QEvent.Drop:
             
-            if self.OnDrop( event.pos().x(), event.pos().y() ):
+            if self.OnDrop( event.position().toPoint().x(), event.position().toPoint().y() ):
                 
                 event.setDropAction( self.OnData( event.mimeData(), event.proposedAction() ) )
                 
