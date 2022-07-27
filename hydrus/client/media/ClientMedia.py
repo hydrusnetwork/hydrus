@@ -470,6 +470,58 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
     
+    def has_exif( m ):
+        
+        try:
+            
+            hash = m.GetHash()
+            mime = m.GetMime()
+            
+            if mime not in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF ):
+                
+                return False
+                
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+            pil_image = HydrusImageHandling.RawOpenPILImage( path )
+            
+            exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+            
+            if exif_dict is None:
+                
+                return False
+                
+            
+            return len( exif_dict ) > 0
+            
+        except:
+            
+            return False
+            
+        
+    
+    s_has_exif = has_exif( shown_media )
+    c_has_exif = has_exif( comparison_media )
+    
+    if s_has_exif or c_has_exif:
+        
+        if s_has_exif and c_has_exif:
+            
+            exif_statement = 'both have exif data'
+            
+        elif s_has_exif:
+            
+            exif_statement = 'has exif data, the other does not'
+            
+        else:
+            
+            exif_statement = 'the other has exif data, this does not'
+            
+        
+        statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
+        
+    
     s_has_icc = shown_media.GetMediaResult().GetFileInfoManager().has_icc_profile
     c_has_icc = comparison_media.GetMediaResult().GetFileInfoManager().has_icc_profile
     
@@ -3001,7 +3053,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             serialisable_tag_context = tag_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context )
+            new_serialisable_info = ( sort_metatype, serialisable_sort_data, sort_order, serialisable_tag_context )
             
             return ( 3, new_serialisable_info )
             

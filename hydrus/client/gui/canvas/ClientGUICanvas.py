@@ -8,7 +8,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 
@@ -55,8 +54,6 @@ zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MEDIA_CENTER ] = 'media center'
 zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_VIEWER_CENTER ] = 'viewer center'
 zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MOUSE ] = 'mouse (or viewer center if mouse outside)'
 zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MEDIA_TOP_LEFT ] = 'media top-left'
-
-OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
 def AddAudioVolumeMenu( menu, canvas_type ):
     
@@ -151,197 +148,101 @@ def AddAudioVolumeMenu( menu, canvas_type ):
     
     ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
     
-def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
+# cribbing from here https://doc.qt.io/qt-5/layout.html#how-to-write-a-custom-layout-manager
+# not finished, but a start as I continue to refactor. might want to rename to 'draggable layout' or something too, since it doesn't actually care about media container that much, and instead subclass vboxlayout?
+class CanvasLayout( QW.QLayout ):
     
-    canvas_width = canvas_size.width()
-    canvas_height = canvas_size.height()
-    
-    '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
+    def __init__( self ):
         
-        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        QW.QLayout.__init__( self )
         
-        canvas_height -= animated_scanbar_height
-        '''
-    
-    canvas_width = max( canvas_width, 80 )
-    canvas_height = max( canvas_height, 60 )
-    
-    return ( canvas_width, canvas_height )
-    
-def CalculateCanvasZooms( canvas, media, show_action ):
-    
-    if media is None:
+        self._current_drag_delta = QC.QPoint( 0, 0 )
         
-        return ( 1.0, 1.0 )
+        self._layout_items = []
         
     
-    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+    def addItem( self, layout_item: QW.QLayoutItem ) -> None:
         
-        return ( 1.0, 1.0 )
-        
-    
-    ( media_width, media_height ) = CalculateMediaSize( media, 1.0 )
-    
-    if media_width == 0 or media_height == 0:
-        
-        return ( 1.0, 1.0 )
+        self._layout_items.append( layout_item )
         
     
-    new_options = HG.client_controller.new_options
-    
-    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.size(), show_action )
-    
-    width_zoom = canvas_width / media_width
-    
-    height_zoom = canvas_height / media_height
-    
-    canvas_zoom = min( ( width_zoom, height_zoom ) )
-    
-    #
-    
-    mime = media.GetMime()
-    
-    ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomOptions( mime )
-    
-    if exact_zooms_only:
+    def itemAt( self, index: int ):
         
-        max_regular_zoom = 1.0
-        
-        if canvas_zoom > 1.0:
+        try:
             
-            while max_regular_zoom * 2 < canvas_zoom:
-                
-                max_regular_zoom *= 2
-                
+            return self._layout_items[ index ]
             
-        elif canvas_zoom < 1.0:
+        except IndexError:
             
-            while max_regular_zoom > canvas_zoom:
-                
-                max_regular_zoom /= 2
-                
+            return None
             
         
-    else:
+    
+    def minimumSize(self) -> QC.QSize:
         
-        regular_zooms = new_options.GetMediaZooms()
+        return self.sizeHint()
         
-        valid_regular_zooms = [ zoom for zoom in regular_zooms if zoom < canvas_zoom ]
+    
+    def resetDragDelta( self ):
         
-        if len( valid_regular_zooms ) > 0:
+        self._current_drag_delta = QC.QPoint( 0, 0 )
+        
+    
+    def setGeometry( self, rect: QC.QRect ) -> None:
+        
+        if len( self._layout_items ) == 0:
             
-            max_regular_zoom = max( valid_regular_zooms )
+            return
+            
+        
+        layout_item = self._layout_items[0]
+        
+        size = self.sizeHint()
+        
+        # the given rect is the whole canvas?
+        
+        natural_x = ( rect.width() - size.width() ) // 2
+        natural_y = ( rect.height() - size.height() ) // 2
+        
+        topleft = QC.QPoint( natural_x, natural_y ) + self._current_drag_delta
+        
+        media_container_rect = QC.QRect( topleft, size )
+        
+        layout_item.setGeometry( media_container_rect )
+        
+    
+    def sizeHint(self) -> QC.QSize:
+        
+        if len( self._layout_items ) == 0:
+            
+            return QC.QSize( 0, 0 )
             
         else:
             
-            max_regular_zoom = canvas_zoom
+            return self._layout_items[0].sizeHint()
             
         
     
-    if media.GetMime() in HC.AUDIO:
+    def takeAt( self, index: int ):
         
-        scale_up_action = CC.MEDIA_VIEWER_SCALE_100
-        scale_down_action = CC.MEDIA_VIEWER_SCALE_TO_CANVAS
+        layout_item = self.itemAt( index )
         
-    elif canvas.PREVIEW_WINDOW:
-        
-        scale_up_action = preview_scale_up
-        scale_down_action = preview_scale_down
-        
-    else:
-        
-        scale_up_action = media_scale_up
-        scale_down_action = media_scale_down
-        
-    
-    can_be_scaled_down = media_width > canvas_width or media_height > canvas_height
-    can_be_scaled_up = media_width < canvas_width and media_height < canvas_height
-    
-    #
-    
-    if can_be_scaled_up:
-        
-        scale_action = scale_up_action
-        
-    elif can_be_scaled_down:
-        
-        scale_action = scale_down_action
-        
-    else:
-        
-        scale_action = CC.MEDIA_VIEWER_SCALE_100
-        
-    
-    if scale_action == CC.MEDIA_VIEWER_SCALE_100:
-        
-        default_zoom = 1.0
-        
-    elif scale_action == CC.MEDIA_VIEWER_SCALE_MAX_REGULAR:
-        
-        default_zoom = max_regular_zoom
-        
-    else:
-        
-        default_zoom = canvas_zoom
-        
-    
-    return ( default_zoom, canvas_zoom )
-    
-def CalculateMediaContainerSize( media, zoom, show_action ):
-    
-    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
-        
-        raise Exception( 'This media should not be shown in the media viewer!' )
-        
-    elif show_action == CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON:
-        
-        ( width, height ) = OPEN_EXTERNALLY_BUTTON_SIZE
-        
-        if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+        if layout_item is None:
             
-            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            
-            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type )
-            
-            height = height + thumb_height
+            return 0
             
         
-        return QC.QSize( width, height )
+        del self._layout_items[ index ]
         
-    else:
-        
-        ( media_width, media_height ) = CalculateMediaSize( media, zoom )
-        
-        '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
-            
-            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-            
-            media_height += animated_scanbar_height
-            '''
-        
-        return QC.QSize( media_width, media_height )
+        return layout_item
         
     
-def CalculateMediaSize( media, zoom ):
-    
-    if media.GetMime() in HC.AUDIO:
+    def updateDragDelta( self, delta: QC.QPoint ):
         
-        ( original_width, original_height ) = ( 360, 240 )
-        
-    else:
-        
-        ( original_width, original_height ) = media.GetResolution()
+        self._current_drag_delta += delta
         
     
-    media_width = int( round( zoom * original_width ) )
-    media_height = int( round( zoom * original_height ) )
-    
-    media_width = max( 1, media_width )
-    media_height = max( 1, media_height )
-    
-    return ( media_width, media_height )
-    
+
 class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     PREVIEW_WINDOW = False
@@ -381,6 +282,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._media_container = ClientGUICanvasMedia.MediaContainer( self, self.CANVAS_TYPE, self._click_drag_reporting_filter )
         
+        # TODO: move zoom responsibility to the media container. that guy should handle his own size, and the new QLayout should deal with mouse drag delta
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
         
@@ -407,37 +309,6 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
             
-        
-    
-    def _CanDisplayMedia( self, media ):
-        
-        if media is None:
-            
-            return True
-            
-        
-        media = media.GetDisplayMedia()
-        
-        if media is None:
-            
-            return True
-            
-        
-        locations_manager = media.GetLocationsManager()
-        
-        if not locations_manager.IsLocal():
-            
-            return False
-            
-        
-        ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( media )
-        
-        if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
-            
-            return False
-            
-        
-        return True
         
     
     def _CopyBMPToClipboard( self ):
@@ -654,47 +525,9 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         return self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
     
-    def _GetShowAction( self, media ):
-        
-        start_paused = False
-        start_with_embed = False
-        
-        bad_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, start_paused, start_with_embed )
-        
-        if media is None:
-            
-            return bad_result
-            
-        
-        mime = media.GetMime()
-        
-        if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
-            
-            return bad_result
-            
-        
-        if self.PREVIEW_WINDOW:
-            
-            return self._new_options.GetPreviewShowAction( mime )
-            
-        else:
-            
-            return self._new_options.GetMediaShowAction( mime )
-            
-        
-    
     def _GetIndexString( self ):
         
         return ''
-        
-    
-    def _GetMediaContainerSize( self ):
-        
-        ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
-        
-        new_size = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
-        
-        return new_size
         
     
     def _Inbox( self ):
@@ -714,7 +547,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             return False
             
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( self._current_media )
         
         return media_show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
@@ -741,19 +574,19 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             previous_current_zoom = self._current_zoom
             
-            ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( previous_media )
+            ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( previous_media )
             
-            ( previous_default_zoom, previous_canvas_zoom ) = CalculateCanvasZooms( self, previous_media, media_show_action )
+            ( previous_default_zoom, previous_canvas_zoom ) = ClientGUICanvasMedia.CalculateCanvasZooms( self, previous_media, media_show_action )
             
-            ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
+            ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( self._current_media )
             
-            ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, media_show_action )
+            ( gumpf_current_zoom, self._canvas_zoom ) = ClientGUICanvasMedia.CalculateCanvasZooms( self, self._current_media, media_show_action )
             
             # previously, we always matched width, but this causes a problem in dupe viewer when B has a little watermark on the bottom, spilling below bottom of screen
             # I think in future we will have more options regarding all this, and this method will change significantly
             # however for now we really just want a hardcoded ok solution for all situations, so let's just hook on default canvas zoom situation
             
-            ( previous_width, previous_height ) = CalculateMediaSize( previous_media, self._current_zoom )
+            ( previous_width, previous_height ) = ClientGUICanvasMedia.CalculateMediaSize( previous_media, self._current_zoom )
             
             ( previous_media_100_width, previous_media_100_height ) = previous_media.GetResolution()
             ( current_media_100_width, current_media_100_height ) = self._current_media.GetResolution()
@@ -761,8 +594,8 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             width_locked_zoom = previous_width / current_media_100_width
             height_locked_zoom = previous_height / current_media_100_height
             
-            width_locked_size = CalculateMediaContainerSize( self._current_media, width_locked_zoom, media_show_action )
-            height_locked_size = CalculateMediaContainerSize( self._current_media, height_locked_zoom, media_show_action )
+            width_locked_size = ClientGUICanvasMedia.CalculateMediaContainerSize( self._current_media, width_locked_zoom, media_show_action )
+            height_locked_size = ClientGUICanvasMedia.CalculateMediaContainerSize( self._current_media, height_locked_zoom, media_show_action )
             
             # if landscape, go height, portrait, go width
             if previous_media_100_width > previous_media_100_height and current_media_100_width > current_media_100_height:
@@ -818,6 +651,8 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
                 self._current_zoom = width_locked_zoom
                 
+            
+            self._media_container.SetZoom( self._current_zoom )
             
             HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
             
@@ -987,26 +822,6 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
         
     
-    def _PauseCurrentMedia( self ):
-        
-        if self._current_media is None:
-            
-            return
-            
-        
-        self._media_container.Pause()
-        
-    
-    def _PausePlayCurrentMedia( self ):
-        
-        if self._current_media is None:
-            
-            return
-            
-        
-        self._media_container.PausePlay()
-        
-    
     def _PrefetchNeighbours( self ):
         
         pass
@@ -1019,16 +834,18 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             return
             
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( self._current_media )
         
-        ( self._current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, media_show_action )
+        ( self._current_zoom, self._canvas_zoom ) = ClientGUICanvasMedia.CalculateCanvasZooms( self, self._current_media, media_show_action )
+        
+        self._media_container.SetZoom( self._current_zoom )
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
     
     def _RescueOffScreenMediaWindow( self ):
         
-        size = self._GetMediaContainerSize()
+        size = self._media_container.sizeHint()
         
         my_rect = self.rect()
         media_rect = QC.QRect( self._media_window_pos, size )
@@ -1074,9 +891,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         my_size = self.size()
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
-        
-        media_size = CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
+        media_size = self._media_container.sizeHint()
         
         x = ( my_size.width() - media_size.width() ) // 2
         y = ( my_size.height() - media_size.height() ) // 2
@@ -1136,28 +951,31 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def _SizeAndPositionMediaContainer( self ):
         
+        # and its this guy that'll be replaced by a proper Qlayout
+        
         if self._current_media is None:
             
             return
             
         
-        new_size = self._GetMediaContainerSize()
+        new_size = self._media_container.sizeHint()
         
-        if new_size != self._media_container.size():
+        size_wrong = new_size != self._media_container.size()
+        pos_wrong = self._media_window_pos != self._media_container.pos()
+        
+        if size_wrong or pos_wrong:
             
-            self._media_container.setFixedSize( new_size )
+            rect = QC.QRect( self._media_window_pos, new_size )
+            
+            self._media_container.setGeometry( rect )
             
         
-        if self._media_window_pos == self._media_container.pos():
+        if not pos_wrong:
             
             if HC.PLATFORM_MACOS:
                 
                 self._media_container.update()
                 
-            
-        else:
-            
-            self._media_container.move( self._media_window_pos )
             
         
     
@@ -1173,7 +991,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         media_window_width = media_window_size.width()
         media_window_height = media_window_size.height()
         
-        new_media_window_size = CalculateMediaContainerSize( self._current_media, new_zoom, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV )
+        new_media_window_size = ClientGUICanvasMedia.CalculateMediaContainerSize( self._current_media, new_zoom, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE )
         
         new_media_window_width = new_media_window_size.width()
         new_media_window_height = new_media_window_size.height()
@@ -1237,6 +1055,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         #
         
         self._current_zoom = new_zoom
+        self._media_container.SetZoom( self._current_zoom )
         
         self._RescueOffScreenMediaWindow()
         
@@ -1589,7 +1408,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def PauseMedia( self ):
         
-        self._PauseCurrentMedia()
+        self._media_container.Pause()
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -1699,11 +1518,11 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
             elif action == CAC.SIMPLE_PAUSE_MEDIA:
                 
-                self._PauseCurrentMedia()
+                self._media_container.Pause()
                 
             elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
-                self._PausePlayCurrentMedia()
+                self._media_container.PausePlay()
                 
             elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
                 
@@ -1798,7 +1617,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             media = media.GetDisplayMedia()
             
-            if not self._CanDisplayMedia( media ):
+            if not self._media_container.CanDisplayMedia( media ):
                 
                 media = None
                 
@@ -1829,22 +1648,36 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     self._ReinitZoom()
                     
                 
+                ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( self._current_media )
+                
+                initial_size = ClientGUICanvasMedia.CalculateMediaContainerSize( self._current_media, self._current_zoom, media_show_action )
+                
                 if not self._maintain_pan_and_zoom:
                     
-                    self._ResetMediaWindowCenterPosition()
+                    # hackery dackery doo here, clean all this up when we move to layouts
                     
-                
-                initial_size = self._GetMediaContainerSize()
+                    my_size = self.size()
+                    
+                    x = ( my_size.width() - initial_size.width() ) // 2
+                    y = ( my_size.height() - initial_size.height() ) // 2
+                    
+                    self._media_window_pos = QC.QPoint( x, y )
+                    
                 
                 if self._current_media.GetLocationsManager().IsLocal() and initial_size.width() > 0 and initial_size.height() > 0:
                     
-                    ( media_show_action, media_start_paused, media_start_with_embed ) = self._GetShowAction( self._current_media )
+                    ( media_show_action, media_start_paused, media_start_with_embed ) = self._media_container.GetShowAction( self._current_media )
                     
                     self._media_container.SetMedia( self._current_media, initial_size, self._media_window_pos, media_show_action, media_start_paused, media_start_with_embed )
                     
                 else:
                     
                     self._current_media = None
+                    
+                
+                if not self._maintain_pan_and_zoom:
+                    
+                    self._ResetMediaWindowCenterPosition()
                     
                 
             
@@ -2934,7 +2767,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         
-        QP.CallAfter( self._LoadNextBatchOfPairs() )
+        QP.CallAfter( self._LoadNextBatchOfPairs )
         
     
     def _CommitProcessed( self, blocking = True ):
@@ -3519,7 +3352,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_media = ClientMedia.MediaSingleton( first_media_result )
             second_media = ClientMedia.MediaSingleton( second_media_result )
             
-            if not self._CanDisplayMedia( first_media ) or not self._CanDisplayMedia( second_media ):
+            if not self._media_container.CanDisplayMedia( first_media ) or not self._media_container.CanDisplayMedia( second_media ):
                 
                 return False
                 
@@ -4257,9 +4090,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                         
                     
                 
-                specific_local_service_keys = [ service_key for service_key in current_local_service_keys if HG.client_controller.services_manager.GetServiceType( service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES ]
-                
-                if len( specific_local_service_keys ) > len( local_file_domain_service_keys ): # we have some trash or I guess repo updates
+                if CC.TRASH_SERVICE_KEY in current_local_service_keys or CC.LOCAL_UPDATE_SERVICE_KEY in current_local_service_keys:
                     
                     location_contexts_to_present_options_for.append( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
                     

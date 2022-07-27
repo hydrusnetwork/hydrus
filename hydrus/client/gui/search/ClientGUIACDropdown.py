@@ -2794,9 +2794,17 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                     tag_preds = []
                     
                     system_preds = []
+                    negated_system_pred_strings = []
                     system_pred_strings = []
                     
                     for tag_string in s:
+                        
+                        if tag_string.startswith( '-system:' ):
+                            
+                            negated_system_pred_strings.append( tag_string )
+                            
+                            continue
+                            
                         
                         if tag_string.startswith( 'system:' ):
                             
@@ -2848,6 +2856,11 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         tag_preds.append( row_pred )
                         
                     
+                    if len( negated_system_pred_strings ) > 0:
+                        
+                        raise ValueError( 'Sorry, that would make negated system tags, which are not supported yet! Try to rephrase or negate the system tag yourself.' )
+                        
+                    
                     if len( system_pred_strings ) > 0:
                         
                         try:
@@ -2875,9 +2888,9 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                 output = os.linesep.join( ( pred.ToString() for pred in self._current_predicates ) )
                 object_name = 'HydrusValid'
                 
-            except ValueError:
+            except ValueError as e:
                 
-                output = 'Could not parse!'
+                output = 'Could not parse! {}'.format( e )
                 object_name = 'HydrusInvalid'
                 
             

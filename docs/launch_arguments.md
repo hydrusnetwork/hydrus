@@ -69,5 +69,9 @@ When SQLite performs very large queries, it may spool temporary table results to
 
 Prints additional debug information to the log during the bootup phase of the application.
 
+##**`--profile_mode`**
+
+This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.
+
 
 The server supports the same arguments. It also takes a _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.

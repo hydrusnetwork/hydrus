@@ -1745,8 +1745,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def _SetDuplicates( self, duplicate_type, media_pairs = None, media_group = None, duplicate_action_options = None, silent = False ):
         
-        yes_no_text = 'unknown duplicate action'
-        
         if duplicate_type == HC.DUPLICATE_POTENTIAL:
             
             yes_no_text = 'queue all possible and valid pair combinations into the duplicate filter'
@@ -1819,6 +1817,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 media_pairs_str = HydrusData.ToHumanInt( len( media_pairs ) )
                 
+                message = 'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_pairs_str )
+                
                 if len( media_pairs ) > 100:
                     
                     if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
@@ -1839,10 +1839,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                         yes_label = 'they are all alternates'
                         no_label = 'some may be duplicates'
                         
-                    
-                else:
-                    
-                    'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_pairs_str )
                     
                 
             else:

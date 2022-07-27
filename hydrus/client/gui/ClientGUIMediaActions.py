@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -16,6 +17,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -547,6 +549,36 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable )
     
     job.start()
+    
+
+def ShowFileEXIF( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
+    
+    if not media.GetLocationsManager().IsLocal():
+        
+        QW.QMessageBox.warning( win, 'Warning', 'This file is not local to this computer!' )
+        
+    
+    hash = media.GetHash()
+    mime = media.GetMime()
+    
+    path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    
+    pil_image = HydrusImageHandling.RawOpenPILImage( path )
+    
+    exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+    
+    if exif_dict is None:
+        
+        QW.QMessageBox.information( win, 'No EXIF', 'Sorry, could not see any EXIF information in this file!' )
+        
+        return
+        
+    
+    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'File EXIF' )
+    
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEXIF( frame, exif_dict )
+    
+    frame.SetPanel( panel )
     
 
 def UndeleteFiles( hashes ):

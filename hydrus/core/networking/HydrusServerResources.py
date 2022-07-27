@@ -756,7 +756,7 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request: HydrusServerRequest.HydrusRequest ):
         
-        HydrusData.Profile( 'Profiling client api: {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
+        HydrusData.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
         
         return request.result_lmao
         

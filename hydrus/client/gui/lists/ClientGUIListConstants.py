@@ -1465,3 +1465,19 @@ register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.CAN_VA
 register_column_type( COLUMN_LIST_VACUUM_DATA.ID, COLUMN_LIST_VACUUM_DATA.VACUUM_TIME_ESTIMATE, 'vacuum time estimate', False, 48, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_VACUUM_DATA.ID ] = ( COLUMN_LIST_VACUUM_DATA.NAME, True )
+
+class COLUMN_LIST_EXIF_DATA( COLUMN_LIST_DEFINITION ):
+    
+    ID = 67
+    
+    EXIF_ID = 0
+    EXIF_LABEL = 1
+    VALUE = 2
+    
+column_list_type_name_lookup[ COLUMN_LIST_EXIF_DATA.ID ] = 'exif data'
+
+register_column_type( COLUMN_LIST_EXIF_DATA.ID, COLUMN_LIST_EXIF_DATA.EXIF_ID, 'id', False, 6, True )
+register_column_type( COLUMN_LIST_EXIF_DATA.ID, COLUMN_LIST_EXIF_DATA.EXIF_LABEL, 'label', False, 20, True )
+register_column_type( COLUMN_LIST_EXIF_DATA.ID, COLUMN_LIST_EXIF_DATA.VALUE, 'value', False, 20, True )
+
+default_column_list_sort_lookup[ COLUMN_LIST_EXIF_DATA.ID ] = ( COLUMN_LIST_EXIF_DATA.EXIF_ID, True )

@@ -11069,7 +11069,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                from hydrus.client.gui import ClientGUIMPV
+                from hydrus.client.gui.canvas import ClientGUIMPV
                 
                 if ClientGUIMPV.MPV_IS_AVAILABLE and HC.PLATFORM_LINUX:
                     
@@ -11119,7 +11119,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_serialisable.SetJSONDump( new_options )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 

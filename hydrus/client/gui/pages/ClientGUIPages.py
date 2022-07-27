@@ -1548,16 +1548,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if isinstance( page, Page ) and not page.IsInitialised():
             
-            page_name = 'initialising'
+            full_page_name = 'initialising'
             
         else:
             
-            page_name = page.GetName()
+            full_page_name = page.GetName()
             
-            page_name = page_name.replace( os.linesep, '' )
+            full_page_name = full_page_name.replace( os.linesep, '' )
             
         
-        page_name = HydrusText.ElideText( page_name, max_page_name_chars )
+        page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
+        
+        do_tooltip = len( page_name ) != len( full_page_name )
         
         num_string = ''
         
@@ -1595,6 +1597,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if existing_page_name not in ( safe_page_name, page_name ):
             
             tab_bar.setTabText( index, safe_page_name )
+            
+            if do_tooltip:
+                
+                self.setTabToolTip( index, full_page_name )
+                
             
         
     

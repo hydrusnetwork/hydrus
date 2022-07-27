@@ -6,6 +6,8 @@ import threading
 import time
 import traceback
 
+from PIL import ExifTags
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -2287,6 +2289,115 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     def ImportFromDragDrop( self, paths ):
         
         self._ImportPaths( paths )
+        
+    
+
+class ReviewFileEXIF( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, exif_dict ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'Double-click a row to copy its value to clipboard.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, 24, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
+        
+        datas = []
+        
+        for ( exif_id, value ) in exif_dict.items():
+            
+            if isinstance( value, dict ):
+                
+                datas.extend( value.items() )
+                
+            else:
+                
+                datas.append( ( exif_id, value ) )
+                
+            
+        
+        self._exif_listctrl.AddDatas( datas )
+        
+        QP.AddToLayout( vbox, self._exif_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _ConvertEXIFToListCtrlTuples( self, exif_tuple ):
+    
+        ( exif_id, raw_value ) = exif_tuple
+        
+        if exif_id in ExifTags.TAGS:
+            
+            label = ExifTags.TAGS[ exif_id ]
+            pretty_label = label
+            
+        elif exif_id in ExifTags.GPSTAGS:
+            
+            label = ExifTags.GPSTAGS[ exif_id ]
+            pretty_label = label
+            
+        else:
+            
+            label = 'zzz'
+            pretty_label = 'Unknown'
+            
+        
+        pretty_id = str( exif_id )
+        
+        if isinstance( raw_value, bytes ):
+            
+            value = raw_value.hex()
+            pretty_value = '{}: {}'.format( HydrusData.ToHumanBytes( len( raw_value ) ), value )
+            
+        else:
+            
+            value = str( raw_value )
+            
+            if HydrusText.NULL_CHARACTER in value:
+                
+                value = value.replace( HydrusText.NULL_CHARACTER, '[null]' )
+                
+            
+            pretty_value = value
+            
+        
+        display_tuple = ( pretty_id, pretty_label, pretty_value )
+        sort_tuple = ( exif_id, label, value )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _CopyRow( self ):
+        
+        selected_exif_tuples = self._exif_listctrl.GetData( only_selected = True )
+        
+        if len( selected_exif_tuples ) == 0:
+            
+            return
+            
+        
+        ( first_row_id, first_row_value ) = selected_exif_tuples[0]
+        
+        if isinstance( first_row_value, bytes ):
+            
+            copy_text = first_row_value.hex()
+            
+        else:
+            
+            copy_text = str( first_row_value )
+            
+        
+        HG.client_controller.pub( 'clipboard', 'text', copy_text )
         
     
 class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):

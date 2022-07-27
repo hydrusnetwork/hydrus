@@ -1,5 +1,7 @@
 import collections
 import os
+import typing
+
 import psutil
 import re
 import send2trash
@@ -290,7 +292,7 @@ def GetDefaultLaunchPath():
         return 'open "%path%"'
         
     
-def GetDevice( path ):
+def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
     
     path = path.lower()
     
@@ -311,7 +313,7 @@ def GetDevice( path ):
                 
                 if path.startswith( partition_info.mountpoint.lower() ):
                     
-                    return partition_info.device
+                    return partition_info
                     
                 
             
@@ -323,6 +325,35 @@ def GetDevice( path ):
     
     return None
     
+
+def GetDevice( path ) -> typing.Optional[ str ]:
+    
+    partition_info = GetPartitionInfo( path )
+    
+    if partition_info is None:
+        
+        return None
+        
+    else:
+        
+        return partition_info.device
+        
+    
+
+def GetFileSystemType( path ):
+    
+    partition_info = GetPartitionInfo( path )
+    
+    if partition_info is None:
+        
+        return None
+        
+    else:
+        
+        return partition_info.fstype
+        
+    
+
 def GetFreeSpace( path ):
     
     disk_usage = psutil.disk_usage( path )
@@ -801,20 +832,42 @@ def RecyclePath( path ):
             
         
     
-def SanitizeFilename( filename ):
+def SanitizeFilename( filename, force_ntfs = False ) -> str:
     
-    if HC.PLATFORM_WINDOWS:
+    if HC.PLATFORM_WINDOWS or force_ntfs:
         
         # \, /, :, *, ?, ", <, >, |
-        filename = re.sub( r'\\|/|:|\*|\?|"|<|>|\|', '_', filename )
+        bad_characters = r'[\\/:*?"<>|]'
         
     else:
         
-        filename = re.sub( '/', '_', filename )
+        bad_characters = '/'
         
     
-    return filename
+    return re.sub( bad_characters, '_', filename )
     
+
+def SanitizePathForExport( directory_path, directories_and_filename ):
+    
+    # this does not figure out the situation where the suffix directories cross a mount point to a new file system, but at that point it is user's job to fix
+    
+    components = directories_and_filename.split( os.path.sep )
+    
+    filename = components[-1]
+    
+    suffix_directories = components[:-1]
+    
+    force_ntfs = GetFileSystemType( directory_path ).lower() in ( 'ntfs', 'exfat' )
+    
+    suffix_directories = [ SanitizeFilename( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
+    filename = SanitizeFilename( filename, force_ntfs = force_ntfs )
+    
+    sanitized_components = suffix_directories
+    sanitized_components.append( filename )
+    
+    return os.path.join( *sanitized_components )
+    
+
 def TryToGiveFileNicePermissionBits( path ):
     
     if not os.path.exists( path ):

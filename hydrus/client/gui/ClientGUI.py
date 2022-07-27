@@ -58,7 +58,6 @@ from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUILogin
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -78,6 +77,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
 from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagement
@@ -245,7 +245,7 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'message', job_key )
         
         no_results_found = result is None
-    
+        
         while result is not None:
             
             time_started_this_loop = HydrusData.GetNowPrecise()

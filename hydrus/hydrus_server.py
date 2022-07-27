@@ -48,6 +48,7 @@ try:
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
+    argparser.add_argument( '--profile_mode', action='store_true', help = 'start the server with profile mode on' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'OBSOLETE: run using TRUNCATE db journaling' )
     argparser.add_argument( '--db_memory_journaling', action='store_true', help = 'OBSOLETE: run using MEMORY db journaling (DANGEROUS)' )
     
@@ -155,6 +156,9 @@ try:
     HG.no_db_temp_files = result.no_db_temp_files
     
     HG.boot_debug = result.boot_debug
+    
+    HG.profile_mode = result.profile_mode
+    HG.profile_start_time = HydrusData.GetNow()
     
     if result.temp_dir is not None:
         

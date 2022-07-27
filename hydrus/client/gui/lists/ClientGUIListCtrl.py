@@ -593,7 +593,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         #QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
-    def GetData( self, only_selected = False ):
+    def GetData( self, only_selected = False ) -> list:
         
         if only_selected:
             
@@ -601,7 +601,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         else:
             
-            indices = list(self._indices_to_data_info.keys())
+            indices = list( self._indices_to_data_info.keys() )
             
         
         result = []

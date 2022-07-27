@@ -3,6 +3,28 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 493](https://github.com/hydrusnetwork/hydrus/releases/tag/v493)
+
+### EXIF
+* in the first step of 'official' EXIF support, the media viewer now has a 'cog' button on the top hover, enabled when looking at a jpeg, that will check the file for EXIF data. if found, it will throw it up on a simple new window that shows EXIF id, label, and value. this is a hacked-together prototype, not super user-friendly, but it works. let me know what you think, and please send me any files that have weird EXIF that doesn't parse right but you think should. I already discovered a file with a null character that wouldn't display in UI, that sort of thing
+* GPS EXIF values are also parsed and extracted
+* made it so you can double-click a row in this new window to copy an EXIF value to clipboard
+* in the duplicate filter, if one or both files have exif data, this is now noted in the comparison statements, just like ICC profile! (issue #469)
+* obvious future extensions here will be storing 'has exif' in the database and allowing its presence to be searchable and enabling the cog button (or a nicer 'exif' button) only when there is known data to see. a subsequent step would be actually caching the data in the database for full EXIF search
+* as a side thing, we're now set up on the hydrus end to pull TIFF EXIF, but PIL doesn't seem to offer it, so we'll have to wait for a different solution there
+
+### fixes and misc
+* fixed a problem that made saved page file sorts reset their sort order one time on update to v492. thank you to a user for noticing this and discovering the fix, and I'm very sorry for the inconvenience of changing your session and favourite search sorts. unfortunately there is no easy fix other than rolling back to a backup and jumping forward to this version
+* fixed a v492 message display error when setting various duplicate relationships to three or more thumbnails at once. it was a stupid typo, sorry for the trouble! (issue #1199)
+* if a page tab name elides to a 'shorter...' length, it now has its full name as the tooltip
+* fixed a typo in update code error handling (issue #1192)
+* the duplicate filter page now remembers if you are 'searching immediately'/'search paused' (issue #1193)
+* if you are on non-Windows and export files manually or with an export folder to an NTFS or exFAT partition, this is now detected, and NTFS-invalid characters in the pattern-generated folders or filename are now replaced with underscores (issue #1194)
+* 'fixed' a system predicate bug in the 'OR*' advanced predicate parser--entering a logical expression that results in a negated system tag now causes an error. previously, it would strip the 'system:' and just enter the given text as an unnamespaced tag. furthermore, that dialog now reports specific error reasons when it fails to parse. I hope to improve support for negated system tags in future--some stuff, like archive/inbox, should be easy.
+* I think I fixed an instance where the archive/delete filter's confirmation dialog could present 'delete from hard disk' as an option when it wasn't appropriate
+* in an attempt to reduce the media-change flickering we've recently seen in the media viewer, I untangled a bunch of the canvas size/position code this week. I'm preparing a complete overhaul and neat Qt layout integration, which this starts. I _think_ I've made some things less flickery on occasion, but we'll see IRL. much more to do
+* added a '--profile_mode' launch argument, which allows you to capture the performance of boot and also try out profile mode on the server (although support there is very limited atm)
+
 ## [Version 492](https://github.com/hydrusnetwork/hydrus/releases/tag/v492)
 
 ### sort and collect updates
@@ -267,73 +289,3 @@
 * if a 'move' job is started without a source service and multiple services could apply, the main routine will now ask the user which to use using a selector that shows how many files each choice will affect
 * also rewrote the add/move menu population code, fixed a couple little issues, and refactored it to a module the media viewer canvas can use
 * wrote a new menu builder that can place a list of items either as a single item (if the list is length 1), or make a submenu if there are more. it drives the new add/move commands and now the behind the scenes of all other service-based menu population
-
-## [Version 483](https://github.com/hydrusnetwork/hydrus/releases/tag/v483)
-
-### multiple local file services
-* the multiple local file services feature is ready for advanced users to test out! it lets you have more than one 'my files' service to store things, which will give us some neat privacy and management tools in future. there is no nice help for this feature yet, and the UI is still a little non-user-friendly, so please do not try it out unless you have been following it. and, while this has worked great in all testing, I generally do not recommend it for heavy use on a real client either, just in case something does go wrong. with those caveats, hit up _manage services_ in advanced mode, and you can now add new 'local file domain' services. it is possible to search, import to, and migrate files between these and everything basically works. I need to do more UI work to make it clear what is going on (for instance, I think we'll figure out custom icons or similar to show where files are), and some more search tech, and write up proper help, and figure out easy client merging so users can combine legacy clients, but please feel free to experiment wildly on a fresh client or carefully on your existing one
-* if you have more than one local file service, a new 'files' or 'local services' menu on thumbnail right-click handles duplicating and moving across local services. these actions will preserve original import times (e.g. if you move from A to B and then back to A), so they should be generally non-destructive, but we may want to add some advanced tools in future. let me know how this part goes--I think we'll probably want a different status than 'deleted from A' when you just move A->B, so as not to interfere with some advanced queries, but only IRL testing will show it
-* if you have a 'file import options' that imports files to multiple local services but the file import is 'already in db', the file import job will now examine if and where the file is still needed and send content update calls to fill in the gaps
-* the advanced delete files dialog now gives a new 'delete from all and send to trash' option if the file is in multiple local file domains
-* the advanced delete files dialog now fully supports file repositories
-* cleaned up some logic on the 'remember action' option of the advanced file deletion dialog. it also supports remembering specific file domains, not just the clever commands like 'delete and leave no record'. also this dialog no longer places the 'suggested' file service at the top of the radio button list--instead it selects that 'suggested' if there is no 'remember action' initial selection applicable. the suggested file service is now also set by the underlying thumbnail grid or media canvas if it has a simple one-service location context
-* the normal 'non-advanced' delete files dialog now supports files that are in multiple local file services. it will show a part of the advanced dialog to let you choose where to delete from
-
-### misc
-* thanks to user submissions, there is a bit more help docs work--for file search, and for some neat new 'mermaid' svg diagrams in siblings/parents, which are automatically generated from a markup and easy to edit
-* with the new easy-to-edit mermaid diagrams, I updated the unhelpful and honestly cringe examples in the siblings and parents help to reflect real world PTR data and brushed up all the text in the top sections
-* just a small thing--the 'pages' menu and the page picker dialog now both say 'file search' to refer to a page that searches files. previously, 'search' or 'files' was used in different places
-* completely rewrote the queue code behind the duplicate filter. an ancient bad idea is now replaced with something that will be easier to work with in future
-* you can now go 'back' in the duplicate filter even when you have only done skips so far
-* the 'index string' of duplicate filters, where it says 53/100, now also says the number of decisions made
-* fixed some small edge case bugs in duplicate filter forward/backward move logic, and fixed the recent problem with going back after certain decisions
-* updated the default nijie.info parser to grab video (issue #1113)
-* added in a user fix to the deviant art parser
-* added user-made Mega URL Classes. hydrus won't support Mega for a long while, but it can recognise and categorise these URLs now, presenting them in the media viewer if you want to open them externally
-* fixed Exif image rotation for images that also have ICC Profiles. thanks to the user who provided great test images here (issue #1124)
-* hitting F5 or otherwise saying 'refresh' explicitly will now turn a search page that is currently in 'searching paused' to 'searching immediately'. previously it silently did nothing
-* the 'current file info' in the media window's top hover and the status bar of the main window now ignores Deletion reason, and also file modified date if it is not substantially different from another timestamp already stated. this data can still be seen on the file's right-click menu's expanded info lines off the top entry. also, as a small cleanup, it now says 'modified' and 'archived' instead of 'file modified/archived', just to save some more space
-* like the above 'show if interesting' check for modified date, that list of file info texts now includes the actual import time if it is different than other timestamps. (for instance, if you migrate it from one service to another some time after import)
-* fixed a sort error notification in the edit parser dialog when you have two duplicate subsidiary parsers that both have vetoes
-* fixed the new media viewer note display for PyQt5
-* fixed a rare frame-duration-lookup problem when loading certain gifs into the media viewer
-
-### boring code cleanup
-* cleaned up search signalling UI code, a couple of minor bugs with 'searching immediately' sometimes not saving right should be fixed
-* the 'repository updates' domain now has a different service type. it is now a 'local update file domain' rather than a 'local file domain', which is just an enum change but marks it as different to the regular media domains. some code is cleaned up as a result
-* renamed the terms in some old media filtering code to make it more compatible with multiple local file services
-* brushed up some delete code to handle multiple local file services better
-* cleaned up more behind the scenes of the delete files dialog
-* refactored ClientGUIApplicationCommand to the widgets module
-* wrote a new ApplicationCommandProcessor Mixin class for all UI elements that process commands. it is now used across the program and will grow in responsibility in future to unify some things here
-* the media viewer hover windows now send their application commands through Qt signals rather than the old pubsub system
-* in a bunch of places across the program, renamed 'remote' to 'not local' in file status contexts--this tends to make more sense to people at out the gate
-* misc little syntax cleanup
-
-## [Version 482](https://github.com/hydrusnetwork/hydrus/releases/tag/v482)
-
-### misc
-* fixed the stupid taglist scrolled-click position problem--sorry! I have a new specific weekly test for this, so it shouldn't happen again (issue #1120)
-* I made it so middle-clicking on a tag list does a select event again
-* the duplicate action options now let you say to archive both files regardless of their current archive status (issue #472)
-* the duplicate filter is now hooked into the media prefetch system. as soon as 'A' is displayed, the 'B' file will now be queued to be loaded, so with luck you will see very little flicker on the first transition from A->B.
-* I updated the duplicate filter's queue to store more information and added the next pair to the new prefetch queue, so when you action a pair, the A of the next pair should also load up quickly
-* boosted the default sizes of the thumbnail and image caches up to 32MB and 384MB (from 25/150)  and gave them nicer 'bytes quantity' widgets in the options panel
-* when popup windows show network jobs, they now have delayed hide. with luck, this will make subscriptions more stable in height, less flickering as jobs are loaded and unloaded
-* reduced the extremes of the new auto-throttled pending upload. it will now change speed slower, on less strict of a schedule, and won't go as fast or slow max
-* the text colour of hyperlinks across the program, most significantly in the top-right media hover window, can now be customised in QSS. I have set some ok defaults for all the QSS styles that come with the client, if you have a custom QSS, check out my default to see what you need to do. also hyperlinks are no longer underlined and you can't 'select' their text with the mouse any more (this was a weird rich-text flag)
-* the client api and local booru now have a checkbox in their manage services panel for 'normie-friendly welcome page', which switches the default ascii art for an alternate
-* fixed an issue with the hydrus server not explicitly saying it is utf-8 when rendering html
-* may have fixed some issues with autocomplete dropdowns getting hung up in the wrong position and not fixing themselves until parent resize event or similar
-
-### code cleanup
-* about 80KB of code moved out of the main ClientDB.py file:
-* refactored all combined files display mappings cache code from the code database to a new database module
-* refactored all combined files storage mappings cache code from the code database to a new database module
-* refactored all specific storage mappings cache code from the code database to a new database module
-* more misc refactoring of tag count estimate, tag search, and other code down to modules
-* hooked up specific display mappings cache to the repair system correctly--it had been left unregistered by accident
-* some misc duplicate action options code cleanup
-* migrated some ancient pause states--repository, subscriptions, import&export folders--to the newer options structure
-* migrated the image and thumbnail cache sizes to the newer options structure
-* removed some ancient db and dialog code from the retired dumper system

@@ -152,6 +152,10 @@ def CreateManagementControllerDuplicateFilter():
     
     file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
     
+    synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
+    
+    management_controller.SetVariable( 'synchronised', synchronised )
+    
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'both_files_match', False )
     management_controller.SetVariable( 'pixel_dupes_preference', CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
@@ -1204,7 +1208,16 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         file_search_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, force_system_everything = True )
+        if self._management_controller.HasVariable( 'synchronised' ):
+            
+            synchronised = self._management_controller.GetVariable( 'synchronised' )
+            
+        else:
+            
+            synchronised = True
+            
+        
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort, media_collect_widget = self._media_collect, allow_all_known_files = False, synchronised = synchronised, force_system_everything = True )
         
         self._both_files_match = QW.QCheckBox( self._filtering_panel )
         
@@ -1461,6 +1474,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         ( file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
         self._management_controller.SetVariable( 'file_search_context', file_search_context )
+        
+        synchronised = self._tag_autocomplete.IsSynchronised()
+        
+        self._management_controller.SetVariable( 'synchronised', synchronised )
+        
         self._management_controller.SetVariable( 'both_files_match', both_files_match )
         self._management_controller.SetVariable( 'pixel_dupes_preference', pixel_dupes_preference )
         self._management_controller.SetVariable( 'max_hamming_distance', max_hamming_distance )

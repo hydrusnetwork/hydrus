@@ -18,13 +18,13 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -687,6 +687,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         shortcuts.setToolTip( 'shortcuts' )
         shortcuts.setFocusPolicy( QC.Qt.TabFocus )
         
+        self._cog_icon = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
+        self._cog_icon.setToolTip( 'extra options' )
+        self._cog_icon.setFocusPolicy( QC.Qt.TabFocus )
+        
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( 'fullscreen switch' )
         fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
@@ -717,6 +721,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._cog_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -765,6 +770,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 self._undelete_button.show()
                 
+            
+            exif_possible = self._current_media.GetMime() in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF )
+            
+            self._cog_icon.setEnabled( exif_possible )
             
         
     
@@ -817,6 +826,20 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         new_options.SetStringList( 'default_media_viewer_custom_shortcuts', default_media_viewer_custom_shortcuts )
         
     
+    def _ShowCogMenu( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        menu = QW.QMenu()
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'check for exif data', 'See if the file has any EXIF data.', ClientGUIMediaActions.ShowFileEXIF, self, self._current_media )
+        
+        CGC.core().PopupMenu( self._cog_icon, menu )
+        
+    
     def _ShowShortcutMenu( self ):
         
         all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
@@ -824,7 +847,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
         menu = QW.QMenu()
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', ClientGUIShortcutControls.ManageShortcuts, self )
         
         if len( custom_shortcuts_names ) > 0:
@@ -1667,7 +1690,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'icc_profile' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'icc_profile' ]
         
         self._comparison_statements_sts = {}
         

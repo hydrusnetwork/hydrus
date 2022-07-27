@@ -1,5 +1,7 @@
 import hashlib
 import io
+import typing
+
 import numpy
 import numpy.core.multiarray # important this comes before cv!
 import struct
@@ -532,6 +534,26 @@ def GenerateThumbnailBytesPIL( pil_image: PILImage.Image, mime ) -> bytes:
     
     return thumbnail_bytes
     
+
+def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
+    
+    if pil_image.format in ( 'JPEG', 'TIFF' ) and hasattr( pil_image, '_getexif' ):
+        
+        try:
+            
+            exif_dict = pil_image._getexif()
+            
+            return exif_dict
+            
+        except:
+            
+            pass
+            
+        
+    
+    return None
+    
+
 def GetGIFFrameDurations( path ):
     
     pil_image = RawOpenPILImage( path )
@@ -1042,73 +1064,63 @@ def ResizeNumPyImage( numpy_image: numpy.array, target_resolution ) -> numpy.arr
     
 def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
     
-    if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
+    exif_dict = GetEXIFDict( pil_image )
+    
+    if exif_dict is not None:
         
-        try:
-            
-            exif_dict = pil_image._getexif()
-            
-        except:
-            
-            exif_dict = None
-            
+        EXIF_ORIENTATION = 274
         
-        if exif_dict is not None:
+        if EXIF_ORIENTATION in exif_dict:
             
-            EXIF_ORIENTATION = 274
+            orientation = exif_dict[ EXIF_ORIENTATION ]
             
-            if EXIF_ORIENTATION in exif_dict:
+            if orientation == 1:
                 
-                orientation = exif_dict[ EXIF_ORIENTATION ]
+                pass # normal
                 
-                if orientation == 1:
-                    
-                    pass # normal
-                    
-                elif orientation == 2:
-                    
-                    # mirrored horizontal
-                    
-                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT )
-                    
-                elif orientation == 3:
-                    
-                    # 180
-                    
-                    pil_image = pil_image.transpose( PILImage.ROTATE_180 )
-                    
-                elif orientation == 4:
-                    
-                    # mirrored vertical
-                    
-                    pil_image = pil_image.transpose( PILImage.FLIP_TOP_BOTTOM )
-                    
-                elif orientation == 5:
-                    
-                    # seems like these 90 degree rotations are wrong, but fliping them works for my posh example images, so I guess the PIL constants are odd
-                    
-                    # mirrored horizontal, then 90 CCW
-                    
-                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_90 )
-                    
-                elif orientation == 6:
-                    
-                    # 90 CW
-                    
-                    pil_image = pil_image.transpose( PILImage.ROTATE_270 )
-                    
-                elif orientation == 7:
-                    
-                    # mirrored horizontal, then 90 CCW
-                    
-                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_270 )
-                    
-                elif orientation == 8:
-                    
-                    # 90 CCW
-                    
-                    pil_image = pil_image.transpose( PILImage.ROTATE_90 )
-                    
+            elif orientation == 2:
+                
+                # mirrored horizontal
+                
+                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT )
+                
+            elif orientation == 3:
+                
+                # 180
+                
+                pil_image = pil_image.transpose( PILImage.ROTATE_180 )
+                
+            elif orientation == 4:
+                
+                # mirrored vertical
+                
+                pil_image = pil_image.transpose( PILImage.FLIP_TOP_BOTTOM )
+                
+            elif orientation == 5:
+                
+                # seems like these 90 degree rotations are wrong, but fliping them works for my posh example images, so I guess the PIL constants are odd
+                
+                # mirrored horizontal, then 90 CCW
+                
+                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_90 )
+                
+            elif orientation == 6:
+                
+                # 90 CW
+                
+                pil_image = pil_image.transpose( PILImage.ROTATE_270 )
+                
+            elif orientation == 7:
+                
+                # mirrored horizontal, then 90 CCW
+                
+                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_270 )
+                
+            elif orientation == 8:
+                
+                # 90 CCW
+                
+                pil_image = pil_image.transpose( PILImage.ROTATE_90 )
                 
             
         

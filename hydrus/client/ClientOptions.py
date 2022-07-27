@@ -36,7 +36,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         # media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
         
-        from hydrus.client.gui import ClientGUIMPV
+        from hydrus.client.gui.canvas import ClientGUIMPV
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
             

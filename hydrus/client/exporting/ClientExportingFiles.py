@@ -112,18 +112,18 @@ def GenerateExportFilename( destination_directory, media, terms, do_not_use_file
         filename = filename[1:]
         
     
+    # replace many consecutive (back)slash with single
+    
     if HC.PLATFORM_WINDOWS:
         
-        # replace many consecutive backspace with single backspace
-        filename = re.sub( '\\\\+', '\\\\', filename )
-        
-        # /, :, *, ?, ", <, >, |
-        filename = re.sub( r'/|:|\*|\?|"|<|>|\|', '_', filename )
+        filename = re.sub( r'\\+', r'\\', filename )
         
     else:
         
         filename = re.sub( '/+', '/', filename )
         
+    
+    filename = HydrusPaths.SanitizePathForExport( destination_directory, filename )
     
     #
     

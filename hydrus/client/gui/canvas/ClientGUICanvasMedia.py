@@ -9,6 +9,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -17,11 +18,208 @@ from hydrus.client import ClientRendering
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
-from hydrus.client.gui import ClientGUIMPV
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
+
+OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
+
+def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
+    
+    canvas_width = canvas_size.width()
+    canvas_height = canvas_size.height()
+    
+    '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
+        
+        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        
+        canvas_height -= animated_scanbar_height
+        '''
+    
+    canvas_width = max( canvas_width, 80 )
+    canvas_height = max( canvas_height, 60 )
+    
+    return ( canvas_width, canvas_height )
+    
+
+def CalculateCanvasZooms( canvas, media, show_action ):
+    
+    if media is None:
+        
+        return ( 1.0, 1.0 )
+        
+    
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+        
+        return ( 1.0, 1.0 )
+        
+    
+    ( media_width, media_height ) = CalculateMediaSize( media, 1.0 )
+    
+    if media_width == 0 or media_height == 0:
+        
+        return ( 1.0, 1.0 )
+        
+    
+    new_options = HG.client_controller.new_options
+    
+    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.size(), show_action )
+    
+    width_zoom = canvas_width / media_width
+    
+    height_zoom = canvas_height / media_height
+    
+    canvas_zoom = min( ( width_zoom, height_zoom ) )
+    
+    #
+    
+    mime = media.GetMime()
+    
+    ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomOptions( mime )
+    
+    if exact_zooms_only:
+        
+        max_regular_zoom = 1.0
+        
+        if canvas_zoom > 1.0:
+            
+            while max_regular_zoom * 2 < canvas_zoom:
+                
+                max_regular_zoom *= 2
+                
+            
+        elif canvas_zoom < 1.0:
+            
+            while max_regular_zoom > canvas_zoom:
+                
+                max_regular_zoom /= 2
+                
+            
+        
+    else:
+        
+        regular_zooms = new_options.GetMediaZooms()
+        
+        valid_regular_zooms = [ zoom for zoom in regular_zooms if zoom < canvas_zoom ]
+        
+        if len( valid_regular_zooms ) > 0:
+            
+            max_regular_zoom = max( valid_regular_zooms )
+            
+        else:
+            
+            max_regular_zoom = canvas_zoom
+            
+        
+    
+    if media.GetMime() in HC.AUDIO:
+        
+        scale_up_action = CC.MEDIA_VIEWER_SCALE_100
+        scale_down_action = CC.MEDIA_VIEWER_SCALE_TO_CANVAS
+        
+    elif canvas.PREVIEW_WINDOW:
+        
+        scale_up_action = preview_scale_up
+        scale_down_action = preview_scale_down
+        
+    else:
+        
+        scale_up_action = media_scale_up
+        scale_down_action = media_scale_down
+        
+    
+    can_be_scaled_down = media_width > canvas_width or media_height > canvas_height
+    can_be_scaled_up = media_width < canvas_width and media_height < canvas_height
+    
+    #
+    
+    if can_be_scaled_up:
+        
+        scale_action = scale_up_action
+        
+    elif can_be_scaled_down:
+        
+        scale_action = scale_down_action
+        
+    else:
+        
+        scale_action = CC.MEDIA_VIEWER_SCALE_100
+        
+    
+    if scale_action == CC.MEDIA_VIEWER_SCALE_100:
+        
+        default_zoom = 1.0
+        
+    elif scale_action == CC.MEDIA_VIEWER_SCALE_MAX_REGULAR:
+        
+        default_zoom = max_regular_zoom
+        
+    else:
+        
+        default_zoom = canvas_zoom
+        
+    
+    return ( default_zoom, canvas_zoom )
+    
+
+def CalculateMediaContainerSize( media, zoom, show_action ):
+    
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+        
+        raise Exception( 'This media should not be shown in the media viewer!' )
+        
+    elif show_action == CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON:
+        
+        ( width, height ) = OPEN_EXTERNALLY_BUTTON_SIZE
+        
+        if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+            
+            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            
+            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type )
+            
+            height = height + thumb_height
+            
+        
+        return QC.QSize( width, height )
+        
+    else:
+        
+        ( media_width, media_height ) = CalculateMediaSize( media, zoom )
+        
+        '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
+            
+            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+            
+            media_height += animated_scanbar_height
+            '''
+        
+        return QC.QSize( media_width, media_height )
+        
+    
+
+def CalculateMediaSize( media, zoom ):
+    
+    if media.GetMime() in HC.AUDIO:
+        
+        ( original_width, original_height ) = ( 360, 240 )
+        
+    else:
+        
+        ( original_width, original_height ) = media.GetResolution()
+        
+    
+    media_width = int( round( zoom * original_width ) )
+    media_height = int( round( zoom * original_height ) )
+    
+    media_width = max( 1, media_width )
+    media_height = max( 1, media_height )
+    
+    return ( media_width, media_height )
+    
 
 def ShouldHaveAnimationBar( media, show_action ):
     
@@ -991,6 +1189,20 @@ class AnimationBar( QW.QWidget ):
     hab_background = QC.Property( QG.QColor, get_hab_background, set_hab_background )
     hab_nub = QC.Property( QG.QColor, get_hab_nub, set_hab_nub )
     
+
+# cribbing from here https://doc.qt.io/qt-5/layout.html#how-to-write-a-custom-layout-manager
+class MediaContainerLayout( QW.QLayout ):
+    
+    def __init__( self, static_image ):
+        
+        QW.QLayout.__init__( self )
+        
+        self._static_image = static_image
+        
+        self._layout_items = [ static_image ]
+        
+    
+
 class MediaContainer( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
@@ -1017,6 +1229,8 @@ class MediaContainer( QW.QWidget ):
         self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
         self._start_paused = False
         self._start_with_embed = False
+        
+        self._current_zoom = 1.0
         
         self._media_window = None
         
@@ -1241,6 +1455,7 @@ class MediaContainer( QW.QWidget ):
                 
                 self._controls_bar.setFixedSize( controls_bar_rect.size() )
                 
+            
             self._controls_bar.move( controls_bar_rect.topLeft() )
             
         
@@ -1248,6 +1463,37 @@ class MediaContainer( QW.QWidget ):
     def BeginDrag( self ):
         
         self.parentWidget().BeginDrag()
+        
+    
+    def CanDisplayMedia( self, media ) -> bool:
+        
+        if media is None:
+            
+            return True
+            
+        
+        media = media.GetDisplayMedia()
+        
+        if media is None:
+            
+            return True
+            
+        
+        locations_manager = media.GetLocationsManager()
+        
+        if not locations_manager.IsLocal():
+            
+            return False
+            
+        
+        ( media_show_action, media_start_paused, media_start_with_embed ) = self.GetShowAction( media )
+        
+        if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            return False
+            
+        
+        return True
         
     
     def ClearMedia( self ):
@@ -1281,14 +1527,6 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def resizeEvent( self, event ):
-        
-        if self._media is not None:
-            
-            self._SizeAndPositionChildren()
-            
-        
-    
     def GetIdealControlsBarRect( self, full_size = True ):
         
         my_size = self.size()
@@ -1314,6 +1552,37 @@ class MediaContainer( QW.QWidget ):
             QC.QPoint( 0, my_height - animated_scanbar_height ),
             QC.QSize( my_width, animated_scanbar_height )
         )
+        
+    
+    def GetShowAction( self, media ):
+        
+        # in the midst of a rewrite, feel free to refactor further
+        
+        start_paused = False
+        start_with_embed = False
+        
+        bad_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, start_paused, start_with_embed )
+        
+        if media is None:
+            
+            return bad_result
+            
+        
+        mime = media.GetMime()
+        
+        if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
+            
+            return bad_result
+            
+        
+        if self._canvas_type == CC.CANVAS_PREVIEW:
+            
+            return HG.client_controller.new_options.GetPreviewShowAction( mime )
+            
+        else:
+            
+            return HG.client_controller.new_options.GetMediaShowAction( mime )
+            
         
     
     def GotoPreviousOrNextFrame( self, direction ):
@@ -1369,6 +1638,11 @@ class MediaContainer( QW.QWidget ):
             
         
         return False
+        
+    
+    def minimumSizeHint( self ) -> QC.QSize:
+        
+        return self.sizeHint()
         
     
     def MouseIsNearAnimationBar( self ):
@@ -1455,6 +1729,14 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def resizeEvent( self, event ):
+        
+        if self._media is not None:
+            
+            self._SizeAndPositionChildren()
+            
+        
+    
     def SeekDelta( self, direction, duration_ms ):
         
         if self._media is not None:
@@ -1495,8 +1777,7 @@ class MediaContainer( QW.QWidget ):
             self._MakeMediaWindow()
             
         
-        self.setFixedSize( initial_size )
-        self.move( initial_position )
+        self.setGeometry( QC.QRect( initial_position, initial_size ) )
         
         self._SizeAndPositionChildren()
         
@@ -1510,6 +1791,11 @@ class MediaContainer( QW.QWidget ):
         self.show()
         
     
+    def SetZoom( self, zoom: float ):
+        
+        self._current_zoom = zoom
+        
+    
     def ShouldHaveVolumeControl( self ):
         
         if self._media is None:
@@ -1518,6 +1804,18 @@ class MediaContainer( QW.QWidget ):
             
         
         return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio()
+        
+    
+    def sizeHint(self) -> QC.QSize:
+        
+        ( media_show_action, media_start_paused, media_start_with_embed ) = self.GetShowAction( self._media )
+        
+        if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            return QC.QSize( 0, 0 )
+            
+        
+        return CalculateMediaContainerSize( self._media, self._current_zoom, media_show_action )
         
     
     def StopForSlideshow( self, value ):
