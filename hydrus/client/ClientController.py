@@ -56,7 +56,7 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
-PubSubEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+PubSubEventType = QP.registerEventType()
 
 class PubSubEvent( QC.QEvent ):
     
@@ -95,7 +95,7 @@ class PubSubEventCatcher( QC.QObject ):
     
 def MessageHandler( msg_type, context, text ):
     
-    if msg_type not in ( QC.QtDebugMsg, QC.QtInfoMsg ):
+    if msg_type not in ( QC.QtMsgType.QtDebugMsg, QC.QtMsgType.QtInfoMsg ):
         
         # Set a breakpoint here to be able to see where the warnings originate from.
         HydrusData.Print( text )
@@ -542,7 +542,7 @@ class Controller( HydrusController.HydrusController ):
                 
             else:
                 
-                QP.CallAfter( QW.QApplication.instance().quit )
+                QP.CallAfter( QW.QApplication.instance().exit )
                 
             
         elif sig == signal.SIGTERM:
@@ -2104,7 +2104,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._DestroySplash()
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
             return
             
@@ -2125,7 +2125,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.CleanRunningFile()
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
         except Exception as e:
             
@@ -2200,7 +2200,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._program_is_shut_down = True
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
         
     

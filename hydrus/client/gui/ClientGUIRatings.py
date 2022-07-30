@@ -26,16 +26,16 @@ default_numerical_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 )
 
 STAR_COORDS = []
 
-STAR_COORDS.append( QC.QPoint( 6, 0 ) ) # top
-STAR_COORDS.append( QC.QPoint( 9, 4 ) )
-STAR_COORDS.append( QC.QPoint( 12, 4 ) ) # right
-STAR_COORDS.append( QC.QPoint( 9, 8 ) )
-STAR_COORDS.append( QC.QPoint( 10, 12 ) ) # bottom right
-STAR_COORDS.append( QC.QPoint( 6, 10 ) )
-STAR_COORDS.append( QC.QPoint( 2, 12 ) ) # bottom left
-STAR_COORDS.append( QC.QPoint( 3, 8 ) )
-STAR_COORDS.append( QC.QPoint( 0, 4 ) ) # left
-STAR_COORDS.append( QC.QPoint( 3, 4 ) )
+STAR_COORDS.append( QC.QPointF( 6, 0 ) ) # top
+STAR_COORDS.append( QC.QPointF( 9, 4 ) )
+STAR_COORDS.append( QC.QPointF( 12, 4 ) ) # right
+STAR_COORDS.append( QC.QPointF( 9, 8 ) )
+STAR_COORDS.append( QC.QPointF( 10, 12 ) ) # bottom right
+STAR_COORDS.append( QC.QPointF( 6, 10 ) )
+STAR_COORDS.append( QC.QPointF( 2, 12 ) ) # bottom left
+STAR_COORDS.append( QC.QPointF( 3, 8 ) )
+STAR_COORDS.append( QC.QPointF( 0, 4 ) ) # left
+STAR_COORDS.append( QC.QPointF( 3, 4 ) )
 
 def DrawLike( painter, x, y, service_key, rating_state ):
     

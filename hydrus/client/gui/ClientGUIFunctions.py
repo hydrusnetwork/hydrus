@@ -84,11 +84,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
     data_bytearray = qt_image.bits()
     
-    if QP.qtpy.PYSIDE2:
+    if QP.qtpy.PYSIDE2 or QP.qtpy.PYSIDE6:
         
         data_bytes = bytes( data_bytearray )
         
-    elif QP.qtpy.PYQT5:
+    elif QP.qtpy.PYQT5 or QP.qtpy.PYQT6:
         
         data_bytes = data_bytearray.asstring( height * width * depth )
         
@@ -162,11 +162,11 @@ def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
 def GetDisplayPosition( window ):
     
-    return QW.QApplication.desktop().availableGeometry( window ).topLeft()
+    return window.screen().availableGeometry().topLeft()
     
 def GetDisplaySize( window ):
     
-    return QW.QApplication.desktop().availableGeometry( window ).size()
+    return window.screen().availableGeometry().size()
     
 def GetLighterDarkerColour( colour, intensity = 3 ):
     

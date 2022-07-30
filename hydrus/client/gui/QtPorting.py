@@ -2,7 +2,7 @@
 
 import os
 
-# If not explicitely set, prefer PySide2 instead of the qtpy default which is PyQt5
+# If not explicitly set, prefer PySide2/PySide6 instead of the qtpy default which is PyQt5
 # It is important that this runs on startup *before* anything is imported from qtpy.
 # Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
 
@@ -10,13 +10,21 @@ if not 'QT_API' in os.environ:
     
     try:
 
-        import PySide2
+        import PySide2 # Qt5
 
         os.environ[ 'QT_API' ] = 'pyside2'
         
     except ImportError as e:
         
-        pass
+        try:
+
+            import PySide6 # Qt6
+
+            os.environ[ 'QT_API' ] = 'pyside6'
+            
+        except ImportError as e:
+            
+            pass
         
 
 # 
@@ -31,7 +39,7 @@ from collections import defaultdict
     
 if qtpy.PYQT5:
     
-    import sip # pylint: disable=E0401
+    from PyQt5 import sip # pylint: disable=E0401
     
     def isValid( obj ):
         
@@ -42,16 +50,34 @@ if qtpy.PYQT5:
         
         return True
         
+elif qtpy.PYQT6:
     
+    from PyQt6 import sip # pylint: disable=E0401
+    
+    def isValid( obj ):
+        
+        if isinstance( obj, sip.simplewrapper ):
+        
+            return not sip.isdeleted( obj )
+            
+        
+        return True
+
 elif qtpy.PYSIDE2:
     
     import shiboken2
     
     isValid = shiboken2.isValid
+
+elif qtpy.PYSIDE6:
     
+    import shiboken6
+    
+    isValid = shiboken6.isValid
+
 else:
     
-    raise RuntimeError( 'You need either PySide2 or PyQt5' )
+    raise RuntimeError( 'You need one of PySide2, PySide6, PyQt5 or PyQt6' )
     
 
 from hydrus.core import HydrusConstants as HC
@@ -62,7 +88,12 @@ from hydrus.client import ClientConstants as CC
 
 def MonkeyPatchMissingMethods():
     
-    if qtpy.PYQT5:
+    if qtpy.PYQT5 or qtpy.PYSIDE2:
+        
+        QG.QMouseEvent.globalPosition = lambda self, *args, **kwargs: self.globalPos( *args, **kwargs )
+        QG.QDropEvent.position = lambda self, *args, **kwargs: self.posF( *args, **kwargs )
+        
+    if qtpy.PYQT5 or qtpy.PYQT6:
         
         def MonkeyPatchGetSaveFileName( original_function ):
             
@@ -81,7 +112,15 @@ def MonkeyPatchMissingMethods():
             
         
         QW.QFileDialog.getSaveFileName = MonkeyPatchGetSaveFileName( QW.QFileDialog.getSaveFileName )
+
+
+def registerEventType():
+    
+    if qtpy.PYSIDE2 or qtpy.PYSIDE6:
         
+        return QC.QEvent.Type( QC.QEvent.registerEventType() )
+        
+    return QC.QEvent.registerEventType()
 
 
 class HBoxLayout( QW.QHBoxLayout ):
@@ -410,7 +449,7 @@ class TabBar( QW.QTabBar ):
             
             self._last_clicked_tab_index = index
             
-            self._last_clicked_global_pos = event.globalPos()
+            self._last_clicked_global_pos = event.globalPosition()
             
         
         QW.QTabBar.mousePressEvent( self, event )
@@ -483,7 +522,7 @@ class TabBar( QW.QTabBar ):
         
         if 'application/hydrus-tab' not in event.mimeData().formats():
             
-            tab_index = self.tabAt( event.pos() )
+            tab_index = self.tabAt( event.position().toPoint() )
             
             if tab_index != -1:
                 
@@ -619,7 +658,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        if e.globalPos() == clicked_global_pos:
+        if e.globalPosition() == clicked_global_pos:
             
             # don't start a drag until movement
             
@@ -655,7 +694,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
 
     def dragEnterEvent( self, e ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             return QW.QTabWidget.dragEnterEvent( self, e )
             
@@ -1161,19 +1200,25 @@ def AdjustOpacity( image, opacity_factor ):
 
 def ToKeySequence( modifiers, key ):
     
-    if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
+    if qtpy.PYQT5 or qtpy.PYSIDE2:
         
-        seq_str = ''
+        if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
+            
+            seq_str = ''
+            
+            for modifier in [ QC.Qt.ShiftModifier, QC.Qt.ControlModifier, QC.Qt.AltModifier, QC.Qt.MetaModifier, QC.Qt.KeypadModifier, QC.Qt.GroupSwitchModifier ]:
+                
+                if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
+                
+            seq_str += QG.QKeySequence( key ).toString()
+                
+            return QG.QKeySequence( seq_str )
+                
+        else: return QG.QKeySequence( key + modifiers )
         
-        for modifier in [ QC.Qt.ShiftModifier, QC.Qt.ControlModifier, QC.Qt.AltModifier, QC.Qt.MetaModifier, QC.Qt.KeypadModifier, QC.Qt.GroupSwitchModifier ]:
-            
-            if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
-            
-        seq_str += QG.QKeySequence( key ).toString()
-            
-        return QG.QKeySequence( seq_str )
-            
-    else: return QG.QKeySequence( key + modifiers )
+    else:
+        
+        return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) )
 
 
 def AddShortcut( widget, modifier, key, callable, *args ):
@@ -1191,7 +1236,7 @@ def GetBackgroundColour( widget ):
     return widget.palette().color( QG.QPalette.Window )
 
 
-CallAfterEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+CallAfterEventType = registerEventType()
 
 class CallAfterEvent( QC.QEvent ):
     
