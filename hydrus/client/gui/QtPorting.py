@@ -36,11 +36,22 @@ from qtpy import QtGui as QG
 import math
 
 from collections import defaultdict
-    
+
+# we can't test qtpy.PYQT6 unless it has it lmao, so we'll test and assign more carefully
+
+WE_ARE_QT5 = False
+WE_ARE_QT6 = False
+
+WE_ARE_PYQT = False
+WE_ARE_PYSIDE = False
+
 if qtpy.PYQT5:
     
     from PyQt5 import sip # pylint: disable=E0401
     
+    WE_ARE_QT5 = True
+    WE_ARE_PYQT = True
+    
     def isValid( obj ):
         
         if isinstance( obj, sip.simplewrapper ):
@@ -50,10 +61,14 @@ if qtpy.PYQT5:
         
         return True
         
-elif qtpy.PYQT6:
+    
+elif hasattr( qtpy, 'PYQT6' ) and qtpy.PYQT6:
     
     from PyQt6 import sip # pylint: disable=E0401
     
+    WE_ARE_QT6 = True
+    WE_ARE_PYQT = True
+    
     def isValid( obj ):
         
         if isinstance( obj, sip.simplewrapper ):
@@ -62,19 +77,25 @@ elif qtpy.PYQT6:
             
         
         return True
-
+    
 elif qtpy.PYSIDE2:
     
     import shiboken2
     
+    WE_ARE_QT5 = True
+    WE_ARE_PYSIDE = True
+    
     isValid = shiboken2.isValid
-
+    
 elif qtpy.PYSIDE6:
     
     import shiboken6
     
+    WE_ARE_QT6 = True
+    WE_ARE_PYSIDE = True
+    
     isValid = shiboken6.isValid
-
+    
 else:
     
     raise RuntimeError( 'You need one of PySide2, PySide6, PyQt5 or PyQt6' )
@@ -88,12 +109,13 @@ from hydrus.client import ClientConstants as CC
 
 def MonkeyPatchMissingMethods():
     
-    if qtpy.PYQT5 or qtpy.PYSIDE2:
+    if WE_ARE_QT5:
         
         QG.QMouseEvent.globalPosition = lambda self, *args, **kwargs: self.globalPos( *args, **kwargs )
         QG.QDropEvent.position = lambda self, *args, **kwargs: self.posF( *args, **kwargs )
         
-    if qtpy.PYQT5 or qtpy.PYQT6:
+    
+    if WE_ARE_PYQT:
         
         def MonkeyPatchGetSaveFileName( original_function ):
             

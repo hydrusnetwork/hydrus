@@ -712,7 +712,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
             library_versions.append( ( 'sip', SIP_VERSION_STR ) )
             
-        elif qtpy.PYSIDE6:
+        elif QP.WE_ARE_PYSIDE and QP.WE_ARE_QT6:
             
             import PySide6
             import shiboken6
@@ -720,7 +720,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             library_versions.append( ( 'PySide6', PySide6.__version__ ) )
             library_versions.append( ( 'shiboken6', shiboken6.__version__ ) )
 
-        elif qtpy.PYQT6:
+        elif QP.WE_ARE_PYQT and QP.WE_ARE_QT6:
 
             from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401
             from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401

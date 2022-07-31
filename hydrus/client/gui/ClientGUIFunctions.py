@@ -84,11 +84,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
     data_bytearray = qt_image.bits()
     
-    if QP.qtpy.PYSIDE2 or QP.qtpy.PYSIDE6:
+    if QP.WE_ARE_PYSIDE:
         
         data_bytes = bytes( data_bytearray )
         
-    elif QP.qtpy.PYQT5 or QP.qtpy.PYQT6:
+    elif QP.WE_ARE_PYQT:
         
         data_bytes = data_bytearray.asstring( height * width * depth )
         

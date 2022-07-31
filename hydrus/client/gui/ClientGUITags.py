@@ -4768,7 +4768,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.setText( 'Tags on the left will be appear as those on the right.' )
+                self._status_st.setText( 'Tags on the left will appear as those on the right.' )
                 
                 looking_good = True
                 
