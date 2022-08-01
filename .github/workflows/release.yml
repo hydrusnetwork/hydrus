@@ -54,7 +54,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.1
         with:
-          name: MacOS-DMG
+          name: MacOS-DMG5
           path: HydrusNetwork5.dmg
           if-no-files-found: error
           retention-days: 2
@@ -108,7 +108,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.1
         with:
-          name: MacOS-DMG
+          name: MacOS-DMG6
           path: HydrusNetwork6.dmg
           if-no-files-found: error
           retention-days: 2
@@ -186,7 +186,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu-Extract
+          name: Ubuntu-Extract5
           path: Ubuntu-Extract5.tar.gz
           if-no-files-found: error
           retention-days: 2
@@ -264,7 +264,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu-Extract
+          name: Ubuntu-Extract6
           path: Ubuntu-Extract6.tar.gz
           if-no-files-found: error
           retention-days: 2
@@ -366,7 +366,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Windows-Extract
+          name: Windows-Extract5
           path: Windows-Extract5.zip
           if-no-files-found: error
           retention-days: 2
@@ -453,7 +453,7 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Windows-Extract
+          name: Windows-Extract6
           path: Windows-Extract6.zip
           if-no-files-found: error
           retention-days: 2
