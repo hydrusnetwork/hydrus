@@ -479,13 +479,13 @@ jobs:
         name: Rename Files
         run: |
           mkdir ubuntu windows
-          mv MacOS-DMG/HydrusNetwork5.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt5.-.App.dmg
-          mv MacOS-DMG/HydrusNetwork6.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt6.-.App.dmg
+          mv MacOS-DMG5/HydrusNetwork5.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt5.-.App.dmg
+          mv MacOS-DMG6/HydrusNetwork6.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt6.-.App.dmg
           mv Windows-Install/HydrusInstaller.exe  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Installer.exe
-          mv Windows-Extract/Windows-Extract5.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Extract.only.zip
-          mv Windows-Extract/Windows-Extract6.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Extract.only.zip
-          mv Ubuntu-Extract/Ubuntu-Extract5.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt5.-.Executable.tar.gz
-          mv Ubuntu-Extract/Ubuntu-Extract6.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt6.-.Executable.tar.gz
+          mv Windows-Extract5/Windows-Extract5.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Extract.only.zip
+          mv Windows-Extract6/Windows-Extract6.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Extract.only.zip
+          mv Ubuntu-Extract5/Ubuntu-Extract5.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt5.-.Executable.tar.gz
+          mv Ubuntu-Extract6/Ubuntu-Extract6.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt6.-.Executable.tar.gz
       - 
         name: Release new
         uses: softprops/action-gh-release@v1
