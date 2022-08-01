@@ -42,6 +42,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportSubscriptions
@@ -1588,7 +1589,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        QP.MonkeyPatchMissingMethods()
+        QtInit.MonkeyPatchMissingMethods()
         
         from hydrus.client.gui import ClientGUICore
         

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from qtpy import QtWidgets as QW
 
@@ -36,7 +37,7 @@ def boot():
         
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
-        QP.MonkeyPatchMissingMethods()
+        QtInit.MonkeyPatchMissingMethods()
         app = QW.QApplication( sys.argv )
         
         app.call_after_catcher = QP.CallAfterEventCatcher( app )

@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
@@ -84,11 +85,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
     data_bytearray = qt_image.bits()
     
-    if QP.WE_ARE_PYSIDE:
+    if QtInit.WE_ARE_PYSIDE:
         
         data_bytes = bytes( data_bytearray )
         
-    elif QP.WE_ARE_PYQT:
+    elif QtInit.WE_ARE_PYQT:
         
         data_bytes = data_bytearray.asstring( height * width * depth )
         

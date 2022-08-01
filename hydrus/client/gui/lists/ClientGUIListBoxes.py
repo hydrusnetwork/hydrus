@@ -1119,7 +1119,7 @@ class ListBox( QW.QScrollArea ):
     
     def _GetLogicalIndexUnderMouse( self, mouse_event ):
         
-        y = mouse_event.pos().y()
+        y = mouse_event.position().toPoint().y()
         
         if mouse_event.type() == QC.QEvent.MouseMove:
             

@@ -348,9 +348,9 @@ class RatingNumerical( QW.QWidget ):
     
     def _GetRatingStateAndRatingFromClickEvent( self, event ):
         
-        click_pos = event.pos()
+        click_pos = event.position().toPoint()
         
-        x = event.pos().x()
+        x = click_pos.x()
         
         BORDER = 1
         

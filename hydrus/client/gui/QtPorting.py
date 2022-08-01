@@ -2,32 +2,6 @@
 
 import os
 
-# If not explicitly set, prefer PySide2/PySide6 instead of the qtpy default which is PyQt5
-# It is important that this runs on startup *before* anything is imported from qtpy.
-# Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
-
-if not 'QT_API' in os.environ:
-    
-    try:
-
-        import PySide2 # Qt5
-
-        os.environ[ 'QT_API' ] = 'pyside2'
-        
-    except ImportError as e:
-        
-        try:
-
-            import PySide6 # Qt6
-
-            os.environ[ 'QT_API' ] = 'pyside6'
-            
-        except ImportError as e:
-            
-            pass
-        
-
-# 
 import qtpy
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -37,113 +11,26 @@ import math
 
 from collections import defaultdict
 
-# we can't test qtpy.PYQT6 unless it has it lmao, so we'll test and assign more carefully
-
-WE_ARE_QT5 = False
-WE_ARE_QT6 = False
-
-WE_ARE_PYQT = False
-WE_ARE_PYSIDE = False
-
-if qtpy.PYQT5:
-    
-    from PyQt5 import sip # pylint: disable=E0401
-    
-    WE_ARE_QT5 = True
-    WE_ARE_PYQT = True
-    
-    def isValid( obj ):
-        
-        if isinstance( obj, sip.simplewrapper ):
-        
-            return not sip.isdeleted( obj )
-            
-        
-        return True
-        
-    
-elif hasattr( qtpy, 'PYQT6' ) and qtpy.PYQT6:
-    
-    from PyQt6 import sip # pylint: disable=E0401
-    
-    WE_ARE_QT6 = True
-    WE_ARE_PYQT = True
-    
-    def isValid( obj ):
-        
-        if isinstance( obj, sip.simplewrapper ):
-        
-            return not sip.isdeleted( obj )
-            
-        
-        return True
-    
-elif qtpy.PYSIDE2:
-    
-    import shiboken2
-    
-    WE_ARE_QT5 = True
-    WE_ARE_PYSIDE = True
-    
-    isValid = shiboken2.isValid
-    
-elif qtpy.PYSIDE6:
-    
-    import shiboken6
-    
-    WE_ARE_QT6 = True
-    WE_ARE_PYSIDE = True
-    
-    isValid = shiboken6.isValid
-    
-else:
-    
-    raise RuntimeError( 'You need one of PySide2, PySide6, PyQt5 or PyQt6' )
-    
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import QtInit
 
-def MonkeyPatchMissingMethods():
-    
-    if WE_ARE_QT5:
-        
-        QG.QMouseEvent.globalPosition = lambda self, *args, **kwargs: self.globalPos( *args, **kwargs )
-        QG.QDropEvent.position = lambda self, *args, **kwargs: self.posF( *args, **kwargs )
-        
-    
-    if WE_ARE_PYQT:
-        
-        def MonkeyPatchGetSaveFileName( original_function ):
-            
-            def new_function( *args, **kwargs ):
-                
-                if 'selectedFilter' in kwargs:
-                    
-                    kwargs[ 'initialFilter' ] = kwargs[ 'selectedFilter' ]
-                    del kwargs[ 'selectedFilter' ]
-                    
-                    return original_function( *args, **kwargs )
-                    
-                
-            
-            return new_function
-            
-        
-        QW.QFileDialog.getSaveFileName = MonkeyPatchGetSaveFileName( QW.QFileDialog.getSaveFileName )
-
+isValid = QtInit.isValid
 
 def registerEventType():
     
-    if qtpy.PYSIDE2 or qtpy.PYSIDE6:
+    if QtInit.WE_ARE_PYSIDE:
         
         return QC.QEvent.Type( QC.QEvent.registerEventType() )
         
-    return QC.QEvent.registerEventType()
-
+    else:
+        
+        return QC.QEvent.registerEventType()
+        
+    
 
 class HBoxLayout( QW.QHBoxLayout ):
     
@@ -159,6 +46,7 @@ class HBoxLayout( QW.QHBoxLayout ):
         
         self.setContentsMargins( val, val, val, val )
         
+    
 
 class VBoxLayout( QW.QVBoxLayout ):
 
@@ -465,13 +353,13 @@ class TabBar( QW.QTabBar ):
     
     def mousePressEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.LeftButton:
             
             self._last_clicked_tab_index = index
             
-            self._last_clicked_global_pos = event.globalPosition()
+            self._last_clicked_global_pos = event.globalPosition().toPoint()
             
         
         QW.QTabBar.mousePressEvent( self, event )
@@ -479,7 +367,7 @@ class TabBar( QW.QTabBar ):
     
     def mouseReleaseEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.MiddleButton:
             
@@ -496,7 +384,7 @@ class TabBar( QW.QTabBar ):
     
     def mouseDoubleClickEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.LeftButton:
             
@@ -649,7 +537,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     
     def mouseMoveEvent( self, e ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             QW.QTabWidget.mouseMoveEvent( self, e )
             
@@ -659,7 +547,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        my_mouse_pos = e.pos()
+        my_mouse_pos = e.position().toPoint()
         global_mouse_pos = self.mapToGlobal( my_mouse_pos )
         tab_bar_mouse_pos = self._tab_bar.mapFromGlobal( global_mouse_pos )
         
@@ -680,7 +568,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        if e.globalPosition() == clicked_global_pos:
+        if e.globalPosition().toPoint() == clicked_global_pos:
             
             # don't start a drag until movement
             
@@ -714,7 +602,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         drag.exec_( QC.Qt.MoveAction )
         
 
-    def dragEnterEvent( self, e ):
+    def dragEnterEvent( self, e: QG.QDragEnterEvent ):
         
         if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
@@ -731,11 +619,11 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
         
     
-    def dragMoveEvent( self, event ):
+    def dragMoveEvent( self, event: QG.QDragMoveEvent ):
         
-        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.pos() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
+        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.position().toPoint() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
         
-        screen_pos = self.mapToGlobal( event.pos() )
+        screen_pos = self.mapToGlobal( event.position().toPoint() )
         
         tab_pos = self._tab_bar.mapFromGlobal( screen_pos )
         
@@ -743,7 +631,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         if tab_index != -1:
             
-            shift_down = event.keyboardModifiers() & QC.Qt.ShiftModifier
+            shift_down = event.modifiers() & QC.Qt.ShiftModifier
             
             self.setCurrentIndex( tab_index )
             
@@ -756,9 +644,9 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         #return QW.QTabWidget.dragMoveEvent( self, event )
         
 
-    def dragLeaveEvent( self, e ):
+    def dragLeaveEvent( self, e: QG.QDragLeaveEvent ):
         
-        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ): return QW.QTabWidget.dragLeaveEvent( self, e )
+        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ): return QW.QTabWidget.dragLeaveEvent( self, e )
         
         e.accept()
         
@@ -783,13 +671,13 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         QW.QTabWidget.insertTab( self, index, widget, *args, **kwargs )
         
     
-    def dropEvent( self, e ):
+    def dropEvent( self, e: QG.QDropEvent ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             return QW.QTabWidget.dropEvent( self, e )
             
-       
+        
         if 'application/hydrus-tab' not in e.mimeData().formats(): #Page dnd has no associated mime data
             
             e.ignore()
@@ -832,7 +720,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         counter = self.count()
         
-        screen_pos = self.mapToGlobal( e.pos() )
+        screen_pos = self.mapToGlobal( e.position().toPoint() )
         
         tab_pos = self.tabBar().mapFromGlobal( screen_pos )
         
@@ -857,8 +745,10 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             left_edge_rect = QC.QRect( tab_rect.topLeft(), edge_size )
             right_edge_rect = QC.QRect( tab_rect.topRight() - QC.QPoint( EDGE_PADDING, 0 ), edge_size )
             
-            dropped_on_left_edge = left_edge_rect.contains( e.pos() )
-            dropped_on_right_edge = right_edge_rect.contains( e.pos() )
+            drop_pos = e.position().toPoint()
+            
+            dropped_on_left_edge = left_edge_rect.contains( drop_pos )
+            dropped_on_right_edge = right_edge_rect.contains( drop_pos )
             
         
         if counter == 0:
@@ -902,8 +792,8 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             self.insertTab( insert_index, source_page, source_name )
 
-            shift_down = e.keyboardModifiers() & QC.Qt.ShiftModifier
-
+            shift_down = e.modifiers() & QC.Qt.ShiftModifier
+            
             follow_dropped_page = not shift_down
 
             new_options = HG.client_controller.new_options

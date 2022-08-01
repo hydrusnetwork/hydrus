@@ -64,13 +64,19 @@ pip3 install -r requirements_windows.txt
 
 If you prefer to do things manually, inspect the document and install the modules yourself.
 
-## PyQt5 support { id="pyqt5" }
+## Qt { id="qt" }
 
-For Qt, either PySide2 (default) or PyQt5 are supported, through qtpy. For PyQt5, go:
+Qt is the UI library. You can run PySide2, PySide6, PyQt5, or PyQt6. A wrapper library called `qtpy` allows this. The default for now is PySide2, but it will soon be PySide6. For PyQt5 or PyQt6, go:
 
 ```
 pip3 install qtpy PyQtChart PyQt5
+-or-
+pip3 install qtpy PyQt6-Charts PyQt6
 ```
+
+If you have multiple Qts installed, then select which one you want to use by setting the `QT_API` environment variable to 'pyside2', 'pyside6', 'pyqt5', or 'pyqt6'. Check _help->about_ to make sure it loaded the right one. 
+
+If you run Windows 7, you cannot run Qt6. Please try PySide2 or PyQt5.
 
 ## FFMPEG { id="ffmpeg" }
 

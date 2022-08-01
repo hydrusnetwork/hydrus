@@ -20,7 +20,7 @@ try:
     HydrusBoot.AddBaseDirToEnvPath()
     
     # initialise Qt here, important it is done early
-    from hydrus.client.gui import QtPorting as QP
+    from hydrus.client.gui import QtInit
     
     from hydrus.core import HydrusConstants as HC
     from hydrus.core import HydrusData
