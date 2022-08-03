@@ -1273,7 +1273,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 if event.type() == QC.QEvent.MouseButtonPress:
                     
-                    self._last_click_down_position = event.globalPos()
+                    self._last_click_down_position = event.globalPosition().toPoint()
                     
                     CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
                     
@@ -1290,7 +1290,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 if event.type() == QC.QEvent.MouseButtonRelease:
                     
-                    release_press_pos = event.globalPos()
+                    release_press_pos = event.globalPosition().toPoint()
                     
                     delta = release_press_pos - self._last_click_down_position
                     

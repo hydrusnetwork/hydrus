@@ -2916,8 +2916,10 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
         
-        x = mouse_event.pos().x()
-        y = mouse_event.pos().y()
+        pos = mouse_event.position().toPoint()
+        
+        x = pos.x()
+        y = pos.y()
         
         ( t_span_x, t_span_y ) = self._GetThumbnailSpanDimensions()
         

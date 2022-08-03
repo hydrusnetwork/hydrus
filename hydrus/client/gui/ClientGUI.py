@@ -76,6 +76,7 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
 from hydrus.client.gui import ClientGUILocatorSearchProviders
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
@@ -696,38 +697,45 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         library_versions.append( ( 'Qt', QC.__version__ ) )
         
-        if qtpy.PYSIDE2:
+        if QtInit.WE_ARE_QT5:
             
-            import PySide2
-            import shiboken2
+            if QtInit.WE_ARE_PYSIDE:
+                
+                import PySide2
+                import shiboken2
+                
+                library_versions.append( ( 'PySide2', PySide2.__version__ ) )
+                library_versions.append( ( 'shiboken2', shiboken2.__version__ ) )
+                
+            elif QtInit.WE_ARE_PYQT:
+                
+                from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
+                from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401
+                
+                library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
+                library_versions.append( ( 'sip', SIP_VERSION_STR ) )
+                
             
-            library_versions.append( ( 'PySide2', PySide2.__version__ ) )
-            library_versions.append( ( 'shiboken2', shiboken2.__version__ ) )
+        elif QtInit.WE_ARE_QT6:
             
-        elif qtpy.PYQT5:
-
-            from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-            from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401
-
-            library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
-            library_versions.append( ( 'sip', SIP_VERSION_STR ) )
+            if QtInit.WE_ARE_PYSIDE:
+                
+                import PySide6
+                import shiboken6
+                
+                library_versions.append( ( 'PySide6', PySide6.__version__ ) )
+                library_versions.append( ( 'shiboken6', shiboken6.__version__ ) )
+                
+            elif QtInit.WE_ARE_PYQT:
+                
+                from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401
+                from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401
+                
+                library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
+                library_versions.append( ( 'sip', SIP_VERSION_STR ) )
+                
             
-        elif QP.WE_ARE_PYSIDE and QP.WE_ARE_QT6:
-            
-            import PySide6
-            import shiboken6
-            
-            library_versions.append( ( 'PySide6', PySide6.__version__ ) )
-            library_versions.append( ( 'shiboken6', shiboken6.__version__ ) )
-
-        elif QP.WE_ARE_PYQT and QP.WE_ARE_QT6:
-
-            from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401
-            from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401
-
-            library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
-            library_versions.append( ( 'sip', SIP_VERSION_STR ) )
-
+        
         CBOR_AVAILABLE = False
         
         try:

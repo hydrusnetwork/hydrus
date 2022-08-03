@@ -3,11 +3,10 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: []
 
 jobs:
   build-client:
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       -
         name: Checkout
@@ -53,7 +52,7 @@ jobs:
           labels: ${{ steps.docker_meta.outputs.labels }}
 
   build-server:
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       -
         name: Checkout
