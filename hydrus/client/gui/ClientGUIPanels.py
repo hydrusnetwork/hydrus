@@ -73,6 +73,9 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         def do_it( service ):
             
+            result = ''
+            nocopy_available = False
+            
             try:
                 
                 nocopy_available = service.GetNoCopyAvailable()
@@ -132,6 +135,9 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         def do_it( service ):
             
+            result = ''
+            is_running = False
+            
             try:
                 
                 version = service.GetDaemonVersion()
@@ -185,6 +191,8 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
             
         
         def do_it( service ):
+            
+            success = False
             
             try:
                 

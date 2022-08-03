@@ -39,7 +39,10 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._highlighted_watcher_url = None
         
         self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
-        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._watcher_keys_to_watchers = {}
@@ -182,7 +185,10 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             try:
                 
                 checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
-                file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+                
+                file_import_options = FileImportOptions.FileImportOptions()
+                file_import_options.SetIsDefault( True )
+                
                 tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
                 
             except:
@@ -629,7 +635,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
         self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
-        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         self._last_check_time = 0
         self._checking_status = ClientImporting.CHECKER_STATUS_OK
@@ -1070,7 +1079,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
+        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options )
         
         with self._lock:
             
@@ -1304,6 +1313,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             checker_go = HydrusData.TimeHasPassed( self._next_check_time ) and not self._checking_paused
             files_go = files_work_to_do and not self._files_paused
             
+            work_is_going_on = self._checker_working_lock.locked() or self._files_working_lock.locked()
+            
             if not HydrusData.TimeHasPassed( self._no_work_until ):
                 
                 if self._next_check_time is None:
@@ -1319,7 +1330,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif checker_go or files_go:
                 
-                if self._checker_working_lock.locked() or self._files_working_lock.locked():
+                if work_is_going_on:
                     
                     return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_WORKING, 'working' )
                     
@@ -1340,7 +1351,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 if self._checking_paused:
                     
-                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSED, '' )
+                    if work_is_going_on:
+                        
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSING, 'pausing\u2026' )
+                        
+                    else:
+                        
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSED, '' )
+                        
                     
                 else:
                     

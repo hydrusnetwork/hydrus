@@ -3,6 +3,40 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 494](https://github.com/hydrusnetwork/hydrus/releases/tag/v494)
+
+### QT6
+* thanks to a user's help, we are rolling out a Qt6 test build this week. we've been running Qt5 for a few years now. 6 is mostly a very large bugfix patch, and I am hopeful this update will relieve several legacy issues related to UI scale, colour support, draw flickering, and other unusual stuff. so far, it is working for me great. I'll be putting out joint 5 and 6 builds for 4-8 weeks, to iron out any big problems, and then I'll switch over to 6 releases exclusively. if you are an advanced user, please give it a go this or next week and let me know if you run into any traceback errors about deprecated method names or completely jank layout in the less used parts of the program
+* the actual changes you'll see are mostly style, just slightly different font spacing, things like that. if you have a system-baked Qt5 style that hydrus magically inherits, this will no longer work, you need to get a Qt6 version of the style (although I understand this is happening already for the popular styles, so you may already have them)
+* users on Windows 7 and similarly old OS versions are unable to run Qt6 programs, sorry!
+* I intend to keep the code 5-compatible, and users who run from source can choose whichever version of Qt they prefer, as here in the help: https://hydrusnetwork.github.io/hydrus/running_from_source.html#qt
+* the linux Qt6 build also goes up from ubuntu 18.04 to 20.04. let me know if you have any trouble, but it feels like it is time to update this too
+
+### file import options overhaul
+* I wanted to do note parsing this week, but when I reviewed the whole job, there wasn't enough time to do it properly. so, in prep for a cleaner introduction of 'note import options' next week, I am overhauling how the other import options do some stuff
+* all file import options now support filetype filtering! it uses the same control as system:filetype or in import folders, but with some improved logic. on update, existing import folder filetype settings will be copied down to the file import options
+* file import options now work on a similar 'default' system as tag import options. existing file import options will stay as-is, but new ones will begin in a 'use the default settings at time of import' state. those defaults are editable under _options->importing_. for now I am not adding a 'use this file import options default for this web domain' system, but it might happen in future. let's see how this all shakes out first
+* the file import options button now has a right-click menu like the tag import options button
+* the manage subscriptions panel now has a 'overwrite file import options' button to mass-set FIO
+* cleaned up a bunch of old file import and import options code
+
+### misc
+* system:filetype now remembers meta filetypes better. if you select 'all video', it will now still select all video even if hydev adds support for a new video type in future. also if you select 'video + animations', it'll say that rather than listing out every possible specific-type
+* fixed an issue where loading a favourite search wasn't always setting 'include current/pending' values on the buttons correct
+* fixed up a status display in the gallery downloader and watcher pages--if you pause an importer while it is doing work, it now says 'pausing...' as its status until any current jobs are finished. it was giving empty text before, as if it were finished already
+* fixed some unusual behaviour with downloader highlighting where the first query pended to an empty page was secretly highlighted for the next session load, and fixed the 'subscription gap downloader' also doing this and not obeying the normal 'highlight new downloaders if nothing already highlighted' option
+* improved the error when the 'make sure this directory exists' function runs into a file with that pathname
+* fixed a rare selection position error, maybe Qt6 only, when clicking in the thumbnail grid as it is loading
+
+### boring Qt6 code cleanup
+* as a side thing, I set up quick-launch environments for QtPy5, QtPy6, PySide2, and PySide6 in my IDE this week, so I can now test all these situations and jump back in time no problem in future
+* integrated a user's patch to bring us up to Qt6 compatibility and did a little more work to get it backwards compatible with older qtpy and Qt5
+* refactored the critical Qt boot setup and monkeypatching from QtPorting to a new QtInit module
+* migrated the hydrus code for keyboardModifiers, event-pos, and globalPos all to the Qt6 equivalents so the monkeypatching is always going to be on older versions looking forward
+* fiddled with QPoint and QPointF conversions a little so I _think_ Qt5 and Qt6 is always talking about the same type
+* updated build scripts and requirements.txts for the new situation
+* updated the help a bit for the new situation
+
 ## [Version 493](https://github.com/hydrusnetwork/hydrus/releases/tag/v493)
 
 ### EXIF
@@ -262,30 +296,3 @@
 * created a new database module for some rich file metadata and refactored some file filtering, history, and status testing code to it
 * created new database module for file searching and moved all tag-based file searching code to it
 * moved several other misc methods down to database modules
-
-## [Version 484](https://github.com/hydrusnetwork/hydrus/releases/tag/v484)
-
-### misc
-* fixed the simple delete files dialog for trashed files. due to a logical oversight, the simple version was not testing 'trashed' status and so didn't see anything to permanently delete and would immediately dump out. now it shows the option for trashed files again, and if the selection includes trash and non-trash, it shows multiple options
-* fixed an error in the 'show next pair' logic of the new duplicate filter queue where if it needed to auto-skip through the end of the current batch and load up the next batch (issues #1139, #1143)
-* a new setting on _options->media_ now lets you set the scanbar to be small and simple instead of hidden when the mouse is moved away. I liked this so much personally it is now the default for new users. try it out!
-* the media viewer's taglist hover window will now never send a mouse wheel event up to the media viewer canvas (so scrolling the tags won't accidentally do previous/next if you hit the end of the list scrollbar)
-* I think I have fixed the bug where going on the media viewer from borderless fullscreen to a regular window would not trigger a media container resize if the media perfectly fitted the ratio of the fullscreen monitor!
-* the system tray icon now has minimise/restore entries
-* to reduce confusion, when a content parser vetoes, it now prepends the file import 'note' with 'veto: '
-* the 'clear service info cache' job under _database->regenerate_ is renamed to 'service info numbers' and now has a service selector so you can, let's say, regen your miscounted 'number of files in trash' count without triggering a complete recount of every single mapping on the PTR the next time you open review services
-* hydrus now recognises most (and maybe all) windows executables so it can discard them from imports confidently. a user discovered an interesting exe with embedded audio that ffmpeg was seeing as an mp3--this no longer occurs
-* the 'edit string conversion step' dialog now saves a new default (which is used on 'add' events) every time you ok it. 'append extra text' is no longer the universal default!
-* the 'edit tag rule' dialog in the parsing system now starts with the tag name field focused
-* updated 'getting started/installing' help to talk more about mpv on Linux. the 'libgmodule' problem _seems_ to have a solid fix now, which is properly written out there. thanks to the users who figured all this out and provided feedback
-
-### multiple local file services
-* the media viewer menu now offers add/move actions just like the thumb grid
-* added a new shortcut action that lets you specify add/move jobs. it is available in the media shortcut set and will work in the thumbnail grid and the media viewer
-* add/move is now nicer in edge cases. files are filtered better to ensure only local media files end up in a job (e.g. if you were to try to move files out of the repository update domain using a shortcut), and 'add' commands from trashed files are naturally and silently converted to a pure undelete
-
-### boring code cleanup
-* refactored the UI side of multiple local file services add/move commands. various functions to select, filter, and question the user on actions are now pulled to a separate simple module where other parts of the UI can also access them, and there is now just one isolated pipeline for file service add/move content updates.
-* if a 'move' job is started without a source service and multiple services could apply, the main routine will now ask the user which to use using a selector that shows how many files each choice will affect
-* also rewrote the add/move menu population code, fixed a couple little issues, and refactored it to a module the media viewer canvas can use
-* wrote a new menu builder that can place a list of items either as a single item (if the list is length 1), or make a submenu if there are more. it drives the new add/move commands and now the behind the scenes of all other service-based menu population

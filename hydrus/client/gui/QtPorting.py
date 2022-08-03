@@ -1112,7 +1112,7 @@ def AdjustOpacity( image, opacity_factor ):
 
 def ToKeySequence( modifiers, key ):
     
-    if qtpy.PYQT5 or qtpy.PYSIDE2:
+    if QtInit.WE_ARE_QT5:
         
         if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
             
@@ -1122,16 +1122,21 @@ def ToKeySequence( modifiers, key ):
                 
                 if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
                 
+            
             seq_str += QG.QKeySequence( key ).toString()
-                
+            
             return QG.QKeySequence( seq_str )
-                
-        else: return QG.QKeySequence( key + modifiers )
+            
+        else:
+            
+            return QG.QKeySequence( key + modifiers )
+            
         
     else:
         
         return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) )
-
+        
+    
 
 def AddShortcut( widget, modifier, key, callable, *args ):
     

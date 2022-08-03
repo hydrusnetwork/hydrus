@@ -9,11 +9,12 @@ import locale
 try: locale.setlocale( locale.LC_ALL, '' )
 except: pass
 
+import sys
+
 try:
     
     import os
     import argparse
-    import sys
     
     from hydrus.core import HydrusBoot
     

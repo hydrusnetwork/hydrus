@@ -19,6 +19,7 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIImport
+from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
@@ -1423,7 +1424,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptions.FileImportOptions, show_downloader_options: bool ):
+    def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptions.FileImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1433,7 +1434,32 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        pre_import_panel = ClientGUICommon.StaticBox( self, 'pre-import checks' )
+        default_panel = ClientGUICommon.StaticBox( self, 'default options' )
+        
+        self._use_default_dropdown = ClientGUICommon.BetterChoice( default_panel )
+        
+        self._use_default_dropdown.addItem( 'use the default file import options at the time of import', True )
+        self._use_default_dropdown.addItem( 'set custom file import options just for this downloader', False )
+        
+        tt = 'Normally, the client will refer to the defaults (as set under "options->importing") at the time of import.'
+        tt += os.linesep * 2
+        tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
+        tt += os.linesep * 2
+        tt += 'But if you are doing a one-time import that has some unusual file rules, set them here.'
+        
+        self._use_default_dropdown.setToolTip( tt )
+        
+        #
+        
+        self._load_default_options = ClientGUICommon.BetterButton( self, 'load one of the default options', self._LoadDefaultOptions )
+        
+        #
+        
+        self._specific_options_panel = QW.QWidget( self )
+        
+        #
+        
+        pre_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'pre-import checks' )
         
         self._exclude_deleted = QW.QCheckBox( pre_import_panel )
         
@@ -1461,6 +1487,8 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._allow_decompression_bombs.setToolTip( tt )
         
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( pre_import_panel, HC.ALLOWED_MIMES )
+        
         self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )
         
@@ -1487,7 +1515,11 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        destination_panel = ClientGUICommon.StaticBox( self, 'import destinations' )
+        self._use_default_dropdown.SetValue( file_import_options.IsDefault() )
+        
+        #
+        
+        destination_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'import destinations' )
         
         self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
         
@@ -1501,7 +1533,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
+        post_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'post-import actions' )
         
         self._auto_archive = QW.QCheckBox( post_import_panel )
         self._associate_primary_urls = QW.QCheckBox( post_import_panel )
@@ -1521,7 +1553,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        presentation_static_box = ClientGUICommon.StaticBox( self, 'presentation options' )
+        presentation_static_box = ClientGUICommon.StaticBox( self._specific_options_panel, 'presentation options' )
         
         presentation_import_options = file_import_options.GetPresentationImportOptions()
         
@@ -1529,27 +1561,16 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
-        
-        self._exclude_deleted.setChecked( exclude_deleted )
-        self._do_not_check_known_urls_before_importing.setChecked( do_not_check_known_urls_before_importing )
-        self._do_not_check_hashes_before_importing.setChecked( do_not_check_hashes_before_importing )
-        self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
-        self._min_size.SetValue( min_size )
-        self._max_size.SetValue( max_size )
-        self._max_gif_size.SetValue( max_gif_size )
-        self._min_resolution.SetValue( min_resolution )
-        self._max_resolution.SetValue( max_resolution )
+        self._SetValue( file_import_options )
         
         #
         
-        automatic_archive = file_import_options.AutomaticallyArchives()
-        associate_primary_urls = file_import_options.ShouldAssociatePrimaryURLs()
-        associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
+        default_panel.Add( self._use_default_dropdown, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._auto_archive.setChecked( automatic_archive )
-        self._associate_primary_urls.setChecked( associate_primary_urls )
-        self._associate_source_urls.setChecked( associate_source_urls )
+        if not allow_default_selection:
+            
+            default_panel.hide()
+            
         
         #
         
@@ -1568,6 +1589,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
             self._do_not_check_hashes_before_importing.setVisible( False )
             
         
+        rows.append( ( 'allowed filetypes: ', self._mimes ) )
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
         rows.append( ( 'minimum filesize: ', self._min_size ) )
         rows.append( ( 'maximum filesize: ', self._max_size ) )
@@ -1611,19 +1633,109 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        specific_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( specific_vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( specific_vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( specific_vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._specific_options_panel.setLayout( specific_vbox )
+        
+        #
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         
         self._destination_location_context.locationChanged.connect( self._UpdateLocationText )
+        
+        self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
+        
+        self._UpdateIsDefault()
+        
+    
+    def _LoadDefaultOptions( self ):
+        
+        loud_file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
+        quiet_file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
+        
+        choice_tuples = []
+        
+        choice_tuples.append( ( 'loud default', loud_file_import_options ) )
+        choice_tuples.append( ( 'quiet default', quiet_file_import_options ) )
+        
+        try:
+            
+            default_file_import_options = ClientGUIDialogsQuick.SelectFromList( self, 'Select which default', choice_tuples, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if default_file_import_options is None:
+            
+            return
+            
+        
+        self._SetValue( default_file_import_options )
+        
+    
+    def _SetValue( self, file_import_options: FileImportOptions.FileImportOptions ):
+        
+        self._use_default_dropdown.SetValue( file_import_options.IsDefault() )
+        
+        ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        
+        mimes = file_import_options.GetAllowedSpecificFiletypes()
+        
+        self._mimes.SetValue( mimes )
+        
+        self._exclude_deleted.setChecked( exclude_deleted )
+        self._do_not_check_known_urls_before_importing.setChecked( do_not_check_known_urls_before_importing )
+        self._do_not_check_hashes_before_importing.setChecked( do_not_check_hashes_before_importing )
+        self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
+        self._min_size.SetValue( min_size )
+        self._max_size.SetValue( max_size )
+        self._max_gif_size.SetValue( max_gif_size )
+        self._min_resolution.SetValue( min_resolution )
+        self._max_resolution.SetValue( max_resolution )
+        
+        #
+        
+        automatic_archive = file_import_options.AutomaticallyArchives()
+        associate_primary_urls = file_import_options.ShouldAssociatePrimaryURLs()
+        associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
+        
+        self._auto_archive.setChecked( automatic_archive )
+        self._associate_primary_urls.setChecked( associate_primary_urls )
+        self._associate_source_urls.setChecked( associate_source_urls )
+        
+        #
+        
+        destination_location_context = file_import_options.GetDestinationLocationContext()
+        
+        destination_location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        self._destination_location_context.SetValue( destination_location_context )
+        
+        #
+        
+        presentation_import_options = file_import_options.GetPresentationImportOptions()
+        
+        self._presentation_import_options_edit_panel.SetValue( presentation_import_options )
+        
+        #
+        
+        self._UpdateIsDefault()
         
     
     def _ShowHelp( self ):
@@ -1653,6 +1765,22 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         QW.QMessageBox.information( self, 'Information', help_message )
         
     
+    def _UpdateIsDefault( self ):
+        
+        is_default = self._use_default_dropdown.GetValue()
+        
+        show_specific_options = not is_default
+        
+        self._load_default_options.setVisible( show_specific_options )
+        
+        self._specific_options_panel.setVisible( show_specific_options )
+        
+        if not show_specific_options:
+            
+            self.window().adjustSize()
+            
+        
+    
     def _UpdateLocationText( self ):
         
         location_context = self._destination_location_context.GetValue()
@@ -1675,30 +1803,40 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
     
     def GetValue( self ) -> FileImportOptions.FileImportOptions:
         
-        exclude_deleted = self._exclude_deleted.isChecked()
-        do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
-        do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.isChecked()
-        allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
-        min_size = self._min_size.GetValue()
-        max_size = self._max_size.GetValue()
-        max_gif_size = self._max_gif_size.GetValue()
-        min_resolution = self._min_resolution.GetValue()
-        max_resolution = self._max_resolution.GetValue()
-        
-        automatic_archive = self._auto_archive.isChecked()
-        associate_primary_urls = self._associate_primary_urls.isChecked()
-        associate_source_urls = self._associate_source_urls.isChecked()
-        
-        presentation_import_options = self._presentation_import_options_edit_panel.GetValue()
+        is_default = self._use_default_dropdown.GetValue()
         
         file_import_options = FileImportOptions.FileImportOptions()
         
-        destination_location_context = self._destination_location_context.GetValue()
-        
-        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        file_import_options.SetDestinationLocationContext( destination_location_context )
-        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        file_import_options.SetPresentationImportOptions( presentation_import_options )
+        if is_default:
+            
+            file_import_options.SetIsDefault( True )
+            
+        else:
+            
+            exclude_deleted = self._exclude_deleted.isChecked()
+            do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
+            do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.isChecked()
+            allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
+            min_size = self._min_size.GetValue()
+            max_size = self._max_size.GetValue()
+            max_gif_size = self._max_gif_size.GetValue()
+            min_resolution = self._min_resolution.GetValue()
+            max_resolution = self._max_resolution.GetValue()
+            
+            automatic_archive = self._auto_archive.isChecked()
+            associate_primary_urls = self._associate_primary_urls.isChecked()
+            associate_source_urls = self._associate_source_urls.isChecked()
+            
+            presentation_import_options = self._presentation_import_options_edit_panel.GetValue()
+            
+            destination_location_context = self._destination_location_context.GetValue()
+            
+            file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+            file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
+            file_import_options.SetDestinationLocationContext( destination_location_context )
+            file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
+            file_import_options.SetPresentationImportOptions( presentation_import_options )
+            
         
         return file_import_options
         
@@ -2501,6 +2639,13 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         return presentation_import_options
         
     
+    def SetValue( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
+        
+        self._presentation_location.SetValue( presentation_import_options.GetLocationContext() )
+        self._presentation_status.SetValue( presentation_import_options.GetPresentationStatus() )
+        self._presentation_inbox.SetValue( presentation_import_options.GetPresentationInbox() )
+        
+    
 class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, regex_favourites ):
@@ -2625,7 +2770,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool = False ):
+    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2651,7 +2796,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += os.linesep * 2
         tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
         tt += os.linesep * 2
-        tt += 'But if you are doing a one-time import that has some unusual tag rules, set some specific rules here.'
+        tt += 'But if you are doing a one-time import that has some unusual tag rules, set them here.'
         
         self._use_default_dropdown.setToolTip( tt )
         

@@ -12,6 +12,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
+from hydrus.client.importing.options import FileImportOptions
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -966,7 +967,17 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'default_file_import_options' ][ options_type ]
+            if options_type == FileImportOptions.IMPORT_TYPE_LOUD:
+                
+                key = 'loud'
+                
+            else:
+                
+                key = 'quiet'
+                
+                
+            
+            return self._dictionary[ 'default_file_import_options' ][ key ]
             
         
     
@@ -1411,7 +1422,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._dictionary[ 'default_file_import_options' ][ options_type ] = file_import_options
+            if options_type == FileImportOptions.IMPORT_TYPE_LOUD:
+                
+                key = 'loud'
+                
+            else:
+                
+                key = 'quiet'
+                
+            
+            self._dictionary[ 'default_file_import_options' ][ key ] = file_import_options
             
         
     

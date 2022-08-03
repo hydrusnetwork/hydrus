@@ -365,7 +365,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.InitModel()
         
-        HydrusData.Print( 'Initialising daemons\u2026' )
+        HydrusData.Print( 'Initialising workers\u2026' )
         
         self.InitView()
         

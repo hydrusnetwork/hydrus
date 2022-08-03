@@ -21,6 +21,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -1681,20 +1682,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             show_downloader_options = True
             
-            quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )
+            quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
             
-            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options )
+            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options, allow_default_selection = False )
             
-            loud_file_import_options = self._new_options.GetDefaultFileImportOptions( 'loud' )
+            loud_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
             
-            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options )
+            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options, allow_default_selection = False )
             
             #
             
             rows = []
             
-            rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
-            rows.append( ( 'For import contexts that work on pages:', self._loud_fios ) )
+            rows.append( ( 'For \'quiet\' import contexts: import folders, subscriptions, Client API:', self._quiet_fios ) )
+            rows.append( ( 'For \'loud\' import contexts: downloader pages:', self._loud_fios ) )
             
             gridbox = ClientGUICommon.WrapInGrid( default_fios, rows )
             
@@ -1712,8 +1713,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
-            self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
+            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET, self._quiet_fios.GetValue() )
+            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD, self._loud_fios.GetValue() )
             
         
     

@@ -1839,7 +1839,13 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
-        self.assertEqual( p.ToString(), 'system:filetype is webm, gif' )
+        self.assertEqual( p.ToString(), 'system:filetype is gif, webm' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.GENERAL_AUDIO, HC.GENERAL_VIDEO ) )
+        
+        self.assertEqual( p.ToString(), 'system:filetype is audio, video' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
@@ -1990,7 +1996,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:limit is 5,000', "system:limit is 5000" ),
             ( 'system:limit is 100', "system:limit = 100" ),
             ( 'system:filetype is jpeg', "system:filetype is jpeg" ),
-            ( 'system:filetype is jpeg, png, apng', "system:filetype =   image/jpg, image/png, apng" ),
+            ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
             ( 'system:sha256 hash is in 3 hashes', "system:hash = abcdef01 abcdef02 abcdef03" ),
             ( 'system:md5 hash is in 3 hashes', "system:hash = abcdef01 abcdef, abcdef04 md5" ),
             ( 'system:md5 hash is abcdef01', "system:hash = abcdef01 md5" ),

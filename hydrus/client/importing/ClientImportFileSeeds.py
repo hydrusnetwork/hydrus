@@ -224,6 +224,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
         
     
+    def _SetupFileImportOptions( self, given_file_import_options: FileImportOptions.FileImportOptions, loud_or_quiet: int ) -> FileImportOptions.FileImportOptions:
+        
+        if given_file_import_options.IsDefault():
+            
+            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( loud_or_quiet )
+            
+        else:
+            
+            file_import_options = given_file_import_options
+            
+        
+        return file_import_options
+        
+    
     def _SetupTagImportOptions( self, given_tag_import_options: TagImportOptions.TagImportOptions ) -> TagImportOptions.TagImportOptions:
         
         if given_tag_import_options.IsDefault():
@@ -394,7 +408,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._CheckTagsVeto( self._tags, tag_import_options )
         
     
-    def DownloadAndImportRawFile( self, file_url: str, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, forced_referral_url = None, file_seed_cache = None ):
+    def DownloadAndImportRawFile( self, file_url: str, file_import_options, loud_or_quiet: int, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, forced_referral_url = None, file_seed_cache = None ):
+        
+        file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
         
         self.AddPrimaryURLs( ( file_url, ) )
         
@@ -808,9 +824,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.SetHash( file_import_status.hash )
         
     
-    def ImportPath( self, file_seed_cache: "FileSeedCache", file_import_options: FileImportOptions.FileImportOptions, limited_mimes = None, status_hook = None ):
+    def ImportPath( self, file_seed_cache: "FileSeedCache", file_import_options: FileImportOptions.FileImportOptions, loud_or_quiet: int, status_hook = None ):
         
         try:
+            
+            file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
             
             if self.file_seed_type != FILE_SEED_TYPE_HDD:
                 
@@ -838,23 +856,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 if not copied:
                     
                     raise Exception( 'File failed to copy to temp path--see log for error.' )
-                    
-                
-                if limited_mimes is not None:
-                    
-                    # I think this thing should and will be rolled into file import options late
-                    
-                    if status_hook is not None:
-                        
-                        status_hook( 'testing file type' )
-                        
-                    
-                    mime = HydrusFileHandling.GetMime( temp_path )
-                    
-                    if mime not in limited_mimes:
-                        
-                        raise HydrusExceptions.VetoException( 'Not in allowed mimes!' )
-                        
                     
                 
                 self.Import( temp_path, file_import_options, status_hook = status_hook )
@@ -1131,7 +1132,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, file_seed_cache: "FileSeedCache", status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options: FileImportOptions.FileImportOptions, tag_import_options: TagImportOptions.TagImportOptions ):
+    def WorkOnURL( self, file_seed_cache: "FileSeedCache", status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options: FileImportOptions.FileImportOptions, loud_or_quiet: int, tag_import_options: TagImportOptions.TagImportOptions ):
         
         did_substantial_work = False
         
@@ -1149,6 +1150,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
                 
             
+            file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
             tag_import_options = self._SetupTagImportOptions( tag_import_options )
             
             status_hook( 'checking url status' )
@@ -1326,7 +1328,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 if should_download_file:
                                     
-                                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = True, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
+                                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = True, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
                                     
                                 
                             elif url_type == HC.URL_TYPE_POST and can_parse:
@@ -1403,7 +1405,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_url = self.file_seed_data
                     
-                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, file_seed_cache = file_seed_cache )
+                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, file_seed_cache = file_seed_cache )
                     
                 
             

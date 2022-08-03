@@ -710,7 +710,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-                from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401
+                from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401,E0611
                 
                 library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
                 library_versions.append( ( 'sip', SIP_VERSION_STR ) )
@@ -728,8 +728,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
             elif QtInit.WE_ARE_PYQT:
                 
-                from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401
-                from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401
+                from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401,E0611
+                from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401,E0611
                 
                 library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
                 library_versions.append( ( 'sip', SIP_VERSION_STR ) )
@@ -1461,7 +1461,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key.SetStatusTitle( 'sub gap downloader test' )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
+        from hydrus.client.importing.options import FileImportOptions
+        
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         from hydrus.client.importing.options import TagImportOptions
         
@@ -3968,7 +3971,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         try:
                             
-                            job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
+                            job_key.SetVariable( 'popup_text_1', 'Waiting for export folders to finish.' )
                             
                             controller.pub( 'message', job_key )
                             
@@ -4109,7 +4112,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                     try:
                         
-                        controller.CallBlockingToQt(self, qt_do_it)
+                        controller.CallBlockingToQt( self, qt_do_it )
                         
                     except HydrusExceptions.QtDeadWindowException:
                         
@@ -6864,11 +6867,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusData.ShowText( 'Sorry, could not create the downloader page! Is your session super full atm?' )
             
         
-        management_controller = page.GetManagementController()
+        panel = page.GetManagementPanel()
         
-        multiple_gallery_import = management_controller.GetVariable( 'multiple_gallery_import' )
-        
-        multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
+        panel.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
         
         self._notebook.ShowPage( page )
         

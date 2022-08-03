@@ -96,7 +96,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         for hash in self._all_hashes:
             

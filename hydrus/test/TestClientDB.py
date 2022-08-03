@@ -83,8 +83,8 @@ class TestClientDB( unittest.TestCase ):
     
     def test_autocomplete( self ):
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
         tag_context = ClientSearch.TagContext( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
@@ -366,7 +366,8 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -755,7 +756,8 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -811,7 +813,8 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -919,7 +922,8 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -1241,7 +1245,8 @@ class TestClientDB( unittest.TestCase ):
         test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, False, None ) )
         test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, { 600 }, { 5 }, False, None ) )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         for ( filename, hex_hash, size, mime, width, height, durations, num_frames, has_audio, num_words ) in test_files:
             
@@ -1292,8 +1297,8 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        import_folder_1 = ClientImportLocal.ImportFolder( 'imp 1', path = TestController.DB_DIR, mimes = HC.VIDEO, publish_files_to_popup_button = False )
-        import_folder_2 = ClientImportLocal.ImportFolder( 'imp 2', path = TestController.DB_DIR, mimes = HC.IMAGES, period = 1200, publish_files_to_popup_button = False )
+        import_folder_1 = ClientImportLocal.ImportFolder( 'imp 1', path = TestController.DB_DIR, publish_files_to_popup_button = False )
+        import_folder_2 = ClientImportLocal.ImportFolder( 'imp 2', path = TestController.DB_DIR, period = 1200, publish_files_to_popup_button = False )
         
         #
         
@@ -1368,7 +1373,8 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -1436,7 +1442,8 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -1488,7 +1495,8 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
         
@@ -1718,7 +1726,8 @@ class TestClientDB( unittest.TestCase ):
             '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' : 'muh_apng.png'
         }
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         for ( hash, filename ) in test_files.items():
             

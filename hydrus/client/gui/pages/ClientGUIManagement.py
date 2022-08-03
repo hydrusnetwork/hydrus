@@ -2665,6 +2665,16 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._multiple_gallery_import.SetFileLimit( self._file_limit.GetValue() )
         
     
+    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit ):
+        
+        new_query = self._multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
+        
+        if new_query is not None and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
+            
+            self._HighlightGalleryImport( new_query )
+            
+        
+    
     def SetSearchFocus( self ):
         
         ClientGUIFunctions.SetFocusLater( self._query_input )

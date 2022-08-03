@@ -40,6 +40,7 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
@@ -1267,7 +1268,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         ( os_file_handle, temp_path ) = request.temp_file_info
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
         
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
         

@@ -504,7 +504,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = 100
         self._paused = False
         
-        self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._no_work_until = 0
@@ -673,7 +675,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         message += os.linesep * 2
                         message += login_fail_reason
                         message += os.linesep * 2
-                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )
                         
@@ -733,7 +735,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         message += os.linesep * 2
                         message += login_fail_reason
                         message += os.linesep * 2
-                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )
                         
@@ -1000,7 +1002,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                             job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
                             
                         
-                        file_seed.WorkOnURL( file_seed_cache, status_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
+                        file_seed.WorkOnURL( file_seed_cache, status_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET, self._tag_import_options )
                         
                         query_tag_import_options = query.GetTagImportOptions()
                         

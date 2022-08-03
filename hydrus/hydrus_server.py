@@ -6,6 +6,8 @@
 
 action = 'start'
 
+import sys
+
 try:
     
     import locale
@@ -14,7 +16,6 @@ try:
     except: pass
     
     import os
-    import sys
     import threading
     
     from hydrus.core import HydrusBoot

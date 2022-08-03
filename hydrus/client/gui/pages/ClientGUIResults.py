@@ -2936,11 +2936,22 @@ class MediaPanelThumbnails( MediaPanel ):
         column_index = x // t_span_x
         row_index = y // t_span_y
         
-        if column_index >= self._num_columns: return None
+        if column_index >= self._num_columns:
+            
+            return None
+            
         
         thumbnail_index = self._num_columns * row_index + column_index
         
-        if thumbnail_index >= len( self._sorted_media ): return None
+        if thumbnail_index < 0:
+            
+            return None
+            
+        
+        if thumbnail_index >= len( self._sorted_media ):
+            
+            return None
+            
         
         return self._sorted_media[ thumbnail_index ]
         

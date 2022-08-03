@@ -246,6 +246,8 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             summary = '{}, {}'.format( summary, s )
             
         
+        summary = 'presenting {}'.format( summary )
+        
         return summary
         
     

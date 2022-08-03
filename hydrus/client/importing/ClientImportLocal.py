@@ -15,6 +15,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
+from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
@@ -159,7 +160,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        file_seed.ImportPath( self._file_seed_cache, self._file_import_options, status_hook = status_hook )
+        file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, status_hook = status_hook )
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
@@ -387,18 +388,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
     SERIALISABLE_NAME = 'Import Folder'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
-    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, mimes = None, actions = None, action_locations = None, period = 3600, check_regularly = True, show_working_popup = True, publish_files_to_popup_button = True, publish_files_to_page = False ):
-        
-        if mimes is None:
-            
-            mimes = HC.ALLOWED_MIMES
-            
+    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, actions = None, action_locations = None, period = 3600, check_regularly = True, show_working_popup = True, publish_files_to_popup_button = True, publish_files_to_page = False ):
         
         if file_import_options is None:
             
-            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
+            file_import_options = FileImportOptions.FileImportOptions()
+            file_import_options.SetIsDefault( True )
             
         
         if tag_import_options is None:
@@ -429,7 +426,6 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
         self._path = path
-        self._mimes = mimes
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
         self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options
@@ -622,7 +618,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = list(self._actions.items())
         action_location_pairs = list(self._action_locations.items())
         
-        return ( self._path, list( self._mimes ), serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
+        return ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
     def _ImportFiles( self, job_key ):
@@ -670,7 +666,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             path = file_seed.file_seed_data
             
-            file_seed.ImportPath( self._file_seed_cache, self._file_import_options, limited_mimes = self._mimes )
+            file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
             
             if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                 
@@ -770,9 +766,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
-        
-        self._mimes = set( mimes )
+        ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
@@ -858,6 +852,21 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = old_serialisable_info
+            
+            file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+            
+            file_import_options.SetAllowedSpecificFiletypes( mimes )
+            
+            serialisable_file_import_options = file_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -972,7 +981,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._tag_service_keys_to_filename_tagging_options, self._actions, self._action_locations, self._period, self._check_regularly, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
+        return ( self._name, self._path, self._file_import_options, self._tag_import_options, self._tag_service_keys_to_filename_tagging_options, self._actions, self._action_locations, self._period, self._check_regularly, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
     def SetFileSeedCache( self, file_seed_cache ):
@@ -980,23 +989,22 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._file_seed_cache = file_seed_cache
         
     
-    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ):
+    def SetTuple( self, name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ):
         
         if path != self._path:
             
             self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
             
         
-        mimes = set( mimes )
+        mimes = set( file_import_options.GetAllowedSpecificFiletypes() )
         
-        if mimes != self._mimes:
+        if mimes != set( self._file_import_options.GetAllowedSpecificFiletypes() ):
             
             self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_VETOED, ) )
             
         
         self._name = name
         self._path = path
-        self._mimes = mimes
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
         self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options

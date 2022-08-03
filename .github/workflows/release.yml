@@ -250,6 +250,10 @@ jobs:
             find dist/client/ -type f -name "*.pyc" -delete
             while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
       -
+        name: Remove Surplus File
+        run: |
+          rm -f dist/client/libxkbcommon.so*
+      -
         name: Set Permissions
         run: |
             sudo chown --recursive 1000:1000 dist/client

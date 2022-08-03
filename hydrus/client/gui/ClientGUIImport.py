@@ -101,22 +101,30 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
 class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, file_import_options, show_downloader_options, update_callable = None ):
+    def __init__( self, parent, file_import_options, show_downloader_options, update_callable = None, allow_default_selection = True ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'file import options', self._EditOptions )
         
         self._file_import_options = file_import_options
         self._show_downloader_options = show_downloader_options
         self._update_callable = update_callable
+        self._allow_default_selection = allow_default_selection
         
         self._SetToolTip()
+        
+    
+    def _Copy( self ):
+        
+        json_string = self._file_import_options.DumpToString()
+        
+        HG.client_controller.pub( 'clipboard', 'text', json_string )
         
     
     def _EditOptions( self ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit file import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditFileImportOptions( dlg, self._file_import_options, self._show_downloader_options )
+            panel = ClientGUIScrolledPanelsEdit.EditFileImportOptions( dlg, self._file_import_options, self._show_downloader_options, self._allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -127,6 +135,49 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
                 self._SetValue( file_import_options )
                 
             
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            QW.QMessageBox.critical( self, 'Error', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            file_import_options = HydrusSerialisable.CreateFromString( raw_text )
+            
+            if not isinstance( file_import_options, FileImportOptions.FileImportOptions ):
+                
+                raise Exception( 'Not a File Import Options!' )
+                
+            
+        except Exception as e:
+            
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            
+            HydrusData.ShowException( e )
+            
+            return
+            
+        
+        self._SetValue( file_import_options )
+        
+    
+    def _SetDefault( self ):
+        
+        file_import_options = self._file_import_options.Duplicate()
+        
+        file_import_options.SetIsDefault( True )
+        
+        self._SetValue( file_import_options )
         
     
     def _SetToolTip( self ):
@@ -146,14 +197,54 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
     def GetValue( self ):
         
         return self._file_import_options
         
     
+    def mouseReleaseEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
+            
+            return
+            
+        
+        self.ShowMenu()
+        
+    
     def SetValue( self, file_import_options ):
         
         self._SetValue( file_import_options )
+        
+    
+    def ShowMenu( self ):
+        
+        menu = QW.QMenu()
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'copy to clipboard', 'Serialise this file import options and copy it to clipboard.', self._Copy )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'paste from clipboard', 'Try to import serialised file import options from the clipboard.', self._Paste )
+        
+        if not self._file_import_options.IsDefault():
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'set to default', 'Set this file import options to defer to the defaults.', self._SetDefault )
+            
+        
+        CGC.core().PopupMenu( self, menu )
         
     
 class FilenameTaggingOptionsPanel( QW.QWidget ):
@@ -990,7 +1081,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = self._import_folder.ToTuple()
+        ( name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = self._import_folder.ToTuple()
         
         self._folder_box = ClientGUICommon.StaticBox( self, 'folder options' )
         
@@ -1015,8 +1106,6 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._file_box = ClientGUICommon.StaticBox( self, 'file options' )
-        
-        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self._file_box, HC.ALLOWED_MIMES )
         
         def create_choice():
             
@@ -1082,8 +1171,6 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._publish_files_to_popup_button.setChecked( publish_files_to_popup_button )
         self._publish_files_to_page.setChecked( publish_files_to_page )
         
-        self._mimes.SetValue( mimes )
-        
         self._action_successful.SetValue( actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] )
         if CC.STATUS_SUCCESSFUL_AND_NEW in action_locations:
             
@@ -1135,12 +1222,6 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        rows = []
-        
-        rows.append( ( 'file types to import: ', self._mimes ) )
-        
-        mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
-        
         gridbox = QP.GridLayout( cols = 3 )
         
         gridbox.setColumnStretch( 1, 1 )
@@ -1161,7 +1242,6 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( gridbox, self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._file_box.Add( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1413,7 +1493,6 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = self._name.text()
         path = self._path.GetPath()
-        mimes = self._mimes.GetValue()
         file_import_options = self._file_import_options.GetValue()
         tag_import_options = self._tag_import_options.GetValue()
         
@@ -1457,7 +1536,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
         
-        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+        self._import_folder.SetTuple( name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
         
         return self._import_folder
         
@@ -2202,7 +2281,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._tag_import_options, self._show_downloader_options, allow_default_selection = self._allow_default_selection )
+            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._tag_import_options, self._show_downloader_options, self._allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -2237,19 +2316,25 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
                 raise Exception( 'Not a Tag Import Options!' )
                 
             
-            self._tag_import_options = tag_import_options
-            
         except Exception as e:
             
             QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
             HydrusData.ShowException( e )
             
+            return
+            
+        
+        self._SetValue( tag_import_options )
         
     
     def _SetDefault( self ):
         
-        self._tag_import_options.SetDefault()
+        tag_import_options = self._tag_import_options.Duplicate()
+        
+        tag_import_options.SetIsDefault( True )
+        
+        self._SetValue( tag_import_options )
         
     
     def _SetToolTip( self ):
@@ -2279,6 +2364,11 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
     
+    def GetValue( self ):
+        
+        return self._tag_import_options
+        
+    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -2289,6 +2379,16 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
         self.ShowMenu()
+        
+    
+    def SetNamespaces( self, namespaces ):
+        
+        self._namespaces = namespaces
+        
+    
+    def SetValue( self, tag_import_options ):
+        
+        self._SetValue( tag_import_options )
         
     
     def ShowMenu( self ):
@@ -2309,21 +2409,6 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
         CGC.core().PopupMenu( self, menu )
-        
-    
-    def GetValue( self ):
-        
-        return self._tag_import_options
-        
-    
-    def SetNamespaces( self, namespaces ):
-        
-        self._namespaces = namespaces
-        
-    
-    def SetValue( self, tag_import_options ):
-        
-        self._SetValue( tag_import_options )
         
     
 class WatcherReviewPanel( ClientGUICommon.StaticBox ):

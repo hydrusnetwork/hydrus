@@ -28,12 +28,13 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        
         self._pending_jobs = []
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
-        self._file_import_options = file_import_options
+        
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._formula_name = 'all files linked by images in page'
         self._gallery_paused = False
         self._files_paused = False
@@ -224,7 +225,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, tag_import_options )
             
         except HydrusExceptions.NetworkException as e:
             
@@ -829,7 +830,10 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
-        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         self._paused = False
         
@@ -989,7 +993,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             status_hook = lambda s: s # do nothing for now
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options )
             
             if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
                 

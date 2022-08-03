@@ -493,6 +493,20 @@ def LaunchFile( path, launch_path = None ):
     
 def MakeSureDirectoryExists( path ):
     
+    it_exists_already = os.path.exists( path )
+    
+    if it_exists_already:
+        
+        if os.path.isdir( path ):
+            
+            return
+            
+        else:
+            
+            raise Exception( 'Sorry, the desired directory "{}" already exists as a normal file!'.format( path ) )
+            
+        
+    
     os.makedirs( path, exist_ok = True )
     
 def safe_copy2( source, dest ):

@@ -108,6 +108,32 @@ SYSTEM_PREDICATE_TYPES = {
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
 
+def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+    
+    specific_mimes_to_process = set( specific_mimes )
+    
+    summary_mimes = set()
+    
+    for ( general_mime, mime_group ) in HC.general_mimetypes_to_mime_groups.items():
+        
+        if only_searchable:
+            
+            mime_group = set( mime_group )
+            mime_group.intersection_update( HC.SEARCHABLE_MIMES )
+            
+        
+        if specific_mimes_to_process.issuperset( mime_group ):
+            
+            summary_mimes.add( general_mime )
+            specific_mimes_to_process.difference_update( mime_group )
+            
+        
+    
+    summary_mimes.update( specific_mimes_to_process )
+    
+    return summary_mimes
+    
+
 def ConvertSubtagToSearchable( subtag ):
     
     if subtag == '':
@@ -125,6 +151,47 @@ def ConvertSubtagToSearchable( subtag ):
     
     return subtag
     
+
+def ConvertSummaryFiletypesToSpecific( summary_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+    
+    specific_mimes = set()
+    
+    for mime in summary_mimes:
+        
+        if mime in HC.GENERAL_FILETYPES:
+            
+            specific_mimes.update( HC.general_mimetypes_to_mime_groups[ mime ] )
+            
+        else:
+            
+            specific_mimes.add( mime )
+            
+        
+    
+    if only_searchable:
+        
+        specific_mimes.intersection_update( HC.SEARCHABLE_MIMES )
+        
+    
+    return specific_mimes
+    
+
+def ConvertSummaryFiletypesToString( summary_mimes: typing.Collection[ int ] ) -> str:
+    
+    if set( summary_mimes ) == HC.GENERAL_FILETYPES:
+        
+        mime_text = 'anything'
+        
+    else:
+        
+        summary_mimes = sorted( summary_mimes, key = lambda m: HC.mime_mimetype_string_lookup[ m ] )
+        
+        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in summary_mimes ] )
+        
+    
+    return mime_text
+    
+
 def ConvertTagToSearchable( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
@@ -442,11 +509,14 @@ class FileSystemPredicates( object ):
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
                 
-                mimes = value
+                summary_mimes = value
                 
-                if isinstance( mimes, int ): mimes = ( mimes, )
+                if isinstance( summary_mimes, int ):
+                    
+                    summary_mimes = ( summary_mimes, )
+                    
                 
-                self._common_info[ 'mimes' ] = mimes
+                self._common_info[ 'mimes' ] = ConvertSummaryFiletypesToSpecific( summary_mimes )
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
@@ -1446,7 +1516,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__(
         self,
@@ -1455,6 +1525,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         inclusive: bool = True,
         count = None
         ):
+        
+        if predicate_type == PREDICATE_TYPE_SYSTEM_MIME and value is not None:
+            
+            value = tuple( ConvertSpecificFiletypesToSummary( value ) )
+            
         
         if isinstance( value, ( list, set ) ):
             
@@ -1711,6 +1786,24 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
             
             return ( 4, new_serialisable_info )
+            
+        
+        if version == 4:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
+                
+                specific_mimes = serialisable_value
+                
+                summary_mimes = ConvertSpecificFiletypesToSummary( specific_mimes )
+                
+                serialisable_value = tuple( summary_mimes )
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 5, new_serialisable_info )
             
         
     
@@ -2406,36 +2499,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    mimes = self._value
+                    summary_mimes = self._value
                     
-                    if set( mimes ) == set( HC.SEARCHABLE_MIMES ):
-                        
-                        mime_text = 'anything'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.APPLICATIONS ) ):
-                        
-                        mime_text = 'application'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.AUDIO ) ):
-                        
-                        mime_text = 'audio'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.IMAGES ) ):
-                        
-                        mime_text = 'image'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.ANIMATIONS ) ):
-                        
-                        mime_text = 'animation'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.VIDEO ) ):
-                        
-                        mime_text = 'video'
-                        
-                    else:
-                        
-                        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in mimes ] )
-                        
+                    mime_text = ConvertSummaryFiletypesToString( summary_mimes )
                     
                     base += ' is ' + mime_text
                     

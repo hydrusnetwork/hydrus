@@ -1353,6 +1353,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
         self._subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'overwrite file import options', self.SetFileImportOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
         
         #
@@ -2821,6 +2822,39 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def SetFileImportOptions( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        file_import_options = subscriptions[0].GetFileImportOptions()
+        show_downloader_options = True
+        allow_default_selection = True
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditFileImportOptions( dlg, file_import_options, show_downloader_options, allow_default_selection )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                file_import_options = panel.GetValue()
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetFileImportOptions( file_import_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
     def SetTagImportOptions( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -2832,10 +2866,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = subscriptions[0].GetTagImportOptions()
         show_downloader_options = True
+        allow_default_selection = True
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection = True )
+            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             

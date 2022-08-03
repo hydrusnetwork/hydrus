@@ -1963,7 +1963,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._ShutdownManagers()
             
-            self.frame_splash_status.SetText( 'waiting for daemons to exit' )
+            self.frame_splash_status.SetText( 'waiting for workers to exit' )
             
             self._ShutdownDaemons()
             
@@ -1989,7 +1989,7 @@ class Controller( HydrusController.HydrusController ):
             
             try:
                 
-                self.frame_splash_status.SetText( 'waiting for twisted to exit' )
+                self.frame_splash_status.SetText( 'waiting for services to exit' )
                 
                 self.SetRunningTwistedServices( [] )
                 

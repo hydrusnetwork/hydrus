@@ -1647,9 +1647,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def do_it( login_script, domain, credentials, network_job_presentation_context_factory ):
             
+            login_result = 'login did not finish'
+            
             try:
-                
-                login_result = 'login did not finish'
                 
                 # a potential here is to properly inform the login manager of the domain map and hence read back the invalidation text
                 # but I am catching the info in the raised exception, so nbd really, I think

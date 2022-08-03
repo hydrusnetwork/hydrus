@@ -661,9 +661,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._is_default
         
     
-    def SetDefault( self ):
+    def SetIsDefault( self, value: bool ):
         
-        self._is_default = True
+        self._is_default = value
         
     
     def ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB( self ):

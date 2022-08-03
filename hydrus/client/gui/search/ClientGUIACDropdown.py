@@ -2215,6 +2215,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._SetLocationContext( self._file_search_context.GetLocationContext() )
         self._SetTagService( self._file_search_context.GetTagContext().service_key )
         
+        self._include_current_tags.SetOnOff( self._file_search_context.GetTagContext().include_current_tags )
+        self._include_pending_tags.SetOnOff( self._file_search_context.GetTagContext().include_pending_tags )
+        
         self._SignalNewSearchState()
         
     

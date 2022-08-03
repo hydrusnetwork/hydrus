@@ -1440,14 +1440,16 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        mimes = predicate.GetValue()
+        summary_mimes = predicate.GetValue()
         
-        if isinstance( mimes, int ):
+        if isinstance( summary_mimes, int ):
             
-            mimes = ( mimes, )
+            summary_mimes = ( summary_mimes, )
             
         
-        self._mimes.SetValue( mimes )
+        specific_mimes = ClientSearch.ConvertSummaryFiletypesToSpecific( summary_mimes )
+        
+        self._mimes.SetValue( specific_mimes )
         
         #
         
@@ -1463,16 +1465,16 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        mimes = tuple()
+        specific_mimes = tuple()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes )
         
     
     def GetPredicates( self ):
         
-        mimes = self._mimes.GetValue()
+        specific_mimes = self._mimes.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes ), )
         
         return predicates
         

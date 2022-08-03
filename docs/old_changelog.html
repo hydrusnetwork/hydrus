@@ -33,6 +33,40 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_494"><a href="#version_494">version 494</a></h3></li>
+				<ul>
+					<li>QT6:</li>
+					<li>thanks to a user's help, we are rolling out a Qt6 test build this week. we've been running Qt5 for a few years now. 6 is mostly a very large bugfix patch, and I am hopeful this update will relieve several legacy issues related to UI scale, colour support, draw flickering, and other unusual stuff. so far, it is working for me great. I'll be putting out joint 5 and 6 builds for 4-8 weeks, to iron out any big problems, and then I'll switch over to 6 releases exclusively. if you are an advanced user, please give it a go this or next week and let me know if you run into any traceback errors about deprecated method names or completely jank layout in the less used parts of the program</li>
+					<li>the actual changes you'll see are mostly style, just slightly different font spacing, things like that. if you have a system-baked Qt5 style that hydrus magically inherits, this will no longer work, you need to get a Qt6 version of the style (although I understand this is happening already for the popular styles, so you may already have them)</li>
+					<li>users on Windows 7 and similarly old OS versions are unable to run Qt6 programs, sorry!</li>
+					<li>I intend to keep the code 5-compatible, and users who run from source can choose whichever version of Qt they prefer, as here in the help: https://hydrusnetwork.github.io/hydrus/running_from_source.html#qt</li>
+					<li>the linux Qt6 build also goes up from ubuntu 18.04 to 20.04. let me know if you have any trouble, but it feels like it is time to update this too</li>
+					<li>.</li>
+					<li>file import options overhaul:</li>
+					<li>I wanted to do note parsing this week, but when I reviewed the whole job, there wasn't enough time to do it properly. so, in prep for a cleaner introduction of 'note import options' next week, I am overhauling how the other import options do some stuff</li>
+					<li>all file import options now support filetype filtering! it uses the same control as system:filetype or in import folders, but with some improved logic. on update, existing import folder filetype settings will be copied down to the file import options</li>
+					<li>file import options now work on a similar 'default' system as tag import options. existing file import options will stay as-is, but new ones will begin in a 'use the default settings at time of import' state. those defaults are editable under _options->importing_. for now I am not adding a 'use this file import options default for this web domain' system, but it might happen in future. let's see how this all shakes out first</li>
+					<li>the file import options button now has a right-click menu like the tag import options button</li>
+					<li>the manage subscriptions panel now has a 'overwrite file import options' button to mass-set FIO</li>
+					<li>cleaned up a bunch of old file import and import options code</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>system:filetype now remembers meta filetypes better. if you select 'all video', it will now still select all video even if hydev adds support for a new video type in future. also if you select 'video + animations', it'll say that rather than listing out every possible specific-type</li>
+					<li>fixed an issue where loading a favourite search wasn't always setting 'include current/pending' values on the buttons correct</li>
+					<li>fixed up a status display in the gallery downloader and watcher pages--if you pause an importer while it is doing work, it now says 'pausing...' as its status until any current jobs are finished. it was giving empty text before, as if it were finished already</li>
+					<li>fixed some unusual behaviour with downloader highlighting where the first query pended to an empty page was secretly highlighted for the next session load, and fixed the 'subscription gap downloader' also doing this and not obeying the normal 'highlight new downloaders if nothing already highlighted' option</li>
+					<li>improved the error when the 'make sure this directory exists' function runs into a file with that pathname</li>
+					<li>fixed a rare selection position error, maybe Qt6 only, when clicking in the thumbnail grid as it is loading</li>
+					<li>.</li>
+					<li>boring Qt6 code cleanup:</li>
+					<li>as a side thing, I set up quick-launch environments for QtPy5, QtPy6, PySide2, and PySide6 in my IDE this week, so I can now test all these situations and jump back in time no problem in future</li>
+					<li>integrated a user's patch to bring us up to Qt6 compatibility and did a little more work to get it backwards compatible with older qtpy and Qt5</li>
+					<li>refactored the critical Qt boot setup and monkeypatching from QtPorting to a new QtInit module</li>
+					<li>migrated the hydrus code for keyboardModifiers, event-pos, and globalPos all to the Qt6 equivalents so the monkeypatching is always going to be on older versions looking forward</li>
+					<li>fiddled with QPoint and QPointF conversions a little so I _think_ Qt5 and Qt6 is always talking about the same type</li>
+					<li>updated build scripts and requirements.txts for the new situation</li>
+					<li>updated the help a bit for the new situation</li>
+				</ul>
 				<li><h3 id="version_493"><a href="#version_493">version 493</a></h3></li>
 				<ul>
 					<li>EXIF:</li>

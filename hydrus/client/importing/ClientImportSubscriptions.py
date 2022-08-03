@@ -61,7 +61,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._paused = False
         
-        self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._no_work_until = 0
@@ -412,7 +414,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             message += os.linesep * 2
                             message += login_reason
                             message += os.linesep * 2
-                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
                             
@@ -973,7 +975,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             message += os.linesep * 2
                             message += login_reason
                             message += os.linesep * 2
-                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
                             
@@ -1011,7 +1013,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
                         
                     
-                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
+                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET, self._tag_import_options )
                     
                     query_tag_import_options = query_header.GetTagImportOptions()
                     
@@ -1272,6 +1274,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return self._checker_options
         
     
+    def GetFileImportOptions( self ):
+        
+        return self._file_import_options
+        
+    
     def GetGUGKeyAndName( self ):
         
         return self._gug_key_and_name
@@ -1491,6 +1498,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate on next run' )
                 
             
+        
+    
+    def SetFileImportOptions( self, file_import_options ):
+        
+        self._file_import_options = file_import_options.Duplicate()
         
     
     def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ):
