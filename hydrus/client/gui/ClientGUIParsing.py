@@ -1805,6 +1805,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         types_to_str[ HC.CONTENT_TYPE_URLS ] = 'urls'
         types_to_str[ HC.CONTENT_TYPE_MAPPINGS ] = 'tags'
+        types_to_str[ HC.CONTENT_TYPE_NOTES ] = 'notes'
         types_to_str[ HC.CONTENT_TYPE_HASH ] = 'file hash'
         types_to_str[ HC.CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
         types_to_str[ HC.CONTENT_TYPE_TITLE ] = 'watcher title'
@@ -1818,6 +1819,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_type.currentIndexChanged.connect( self.EventContentTypeChange )
         
+        #
+        
         self._urls_panel = QW.QWidget( self._content_panel )
         
         self._url_type = ClientGUICommon.BetterChoice( self._urls_panel )
@@ -1830,9 +1833,19 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._file_priority = ClientGUICommon.BetterSpinBox( self._urls_panel, min=0, max=100 )
         self._file_priority.setValue( 50 )
         
+        #
+        
         self._mappings_panel = QW.QWidget( self._content_panel )
         
         self._namespace = QW.QLineEdit( self._mappings_panel )
+        
+        #
+        
+        self._notes_panel = QW.QWidget( self._content_panel )
+        
+        self._note_name = QW.QLineEdit( self._notes_panel )
+        
+        #
         
         self._hash_panel = QW.QWidget( self._content_panel )
         
@@ -1850,25 +1863,35 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             self._hash_encoding.addItem( hash_encoding, hash_encoding )
             
         
+        #
+        
         self._timestamp_panel = QW.QWidget( self._content_panel )
         
         self._timestamp_type = ClientGUICommon.BetterChoice( self._timestamp_panel )
         
         self._timestamp_type.addItem( 'source time', HC.TIMESTAMP_TYPE_SOURCE )
         
+        #
+        
         self._title_panel = QW.QWidget( self._content_panel )
         
         self._title_priority = ClientGUICommon.BetterSpinBox( self._title_panel, min=0, max=100 )
         self._title_priority.setValue( 50 )
+        
+        #
         
         self._veto_panel = QW.QWidget( self._content_panel )
         
         self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self._veto_panel, ClientStrings.StringMatch() )
         
+        #
+        
         self._temp_variable_panel = QW.QWidget( self._content_panel )
         
         self._temp_variable_name = QW.QLineEdit( self._temp_variable_panel )
+        
+        #
         
         ( name, content_type, formula, additional_info ) = content_parser.ToTuple()
         
@@ -1892,6 +1915,12 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             namespace = additional_info
             
             self._namespace.setText( namespace )
+            
+        elif content_type == HC.CONTENT_TYPE_NOTES:
+            
+            note_name = additional_info
+            
+            self._note_name.setText( note_name )
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
@@ -1946,6 +1975,29 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self._mappings_panel, rows )
         
         self._mappings_panel.setLayout( gridbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'note name: ', self._note_name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._notes_panel, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'Try to make sure you will only ever parse one text result here. A single content parser with a single note name producing eleven different note texts is going to be conflict hell for the user at the end.'
+        label += os.linesep * 2
+        label += 'Also this is prototype, it does not do anything yet!'
+        
+        st = ClientGUICommon.BetterStaticText( self._notes_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._notes_panel.setLayout( vbox )
         
         #
         
@@ -2018,6 +2070,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._notes_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._hash_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._timestamp_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2065,6 +2118,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._urls_panel.setVisible( False )
         self._mappings_panel.setVisible( False )
+        self._notes_panel.setVisible( False )
         self._hash_panel.setVisible( False )
         self._timestamp_panel.setVisible( False )
         self._title_panel.setVisible( False )
@@ -2078,6 +2132,10 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         elif choice == HC.CONTENT_TYPE_MAPPINGS:
             
             self._mappings_panel.show()
+            
+        elif choice == HC.CONTENT_TYPE_NOTES:
+            
+            self._notes_panel.show()
             
         elif choice == HC.CONTENT_TYPE_HASH:
             
@@ -2121,6 +2179,17 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             namespace = self._namespace.text()
             
             additional_info = namespace
+            
+        elif content_type == HC.CONTENT_TYPE_NOTES:
+            
+            note_name = self._note_name.text()
+            
+            if note_name == '':
+                
+                note_name = 'note'
+                
+            
+            additional_info = note_name
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
@@ -2925,7 +2994,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
+        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
         
         self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestDataForChild, permitted_content_types )
         

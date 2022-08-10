@@ -224,20 +224,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
         
     
-    def _SetupFileImportOptions( self, given_file_import_options: FileImportOptions.FileImportOptions, loud_or_quiet: int ) -> FileImportOptions.FileImportOptions:
-        
-        if given_file_import_options.IsDefault():
-            
-            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( loud_or_quiet )
-            
-        else:
-            
-            file_import_options = given_file_import_options
-            
-        
-        return file_import_options
-        
-    
     def _SetupTagImportOptions( self, given_tag_import_options: TagImportOptions.TagImportOptions ) -> TagImportOptions.TagImportOptions:
         
         if given_tag_import_options.IsDefault():
@@ -410,7 +396,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def DownloadAndImportRawFile( self, file_url: str, file_import_options, loud_or_quiet: int, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, forced_referral_url = None, file_seed_cache = None ):
         
-        file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
+        file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, loud_or_quiet )
         
         self.AddPrimaryURLs( ( file_url, ) )
         
@@ -828,7 +814,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
+            file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, loud_or_quiet )
             
             if self.file_seed_type != FILE_SEED_TYPE_HDD:
                 
@@ -1150,7 +1136,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
                 
             
-            file_import_options = self._SetupFileImportOptions( file_import_options, loud_or_quiet )
+            file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, loud_or_quiet )
             tag_import_options = self._SetupTagImportOptions( tag_import_options )
             
             status_hook( 'checking url status' )

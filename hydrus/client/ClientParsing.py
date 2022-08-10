@@ -30,6 +30,7 @@ except ImportError:
     
     HTML5LIB_IS_OK = False
     
+
 try:
     
     import lxml
@@ -40,6 +41,7 @@ except ImportError:
     
     LXML_IS_OK = False
     
+
 def ConvertParseResultToPrettyString( result ):
     
     ( ( name, content_type, additional_info ), parsed_text ) = result
@@ -77,6 +79,12 @@ def ConvertParseResultToPrettyString( result ):
             
         
         return 'tag: ' + tag
+        
+    elif content_type == HC.CONTENT_TYPE_NOTES:
+        
+        note_name = additional_info
+        
+        return 'note "{}": {}'.format( note_name, parsed_text )
         
     elif content_type == HC.CONTENT_TYPE_HASH:
         
@@ -134,6 +142,7 @@ def ConvertParseResultToPrettyString( result ):
     
     raise NotImplementedError()
     
+
 def ConvertParsableContentToPrettyString( parsable_content, include_veto = False ):
     
     try:
@@ -178,6 +187,14 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                     
                 
                 pretty_strings.append( 'tags: ' + ', '.join( namespaces ) )
+                
+            elif content_type == HC.CONTENT_TYPE_NOTES:
+                
+                note_names = sorted( additional_infos )
+                
+                s = 'notes: {}'.format( ', '.join( note_names ) )
+                
+                pretty_strings.append( s )
                 
             elif content_type == HC.CONTENT_TYPE_HASH:
                 
@@ -228,6 +245,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         return ', '.join( pretty_strings )
         
     
+
 def GetChildrenContent( job_key, children, parsing_text, referral_url ):
     
     content = []
@@ -255,6 +273,7 @@ def GetChildrenContent( job_key, children, parsing_text, referral_url ):
     
     return content
     
+
 def GetHashFromParsedText( hash_encoding, parsed_text ) -> bytes:
     
     encodings_to_attempt = []
@@ -296,6 +315,7 @@ def GetHashFromParsedText( hash_encoding, parsed_text ) -> bytes:
     
     raise Exception( 'Could not decode hash: {}'.format( main_error_text ) )
     
+
 def GetHashesFromParseResults( results ):
     
     hash_results = []
@@ -321,6 +341,7 @@ def GetHashesFromParseResults( results ):
     
     return hash_results
     
+
 def GetHTMLTagString( tag: bs4.Tag ):
     
     # don't mess about with tag.string, tag.strings or tag.get_text
@@ -339,6 +360,7 @@ def GetHTMLTagString( tag: bs4.Tag ):
     
     return ''.join( all_strings )
     
+
 def GetNamespacesFromParsableContent( parsable_content ):
     
     content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( content_type, additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
@@ -347,6 +369,24 @@ def GetNamespacesFromParsableContent( parsable_content ):
     
     return namespaces
     
+
+def GetNotesFromParseResults( results ):
+    
+    note_results = []
+    
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
+        
+        if content_type == HC.CONTENT_TYPE_NOTES:
+            
+            note_name = additional_info
+            
+            note_results.append( ( note_name, parsed_text ) )
+            
+        
+    
+    return note_results
+    
+
 def GetSoup( html ):
     
     if HTML5LIB_IS_OK:
@@ -373,6 +413,7 @@ def GetSoup( html ):
         return bs4.BeautifulSoup( html, parser )
         
     
+
 def GetTagsFromParseResults( results ):
     
     tag_results = []
@@ -389,6 +430,7 @@ def GetTagsFromParseResults( results ):
     
     return tag_results
     
+
 def GetTimestampFromParseResults( results, desired_timestamp_type ):
     
     timestamp_results = []
@@ -429,6 +471,7 @@ def GetTimestampFromParseResults( results, desired_timestamp_type ):
         return min( timestamp_results )
         
     
+
 def GetTitleFromAllParseResults( all_parse_results ):
     
     titles = []
@@ -459,6 +502,7 @@ def GetTitleFromAllParseResults( all_parse_results ):
         return None
         
     
+
 def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority = False ):
     
     url_results = collections.defaultdict( list )
@@ -511,6 +555,7 @@ def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority =
     
     return url_list
     
+
 def GetVariableFromParseResults( results ):
     
     timestamp_results = []
@@ -527,6 +572,7 @@ def GetVariableFromParseResults( results ):
     
     return None
     
+
 def MakeParsedTextPretty( parsed_text ):
     
     if isinstance( parsed_text, bytes ):
@@ -536,6 +582,7 @@ def MakeParsedTextPretty( parsed_text ):
     
     return parsed_text
     
+
 def ParseResultsHavePursuableURLs( results ):
     
     for ( ( name, content_type, additional_info ), parsed_text ) in results:
@@ -553,6 +600,7 @@ def ParseResultsHavePursuableURLs( results ):
     
     return False
     
+
 def RenderJSONParseRule( rule ):
     
     ( parse_rule_type, parse_rule ) = rule
@@ -574,6 +622,7 @@ def RenderJSONParseRule( rule ):
     
     return s
     
+
 class ParsingTestData( object ):
     
     def __init__( self, parsing_context, texts ):
@@ -592,6 +641,7 @@ class ParsingTestData( object ):
         return True in ( HydrusText.LooksLikeJSON( text ) for text in self.texts )
         
     
+
 class ParseFormula( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, string_processor = None ):
@@ -665,6 +715,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
+
 class ParseFormulaCompound( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND

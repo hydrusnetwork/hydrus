@@ -192,6 +192,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
         
+        self._dictionary[ 'booleans' ][ 'confirm_multiple_local_file_services_move' ] = True
+        self._dictionary[ 'booleans' ][ 'confirm_multiple_local_file_services_copy' ] = True
+        
         self._dictionary[ 'booleans' ][ 'use_advanced_file_deletion_dialog' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_new_on_file_seed_short_summary' ] = False

@@ -1,23 +1,23 @@
 import os
 
-# If not explicitly set, prefer PySide instead of PyQt5, which is the qtpy default
+# If not explicitly set, prefer PySide instead of PyQt, which is the qtpy default
 # It is critical that this runs on startup *before* anything is imported from qtpy.
 
 if 'QT_API' not in os.environ:
     
     try:
         
-        import PySide2 # Qt5
+        import PySide6 # Qt6
         
-        os.environ[ 'QT_API' ] = 'pyside2'
+        os.environ[ 'QT_API' ] = 'pyside6'
         
     except ImportError as e:
         
         try:
             
-            import PySide6 # Qt6
+            import PySide2 # Qt5
             
-            os.environ[ 'QT_API' ] = 'pyside6'
+            os.environ[ 'QT_API' ] = 'pyside2'
             
         except ImportError as e:
             

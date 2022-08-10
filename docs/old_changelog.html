@@ -33,6 +33,43 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_495"><a href="#version_495">version 495</a></h3></li>
+				<ul>
+					<li>Qt6:</li>
+					<li>if available, Qt6 is now the default. specifically, if the QT_API environment variable is not set, the default is now PySide6, and if that is not available, then PySide2 (Qt5). previously, the opposite was true</li>
+					<li>fixed a bug in last week's File Import Options default update with the new 'default' FIOs always showing 'new' files on a gallery/watcher highlight. the Presentation Import Options and the check to see if the pending local file domains actually exist now correctly look up the 'default' FIOs</li>
+					<li>Qt6 has much better UI scaling support than Qt5 for zooms other than 100%/200%. many Windows users are at 125%/150%, which revealed some pretty ugly thumbnails and thumb banner text in Qt6. thank you for the reports. I did my homework and read up on how this is _supposed_ to work and I have hacked pretty thumbnails at unusual UI scales. it also redraws itself correctly when I move from a 100% screen to a different one at 125%; let me know how you get on. I'm quite pleased</li>
+					<li>the media viewer is still slightly borked at >100%. the fix will be slightly different, but I have a plan and hope to have it sorted for next week.</li>
+					<li>fixed setting a mouse scroll wheel shortcut in shortcut options in Qt6</li>
+					<li>as a reminder, as far as I know, Windows 7 cannot run Qt6. I will be dropping the Qt5 build in a few weeks, so if you are a Windows 7 user, have a think on what you want to do--either stop updating, move hydrus to a newer OS, or run from source on Win 7/Qt5</li>
+					<li>.</li>
+					<li>note import options and note parsing:</li>
+					<li>note parsing is ready in parts. I am rolling them out for feedback from advanced users and hope to link it all up into a working system next week!</li>
+					<li>the different 'x import options', previously file and tag import options, and this week adding 'note import options', are now edited through one combined button and dialog. this 'import options' button dynamically adjusts to deal with how many types of import options the importer has and will relabel and tooltip and right-click-menu itself appropriately</li>
+					<li>this new button and multi-edit-panel show '(is default)' status in menus and tabs for quick referral</li>
+					<li>if you want to play with note import options, check out the new EXPERIMENTAL menu option under _network->downloader components_. read the help and tooltips and let me know if I have missed anything simple, obvious, and important</li>
+					<li>I have no default system for Note Import Options set up yet, so I have not added it for real. I will do something domain-based, similar to Tag Import Options.</li>
+					<li>I did however write simple note parsing support. any Content Parser can now have a 'note' parsing type, with a note name. downloader creators, please feel free to play with this, although it isn't complicated and isn't plugged in yet. I think we should review what sites have parseable notes and plan for that rather than start implementing for real just yet. the main limitation is that the parsing system can't do multi-line results yet</li>
+					<li>I'd like to see if I can get NIO defaults going next week, and this should suddenly all lock into place. multi-line parsing may be easy or a massive pain, I'm not sure yet</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>added two new checkboxes to _options->files and trash_ to turn off the yes/no confirmation when you copy/move file across multiple local file services</li>
+					<li>the 'overwrite this session?' confirmation dialog now says the session name you are overwriting</li>
+					<li>fixed a bug where thumbnails were not immediately updating their banner text on changes to the summary generator objects in _options->tag presentation_</li>
+					<li>moved the 'focus thumbnail in preview window' checkboxes from 'gui pages' options page to 'thumbnails'</li>
+					<li>updated the text and enabled status of the 'BUGFIX: discord DnD' stuff in _options->gui_</li>
+					<li>updated the job description texts in the file maintenance dialog, improving formatting and clarifying what happens in each missing/incorrect job, and what 'remove record' means precisely (it leaves no deletion record)</li>
+					<li>fixed a bug from last week when trying to edit your default tag import options</li>
+					<li>.</li>
+					<li>boring note import options cleanup and refactoring:</li>
+					<li>moved ClientGUIImport code up to a new hydrus.client.gui.importing module, refactored it into multiple files, and merged in some other edit panels for various import gui</li>
+					<li>merged the file/tag import options buttons into one cleverer and cleaner class. changed its update callables into nicer Qt signals. wrote a new tabbed edit panel for it to work with, and replaced all old import option buttons across the program with the new system</li>
+					<li>fixed an issue where the 'import options' buttons (now merged) would allow you to set them as 'default' through the right-click menu even when the button was set to not allow defaults (this state occurs in the options dialog, when you _set_ what the defaults are)</li>
+					<li>fixed the same when you try to paste default options into the button</li>
+					<li>brushed up and completed the note import options object</li>
+					<li>wrote a 'edit note import options' panel</li>
+					<li>fixed a small thing where the 'string-to-string' list widget wasn't setting the custom 'value' column header name correctly</li>
+				</ul>
 				<li><h3 id="version_494"><a href="#version_494">version 494</a></h3></li>
 				<ul>
 					<li>QT6:</li>

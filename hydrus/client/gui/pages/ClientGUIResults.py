@@ -2637,6 +2637,8 @@ class MediaPanelThumbnails( MediaPanel ):
         self._thumbnails_being_faded_in = {}
         self._hashes_faded = set()
         
+        self._last_device_pixel_ratio = self.devicePixelRatio()
+        
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
@@ -2698,7 +2700,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( HG.client_controller.bitmap_manager.GetQtImage( my_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
+        dpr = self.devicePixelRatio()
+        
+        canvas_width = int( my_width * dpr )
+        canvas_height = int( self._num_rows_per_canvas_page * thumbnail_span_height * dpr )
+        
+        canvas_page = HG.client_controller.bitmap_manager.GetQtImage( canvas_width, canvas_height, 32 )
+        
+        canvas_page.setDevicePixelRatio( dpr )
+        
+        self._dirty_canvas_pages.append( canvas_page )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -2799,7 +2810,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
-                painter.drawImage( x, y, thumbnail.GetQtImage() )
+                painter.drawImage( x, y, thumbnail.GetQtImage( self.devicePixelRatio() ) )
                 
             else:
                 
@@ -2860,7 +2871,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._StopFading( hash )
             
-            bmp = thumbnail.GetQtImage()
+            bmp = thumbnail.GetQtImage( self.devicePixelRatio() )
             
             alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
             
@@ -3495,6 +3506,14 @@ class MediaPanelThumbnails( MediaPanel ):
         
         def paintEvent( self, event ):
             
+            if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
+                
+                self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
+                
+                self._parent._DirtyAllPages()
+                self._parent._DeleteAllDirtyPages()
+                
+            
             painter = QG.QPainter( self )
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
@@ -3670,6 +3689,11 @@ class MediaPanelThumbnails( MediaPanel ):
             m.RecalcInternals()
             
         
+        for thumbnail in self._sorted_media:
+            
+            thumbnail.ClearTagSummaryCaches()
+            
+        
         self.widget().update()
         
     
@@ -3690,10 +3714,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         def ctrl_space_callback( self ):
-
+            
             if self._focused_media is not None:
                 
                 self._HitMedia( self._focused_media, True, False )
+                
+            
         
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Home, self._ScrollHome, False )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
@@ -4844,7 +4870,21 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def GetQtImage( self ):
+    def ClearTagSummaryCaches( self ):
+        
+        self._last_tags = None
+        
+        self._last_upper_summary = None
+        self._last_lower_summary = None
+        
+    
+    def GetQtImage( self, device_pixel_ratio ):
+        
+        # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
+        # or just give the qt_image to be drawn to?
+        # or just give a painter and a rect and draw to that or something
+        # we don't really want to mess around with DPR here, we just want to draw thumbs
+        # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
         
         thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
@@ -4852,13 +4892,25 @@ class Thumbnail( Selectable ):
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
-        qt_image = HG.client_controller.bitmap_manager.GetQtImage( width, height, 24 )
+        qt_image_width = int( width * device_pixel_ratio )
+        
+        qt_image_height = int( height * device_pixel_ratio )
+        
+        qt_image = HG.client_controller.bitmap_manager.GetQtImage( qt_image_width, qt_image_height, 24 )
+        
+        qt_image.setDevicePixelRatio( device_pixel_ratio )
         
         inbox = self.HasInbox()
         
         local = self.GetLocationsManager().IsLocal()
         
         painter = QG.QPainter( qt_image )
+        
+        if device_pixel_ratio > 1.0:
+            
+            painter.setRenderHint( QG.QPainter.Antialiasing, True )
+            painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True )
+            
         
         new_options = HG.client_controller.new_options
         

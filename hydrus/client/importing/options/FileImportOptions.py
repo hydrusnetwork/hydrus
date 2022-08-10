@@ -4,6 +4,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -13,6 +14,23 @@ from hydrus.client.importing.options import PresentationImportOptions
 
 IMPORT_TYPE_QUIET = 0
 IMPORT_TYPE_LOUD = 1
+
+def GetRealFileImportOptions( file_import_options: "FileImportOptions", loud_or_quiet: int ) -> "FileImportOptions":
+    
+    if file_import_options.IsDefault():
+        
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( loud_or_quiet )
+        
+    
+    return file_import_options
+    
+
+def GetRealPresentationImportOptions( file_import_options: "FileImportOptions", loud_or_quiet: int ) -> PresentationImportOptions.PresentationImportOptions:
+    
+    real_file_import_options = GetRealFileImportOptions( file_import_options, loud_or_quiet )
+    
+    return real_file_import_options.GetPresentationImportOptions()
+    
 
 class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -339,7 +357,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._import_destination_location_context
         
     
-    def GetPresentationImportOptions( self ):
+    def GetPresentationImportOptions( self ) -> PresentationImportOptions.PresentationImportOptions:
         
         return self._presentation_import_options
         

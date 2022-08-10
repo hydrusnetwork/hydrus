@@ -1096,9 +1096,12 @@ def ScrollAreaVisibleRect( scroll_area ):
     
     return rect
     
-def AdjustOpacity( image, opacity_factor ):
+
+def AdjustOpacity( image: QG.QImage, opacity_factor ):
     
     new_image = QG.QImage( image.width(), image.height(), QG.QImage.Format_RGBA8888 )
+    
+    new_image.setDevicePixelRatio( image.devicePixelRatio() )
     
     new_image.fill( QC.Qt.transparent )
     
@@ -1109,6 +1112,7 @@ def AdjustOpacity( image, opacity_factor ):
     painter.drawImage( 0, 0, image )
     
     return new_image
+    
 
 def ToKeySequence( modifiers, key ):
     
@@ -1134,7 +1138,7 @@ def ToKeySequence( modifiers, key ):
         
     else:
         
-        return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) )
+        return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) ) # pylint: disable=E1101
         
     
 
@@ -1404,6 +1408,21 @@ def SetMinClientSize( widget, size ):
     if size.width() >= 0: widget.setMinimumWidth( size.width() )
     if size.height() >= 0: widget.setMinimumHeight( size.height() )
 
+def WheelEventIsSynthesised( event: QG.QWheelEvent ):
+    
+    if QtInit.WE_ARE_QT5:
+    
+        return event.source() == QC.Qt.MouseEventSynthesizedBySystem
+        
+    elif QtInit.WE_ARE_QT6:
+        
+        return event.pointerType() != QG.QPointingDevice.PointerType.Generic
+        
+    else:
+        
+        return False
+        
+    
 
 class StatusBar( QW.QStatusBar ):
     

@@ -25,7 +25,6 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
@@ -35,6 +34,8 @@ from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -938,6 +939,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._confirm_trash = QW.QCheckBox( self )
             self._confirm_archive = QW.QCheckBox( self )
             
+            self._confirm_multiple_local_file_services_copy = QW.QCheckBox( self )
+            self._confirm_multiple_local_file_services_move = QW.QCheckBox( self )
+            
             self._remove_filtered_files = QW.QCheckBox( self )
             self._remove_trashed_files = QW.QCheckBox( self )
             
@@ -981,6 +985,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._confirm_archive.setChecked( HC.options[ 'confirm_archive' ] )
             
+            self._confirm_multiple_local_file_services_copy.setChecked( self._new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' ) )
+            self._confirm_multiple_local_file_services_move.setChecked( self._new_options.GetBoolean( 'confirm_multiple_local_file_services_move' ) )
+            
             self._remove_filtered_files.setChecked( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.setChecked( HC.options[ 'remove_trashed_files' ] )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
@@ -1013,6 +1020,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When copying file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
+            rows.append( ( 'Confirm when copying files across local file services: ', self._confirm_multiple_local_file_services_copy ) )
+            rows.append( ( 'Confirm when moving files across local file services: ', self._confirm_multiple_local_file_services_move ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
@@ -1104,6 +1113,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.isChecked()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetBoolean( 'confirm_multiple_local_file_services_copy', self._confirm_multiple_local_file_services_copy.isChecked() )
+            self._new_options.SetBoolean( 'confirm_multiple_local_file_services_move', self._confirm_multiple_local_file_services_move.isChecked() )
             
             self._new_options.SetBoolean( 'delete_lock_for_archived_files', self._delete_lock_for_archived_files.isChecked() )
             
@@ -1217,10 +1229,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._human_bytes_sig_figs.setToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.')
             
             self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
-            self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
+            self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for Discord support. It also lets you set custom filenames for drag and drop exports.' )
             
             self._discord_dnd_filename_pattern = QW.QLineEdit( self._misc_panel )
-            self._discord_dnd_filename_pattern.setToolTip( 'When discord DnD is enabled, this will use this export phrase to rename your files. If no filename can be generated, hash will be used instead.' )
+            self._discord_dnd_filename_pattern.setToolTip( 'When the above is enabled, this export phrase will rename your files. If no filename can be generated, hash will be used instead.' )
             
             self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
             self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
@@ -1258,6 +1270,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
             
+            self._export_pattern_button = ClientGUICommon.ExportPatternButton( self )
+            
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
             
             self._do_macos_debug_dialog_menus.setChecked( self._new_options.GetBoolean( 'do_macos_debug_dialog_menus' ) )
@@ -1288,9 +1302,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
-            rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
-            rows.append( ( 'Discord drag-and-drop filename pattern: ', self._discord_dnd_filename_pattern ) )
-            rows.append( ( 'Export pattern shortcuts: ', ClientGUICommon.ExportPatternButton( self ) ) )
+            rows.append( ( 'Copy temp files for drag-and-drop (works for <=25, <200MB file DnDs--fixes Discord!): ', self._discord_dnd_fix ) )
+            rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
+            rows.append( ( '', self._export_pattern_button ) )
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
@@ -1316,6 +1330,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self.setLayout( vbox )
             
+            self._discord_dnd_fix.clicked.connect( self._UpdateDnDFilenameEnabled )
+            
+            self._UpdateDnDFilenameEnabled()
+            
         
         def _GetPrettyFrameLocationInfo( self, listctrl_list ):
             
@@ -1327,6 +1345,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             return pretty_listctrl_list
+            
+        
+        def _UpdateDnDFilenameEnabled( self ):
+            
+            enabled = self._discord_dnd_fix.isChecked()
+            
+            self._discord_dnd_filename_pattern.setEnabled( enabled )
+            self._export_pattern_button.setEnabled( enabled )
             
         
         def EditFrameLocations( self ):
@@ -1466,11 +1492,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._hide_preview = QW.QCheckBox( self._controls_panel )
             
-            self._focus_preview_on_ctrl_click = QW.QCheckBox( self._controls_panel )
-            self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self._controls_panel )
-            self._focus_preview_on_shift_click = QW.QCheckBox( self._controls_panel )
-            self._focus_preview_on_shift_click_only_static = QW.QCheckBox( self._controls_panel )
-            
             #
             
             gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
@@ -1525,11 +1546,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
             
             self._hide_preview.setChecked( HC.options[ 'hide_preview' ] )
-            
-            self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
-            self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
-            self._focus_preview_on_shift_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click' ) )
-            self._focus_preview_on_shift_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ) )
             
             #
             
@@ -1587,11 +1603,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'When switching to a page, focus its text input field (if any): ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Hide the bottom-left preview window: ', self._hide_preview ) )
-            rows.append( ( 'Focus thumbnails in the preview window on ctrl-click: ', self._focus_preview_on_ctrl_click ) )
-            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
-            rows.append( ( 'Focus thumbnails in the preview window on shift-click: ', self._focus_preview_on_shift_click ) )
-            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
-            
             gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
             
             self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -1604,28 +1615,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
-            
-            self._UpdatePreviewCheckboxes()
-            
-            self._hide_preview.clicked.connect( self._UpdatePreviewCheckboxes )
-            self._focus_preview_on_ctrl_click.clicked.connect( self._UpdatePreviewCheckboxes )
-            self._focus_preview_on_shift_click.clicked.connect( self._UpdatePreviewCheckboxes )
-            
-        
-        def _UpdatePreviewCheckboxes( self ):
-            
-            preview_ok = not self._hide_preview.isChecked()
-            
-            self._focus_preview_on_ctrl_click.setEnabled( preview_ok )
-            self._focus_preview_on_ctrl_click_only_static.setEnabled( preview_ok )
-            self._focus_preview_on_shift_click.setEnabled( preview_ok )
-            self._focus_preview_on_shift_click_only_static.setEnabled( preview_ok )
-            
-            if preview_ok:
-                
-                self._focus_preview_on_ctrl_click_only_static.setEnabled( self._focus_preview_on_ctrl_click.isChecked() )
-                self._focus_preview_on_shift_click_only_static.setEnabled( self._focus_preview_on_shift_click.isChecked() )
-                
             
         
         def UpdateOptions( self ):
@@ -1661,11 +1650,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
             
-            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click', self._focus_preview_on_ctrl_click.isChecked() )
-            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click_only_static', self._focus_preview_on_ctrl_click_only_static.isChecked() )
-            self._new_options.SetBoolean( 'focus_preview_on_shift_click', self._focus_preview_on_shift_click.isChecked() )
-            self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
-            
         
     
     class _ImportingPanel( QW.QWidget ):
@@ -1684,11 +1668,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
             
-            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options, allow_default_selection = False )
+            show_downloader_options = True
+            allow_default_selection = False
+            
+            self._quiet_fios = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+            
+            self._quiet_fios.SetFileImportOptions( quiet_file_import_options )
             
             loud_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
             
-            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options, allow_default_selection = False )
+            self._loud_fios = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+            
+            self._loud_fios.SetFileImportOptions( loud_file_import_options )
             
             #
             
@@ -1713,8 +1704,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET, self._quiet_fios.GetValue() )
-            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD, self._loud_fios.GetValue() )
+            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET, self._quiet_fios.GetFileImportOptions() )
+            self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD, self._loud_fios.GetFileImportOptions() )
             
         
     
@@ -3944,10 +3935,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._thumbnail_scale_type.addItem( HydrusImageHandling.thumbnail_scale_str_lookup[ t ], t )
                 
             
-            self._thumbnail_scroll_rate = QW.QLineEdit( self )
-            
             self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
+            
+            self._focus_preview_on_ctrl_click = QW.QCheckBox( self )
+            self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self )
+            self._focus_preview_on_shift_click = QW.QCheckBox( self )
+            self._focus_preview_on_shift_click_only_static = QW.QCheckBox( self )
+            
+            self._thumbnail_scroll_rate = QW.QLineEdit( self )
             
             self._media_background_bmp_path = QP.FilePickerCtrl( self )
             
@@ -3965,9 +3961,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._video_thumbnail_percentage_in.setValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             
-            self._thumbnail_scroll_rate.setText( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
+            self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
+            self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
+            self._focus_preview_on_shift_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click' ) )
+            self._focus_preview_on_shift_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ) )
             
             self._thumbnail_visibility_scroll_percent.setValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
+            
+            self._thumbnail_scroll_rate.setText( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
             
             media_background_bmp_path = self._new_options.GetNoneableString( 'media_background_bmp_path' )
             
@@ -3985,6 +3986,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
             rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
+            rows.append( ( 'Focus thumbnails in the preview window on ctrl-click: ', self._focus_preview_on_ctrl_click ) )
+            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
+            rows.append( ( 'Focus thumbnails in the preview window on shift-click: ', self._focus_preview_on_shift_click ) )
+            rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
@@ -3997,6 +4002,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.setLayout( vbox )
+            
+            self._UpdatePreviewCheckboxes()
+            
+        
+        def _UpdatePreviewCheckboxes( self ):
+            
+            self._focus_preview_on_ctrl_click_only_static.setEnabled( self._focus_preview_on_ctrl_click.isChecked() )
+            self._focus_preview_on_shift_click_only_static.setEnabled( self._focus_preview_on_shift_click.isChecked() )
             
         
         def UpdateOptions( self ):
@@ -4011,6 +4024,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'thumbnail_scale_type', self._thumbnail_scale_type.GetValue() )
             
             self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.value() )
+            
+            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click', self._focus_preview_on_ctrl_click.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_ctrl_click_only_static', self._focus_preview_on_ctrl_click_only_static.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_shift_click', self._focus_preview_on_shift_click.isChecked() )
+            self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
             
             try:
                 

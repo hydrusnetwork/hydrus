@@ -385,10 +385,12 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = GetLocalFileActionServiceKeys( media )
     
-    do_yes_no = True
+    do_yes_no = do_yes_no = HG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
     yes_no_text = 'Add {} files to {}?'.format( HydrusData.ToHumanInt( len( applicable_media ) ), dest_service_name )
     
     if action == HC.CONTENT_UPDATE_MOVE:
+        
+        do_yes_no = HG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_move' )
         
         local_moveable_from_and_to_file_service_keys = { pair for pair in local_moveable_from_and_to_file_service_keys if pair[1] == dest_service_key }
         

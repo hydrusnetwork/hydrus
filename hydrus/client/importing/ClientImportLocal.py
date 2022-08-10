@@ -164,7 +164,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
-            if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+            real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            
+            if file_seed.ShouldPresent( real_presentation_import_options ):
                 
                 file_seed.PresentToPage( self._page_key )
                 
@@ -728,7 +730,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if hash not in presentation_hashes_fast:
                     
-                    if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+                    real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                    
+                    if file_seed.ShouldPresent( real_presentation_import_options ):
                         
                         presentation_hashes.append( hash )
                         
@@ -900,7 +904,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         try:
             
-            self._file_import_options.CheckReadyToImport()
+            real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
+            
+            real_file_import_options.CheckReadyToImport()
             
             if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
                 
@@ -996,11 +1002,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
             
         
-        mimes = set( file_import_options.GetAllowedSpecificFiletypes() )
-        
-        if mimes != set( self._file_import_options.GetAllowedSpecificFiletypes() ):
+        if not file_import_options.IsDefault() and not self._file_import_options.IsDefault():
             
-            self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_VETOED, ) )
+            mimes = set( file_import_options.GetAllowedSpecificFiletypes() )
+            
+            if mimes != set( self._file_import_options.GetAllowedSpecificFiletypes() ):
+                
+                self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_VETOED, ) )
+                
             
         
         self._name = name

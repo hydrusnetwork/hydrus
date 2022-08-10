@@ -22,7 +22,6 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
@@ -30,6 +29,8 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -235,9 +236,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         show_downloader_options = True
+        allow_default_selection = True
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options, allow_default_selection = True )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         #
         
@@ -323,8 +327,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
@@ -1112,7 +1115,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._delay_st.setText( status )
         
     
-    def GetValue( self ) -> ClientImportSubscriptions.Subscription:
+    def GetValue( self ) -> typing.Tuple[ ClientImportSubscriptions.Subscription, typing.Dict[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ]:
         
         if not self.isEnabled():
             
@@ -1131,8 +1134,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         paused = self._paused.isChecked()
         
         checker_options = self._checker_options.GetValue()
-        file_import_options = self._file_import_options.GetValue()
-        tag_import_options = self._tag_import_options.GetValue()
+        
+        file_import_options = self._import_options_button.GetFileImportOptions()
+        tag_import_options = self._import_options_button.GetTagImportOptions()
         
         subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
@@ -1180,8 +1184,11 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
+        allow_default_selection = True
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         #
         
@@ -1231,7 +1238,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 1 )
         
@@ -1261,7 +1268,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_header.SetDisplayName( self._display_name.GetValue() )
         
-        query_header.SetTagImportOptions( self._tag_import_options.GetValue() )
+        query_header.SetTagImportOptions( self._import_options_button.GetTagImportOptions() )
         
         query_log_container = self._original_query_log_container.Duplicate()
         
@@ -2837,7 +2844,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditFileImportOptions( dlg, file_import_options, show_downloader_options, allow_default_selection )
+            panel = ClientGUIImportOptions.EditFileImportOptionsPanel( dlg, file_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -2870,7 +2877,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
+            panel = ClientGUIImportOptions.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             

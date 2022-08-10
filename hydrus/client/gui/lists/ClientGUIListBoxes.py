@@ -677,6 +677,11 @@ class AddEditDeleteListBox( QW.QWidget ):
         QP.AddToLayout( self._buttons_hbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
+    def Clear( self ):
+        
+        self._listbox.clear()
+        
+    
     def GetCount( self ):
         
         return self._listbox.count()

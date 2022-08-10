@@ -14,6 +14,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import QtPorting as QP
 
 SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
 SHORTCUT_TYPE_MOUSE = 1
@@ -436,7 +437,7 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
         
         angle_delta = angle_delta_point.y()
         
-        if event.source() == QC.Qt.MouseEventSynthesizedBySystem:
+        if QP.WheelEventIsSynthesised( event ):
             
             if abs( angle_delta ) < ONE_TICK_ON_A_NORMAL_MOUSE_IN_DEGREES:
                 

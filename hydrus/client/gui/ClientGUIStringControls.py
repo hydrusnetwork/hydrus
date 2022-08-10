@@ -397,7 +397,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         use_simple_delete = allow_add_delete
         
-        column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_VALUE.KEY : self._key_name }
+        column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_VALUE.KEY : self._key_name, CGLC.COLUMN_LIST_KEY_TO_VALUE.VALUE : self._value_name }
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         self._listctrl.columnListContentsChanged.connect( self.columnListContentsChanged )
@@ -418,9 +418,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         #
         
-        self._listctrl.AddDatas( list(initial_dict.items()) )
-        
-        self._listctrl.Sort()
+        self._SetValue( initial_dict )
         
         #
         
@@ -536,11 +534,30 @@ class StringToStringDictControl( QW.QWidget ):
         return { key for ( key, value ) in self._listctrl.GetData() }
         
     
+    def _SetValue( self, str_to_str_dict: typing.Dict[ str, str ] ):
+        
+        self.Clear()
+        
+        self._listctrl.AddDatas( list( str_to_str_dict.items() ) )
+        
+        self._listctrl.Sort()
+        
+    
+    def Clear( self ):
+        
+        self._listctrl.clear()
+        
+    
     def GetValue( self ) -> typing.Dict[ str, str ]:
         
         value_dict = dict( self._listctrl.GetData() )
         
         return value_dict
+        
+    
+    def SetValue( self, str_to_str_dict: typing.Dict[ str, str ] ):
+        
+        self._SetValue( str_to_str_dict )
         
     
 class StringToStringMatchDictControl( QW.QWidget ):

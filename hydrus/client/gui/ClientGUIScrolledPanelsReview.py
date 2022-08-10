@@ -42,12 +42,13 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
@@ -3111,8 +3112,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         file_import_options.SetIsDefault( True )
         
         show_downloader_options = False
+        allow_default_selection = True
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
         
         menu_items = []
         
@@ -3150,7 +3154,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         import_options_buttons = QP.HBoxLayout()
         
-        QP.AddToLayout( import_options_buttons, self._file_import_options, CC.FLAGS_CENTER )
+        QP.AddToLayout( import_options_buttons, self._import_options_button, CC.FLAGS_CENTER )
         QP.AddToLayout( import_options_buttons, self._cog_button, CC.FLAGS_CENTER )
         
         buttons = QP.HBoxLayout()
@@ -3213,7 +3217,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( paths ) > 0:
             
-            file_import_options = self._file_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
                 
@@ -3255,7 +3259,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( paths ) > 0:
             
-            file_import_options = self._file_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
             
             paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
             

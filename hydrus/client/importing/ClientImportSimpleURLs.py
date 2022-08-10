@@ -246,7 +246,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             time.sleep( 3 )
             
         
-        if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+        real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+        
+        if file_seed.ShouldPresent( real_presentation_import_options ):
             
             file_seed.PresentToPage( self._page_key )
             
@@ -995,7 +997,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options )
             
-            if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+            real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            
+            if file_seed.ShouldPresent( real_presentation_import_options ):
                 
                 file_seed.PresentToPage( self._page_key )
                 

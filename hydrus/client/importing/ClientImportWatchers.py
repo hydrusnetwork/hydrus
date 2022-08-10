@@ -1083,7 +1083,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            should_present = self._publish_to_page and file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() )
+            real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            
+            should_present = self._publish_to_page and file_seed.ShouldPresent( real_presentation_import_options )
             
             page_key = self._page_key
             
@@ -1297,7 +1299,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if presentation_import_options is None:
                 
-                presentation_import_options = self._file_import_options.GetPresentationImportOptions()
+                presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
                 
             
         

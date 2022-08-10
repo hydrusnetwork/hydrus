@@ -1036,7 +1036,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
-                    if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+                    real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                    
+                    if file_seed.ShouldPresent( real_presentation_import_options ):
                         
                         hash = file_seed.GetHash()
                         
@@ -1599,7 +1601,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     self._SyncQueries( job_key )
                     
                 
-                self._file_import_options.CheckReadyToImport()
+                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
+                
+                real_file_import_options.CheckReadyToImport()
                 
                 self._WorkOnQueriesFiles( job_key )
                 

@@ -26,7 +26,6 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -37,6 +36,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -1799,9 +1800,13 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
         file_import_options = self._hdd_import.GetFileImportOptions()
-        show_downloader_options = False
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._import_queue_panel, file_import_options, show_downloader_options, self._hdd_import.SetFileImportOptions )
+        show_downloader_options = False
+        allow_default_selection = True
+        
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
         
         #
         
@@ -1817,7 +1822,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1832,6 +1837,8 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
         self._UpdateImportStatus()
+        
+        self._import_options_button.fileImportOptionsChanged.connect( self._hdd_import.SetFileImportOptions )
         
     
     def _UpdateImportStatus( self ):
@@ -1934,9 +1941,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         file_limit = self._multiple_gallery_import.GetFileLimit()
         
         show_downloader_options = True
+        allow_default_selection = True
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, show_downloader_options, self._multiple_gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, tag_import_options, show_downloader_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         #
         
@@ -1951,8 +1961,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.Add( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1985,6 +1994,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
         self._gallery_importers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
+        
+        self._import_options_button.fileImportOptionsChanged.connect( self._multiple_gallery_import.SetFileImportOptions )
+        self._import_options_button.tagImportOptionsChanged.connect( self._multiple_gallery_import.SetTagImportOptions )
         
     
     def _CanClearHighlight( self ):
@@ -2454,8 +2466,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         if result == QW.QDialog.Accepted:
             
             file_limit = self._file_limit.GetValue()
-            file_import_options = self._file_import_options.GetValue()
-            tag_import_options = self._tag_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
+            tag_import_options = self._import_options_button.GetTagImportOptions()
             
             for gallery_import in gallery_imports:
                 
@@ -2737,11 +2749,15 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watcher_url_input.setPlaceholderText( 'watcher url' )
         
-        show_downloader_options = True
-        
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._watchers_panel, checker_options, self._OptionsUpdated )
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, show_downloader_options, self._OptionsUpdated )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, tag_import_options, show_downloader_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
+        
+        show_downloader_options = True
+        allow_default_selection = True
+        
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         # suck up watchers from elsewhere in the program (presents a checkboxlistdialog)
         
@@ -2758,8 +2774,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watchers_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watchers_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2782,6 +2797,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
+        
+        self._import_options_button.fileImportOptionsChanged.connect( self._OptionsUpdated )
+        self._import_options_button.tagImportOptionsChanged.connect( self._OptionsUpdated )
         
     
     def _AddURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
@@ -3200,7 +3218,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _OptionsUpdated( self, *args, **kwargs ):
         
-        self._multiple_watcher_import.SetOptions( self._checker_options.GetValue(), self._file_import_options.GetValue(), self._tag_import_options.GetValue() )
+        self._multiple_watcher_import.SetOptions( self._checker_options.GetValue(), self._import_options_button.GetFileImportOptions(), self._import_options_button.GetTagImportOptions() )
         
     
     def _PausePlayChecking( self ):
@@ -3334,8 +3352,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         if result == QW.QDialog.Accepted:
             
             checker_options = self._checker_options.GetValue()
-            file_import_options = self._file_import_options.GetValue()
-            tag_import_options = self._tag_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
+            tag_import_options = self._import_options_button.GetTagImportOptions()
             
             for watcher in watchers:
                 
@@ -3635,8 +3653,11 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         file_import_options = self._simple_downloader_import.GetFileImportOptions()
         
         show_downloader_options = True
+        allow_default_selection = True
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._simple_downloader_panel, file_import_options, show_downloader_options, self._simple_downloader_import.SetFileImportOptions )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
         
         #
         
@@ -3681,7 +3702,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._simple_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._simple_downloader_panel.Add( self._simple_parsing_jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._simple_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_downloader_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -3709,6 +3730,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
         self._UpdateImportStatus()
+        
+        self._import_options_button.fileImportOptionsChanged.connect( self._simple_downloader_import.SetFileImportOptions )
         
     
     def _EditFormulae( self ):
@@ -4063,9 +4086,12 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         ( file_import_options, tag_import_options ) = self._urls_import.GetOptions()
         
         show_downloader_options = True
+        allow_default_selection = True
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, show_downloader_options, self._urls_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, tag_import_options, show_downloader_options, update_callable = self._urls_import.SetTagImportOptions, allow_default_selection = True )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         #
         
@@ -4079,8 +4105,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._url_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -4106,6 +4131,9 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
         self._UpdateImportStatus()
+        
+        self._import_options_button.fileImportOptionsChanged.connect( self._urls_import.SetFileImportOptions )
+        self._import_options_button.tagImportOptionsChanged.connect( self._urls_import.SetTagImportOptions )
         
     
     def _PendURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):

@@ -54,7 +54,6 @@ from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIExport
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUILogin
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
@@ -79,6 +78,9 @@ from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportFolders
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagement
@@ -1789,6 +1791,24 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
         
     
+    def _ExperimentalNoteImportOptions( self ):
+        
+        from hydrus.client.importing.options import NoteImportOptions
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'NIO preview' ) as dlg:
+            
+            panel = ClientGUIImportOptions.EditImportOptionsPanel( dlg, True, True )
+            
+            panel.SetNoteImportOptions( note_import_options )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.exec()
+            
+        
+    
     def _ExportDownloader( self ):
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export downloaders' ) as dlg:
@@ -3478,6 +3498,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( submenu )
         
+        ClientGUIMenus.AppendMenuItem( submenu, 'EXPERIMENTAL: check out note import options', 'Open an NIO to see what they are like.', self._ExperimentalNoteImportOptions )
+        
+        ClientGUIMenus.AppendSeparator( submenu )
+        
         ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'downloader components' )
@@ -4043,7 +4067,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folders' ) as dlg:
                 
-                panel = ClientGUIImport.EditImportFoldersPanel( dlg, import_folders )
+                panel = ClientGUIImportFolders.EditImportFoldersPanel( dlg, import_folders )
                 
                 dlg.SetPanel( panel )
                 
@@ -7626,7 +7650,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         elif name not in ClientGUISession.RESERVED_SESSION_NAMES: # i.e. a human asked to do this
             
-            message = 'Overwrite this session?'
+            message = 'Overwrite "{}" session?'.format( name )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' )
             
