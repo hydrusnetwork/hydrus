@@ -1467,8 +1467,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._location_context_button.SetValue( location_context )
         
-        self._SetListDirty()
-        
     
     def _SetResultsToList( self, results, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ):
         
@@ -1478,6 +1476,38 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _SetTagService( self, tag_service_key ):
+        
+        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._location_context_button.GetValue().IsAllKnownFiles():
+            
+            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            
+            self._SetLocationContext( default_location_context )
+            
+        
+        if tag_service_key == self._tag_service_key:
+            
+            return False
+            
+        
+        tag_context = self._tag_context_button.GetValue().Duplicate()
+        
+        tag_context.service_key = tag_service_key
+        
+        self._tag_context_button.SetValue( tag_context )
+        
+        return True
+        
+    
+    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
+        
+        self._RestoreTextCtrlFocus()
+        
+        tag_service_key = tag_context.service_key
         
         if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
             
@@ -1506,13 +1536,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetListDirty()
         
         return True
-        
-    
-    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
-        
-        self._SetTagService( tag_context.service_key )
-        
-        self._RestoreTextCtrlFocus()
         
     
     def NotifyNewServices( self ):
@@ -1926,6 +1949,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self.locationChanged.emit( self._location_context_button.GetValue() )
         self.tagServiceChanged.emit( self._tag_service_key )
+        
         self._SignalNewSearchState()
         
     
@@ -2005,18 +2029,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._ManageFavouriteSearches( favourite_search_row_to_save = search_row )
         
     
-    def _SetTagService( self, tag_service_key ):
-        
-        it_changed = AutoCompleteDropdownTags._SetTagService( self, tag_service_key )
-        
-        if it_changed:
-            
-            self._file_search_context.SetTagServiceKey( tag_service_key )
-            
-            self._SignalNewSearchState()
-            
-        
-    
     def _SetupTopListBox( self ):
         
         self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key )
@@ -2087,6 +2099,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         p1 = looking_at_search_results and something_to_broadcast and results_desynced_with_text
         
         return p1
+        
+    
+    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
+        
+        it_changed = AutoCompleteDropdownTags._TagContextJustChanged( self, tag_context )
+        
+        if it_changed:
+            
+            self._file_search_context.SetTagServiceKey( self._tag_service_key )
+            
+            self._SignalNewSearchState()
+            
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):
@@ -2555,13 +2579,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._ClearInput()
         
     
-    def _SetTagService( self, tag_service_key ):
+    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
         
-        AutoCompleteDropdownTags._SetTagService( self, tag_service_key )
+        it_changed = AutoCompleteDropdownTags._TagContextJustChanged( self, tag_context )
         
-        if self._tag_service_key_changed_callable is not None:
+        if it_changed and self._tag_service_key_changed_callable is not None:
             
-            self._tag_service_key_changed_callable( tag_service_key )
+            self._tag_service_key_changed_callable( self._tag_service_key )
             
         
     

@@ -614,6 +614,8 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         
         self._menu = QW.QMenu( self )
         
+        self._menu.installEventFilter( self )
+        
         self.setMenu( self._menu )
         
         self._menu.aboutToShow.connect( self._ClearAndPopulateMenu )
@@ -629,6 +631,20 @@ class ButtonWithMenuArrow( QW.QToolButton ):
     def _PopulateMenu( self, menu ):
         
         raise NotImplementedError()
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.Show and watched == self._menu:
+            
+            pos = QG.QCursor.pos()
+            
+            self._menu.move( pos )
+            
+            return True
+            
+        
+        return False
         
     
 class BetterRadioBox( QP.RadioBox ):

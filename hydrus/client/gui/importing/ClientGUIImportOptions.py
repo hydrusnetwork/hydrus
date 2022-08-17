@@ -705,9 +705,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ShowHelp( self ):
         
-        help_message = '''THIS IS PROTOTYPE, LET ME KNOW WHAT YOU THINK
-
-A \'note\' exists in hydrus as the pair of ( name, text ). A file can only have one note for each name. If a downloader provides some notes, normally they will simply be added to your files. The main tricky part comes when a new note conflicts with an existing one.
+        help_message = '''A \'note\' exists in hydrus as the pair of ( name, text ). A file can only have one note for each name. If a downloader provides some notes, normally they will simply be added to your files. The main tricky part comes when a new note conflicts with an existing one.
 
 If a new note coming in has exactly the same name and text, no change is made.
 
@@ -1662,7 +1660,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
-class ImportOptionsButton( ClientGUICommon.BetterButton ):
+class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     fileImportOptionsChanged = QC.Signal( FileImportOptions.FileImportOptions )
     noteImportOptionsChanged = QC.Signal( NoteImportOptions.NoteImportOptions )
@@ -1670,7 +1668,14 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, show_downloader_options: bool, allow_default_selection: bool ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'import options', self._EditOptions )
+        action = QW.QAction()
+        
+        action.setText( 'import options' )
+        action.setToolTip( 'edit the different options for this importer' )
+        
+        action.triggered.connect( self._EditOptions )
+        
+        ClientGUICommon.ButtonWithMenuArrow.__init__( self, parent, action )
         
         self._show_downloader_options = show_downloader_options
         self._allow_default_selection = allow_default_selection
@@ -1770,7 +1775,7 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
             
             HydrusData.ShowException( e )
             
@@ -1811,7 +1816,7 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
             
             HydrusData.ShowException( e )
             
@@ -1852,7 +1857,7 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
             
             HydrusData.ShowException( e )
             
@@ -1869,188 +1874,7 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
         self._SetTagImportOptions( tag_import_options )
         
     
-    def _SetFileImportOptionsDefault( self ):
-        
-        if self._file_import_options is None:
-            
-            return
-            
-        
-        file_import_options = self._file_import_options.Duplicate()
-        
-        file_import_options.SetIsDefault( True )
-        
-        self._SetFileImportOptions( file_import_options )
-        
-    
-    def _SetNoteImportOptionsDefault( self ):
-        
-        if self._note_import_options is None:
-            
-            return
-            
-        
-        note_import_options = self._note_import_options.Duplicate()
-        
-        note_import_options.SetIsDefault( True )
-        
-        self._SetNoteImportOptions( note_import_options )
-        
-    
-    def _SetTagImportOptionsDefault( self ):
-        
-        if self._tag_import_options is None:
-            
-            return
-            
-        
-        tag_import_options = self._tag_import_options.Duplicate()
-        
-        tag_import_options.SetIsDefault( True )
-        
-        self._SetTagImportOptions( tag_import_options )
-        
-    
-    def _SetLabelAndToolTip( self ):
-        
-        summaries = []
-        
-        single_label = 'initialising'
-        
-        if self._file_import_options is not None:
-            
-            single_label = 'file import options'
-            
-            summaries.append( self._file_import_options.GetSummary() )
-            
-        
-        if self._tag_import_options is not None:
-            
-            single_label = 'tag import options'
-            
-            summaries.append( self._tag_import_options.GetSummary( self._show_downloader_options ) )
-            
-        
-        if self._note_import_options is not None:
-            
-            single_label = 'note import options'
-            
-            summaries.append( self._note_import_options.GetSummary() )
-            
-        
-        if len( summaries ) > 1:
-            
-            label = 'import options'
-            
-        else:
-            
-            label = single_label
-            
-        
-        self.setText( label )
-        
-        s = os.linesep * 2
-        
-        summary = s.join( summaries )
-        
-        self.setToolTip( summary )
-        
-    
-    def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
-        
-        self._file_import_options = file_import_options
-        
-        self._SetLabelAndToolTip()
-        
-        self.fileImportOptionsChanged.emit( self._file_import_options )
-        
-    
-    def _SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
-        
-        self._note_import_options = note_import_options
-        
-        self._SetLabelAndToolTip()
-        
-        self.noteImportOptionsChanged.emit( self._note_import_options )
-        
-    
-    def _SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
-        
-        self._tag_import_options = tag_import_options
-        
-        self._SetLabelAndToolTip()
-        
-        self.tagImportOptionsChanged.emit( self._tag_import_options )
-        
-    
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
-    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
-        
-        if self._file_import_options is None:
-            
-            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a File Import Options!' )
-            
-        
-        return self._file_import_options
-        
-    
-    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
-        
-        if self._note_import_options is None:
-            
-            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a Note Import Options!' )
-            
-        
-        return self._note_import_options
-        
-    
-    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
-        
-        if self._tag_import_options is None:
-            
-            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a Tag Import Options!' )
-            
-        
-        return self._tag_import_options
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.RightButton:
-            
-            ClientGUICommon.BetterButton.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        self.ShowMenu()
-        
-    
-    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
-        
-        self._SetFileImportOptions( file_import_options )
-        
-    
-    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
-        
-        self._SetNoteImportOptions( note_import_options )
-        
-    
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
-        
-        self._SetTagImportOptions( tag_import_options )
-        
-    
-    def ShowMenu( self ):
-        
-        menu = QW.QMenu()
+    def _PopulateMenu( self, menu ):
         
         num_options_we_are_managing = len( [ options for options in [ self._file_import_options, self._tag_import_options, self._note_import_options ] if options is not None ] )
         
@@ -2164,6 +1988,165 @@ class ImportOptionsButton( ClientGUICommon.BetterButton ):
                 
             
         
-        CGC.core().PopupMenu( self, menu )
+    
+    def _SetFileImportOptionsDefault( self ):
+        
+        if self._file_import_options is None:
+            
+            return
+            
+        
+        file_import_options = self._file_import_options.Duplicate()
+        
+        file_import_options.SetIsDefault( True )
+        
+        self._SetFileImportOptions( file_import_options )
+        
+    
+    def _SetNoteImportOptionsDefault( self ):
+        
+        if self._note_import_options is None:
+            
+            return
+            
+        
+        note_import_options = self._note_import_options.Duplicate()
+        
+        note_import_options.SetIsDefault( True )
+        
+        self._SetNoteImportOptions( note_import_options )
+        
+    
+    def _SetTagImportOptionsDefault( self ):
+        
+        if self._tag_import_options is None:
+            
+            return
+            
+        
+        tag_import_options = self._tag_import_options.Duplicate()
+        
+        tag_import_options.SetIsDefault( True )
+        
+        self._SetTagImportOptions( tag_import_options )
+        
+    
+    def _SetLabelAndToolTip( self ):
+        
+        summaries = []
+        
+        single_label = 'initialising'
+        
+        if self._file_import_options is not None:
+            
+            single_label = 'file import options'
+            
+            summaries.append( self._file_import_options.GetSummary() )
+            
+        
+        if self._tag_import_options is not None:
+            
+            single_label = 'tag import options'
+            
+            summaries.append( self._tag_import_options.GetSummary( self._show_downloader_options ) )
+            
+        
+        if self._note_import_options is not None:
+            
+            single_label = 'note import options'
+            
+            summaries.append( self._note_import_options.GetSummary() )
+            
+        
+        if len( summaries ) > 1:
+            
+            label = 'import options'
+            
+        else:
+            
+            label = single_label
+            
+        
+        my_action = self.defaultAction()
+        
+        my_action.setText( label )
+        
+        s = os.linesep * 2
+        
+        summary = s.join( summaries )
+        
+        my_action.setToolTip( summary )
+        
+    
+    def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+        
+        self._file_import_options = file_import_options
+        
+        self._SetLabelAndToolTip()
+        
+        self.fileImportOptionsChanged.emit( self._file_import_options )
+        
+    
+    def _SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        self._note_import_options = note_import_options
+        
+        self._SetLabelAndToolTip()
+        
+        self.noteImportOptionsChanged.emit( self._note_import_options )
+        
+    
+    def _SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+        
+        self._tag_import_options = tag_import_options
+        
+        self._SetLabelAndToolTip()
+        
+        self.tagImportOptionsChanged.emit( self._tag_import_options )
+        
+    
+    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+        
+        if self._file_import_options is None:
+            
+            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a File Import Options!' )
+            
+        
+        return self._file_import_options
+        
+    
+    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+        
+        if self._note_import_options is None:
+            
+            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a Note Import Options!' )
+            
+        
+        return self._note_import_options
+        
+    
+    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
+        
+        if self._tag_import_options is None:
+            
+            raise HydrusExceptions.DataMissing( 'This Import Options Button does not manage a Tag Import Options!' )
+            
+        
+        return self._tag_import_options
+        
+    
+    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+        
+        self._SetFileImportOptions( file_import_options )
+        
+    
+    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        self._SetNoteImportOptions( note_import_options )
+        
+    
+    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+        
+        self._SetTagImportOptions( tag_import_options )
         
     

@@ -14,6 +14,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingJobs
@@ -223,9 +224,12 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options.SetIsDefault( True )
+        
         try:
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, tag_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, tag_import_options, note_import_options )
             
         except HydrusExceptions.NetworkException as e:
             
@@ -824,7 +828,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT
     SERIALISABLE_NAME = 'URL Import'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self ):
         
@@ -837,6 +841,10 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._file_import_options.SetIsDefault( True )
         
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        
+        self._note_import_options = NoteImportOptions.NoteImportOptions()
+        self._note_import_options.SetIsDefault( True )
+        
         self._paused = False
         
         self._no_work_until = 0
@@ -923,18 +931,20 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
+        serialisable_note_import_options = self._note_import_options.GetSerialisableTuple()
         
-        return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, self._paused )
+        return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, self._paused ) = serialisable_info
+        ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options, self._paused ) = serialisable_info
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
         
     
     def _NetworkJobFactory( self, *args, **kwargs ):
@@ -977,6 +987,20 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, paused ) = old_serialisable_info
+            
+            note_import_options = NoteImportOptions.NoteImportOptions()
+            note_import_options.SetIsDefault( True )
+            
+            serialisable_note_import_options = note_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options, paused )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def _WorkOnFiles( self ):
         
@@ -995,7 +1019,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             status_hook = lambda s: s # do nothing for now
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
             
             real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
             
@@ -1132,6 +1156,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+        
+        with self._lock:
+            
+            return self._note_import_options
+            
+        
+    
     def GetNumSeeds( self ):
         
         with self._lock:
@@ -1140,11 +1172,11 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetOptions( self ):
+    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
         
         with self._lock:
             
-            return ( self._file_import_options, self._tag_import_options )
+            return self._tag_import_options
             
         
     
@@ -1285,6 +1317,19 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             if file_import_options.DumpToString() != self._file_import_options.DumpToString():
                 
                 self._file_import_options = file_import_options
+                
+                self._SerialisableChangeMade()
+                
+            
+        
+    
+    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        with self._lock:
+            
+            if note_import_options.DumpToString() != self._note_import_options.DumpToString():
+                
+                self._note_import_options = note_import_options
                 
                 self._SerialisableChangeMade()
                 

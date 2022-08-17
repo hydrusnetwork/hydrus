@@ -33,6 +33,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
 
@@ -1120,7 +1121,12 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._file_limit.setToolTip( 'stop searching the gallery once this many files has been reached' )
         
         file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
+        
         tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options.SetIsDefault( True )
         
         show_downloader_options = True
         allow_default_selection = True
@@ -1129,6 +1135,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
         
         #
         
@@ -1161,6 +1168,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         #
         
         self._import_options_button.fileImportOptionsChanged.connect( self._SetFileImportOptions )
+        self._import_options_button.noteImportOptionsChanged.connect( self._SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._SetTagImportOptions )
         
         self._UpdateControlsForNewGalleryImport()
@@ -1173,6 +1181,14 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         if self._gallery_import is not None:
             
             self._gallery_import.SetFileImportOptions( file_import_options )
+            
+        
+    
+    def _SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.SetNoteImportOptions( note_import_options )
             
         
     
@@ -1225,9 +1241,11 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             file_import_options = self._gallery_import.GetFileImportOptions()
             tag_import_options = self._gallery_import.GetTagImportOptions()
+            note_import_options = self._gallery_import.GetNoteImportOptions()
             
             self._import_options_button.SetFileImportOptions( file_import_options )
             self._import_options_button.SetTagImportOptions( tag_import_options )
+            self._import_options_button.SetNoteImportOptions( note_import_options )
             
             file_seed_cache = self._gallery_import.GetFileSeedCache()
             
@@ -1534,7 +1552,12 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._checker_download_control = ClientGUINetworkJobControl.NetworkJobControl( checker_panel )
         
         file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
+        
         tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options.SetIsDefault( True )
         
         show_downloader_options = True
         allow_default_selection = True
@@ -1543,6 +1566,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
         
         #
         
@@ -1570,8 +1594,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         checker_panel.Add( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -1588,6 +1612,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         #
         
         self._import_options_button.fileImportOptionsChanged.connect( self._SetFileImportOptions )
+        self._import_options_button.noteImportOptionsChanged.connect( self._SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._SetTagImportOptions )
         
         self._UpdateControlsForNewWatcher()
@@ -1608,6 +1633,14 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         if self._watcher is not None:
             
             self._watcher.SetFileImportOptions( file_import_options )
+            
+        
+    
+    def _SetNoteImportOptions( self, note_import_options ):
+        
+        if self._watcher is not None:
+            
+            self._watcher.SetNoteImportOptions( note_import_options )
             
         
     
@@ -1667,9 +1700,11 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
             file_import_options = self._watcher.GetFileImportOptions()
             tag_import_options = self._watcher.GetTagImportOptions()
+            note_import_options = self._watcher.GetNoteImportOptions()
             
             self._import_options_button.SetFileImportOptions( file_import_options )
             self._import_options_button.SetTagImportOptions( tag_import_options )
+            self._import_options_button.SetNoteImportOptions( note_import_options )
             
             file_seed_cache = self._watcher.GetFileSeedCache()
             

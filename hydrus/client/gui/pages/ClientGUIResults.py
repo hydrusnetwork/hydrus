@@ -4904,12 +4904,44 @@ class Thumbnail( Selectable ):
         
         local = self.GetLocationsManager().IsLocal()
         
+        #
+        # BAD FONT QUALITY AT 100% UI Scale (semi fixed now, look at the bottom)
+        #
+        # Ok I have spent hours on this now trying to figure it out and can't, so I'll just write about it for when I come back
+        # So, if you boot with two monitors at 100% UI scale, the text here on a QImage is ugly, but on QWidget it is fine
+        # If you boot with one monitor at 125%, the text is beautiful on QImage both screens
+        # My current assumption is booting Qt with unusual UI scales triggers some extra init and that spills over to QImage QPainter initialisation
+        #
+        # I checked painter hints, font stuff, fontinfo and fontmetrics, and the only difference was with fontmetrics, on all-100% vs one >100%:
+        # minLeftBearing: -1, -7
+        # minRightBearing: -1, -8
+        # xHeight: 3, 6
+        #
+        # The fontmetric produced a text size one pixel less wide on the both-100% run, so it is calculating different
+        # However these differences are global to the program so don't explain why painting on a QImage specifically has bad font rather than QWidget
+        # The ugly font is anti-aliased, but it looks like not drawn with sub-pixel calculations, like ClearType isn't kicking in or something
+        # If I blow the font size up to 72, there is still a difference in screenshots between the all-100% and some >100% boot.
+        # So, maybe if the program boots with any weird UI scale going on, Qt kicks in a different renderer for all QImages, the same renderer for QWidgets, perhaps more expensively
+        # Or this is just some weird bug
+        # Or I am still missing some flag
+        #
+        # bit like this https://stackoverflow.com/questions/31043332/qt-antialiasing-of-vertical-text-rendered-using-qpainter
+        #
+        # EDIT: OK, I 'fixed' it with setStyleStrategy( preferantialias ), which has no change in 125%, but in all-100% it draws something different but overall better quality
+        # Note you can't setStyleStrategy on the font when it is in the QPainter. either it gets set read only or there is some other voodoo going on
+        # It does look very slightly weird, but it is a step up so I won't complain. it really seems like the isolated QPainter of only-100% world has some different initialisation. it just can't find the nice font renderer
+        #
+        # EDIT 2: I think it may only look weird when the thumb banner has opacity. Maybe I need to learn about CompositionModes
+        #
+        
         painter = QG.QPainter( qt_image )
+        
+        painter.setRenderHint( QG.QPainter.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
+        painter.setRenderHint( QG.QPainter.Antialiasing, True ) # seems to do nothing, it only affects primitives?
         
         if device_pixel_ratio > 1.0:
             
-            painter.setRenderHint( QG.QPainter.Antialiasing, True )
-            painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True )
+            painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb scale up prettily and expensively when we need it
             
         
         new_options = HG.client_controller.new_options
@@ -4937,14 +4969,15 @@ class Thumbnail( Selectable ):
                 
             
         
-        # this isn't a Qt object, we need to set the font explitly to get font size changes from QSS etc..
-        painter.setFont( HG.client_controller.gui.font() )
+        # the painter isn't getting QSS style from the qt_image, we need to set the font explitly to get font size changes from QSS etc..
         
-        painter.setPen( QC.Qt.NoPen )
+        f = QG.QFont( HG.client_controller.gui.font() )
         
-        painter.setBrush( QG.QBrush( new_options.GetColour( background_colour_type ) ) )
+        f.setStyleStrategy( QG.QFont.PreferAntialias )
         
-        painter.drawRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ) )
+        painter.setFont( f )
+        
+        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), new_options.GetColour( background_colour_type ) )
         
         ( thumb_width, thumb_height ) = thumbnail_hydrus_bmp.GetSize() 
         
@@ -4992,8 +5025,6 @@ class Thumbnail( Selectable ):
                     
                     background_colour_with_alpha = upper_tag_summary_generator.GetBackgroundColour()
                     
-                    painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
-                    
                     ( text_size, upper_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, upper_summary )
                     
                     box_x = thumbnail_border
@@ -5001,9 +5032,7 @@ class Thumbnail( Selectable ):
                     box_width = width - ( thumbnail_border * 2 )
                     box_height = text_size.height() + 2
                     
-                    painter.setPen( QG.QPen( QC.Qt.NoPen ) )
-                    
-                    painter.drawRect( box_x, box_y, box_width, box_height )
+                    painter.fillRect( box_x, box_y, box_width, box_height, background_colour_with_alpha )
                     
                     text_x = ( width - text_size.width() ) // 2
                     text_y = box_y + TEXT_BORDER
@@ -5019,8 +5048,6 @@ class Thumbnail( Selectable ):
                     
                     background_colour_with_alpha = lower_tag_summary_generator.GetBackgroundColour()
                     
-                    painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
-                    
                     ( text_size, lower_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, lower_summary )
                     
                     text_width = text_size.width()
@@ -5031,9 +5058,7 @@ class Thumbnail( Selectable ):
                     box_x = width - box_width - thumbnail_border
                     box_y = height - text_height - thumbnail_border
                     
-                    painter.setPen( QG.QPen( QC.Qt.NoPen ) )
-                    
-                    painter.drawRect( box_x, box_y, box_width, box_height )
+                    painter.fillRect( box_x, box_y, box_width, box_height, background_colour_with_alpha )
                     
                     text_x = box_x + TEXT_BORDER
                     text_y = box_y + TEXT_BORDER
@@ -5150,16 +5175,12 @@ class Thumbnail( Selectable ):
             text_width = text_size.width()
             text_height = text_size.height()
             
-            painter.setBrush( QG.QBrush( CC.COLOUR_UNSELECTED ) )
-            
-            painter.setPen( QC.Qt.NoPen )
-            
             box_width = text_width + ( ICON_MARGIN * 2 )
             box_x = icon_x + icon.width() + ICON_MARGIN
             box_height = text_height + ( ICON_MARGIN * 2 )
             box_y = ( height - 1 ) - box_height
             
-            painter.drawRect( box_x, height - text_height - 3, box_width, box_height )
+            painter.fillRect( box_x, height - text_height - 3, box_width, box_height, CC.COLOUR_UNSELECTED )
             
             painter.setPen( QG.QPen( CC.COLOUR_SELECTED_DARK ) )
             

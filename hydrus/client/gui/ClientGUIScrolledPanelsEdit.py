@@ -11,6 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -28,6 +29,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 
@@ -81,9 +83,21 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         return self._checkboxes.GetValue()
         
     
-class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, url_classes, parsers, url_class_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ):
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        url_classes,
+        parsers,
+        url_class_keys_to_parser_keys,
+        file_post_default_tag_import_options,
+        watchable_default_tag_import_options,
+        url_class_keys_to_tag_import_options,
+        file_post_default_note_import_options,
+        watchable_default_note_import_options,
+        url_class_keys_to_note_import_options
+    ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -93,30 +107,35 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._parser_keys_to_parsers = { parser.GetParserKey() : parser for parser in self._parsers }
         
         self._url_class_keys_to_tag_import_options = dict( url_class_keys_to_tag_import_options )
+        self._url_class_keys_to_note_import_options = dict( url_class_keys_to_note_import_options )
         
         #
         
         show_downloader_options = True
         allow_default_selection = False
         
-        self._file_post_default_tag_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._file_post_default_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
-        self._file_post_default_tag_import_options_button.SetTagImportOptions( file_post_default_tag_import_options )
+        self._file_post_default_import_options_button.SetTagImportOptions( file_post_default_tag_import_options )
+        self._file_post_default_import_options_button.SetNoteImportOptions( file_post_default_note_import_options )
         
-        self._watchable_default_tag_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._watchable_default_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
-        self._watchable_default_tag_import_options_button.SetTagImportOptions( watchable_default_tag_import_options )
+        self._watchable_default_import_options_button.SetTagImportOptions( watchable_default_tag_import_options )
+        self._watchable_default_import_options_button.SetNoteImportOptions( watchable_default_note_import_options )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, self._ConvertDataToListCtrlTuples, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
-        self._list_ctrl_panel.AddButton( 'copy', self._Copy, enabled_check_func = self._OnlyOneTIOSelected )
+        self._list_ctrl_panel.AddButton( 'copy tags', self._CopyTags, enabled_check_func = self._OnlyOneTIOSelected )
+        self._list_ctrl_panel.AddButton( 'copy notes', self._CopyNotes, enabled_check_func = self._OnlyOneNIOSelected )
         self._list_ctrl_panel.AddButton( 'paste', self._Paste, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        self._list_ctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'clear tags', self._ClearTags, enabled_check_func = self._AtLeastOneTIOSelected )
+        self._list_ctrl_panel.AddButton( 'clear notes', self._ClearNotes, enabled_check_func = self._AtLeastOneNIOSelected )
         
         #
         
@@ -130,8 +149,8 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'default for file posts: ', self._file_post_default_tag_import_options_button ) )
-        rows.append( ( 'default for watchable urls: ', self._watchable_default_tag_import_options_button ) )
+        rows.append( ( 'default for file posts: ', self._file_post_default_import_options_button ) )
+        rows.append( ( 'default for watchable urls: ', self._watchable_default_import_options_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -143,35 +162,95 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
+    def _AtLeastOneNIOSelected( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        for url_class in selected:
+            
+            url_class_key = url_class.GetClassKey()
+            
+            if url_class_key in self._url_class_keys_to_note_import_options:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _AtLeastOneTIOSelected( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        for url_class in selected:
+            
+            url_class_key = url_class.GetClassKey()
+            
+            if url_class_key in self._url_class_keys_to_tag_import_options:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def _ConvertDataToListCtrlTuples( self, url_class ):
         
         url_class_key = url_class.GetClassKey()
         
         name = url_class.GetName()
         url_type = url_class.GetURLType()
-        defaults_set = url_class_key in self._url_class_keys_to_tag_import_options
         
         pretty_name = name
         pretty_url_type = HC.url_type_string_lookup[ url_type ]
         
-        if defaults_set:
+        defaults_components = []
+        
+        if url_class_key in self._url_class_keys_to_tag_import_options:
             
-            pretty_default_set = 'yes'
-            
-        else:
-            
-            pretty_default_set = ''
+            defaults_components.append( 'tags' )
             
         
-        display_tuple = ( pretty_name, pretty_url_type, pretty_default_set )
-        sort_tuple = ( name, pretty_url_type, defaults_set )
+        if url_class_key in self._url_class_keys_to_note_import_options:
+            
+            defaults_components.append( 'notes' )
+            
+        
+        pretty_defaults_set = ', '.join( defaults_components )
+        
+        display_tuple = ( pretty_name, pretty_url_type, pretty_defaults_set )
+        sort_tuple = ( name, pretty_url_type, pretty_defaults_set )
         
         return ( display_tuple, sort_tuple )
         
     
-    def _Clear( self ):
+    def _ClearNotes( self ):
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear default tag import options for all selected?' )
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear set note import options for all selected?' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
+            
+            for url_class in url_classes_to_clear:
+                
+                url_class_key = url_class.GetClassKey()
+                
+                if url_class_key in self._url_class_keys_to_note_import_options:
+                    
+                    del self._url_class_keys_to_note_import_options[ url_class_key ]
+                    
+                
+            
+            self._list_ctrl.UpdateDatas( url_classes_to_clear )
+            
+        
+    
+    def _ClearTags( self ):
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear set tag import options for all selected?' )
         
         if result == QW.QDialog.Accepted:
             
@@ -191,7 +270,28 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _Copy( self ):
+    def _CopyNotes( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            url_class = selected[0]
+            
+            url_class_key = url_class.GetClassKey()
+            
+            if url_class_key in self._url_class_keys_to_note_import_options:
+                
+                note_import_options = self._url_class_keys_to_note_import_options[ url_class_key ]
+                
+                json_string = note_import_options.DumpToString()
+                
+                HG.client_controller.pub( 'clipboard', 'text', json_string )
+                
+            
+        
+    
+    def _CopyTags( self ):
         
         selected = self._list_ctrl.GetData( only_selected = True )
         
@@ -221,10 +321,15 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
                 
                 tag_import_options = self._GetDefaultTagImportOptions( url_class )
-                show_downloader_options = True
-                allow_default_selection = False
+                note_import_options = self._GetDefaultNoteImportOptions( url_class )
                 
-                panel = ClientGUIImportOptions.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
+                show_downloader_options = True
+                allow_default_selection = True
+                
+                panel = ClientGUIImportOptions.EditImportOptionsPanel( dlg, show_downloader_options, allow_default_selection )
+                
+                panel.SetTagImportOptions( tag_import_options )
+                panel.SetNoteImportOptions( note_import_options )
                 
                 dlg.SetPanel( panel )
                 
@@ -232,9 +337,29 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     url_class_key = url_class.GetClassKey()
                     
-                    tag_import_options = panel.GetValue()
+                    if url_class_key in self._url_class_keys_to_tag_import_options:
+                        
+                        del self._url_class_keys_to_tag_import_options[ url_class_key ]
+                        
                     
-                    self._url_class_keys_to_tag_import_options[ url_class_key ] = tag_import_options
+                    tag_import_options = panel.GetTagImportOptions()
+                    
+                    if not tag_import_options.IsDefault():
+                        
+                        self._url_class_keys_to_tag_import_options[ url_class_key ] = tag_import_options
+                        
+                    
+                    if url_class_key in self._url_class_keys_to_note_import_options:
+                        
+                        del self._url_class_keys_to_note_import_options[ url_class_key ]
+                        
+                    
+                    note_import_options = panel.GetNoteImportOptions()
+                    
+                    if not note_import_options.IsDefault():
+                        
+                        self._url_class_keys_to_note_import_options[ url_class_key ] = note_import_options
+                        
                     
                 else:
                     
@@ -244,6 +369,39 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._list_ctrl.UpdateDatas( url_classes_to_edit )
+        
+    
+    def _GetDefaultNoteImportOptions( self, url_class ):
+        
+        url_class_key = url_class.GetClassKey()
+        
+        if url_class_key in self._url_class_keys_to_note_import_options:
+            
+            note_import_options = self._url_class_keys_to_note_import_options[ url_class_key ]
+            
+        else:
+            
+            url_type = url_class.GetURLType()
+            
+            if url_type == HC.URL_TYPE_POST:
+                
+                note_import_options = self._file_post_default_import_options_button.GetNoteImportOptions()
+                
+            elif url_type == HC.URL_TYPE_WATCHABLE:
+                
+                note_import_options = self._watchable_default_import_options_button.GetNoteImportOptions()
+                
+            else:
+                
+                raise HydrusExceptions.URLClassException( 'Could not find note import options for that kind of URL Class!' )
+                
+            
+            note_import_options = note_import_options.Duplicate()
+            
+            note_import_options.SetIsDefault( True )
+            
+        
+        return note_import_options
         
     
     def _GetDefaultTagImportOptions( self, url_class ):
@@ -260,19 +418,42 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if url_type == HC.URL_TYPE_POST:
                 
-                tag_import_options = self._file_post_default_tag_import_options_button.GetTagImportOptions()
+                tag_import_options = self._file_post_default_import_options_button.GetTagImportOptions()
                 
             elif url_type == HC.URL_TYPE_WATCHABLE:
                 
-                tag_import_options = self._watchable_default_tag_import_options_button.GetTagImportOptions()
+                tag_import_options = self._watchable_default_import_options_button.GetTagImportOptions()
                 
             else:
                 
                 raise HydrusExceptions.URLClassException( 'Could not find tag import options for that kind of URL Class!' )
                 
             
+            tag_import_options = tag_import_options.Duplicate()
+            
+            tag_import_options.SetIsDefault( True )
+            
         
         return tag_import_options
+        
+    
+    def _OnlyOneNIOSelected( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            url_class = selected[0]
+            
+            url_class_key = url_class.GetClassKey()
+            
+            if url_class_key in self._url_class_keys_to_note_import_options:
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _OnlyOneTIOSelected( self ):
@@ -309,18 +490,26 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
+            unknown_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( tag_import_options, TagImportOptions.TagImportOptions ):
+            if isinstance( unknown_import_options, TagImportOptions.TagImportOptions ):
                 
-                raise Exception( 'Not a Tag Import Options!' )
+                insert_dict = self._url_class_keys_to_tag_import_options
+                
+            elif isinstance( unknown_import_options, NoteImportOptions.NoteImportOptions ):
+                
+                insert_dict = self._url_class_keys_to_note_import_options
+                
+            else:
+                
+                raise Exception( 'Not a Tag or Note Import Options!' )
                 
             
             for url_class in self._list_ctrl.GetData( only_selected = True ):
                 
                 url_class_key = url_class.GetClassKey()
                 
-                self._url_class_keys_to_tag_import_options[ url_class_key ] = tag_import_options.Duplicate()
+                insert_dict[ url_class_key ] = unknown_import_options.Duplicate()
                 
             
             self._list_ctrl.UpdateDatas()
@@ -335,10 +524,20 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        file_post_default_tag_import_options = self._file_post_default_tag_import_options_button.GetTagImportOptions()
-        watchable_default_tag_import_options = self._watchable_default_tag_import_options_button.GetTagImportOptions()
+        file_post_default_tag_import_options = self._file_post_default_import_options_button.GetTagImportOptions()
+        watchable_default_tag_import_options = self._watchable_default_import_options_button.GetTagImportOptions()
         
-        return ( file_post_default_tag_import_options, watchable_default_tag_import_options, self._url_class_keys_to_tag_import_options )
+        file_post_default_note_import_options = self._file_post_default_import_options_button.GetNoteImportOptions()
+        watchable_default_note_import_options = self._watchable_default_import_options_button.GetNoteImportOptions()
+        
+        return (
+            file_post_default_tag_import_options,
+            watchable_default_tag_import_options,
+            self._url_class_keys_to_tag_import_options,
+            file_post_default_note_import_options,
+            watchable_default_note_import_options,
+            self._url_class_keys_to_note_import_options
+        )
         
     
 class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1616,7 +1815,9 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
     
     def GetValue( self ) -> typing.Tuple[ typing.Dict[ str, str ], typing.Set[ str ] ]:
         
-        names_to_notes = { self._notebook.tabText( i ) : self._notebook.widget( i ).toPlainText() for i in range( self._notebook.count() ) }
+        names_to_notes = { self._notebook.tabText( i ) : HydrusText.CleanNoteText( self._notebook.widget( i ).toPlainText() ) for i in range( self._notebook.count() ) }
+        
+        names_to_notes = { name : text for ( name, text ) in names_to_notes.items() if text != '' }
         
         deletee_names = { name for name in self._original_names if name not in names_to_notes }
         

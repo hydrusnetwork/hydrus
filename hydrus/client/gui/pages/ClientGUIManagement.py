@@ -1938,6 +1938,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         file_import_options = self._multiple_gallery_import.GetFileImportOptions()
         tag_import_options = self._multiple_gallery_import.GetTagImportOptions()
+        note_import_options = self._multiple_gallery_import.GetNoteImportOptions()
         file_limit = self._multiple_gallery_import.GetFileLimit()
         
         show_downloader_options = True
@@ -1947,6 +1948,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
         
         #
         
@@ -1996,6 +1998,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_importers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
         
         self._import_options_button.fileImportOptionsChanged.connect( self._multiple_gallery_import.SetFileImportOptions )
+        self._import_options_button.noteImportOptionsChanged.connect( self._multiple_gallery_import.SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._multiple_gallery_import.SetTagImportOptions )
         
     
@@ -2468,12 +2471,14 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             file_limit = self._file_limit.GetValue()
             file_import_options = self._import_options_button.GetFileImportOptions()
             tag_import_options = self._import_options_button.GetTagImportOptions()
+            note_import_options = self._import_options_button.GetNoteImportOptions()
             
             for gallery_import in gallery_imports:
                 
                 gallery_import.SetFileLimit( file_limit )
                 gallery_import.SetFileImportOptions( file_import_options )
                 gallery_import.SetTagImportOptions( tag_import_options )
+                gallery_import.SetNoteImportOptions( note_import_options )
                 
             
         
@@ -2677,9 +2682,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._multiple_gallery_import.SetFileLimit( self._file_limit.GetValue() )
         
     
-    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit ):
+    def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit ):
         
-        new_query = self._multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
+        new_query = self._multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit )
         
         if new_query is not None and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
             
@@ -2712,7 +2717,10 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._highlighted_watcher = self._multiple_watcher_import.GetHighlightedWatcher()
         
-        ( checker_options, file_import_options, tag_import_options ) = self._multiple_watcher_import.GetOptions()
+        checker_options = self._multiple_watcher_import.GetCheckerOptions()
+        file_import_options = self._multiple_watcher_import.GetFileImportOptions()
+        tag_import_options = self._multiple_watcher_import.GetTagImportOptions()
+        note_import_options = self._multiple_watcher_import.GetNoteImportOptions()
         
         #
         
@@ -2758,6 +2766,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
         
         # suck up watchers from elsewhere in the program (presents a checkboxlistdialog)
         
@@ -2799,6 +2808,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
         self._import_options_button.fileImportOptionsChanged.connect( self._OptionsUpdated )
+        self._import_options_button.noteImportOptionsChanged.connect( self._OptionsUpdated )
         self._import_options_button.tagImportOptionsChanged.connect( self._OptionsUpdated )
         
     
@@ -3218,7 +3228,10 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _OptionsUpdated( self, *args, **kwargs ):
         
-        self._multiple_watcher_import.SetOptions( self._checker_options.GetValue(), self._import_options_button.GetFileImportOptions(), self._import_options_button.GetTagImportOptions() )
+        self._multiple_watcher_import.SetCheckerOptions( self._checker_options.GetValue() )
+        self._multiple_watcher_import.SetFileImportOptions( self._import_options_button.GetFileImportOptions() )
+        self._multiple_watcher_import.SetNoteImportOptions( self._import_options_button.GetNoteImportOptions() )
+        self._multiple_watcher_import.SetTagImportOptions( self._import_options_button.GetTagImportOptions() )
         
     
     def _PausePlayChecking( self ):
@@ -4083,7 +4096,9 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_input.setPlaceholderText( 'any url hydrus recognises, or a raw file url' )
         
-        ( file_import_options, tag_import_options ) = self._urls_import.GetOptions()
+        file_import_options = self._urls_import.GetFileImportOptions()
+        tag_import_options = self._urls_import.GetTagImportOptions()
+        note_import_options = self._urls_import.GetNoteImportOptions()
         
         show_downloader_options = True
         allow_default_selection = True
@@ -4092,6 +4107,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
         
         #
         
@@ -4133,6 +4149,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
         self._import_options_button.fileImportOptionsChanged.connect( self._urls_import.SetFileImportOptions )
+        self._import_options_button.noteImportOptionsChanged.connect( self._urls_import.SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._urls_import.SetTagImportOptions )
         
     

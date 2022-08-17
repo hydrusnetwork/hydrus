@@ -37,7 +37,22 @@ STAR_COORDS.append( QC.QPointF( 3, 8 ) )
 STAR_COORDS.append( QC.QPointF( 0, 4 ) ) # left
 STAR_COORDS.append( QC.QPointF( 3, 4 ) )
 
+STAR_COORDS = [
+    QC.QPointF( 6, 0 ), # top
+    QC.QPointF( 7.5, 4.5 ),
+    QC.QPointF( 12, 4.5 ), # right
+    QC.QPointF( 8.3, 7.2 ),
+    QC.QPointF( 9.8, 12 ), # bottom right
+    QC.QPointF( 6, 9 ),
+    QC.QPointF( 2.2, 12 ), # bottom left
+    QC.QPointF( 3.7, 7.2 ),
+    QC.QPointF( 0, 4.5 ), # left
+    QC.QPointF( 4.5, 4.5 )
+]
+
 def DrawLike( painter, x, y, service_key, rating_state ):
+    
+    painter.setRenderHint( QG.QPainter.Antialiasing, True )
     
     shape = ClientRatings.GetShape( service_key )
     
@@ -45,7 +60,7 @@ def DrawLike( painter, x, y, service_key, rating_state ):
     
     painter.setPen( QG.QPen( pen_colour ) )
     painter.setBrush( QG.QBrush( brush_colour ) )
-
+    
     if shape == ClientRatings.CIRCLE:
         
         painter.drawEllipse( QC.QPointF( x+7, y+7 ), 6, 6 )
@@ -55,7 +70,7 @@ def DrawLike( painter, x, y, service_key, rating_state ):
         painter.drawRect( x+2, y+2, 12, 12 )
         
     elif shape == ClientRatings.STAR:
-
+        
         offset = QC.QPoint( x + 1, y + 1 )
         
         painter.translate( offset )
@@ -66,6 +81,8 @@ def DrawLike( painter, x, y, service_key, rating_state ):
         
     
 def DrawNumerical( painter, x, y, service_key, rating_state, rating ):
+    
+    painter.setRenderHint( QG.QPainter.Antialiasing, True )
     
     ( shape, stars ) = GetStars( service_key, rating_state, rating )
     

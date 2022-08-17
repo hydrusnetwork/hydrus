@@ -655,6 +655,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     domain_manager.SetDefaultFilePostTagImportOptions( tag_import_options )
     
+
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     from hydrus.client.media import ClientMedia

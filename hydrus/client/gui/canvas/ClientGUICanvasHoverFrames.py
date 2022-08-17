@@ -585,7 +585,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self.setLayout( vbox )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
     
@@ -932,16 +931,13 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
         
     
-    def SetCurrentZoom( self, canvas_key, zoom ):
+    def SetCurrentZoom( self, zoom: float ):
         
-        if canvas_key == self._canvas_key:
-            
-            self._current_zoom = zoom
-            
-            label = ClientData.ConvertZoomToPercentage( self._current_zoom )
-            
-            self._zoom_text.setText( label )
-            
+        self._current_zoom = zoom
+        
+        label = ClientData.ConvertZoomToPercentage( self._current_zoom )
+        
+        self._zoom_text.setText( label )
         
     
     def SetDisplayMedia( self, canvas_key, media ):

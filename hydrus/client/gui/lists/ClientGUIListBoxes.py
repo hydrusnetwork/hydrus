@@ -1606,10 +1606,6 @@ class ListBox( QW.QScrollArea ):
                     
                     if term in self._selected_terms:
                         
-                        painter.setBrush( QG.QBrush( text_colour ) )
-                        
-                        painter.setPen( QC.Qt.NoPen )
-                        
                         if x_start == self.TEXT_X_PADDING:
                             
                             background_colour_x = 0
@@ -1619,7 +1615,7 @@ class ListBox( QW.QScrollArea ):
                             background_colour_x = x_start
                             
                         
-                        painter.drawRect( background_colour_x, y_top, visible_rect_width, text_height )
+                        painter.fillRect( background_colour_x, y_top, visible_rect_width, text_height, text_colour )
                         
                         text_colour = self._background_colour
                         

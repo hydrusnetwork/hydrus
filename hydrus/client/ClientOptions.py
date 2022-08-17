@@ -354,9 +354,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'wake_delay_period' ] = 15
         
-        from hydrus.client.gui.canvas import ClientGUICanvas
+        from hydrus.client.gui.canvas import ClientGUICanvasMedia
         
-        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvas.ZOOM_CENTERPOINT_MOUSE
+        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvasMedia.ZOOM_CENTERPOINT_MOUSE
         
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         

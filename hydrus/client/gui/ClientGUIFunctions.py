@@ -127,16 +127,19 @@ def DialogIsOpen():
     
     return False
     
+
 def DrawText( painter, x, y, text ):
     
-    ( boundingRect, text ) = GetTextSizeFromPainter( painter, text )
+    ( size, text ) = GetTextSizeFromPainter( painter, text )
     
-    painter.drawText( QC.QRectF( x, y, boundingRect.width(), boundingRect.height() ), text )
+    painter.drawText( QC.QRectF( x, y, size.width(), size.height() ), text )
+    
 
 def EscapeMnemonics( s: str ):
     
     return s.replace( "&", "&&" )
     
+
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
     new_hue = colour.hsvHueF()

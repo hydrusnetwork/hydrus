@@ -21,6 +21,13 @@ re_leading_space_or_garbage = re.compile( r'^(\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
 
+def CleanNoteText( t: str ):
+    
+    t = t.strip()
+    
+    return t
+    
+
 def HexFilter( text ):
     
     text = text.lower()

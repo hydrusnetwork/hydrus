@@ -3,6 +3,42 @@
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 496](https://github.com/hydrusnetwork/hydrus/releases/tag/v496)
+
+### note import options
+* the client now has a system to set default note import options. it works exactly the same as default tag import options and shares the same UI, now named _network->downloaders->manage default import options_. you now set tag and/or note import options for a particular domain. I don't think you'll have to touch the note defaults until this system is really going and we learn more about what we want. I have made the initial defaults get all notes with some simple conflict resolution that won't discard any data
+* all url pages, watchers, watcher pages, gallery queries, gallery downloader pages, and subscriptions now have a note import options. by default, they are 'default'
+* the edit subscription dialog now has a button to set note import options _en masse_
+* all the behind the scenes stuff that connects and powers these systems is done. note parsing now works! advanced users, especially downloader makers, are encouraged to play around with this for real. the remaining hurdle is still multiline parsing support
+* notes now have a cleaning system before they are saved. to start with this week, they are now trimmed of leading or trailing whitespace or newlines
+
+### Qt6
+* the media viewer now draws correctly on UI scaled displays. If you are at >100% UI scale, it will now render images beautifully, using all available pixels, and state the correct zoom percentage. you look at a 4k image on a 4k screen, you now see 4k, no matter the UI scale. previously it was rendering at 100% UI scale coordinates and being nearest-neighbour scaled up
+* after several sad hours banging my head against font metrics, I finally discovered the magic flag needed and have improved the font quality of the thumbnail banners when you boot the client with only 100% UI scale monitors. should be anti-aliased now, although if you have a semi-transparent banner colour it may look slightly jank for reasons I still need to investigate.
+* I fixed the 'don't process the click that activates a media viewer into the shortcuts system' hook for Qt6 (and still working on Qt5). it is a little smarter now, too
+
+### misc
+* the new import options button is now an arrow-menu button. the secret right-click menu is no longer hidden. I also did some behind the scenes stuff to make it so all these arrow buttons spawn their menus on your cursor when you click, rather than hanging off the bottom-left corner of the button proper
+* rating stars of all shapes are now anti-aliased
+* greatly improved the shape of the 'star' rating star
+* moved the 'checker options' button on watcher highlight panels down a bit. maybe it'll get integrated into other import options one day--I am still thinking about it
+* archive/delete filters will not present 'delete from hard disk' as a final choice if the current domain is 'all local files'. I thought I fixed this a couple weeks ago, but there was a legacy issue
+* fixed some real jank logic when setting the tag domain in autocomplete dropdown widgets. this got messed up a little with recent updates to file and tag domain searching. I reworked the signal path and fixed some weird update bugs and situations where you could seemingly set 'all known files'/'all known tags'
+
+### boring code cleanup
+* refactored all zoom code from the media viewer canvas to the media viewer container. the canvas no longer manages zoom numbers or container size
+* refactored all container-position-tracking code from the media viewer canvas to the media viewer container and cleaned it
+* updated the media viewer container to recognise UI scaling and adapt the stated zoom to reflect the raw pixels on screen, not the device independent coordinate system
+* updated the native animation widget to recognise UI scaling, adapt its underlying renderer resolution appropriately, and draw that super-resolution frame to the canvas
+* updated the static image widget to recognise UI scaling, adapt its tile coordinate system and resolution appropriately, and scatter the ethereal powder of the cleansed ancients across the QPainter in order to stitch the arbitrarily zoomed super-resolution tiles together on a sub-pixel canvas with no visible seams
+* the animation and static image widgets also recognise changes in the current UI scale--if the current monitor changes or you move across monitors with differing UI scale
+* updated some old pubsub update calls in the canvas code to Qt signals
+* cleaned up some old const definitions in canvas code
+* refactored and simplified some test methods related to the canvas container and media show actions
+* cleaned up some old painter code and hacks to simpler alternatives
+* cleaned a tangle of file/tag domain update code in the autocomplete dropdowns
+* cleaned up some options getting/setting methods in the downloaders
+
 ## [Version 495](https://github.com/hydrusnetwork/hydrus/releases/tag/v495)
 
 ### Qt6
@@ -311,25 +347,3 @@
 * massively optimised several critical duplicate files filtering methods if the current location context has more than one file domain, and I think I cleared out the basic 'get duplicate info for this file' call of all slow calls in complex location contexts
 * the repair routine that regenerates mapping caches if any tables are missing on boot is now more reliable and covers the entirety of the mappings cache system using the new modules system. it also now regenerates just for the tag services with missing tables, not the whole cache
 * if multiple types of mapping cache tables are missing on boot, and multiple waves of regenerations covering different areas are planned, duplicate regenerations will now be skipped
-
-## [Version 485](https://github.com/hydrusnetwork/hydrus/releases/tag/v485)
-
-### multiple local file services
-* multiple local file services are now available for everyone! you no longer need to be in advanced mode to create them. all are welcome, but in terms of skill level, I most recommend it for users who are comfortable with tag siblings and parents
-* the tl;dr: you can now have more than one 'my files', which lets you put things in isolated locations
-* I wrote a proper help document on multiple local file services--what they are, how they work, my recommendations, and a bit of extra info about hydrus file search in general, right here: https://hydrusnetwork.github.io/hydrus/advanced_multiple_local_file_services.html
-* file searches in 'multiple locations' on large clients are now massively faster in almost all situations. the only place multiple location searches are still slow is whenever the duplicates system (system:file relationships) comes into play
-
-### misc
-* in the page tab menu, you can now sort pages by total file size
-* the 'force system:limit for all searches' option is moved from the 'speed and memory' to 'search' panel
-* when files download from sites, if the raw file is served by cloudflare and has a timestamp radically different to a parsed source time, that CF timestamp is saved under a different domain rather than overwriting the original domain timestamp. this seemed to affect danbooru on about 1 in 10-20 files. note this does not change much at the moment, but when you can see and sort on individual domain modified dates, this should improve the sort
-* updated the 'installing' help to talk about bad install locations for the database. network locations are bad, and thanks to user reports, we now know USB drives can be bad if the database is busy when the OS goes to sleep
-* if a 'database is malformed' error occurs on boot, the client now recognises it and points the user to 'install_dir/db/help my db is broke.txt' for the next steps
-
-### boring code cleanup
-* another 60KB or so of code pulled out of ClientDB.py:
-* created a new database module for url mappings and refactored various fetch and update routines to it
-* created a new database module for some rich file metadata and refactored some file filtering, history, and status testing code to it
-* created new database module for file searching and moved all tag-based file searching code to it
-* moved several other misc methods down to database modules

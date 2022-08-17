@@ -370,9 +370,9 @@ def GetNamespacesFromParsableContent( parsable_content ):
     return namespaces
     
 
-def GetNotesFromParseResults( results ):
+def GetNamesAndNotesFromParseResults( results ):
     
-    note_results = []
+    name_and_note_results = []
     
     for ( ( name, content_type, additional_info ), parsed_text ) in results:
         
@@ -380,11 +380,18 @@ def GetNotesFromParseResults( results ):
             
             note_name = additional_info
             
-            note_results.append( ( note_name, parsed_text ) )
+            note_text = HydrusText.CleanNoteText( parsed_text )
+            
+            if note_text == '':
+                
+                continue
+                
+            
+            name_and_note_results.append( ( note_name, parsed_text ) )
             
         
     
-    return note_results
+    return name_and_note_results
     
 
 def GetSoup( html ):

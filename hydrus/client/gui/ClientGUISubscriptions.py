@@ -118,6 +118,7 @@ def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscript
     
     return query_log_containers
     
+
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ):
@@ -235,6 +236,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        note_import_options = subscription.GetNoteImportOptions()
+        
         show_downloader_options = True
         allow_default_selection = True
         
@@ -242,6 +245,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
+        
         
         #
         
@@ -1137,8 +1142,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_import_options = self._import_options_button.GetFileImportOptions()
         tag_import_options = self._import_options_button.GetTagImportOptions()
+        note_import_options = self._import_options_button.GetNoteImportOptions()
         
         subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        
+        subscription.SetNoteImportOptions( note_import_options )
         
         subscription.SetThisIsARandomSampleSubscription( self._this_is_a_random_sample_sub.isChecked() )
         
@@ -1362,6 +1370,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite file import options', self.SetFileImportOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'overwrite note import options', self.SetNoteImportOptions, enabled_only_on_selection = True )
         
         #
         
@@ -2842,7 +2851,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         show_downloader_options = True
         allow_default_selection = True
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit file import options' ) as dlg:
             
             panel = ClientGUIImportOptions.EditFileImportOptionsPanel( dlg, file_import_options, show_downloader_options, allow_default_selection )
             
@@ -2855,6 +2864,38 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 for subscription in subscriptions:
                     
                     subscription.SetFileImportOptions( file_import_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
+    def SetNoteImportOptions( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        note_import_options = subscriptions[0].GetNoteImportOptions()
+        allow_default_selection = True
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit note import options' ) as dlg:
+            
+            panel = ClientGUIImportOptions.EditNoteImportOptionsPanel( dlg, note_import_options, allow_default_selection )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                note_import_options = panel.GetValue()
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetNoteImportOptions( note_import_options )
                     
                 
                 self._subscriptions.UpdateDatas( subscriptions )

@@ -33,6 +33,42 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_496"><a href="#version_496">version 496</a></h3></li>
+				<ul>
+					<li>note import options:</li>
+					<li>the client now has a system to set default note import options. it works exactly the same as default tag import options and shares the same UI, now named _network->downloaders->manage default import options_. you now set tag and/or note import options for a particular domain. I don't think you'll have to touch the note defaults until this system is really going and we learn more about what we want. I have made the initial defaults get all notes with some simple conflict resolution that won't discard any data</li>
+					<li>all url pages, watchers, watcher pages, gallery queries, gallery downloader pages, and subscriptions now have a note import options. by default, they are 'default'</li>
+					<li>the edit subscription dialog now has a button to set note import options _en masse_</li>
+					<li>all the behind the scenes stuff that connects and powers these systems is done. note parsing now works! advanced users, especially downloader makers, are encouraged to play around with this for real. the remaining hurdle is still multiline parsing support</li>
+					<li>notes now have a cleaning system before they are saved. to start with this week, they are now trimmed of leading or trailing whitespace or newlines</li>
+					<li>.</li>
+					<li>Qt6:</li>
+					<li>the media viewer now draws correctly on UI scaled displays. If you are at >100% UI scale, it will now render images beautifully, using all available pixels, and state the correct zoom percentage. you look at a 4k image on a 4k screen, you now see 4k, no matter the UI scale. previously it was rendering at 100% UI scale coordinates and being nearest-neighbour scaled up</li>
+					<li>after several sad hours banging my head against font metrics, I finally discovered the magic flag needed and have improved the font quality of the thumbnail banners when you boot the client with only 100% UI scale monitors. should be anti-aliased now, although if you have a semi-transparent banner colour it may look slightly jank for reasons I still need to investigate.</li>
+					<li>I fixed the 'don't process the click that activates a media viewer into the shortcuts system' hook for Qt6 (and still working on Qt5). it is a little smarter now, too</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the new import options button is now an arrow-menu button. the secret right-click menu is no longer hidden. I also did some behind the scenes stuff to make it so all these arrow buttons spawn their menus on your cursor when you click, rather than hanging off the bottom-left corner of the button proper</li>
+					<li>rating stars of all shapes are now anti-aliased</li>
+					<li>greatly improved the shape of the 'star' rating star</li>
+					<li>moved the 'checker options' button on watcher highlight panels down a bit. maybe it'll get integrated into other import options one day--I am still thinking about it</li>
+					<li>archive/delete filters will not present 'delete from hard disk' as a final choice if the current domain is 'all local files'. I thought I fixed this a couple weeks ago, but there was a legacy issue</li>
+					<li>fixed some real jank logic when setting the tag domain in autocomplete dropdown widgets. this got messed up a little with recent updates to file and tag domain searching. I reworked the signal path and fixed some weird update bugs and situations where you could seemingly set 'all known files'/'all known tags'</li>
+					<li>.</li>
+					<li>boring code cleanup:</li>
+					<li>refactored all zoom code from the media viewer canvas to the media viewer container. the canvas no longer manages zoom numbers or container size</li>
+					<li>refactored all container-position-tracking code from the media viewer canvas to the media viewer container and cleaned it</li>
+					<li>updated the media viewer container to recognise UI scaling and adapt the stated zoom to reflect the raw pixels on screen, not the device independent coordinate system</li>
+					<li>updated the native animation widget to recognise UI scaling, adapt its underlying renderer resolution appropriately, and draw that super-resolution frame to the canvas</li>
+					<li>updated the static image widget to recognise UI scaling, adapt its tile coordinate system and resolution appropriately, and scatter the ethereal powder of the cleansed ancients across the QPainter in order to stitch the arbitrarily zoomed super-resolution tiles together on a sub-pixel canvas with no visible seams</li>
+					<li>the animation and static image widgets also recognise changes in the current UI scale--if the current monitor changes or you move across monitors with differing UI scale</li>
+					<li>updated some old pubsub update calls in the canvas code to Qt signals</li>
+					<li>cleaned up some old const definitions in canvas code</li>
+					<li>refactored and simplified some test methods related to the canvas container and media show actions</li>
+					<li>cleaned up some old painter code and hacks to simpler alternatives</li>
+					<li>cleaned a tangle of file/tag domain update code in the autocomplete dropdowns</li>
+					<li>cleaned up some options getting/setting methods in the downloaders</li>
+				</ul>
 				<li><h3 id="version_495"><a href="#version_495">version 495</a></h3></li>
 				<ul>
 					<li>Qt6:</li>

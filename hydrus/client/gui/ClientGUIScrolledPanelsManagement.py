@@ -1985,13 +1985,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( self )
             
-            from hydrus.client.gui.canvas import ClientGUICanvas
+            from hydrus.client.gui.canvas import ClientGUICanvasMedia
             
             self._media_viewer_zoom_center = ClientGUICommon.BetterChoice()
             
-            for zoom_centerpoint_type in ClientGUICanvas.ZOOM_CENTERPOINT_TYPES:
+            for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
                 
-                self._media_viewer_zoom_center.addItem( ClientGUICanvas.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
+                self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
                 
             
             tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit.'

@@ -1142,8 +1142,10 @@ class ShortcutsHandler( QC.QObject ):
         self._shortcuts_names = list( initial_shortcuts_names )
         
         self._ignore_activating_mouse_click = ignore_activating_mouse_click
+        self._activating_wait_job = None
         
         self._frame_activated_time = 0.0
+        self._parent_currently_activated = True
         
         if self._catch_mouse and self._ignore_activating_mouse_click:
             
@@ -1277,13 +1279,16 @@ class ShortcutsHandler( QC.QObject ):
                     self._last_click_down_position = event.globalPosition().toPoint()
                     
                     CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
-                    
                 
-                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
                     
-                    if event.type() == QC.QEvent.MouseButtonRelease:
+                    if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:
                         
-                        self._frame_activated_time = 0.0
+                        # first completed click in the time window sets us active instantly
+                        self._activating_wait_job.Cancel()
+                        
+                        self._parent_currently_activated = True
                         
                     
                     return False
@@ -1377,6 +1382,26 @@ class ShortcutsHandler( QC.QObject ):
             
         
     
+    def FrameActivated( self ):
+        
+        def do_it():
+            
+            self._parent_currently_activated = True
+            
+        
+        self._activating_wait_job = HG.client_controller.CallLater( 0.2, do_it )
+        
+    
+    def FrameDeactivated( self ):
+        
+        if self._activating_wait_job is not None:
+            
+            self._activating_wait_job.Cancel()
+            
+        
+        self._parent_currently_activated = False
+        
+    
     def GetCustomShortcutNames( self ):
         
         custom_names = sorted( ( name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ) )
@@ -1412,11 +1437,7 @@ class ShortcutsHandler( QC.QObject ):
         self._shortcuts_names = list( shortcut_set_names )
         
     
-    def FrameActivated( self ):
-        
-        self._frame_activated_time = HydrusData.GetNowPrecise()
-        
-    
+
 class ShortcutsDeactivationCatcher( QC.QObject ):
     
     def __init__( self, shortcuts_handler: ShortcutsHandler, widget: QW.QWidget ):
@@ -1433,6 +1454,10 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
         if event.type() == QC.QEvent.WindowActivate:
             
             self._shortcuts_handler.FrameActivated()
+            
+        elif event.type() == QC.QEvent.WindowDeactivate:
+            
+            self._shortcuts_handler.FrameDeactivated()
             
         
         return False

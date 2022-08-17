@@ -1472,7 +1472,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
-        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', file_import_options, tag_import_options, 2 )
+        from hydrus.client.importing.options import NoteImportOptions
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options.SetIsDefault( True )
+        
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', file_import_options, tag_import_options, note_import_options, 2 )
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
@@ -1788,24 +1793,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         if not result:
             
             QW.QMessageBox.critical( self, 'Error', 'Could not turn on--perhaps your version of PIL does not support it?' )
-            
-        
-    
-    def _ExperimentalNoteImportOptions( self ):
-        
-        from hydrus.client.importing.options import NoteImportOptions
-        
-        note_import_options = NoteImportOptions.NoteImportOptions()
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'NIO preview' ) as dlg:
-            
-            panel = ClientGUIImportOptions.EditImportOptionsPanel( dlg, True, True )
-            
-            panel.SetNoteImportOptions( note_import_options )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
             
         
     
@@ -3470,7 +3457,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage default import options', 'Change the default import options for each of your linked url matches.', self._ManageDefaultImportOptions )
         ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
         
         ClientGUIMenus.AppendSeparator( submenu )
@@ -3495,10 +3482,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
         ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
         ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, 'EXPERIMENTAL: check out note import options', 'Open an NIO to see what they are like.', self._ExperimentalNoteImportOptions )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -3878,7 +3861,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
         
     
-    def _ManageDefaultTagImportOptions( self ):
+    def _ManageDefaultImportOptions( self ):
         
         title = 'edit default tag import options'
         
@@ -3888,20 +3871,41 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ) = domain_manager.GetDefaultTagImportOptions()
             
+            ( file_post_default_note_import_options, watchable_default_note_import_options, url_class_keys_to_note_import_options ) = domain_manager.GetDefaultNoteImportOptions()
+            
             url_classes = domain_manager.GetURLClasses()
             parsers = domain_manager.GetParsers()
             
             url_class_keys_to_parser_keys = domain_manager.GetURLClassKeysToParserKeys()
             
-            panel = ClientGUIScrolledPanelsEdit.EditDefaultTagImportOptionsPanel( dlg, url_classes, parsers, url_class_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options )
+            panel = ClientGUIScrolledPanelsEdit.EditDefaultImportOptionsPanel(
+                dlg,
+                url_classes,
+                parsers,
+                url_class_keys_to_parser_keys,
+                file_post_default_tag_import_options,
+                watchable_default_tag_import_options,
+                url_class_keys_to_tag_import_options,
+                file_post_default_note_import_options,
+                watchable_default_note_import_options,
+                url_class_keys_to_note_import_options
+            )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ) = panel.GetValue()
+                (
+                    file_post_default_tag_import_options,
+                    watchable_default_tag_import_options,
+                    url_class_keys_to_tag_import_options,
+                    file_post_default_note_import_options,
+                    watchable_default_note_import_options,
+                    url_class_keys_to_note_import_options
+                ) = panel.GetValue()
                 
                 domain_manager.SetDefaultTagImportOptions( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options )
+                domain_manager.SetDefaultNoteImportOptions( file_post_default_note_import_options, watchable_default_note_import_options, url_class_keys_to_note_import_options )
                 
             
         
@@ -6882,7 +6886,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         event.ignore() # we always ignore, as we'll close through the window through other means
         
     
-    def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit ):
+    def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit ):
         
         page = self._notebook.GetOrMakeGalleryDownloaderPage( desired_page_name = 'subscription gap downloaders', select_page = True )
         
@@ -6893,7 +6897,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         panel = page.GetManagementPanel()
         
-        panel.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, file_limit )
+        panel.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit )
         
         self._notebook.ShowPage( page )
         
