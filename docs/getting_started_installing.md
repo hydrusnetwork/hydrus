@@ -49,7 +49,8 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
     *   You can also try [running the Windows version in wine](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
-    If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).
+        * If you use Arch Linux, you can check out the AUR package a user maintains [here](https://aur.archlinux.org/packages/hydrus/).  
+        * A flatpak package is available on flathub [here](https://flathub.org/apps/details/io.github.hydrusnetwork.hydrus).
     
 
 === "From Source"
