@@ -21,9 +21,33 @@ re_leading_space_or_garbage = re.compile( r'^(\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
 
+HYDRUS_NOTE_NEWLINE = '\n'
+
 def CleanNoteText( t: str ):
     
+    # trim leading and trailing whitespace
+    
     t = t.strip()
+    
+    # wash all newlines to be os.linesep
+    
+    lines = t.splitlines()
+    
+    # now trim each line
+    
+    lines = [ line.strip() for line in lines ]
+    
+    t = HYDRUS_NOTE_NEWLINE.join( lines )
+    
+    # now replace big gaps with reasonable ones
+    
+    double_newline = HYDRUS_NOTE_NEWLINE * 2
+    triple_newline = HYDRUS_NOTE_NEWLINE * 3
+    
+    while triple_newline in t:
+        
+        t = t.replace( triple_newline, double_newline )
+        
     
     return t
     

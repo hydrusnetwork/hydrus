@@ -120,7 +120,8 @@ Required Headers: n/a
 Arguments: n/a
     
 Response:
-:   Some simple JSON describing the current api version (and hydrus client version, if you are interested).
+: Some simple JSON describing the current api version (and hydrus client version, if you are interested).
+: Note that this is mostly obselete now, since the 'Server' header of every response (and a duplicated 'Hydrus-Server' one, if you have a complicated proxy situation that overwrites 'Server') are now in the form "client api/{client_api_version} ({software_version})", e.g. "client api/32 (497)". 
 
 ```json title="Example response"
 {
@@ -670,6 +671,7 @@ Required Headers: n/a
 Arguments:
 :       
     *   `url`: (the url you want to ask about)
+    *   `doublecheck_file_system`: true or false (optional, defaults False)
 
 Example request:
 :   for URL `http://safebooru.org/index.php?page=post&s=view&id=2753608`:
@@ -691,17 +693,18 @@ Response:
   ]
 }
 ```
-    
-    The `url_file_statuses` is a list of zero-to-n JSON Objects, each representing a file match the client found in its database for the URL. Typically, it will be of length 0 (for as-yet-unvisited URLs or Gallery/Watchable URLs that are not attached to files) or 1, but sometimes multiple files are given the same URL (sometimes by mistaken misattribution, sometimes by design, such as pixiv manga pages). Handling n files per URL is a pain but an unavoidable issue you should account for.
-    
-    `status` is the same as for `/add_files/add_file`:
-    
-    *   0 - File not in database, ready for import (you will only see this very rarely--usually in this case you will just get no matches)
-    *   2 - File already in database
-    *   3 - File previously deleted
-    
-    `hash` is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text you may recognise from hydrus's normal import workflow.
-    
+
+The `url_file_statuses` is a list of zero-to-n JSON Objects, each representing a file match the client found in its database for the URL. Typically, it will be of length 0 (for as-yet-unvisited URLs or Gallery/Watchable URLs that are not attached to files) or 1, but sometimes multiple files are given the same URL (sometimes by mistaken misattribution, sometimes by design, such as pixiv manga pages). Handling n files per URL is a pain but an unavoidable issue you should account for.
+
+`status` is the same as for `/add_files/add_file`:
+
+  *   0 - File not in database, ready for import (you will only see this very rarely--usually in this case you will just get no matches)
+  *   2 - File already in database
+  *   3 - File previously deleted
+
+`hash` is the file's SHA256 hash in hexadecimal, and 'note' is some occasional additional human-readable text you may recognise from hydrus's normal import workflow.
+
+If you set `doublecheck_file_system` to `true`, then any result that is 'already in db' (2) will be double-checked against the actual file system. This check happens on any normal file import process, just to check for and fix missing files (if the file is missing, the status becomes 0--new), but the check can take more than a few milliseconds on an HDD or a network drive, so the default behaviour, assuming you mostly just want to spam for 'seen this before' file statuses, is to not do it. 
 
 ### **GET `/add_urls/get_url_info`** { id="add_urls_get_url_info" }
 

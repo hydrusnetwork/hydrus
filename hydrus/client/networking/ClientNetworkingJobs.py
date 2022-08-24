@@ -1996,7 +1996,14 @@ def CheckHydrusVersion( service_type, response ):
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
     
-    ( service_string_gumpf, network_version ) = server_header.split( '/' )
+    # might be "hydrus tag repository/17" or "hydrus tag repository/17 (498)" kind of thing
+    
+    ( service_string_gumpf, network_version ) = server_header.split( '/', 1 )
+    
+    if ' ' in network_version:
+    
+        ( network_version, software_version_gumpf ) = network_version.split( ' ', 1 )
+        
     
     network_version = int( network_version )
     

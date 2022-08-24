@@ -84,7 +84,7 @@ def ConvertParseResultToPrettyString( result ):
         
         note_name = additional_info
         
-        return 'note "{}": {}'.format( note_name, parsed_text )
+        return 'note "{}":{}{}'.format( note_name, os.linesep, parsed_text )
         
     elif content_type == HC.CONTENT_TYPE_HASH:
         
@@ -192,7 +192,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
                 note_names = sorted( additional_infos )
                 
-                s = 'notes: {}'.format( ', '.join( note_names ) )
+                s = 'notes:{}'.format( ', '.join( note_names ) )
                 
                 pretty_strings.append( s )
                 
@@ -348,10 +348,26 @@ def GetHTMLTagString( tag: bs4.Tag ):
     # on a version update, these suddenly went semi bonkers and wouldn't pull text unless the types of the subtag were explicitly set
     # so we'll just do it ourselves
     
+    all_strings = []
+    
     try:
         
-        all_strings = [ str( c ) for c in tag.descendants if isinstance( c, ( bs4.NavigableString, bs4.CData ) ) ]
-        all_strings = [ s for s in all_strings if len( s ) > 0 ]
+        for sub_tag in tag.descendants:
+            
+            if sub_tag.name in ( 'br', 'p' ):
+                
+                all_strings.append( os.linesep )
+                
+                continue
+                
+            
+            if not isinstance( sub_tag, ( bs4.NavigableString, bs4.CData ) ):
+                
+                continue
+                
+            
+            all_strings.append( str( sub_tag ) )
+            
         
     except:
         
@@ -666,7 +682,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return os.linesep
         
     
-    def _ParseRawTexts( self, parsing_context, parsing_text ):
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
         
         raise NotImplementedError()
         
@@ -676,20 +692,23 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return self._string_processor
         
     
-    def Parse( self, parsing_context, parsing_text ):
+    def Parse( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
         
-        raw_texts = self._ParseRawTexts( parsing_context, parsing_text )
+        raw_texts = self._ParseRawTexts( parsing_context, parsing_text, collapse_newlines )
         
-        raw_texts = [ HydrusText.RemoveNewlines( raw_text ) for raw_text in raw_texts ]
+        if collapse_newlines:
+            
+            raw_texts = [ HydrusText.RemoveNewlines( raw_text ) for raw_text in raw_texts ]
+            
         
         texts = self._string_processor.ProcessStrings( raw_texts )
         
         return texts
         
     
-    def ParsePretty( self, parsing_context, parsing_text ):
+    def ParsePretty( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
         
-        texts = self.Parse( parsing_context, parsing_text )
+        texts = self.Parse( parsing_context, parsing_text, collapse_newlines )
         
         pretty_texts = [ MakeParsedTextPretty( text ) for text in texts ]
         
@@ -766,7 +785,7 @@ class ParseFormulaCompound( ParseFormula ):
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
-    def _ParseRawTexts( self, parsing_context, parsing_text ):
+    def _ParseRawTexts( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
         
         def get_stream_string( index, s ):
             
@@ -788,7 +807,7 @@ class ParseFormulaCompound( ParseFormula ):
         
         for formula in self._formulae:
             
-            stream = formula.Parse( parsing_context, parsing_text )
+            stream = formula.Parse( parsing_context, parsing_text, collapse_newlines )
             
             if len( stream ) == 0: # no contents were found for one of the /1 replace components, so no valid strings can be made.
                 
@@ -912,7 +931,7 @@ class ParseFormulaContextVariable( ParseFormula ):
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
-    def _ParseRawTexts( self, parsing_context, parsing_text ):
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
         
         raw_texts = []
         
@@ -1124,7 +1143,7 @@ class ParseFormulaHTML( ParseFormula ):
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
-    def _ParseRawTexts( self, parsing_context, parsing_text ):
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
         
         try:
             
@@ -1758,7 +1777,7 @@ class ParseFormulaJSON( ParseFormula ):
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     
-    def _ParseRawTexts( self, parsing_context, parsing_text ):
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
         
         try:
             
@@ -2158,7 +2177,9 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            parsed_texts = list( self._formula.Parse( parsing_context, parsing_text ) )
+            collapse_newlines = self._content_type != HC.CONTENT_TYPE_NOTES
+            
+            parsed_texts = list( self._formula.Parse( parsing_context, parsing_text, collapse_newlines ) )
             
         except HydrusExceptions.ParseException as e:
             
@@ -2167,6 +2188,11 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             e = HydrusExceptions.ParseException( prefix + str( e ) )
             
             raise e
+            
+        
+        if self._content_type == HC.CONTENT_TYPE_NOTES:
+            
+            parsed_texts = [ HydrusText.CleanNoteText( parsed_text ) for parsed_text in parsed_texts ]
             
         
         if self._content_type == HC.CONTENT_TYPE_URLS:
@@ -2240,7 +2266,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ParsePretty( self, parsing_context, parsing_text ):
+    def ParsePretty( self, parsing_context, parsing_text: str ):
         
         try:
             
@@ -2553,7 +2579,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     try:
                         
-                        posts = formula.Parse( parsing_context, converted_parsing_text )
+                        collapse_newlines = False
+                        
+                        posts = formula.Parse( parsing_context, converted_parsing_text, collapse_newlines )
                         
                     except HydrusExceptions.ParseException:
                         

@@ -1324,7 +1324,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 from hydrus.client.metadata import ClientRatings
                 
-                dictionary[ 'shape' ] = ClientRatings.STAR
+                dictionary[ 'shape' ] = ClientRatings.FAT_STAR
                 
                 like_colours = {}
                 
@@ -10423,7 +10423,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         from hydrus.client.metadata import ClientRatings
                         
-                        dictionary[ 'shape' ] = ClientRatings.STAR
+                        dictionary[ 'shape' ] = ClientRatings.FAT_STAR
                         
                         like_colours = {}
                         
@@ -11428,6 +11428,36 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( ( '4chan-style thread api parser', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 496:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'hentai foundry file page parser', ) )
                 
                 #
                 

@@ -1245,7 +1245,8 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         self._shape.addItem( 'circle', ClientRatings.CIRCLE )
         self._shape.addItem( 'square', ClientRatings.SQUARE )
-        self._shape.addItem( 'star', ClientRatings.STAR )
+        self._shape.addItem( 'fat star', ClientRatings.FAT_STAR )
+        self._shape.addItem( 'pentagram star', ClientRatings.PENTAGRAM_STAR )
         
         self._colour_ctrls = {}
         
@@ -1287,10 +1288,22 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             QP.AddToLayout( hbox, border_ctrl, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( hbox, fill_ctrl, CC.FLAGS_CENTER_PERPENDICULAR )
             
-            if colour_type == ClientRatings.LIKE: colour_text = 'liked'
-            elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
-            elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
-            elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
+            if colour_type == ClientRatings.LIKE:
+                
+                colour_text = 'liked'
+                
+            elif colour_type == ClientRatings.DISLIKE:
+                
+                colour_text = 'disliked'
+                
+            elif colour_type == ClientRatings.NULL:
+                
+                colour_text = 'not rated'
+                
+            else:
+                
+                colour_text = 'a mixture of ratings'
+                
             
             rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
             

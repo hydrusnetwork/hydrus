@@ -33,6 +33,42 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_497"><a href="#version_497">version 497</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>I bulked out the 'star' rating shape a bit more, since the new pentragram, while it looked better than my old 'by-eye' star, was a bit thin. if you prefer the pentagram, this is now selectable as a new shape type under manage services</li>
+					<li>the Windows installer is now Qt6 exclusively. there are no special update instructions, it should all just work™</li>
+					<li>the 'manage tag siblings/parents' dialogs now have explicit delete buttons, which should make mass-deletes a little easier to do. some of the background code is cleaned up too, and the 'add' button is moved up to the main button row</li>
+					<li>you can now hide all sibling and/or parent text-suffix 'decorators' in the manage tags and autocomplete dropdown taglists, with four new checkboxes under _options->tags_. the right-click menus of these lists let you temporarily show/hide too, just like 'hide/show parent rows'</li>
+					<li>when you change the namespace sort in the options, the existing collect-by dropdowns now update instantly (previously, existing pages needed a client restart to see any changes)</li>
+					<li>I updated how the media viewer 'note' hover window lays out and does its 'how tall should I be?' estimate. it fits better, being exactly just tall enough in more cases, but it still seems to have trouble with multiple notes that include wrapping text</li>
+					<li>added a link to the new flatpak release (easy Linux running-from-source setup) that a user made to the install help</li>
+					<li>fixed an issue with the new 'default' file import options when you right-click a watcher/gallery download--the 'show files' menu now correctly adapts to you having a default file import options</li>
+					<li>if you are set to elide page tab names, then all pages will tooltip their names on mouseover</li>
+					<li>new clients now start with (ctrl+page up/down) as 'move page selection left/right'</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the Client API routine that fetches file statuses for a given URL no longer double-checks 'already in db' results against your actual file system. this check is more appropriate to an actual working import process, so it now defaults off in the Client API</li>
+					<li>if you want to do this check because you are searching for missing files, you can turn it back on with the new 'doublecheck_file_system' parameter.</li>
+					<li>the client api help has been updated to reference this</li>
+					<li>the client api's Server header is now "client api/32 (497)". NOT "client api/17". it was stating the hydrus network version erroneously. it now states client api version and software version. if you are able to parse this header, it makes '/api_version' request superfluous</li>
+					<li>the client api version is now 32</li>
+					<li>.</li>
+					<li>multiline parsing:</li>
+					<li>the parser now supports limited multiline parsing. the main changes are hardcoded: the formulae beneath note content parsers and those that do subsidiary page parser splitting no longer remove newlines when they parse. all the parsing UI and the test panels and so on are now aware of this and set flags in all the right places, and parsed notes are now washed through the new trimming/cleaning method, and everything _seems_ to basically work. the main remaining problems is the complicated string processing UI has mixed single/multi-line testing support. some looks great, most gets coerced to single-line just for the previewed test results</li>
+					<li>as an example, the default hentai foundry downloader now grabs the artist description as a multi-line note</li>
+					<li>the parsing sub-system that extracts cohesive strings from complex html blocks now inserts newlines at 'p' and 'br' tags</li>
+					<li>trying to parse clean multiline notes still caused several formatting issues this week, so I have updated the automatic note-washing routine to standardise hydrus notes in several new ways that I hope will not be too disruptive to manually written notes:</li>
+					<li>the note washing routine now coerces all newline characters to 'backslash-n', regardless of platform</li>
+					<li>the note washing routine now trims each line, so no leading or trailing whitespace anywhere. I am open to changing this in future, maybe for handwritten notes where you really want an indent somewhere, but parsing from complex nested html tags is making a heap of weird extra whitespace, for which this is a clean solution</li>
+					<li>the note washing routine now trims newline gaps that are greater than two-newlines. you can split paragraphs by one empty line, but no more</li>
+					<li>there may be other issues figuring out cleanly formatted strings from nested html tags--so give it a go and let me know what you think. maybe p and br blocks should always make two newlines, so we have separated paragraphs, maybe I need to parse more blocks, like h1 and friends. any specific example html blocks would also be helpful</li>
+					<li>.</li>
+					<li>cleanup:</li>
+					<li>refactored ClientGUIParsing to its own 'parsing' module and split everything into four less tangled files</li>
+					<li>cleaned up a bunch of taglist text presentation code, mostly simplicity and clarity in prep for future updates</li>
+					<li>updated the checker options button to use a Qt signal instead of a callable</li>
+				</ul>
 				<li><h3 id="version_496"><a href="#version_496">version 496</a></h3></li>
 				<ul>
 					<li>note import options:</li>

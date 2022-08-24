@@ -57,7 +57,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUILogin
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -86,6 +85,8 @@ from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagement
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.parsing import ClientGUIParsing
+from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -4327,7 +4328,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
             
-            panel = ClientGUIParsing.ManageParsingScriptsPanel( dlg )
+            panel = ClientGUIParsingLegacy.ManageParsingScriptsPanel( dlg )
             
             dlg.SetPanel( panel )
             

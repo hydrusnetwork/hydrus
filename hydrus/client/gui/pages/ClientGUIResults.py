@@ -4933,6 +4933,7 @@ class Thumbnail( Selectable ):
         #
         # EDIT 2: I think it may only look weird when the thumb banner has opacity. Maybe I need to learn about CompositionModes
         #
+        # EDIT 3: Appalently Qt 6.4.0 may fix the basic 100% UI scale QImage init bug!
         
         painter = QG.QPainter( qt_image )
         
@@ -4973,6 +4974,7 @@ class Thumbnail( Selectable ):
         
         f = QG.QFont( HG.client_controller.gui.font() )
         
+        # this line magically fixes the bad text, as above
         f.setStyleStrategy( QG.QFont.PreferAntialias )
         
         painter.setFont( f )

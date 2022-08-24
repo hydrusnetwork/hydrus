@@ -40,8 +40,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         self._canvas_key = canvas_key
         self._current_media = None
         
-        service = HG.client_controller.services_manager.GetService( service_key )
-        
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
@@ -1346,7 +1344,7 @@ class NotePanel( QW.QWidget ):
         vbox = QP.VBoxLayout( margin = 0 )
         
         QP.AddToLayout( vbox, self._note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._note_text.setVisible( self._note_visible )
         
@@ -1382,16 +1380,38 @@ class NotePanel( QW.QWidget ):
         spacing = self.layout().spacing()
         margin = self.layout().contentsMargins().top()
         
-        height = self._note_name.heightForWidth( width ) + margin * 2
+        total_height = 0
+        
+        expected_widget_height = self._note_name.heightForWidth( width )
+        
+        if self._note_name.width() >= width and self._note_name.height() > expected_widget_height:
+            
+            # there's some mysterious padding that I can't explain, probably a layout flag legacy issue, so we override here if the width seems correct
+            
+            expected_widget_height = self._note_name.height()
+            
+        
+        total_height += expected_widget_height
         
         if self._note_text.isVisibleTo( self ):
             
-            height += spacing
+            total_height += spacing
             
-            height += self._note_text.heightForWidth( width ) + margin * 2
+            expected_widget_height = self._note_text.heightForWidth( width )
+            
+            if self._note_text.width() >= width and self._note_text.height() > expected_widget_height:
+                
+                # there's some mysterious padding that I can't explain, probably a layout flag legacy issue, so we override here if the width seems correct
+                
+                expected_widget_height = self._note_text.height()
+                
+            
+            total_height += expected_widget_height
             
         
-        return height
+        total_height += margin * 2
+        
+        return total_height
         
     
     def IsNoteVisible( self ) -> bool:
@@ -1469,7 +1489,12 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         spacing = self.layout().spacing()
         margin = self.layout().contentsMargins().top()
         
-        best_guess_at_height_for_width = sum( ( spacing + ( margin * 2 ) + note_panel.heightForWidth( my_ideal_width ) for note_panel in self._names_to_note_panels.values() ) ) - spacing
+        my_axis_frame_width = self.frameWidth() * 2
+        my_axis_margin = margin * 2
+        
+        note_panel_width = my_ideal_width - ( my_axis_frame_width + my_axis_margin )
+        
+        best_guess_at_height_for_width = sum( ( spacing + ( margin * 2 ) + note_panel.heightForWidth( note_panel_width ) for note_panel in self._names_to_note_panels.values() ) ) - spacing
         
         best_guess_at_height_for_width += self.frameWidth() * 2
         
@@ -1514,7 +1539,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
                 
                 note_panel = NotePanel( self, name, note, note_visible )
                 
-                QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self._names_to_note_panels[ name ] = note_panel
                 

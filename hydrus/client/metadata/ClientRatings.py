@@ -9,7 +9,8 @@ MIXED = 4
 
 CIRCLE = 0
 SQUARE = 1
-STAR = 2
+FAT_STAR = 2
+PENTAGRAM_STAR = 3
 
 def GetLikeStateFromMedia( media, service_key ):
     
@@ -118,7 +119,7 @@ def GetShape( service_key ):
         
     except HydrusExceptions.DataMissing:
         
-        shape = STAR
+        shape = FAT_STAR
         
     
     return shape

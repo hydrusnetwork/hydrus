@@ -5,6 +5,7 @@ from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
@@ -20,6 +21,258 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+
+# wew lad
+# https://stackoverflow.com/questions/46456238/checkbox-not-visible-inside-combobox
+class CheckBoxDelegate( QW.QStyledItemDelegate ):
+    
+    def __init__( self, parent = None ):
+        
+        super( CheckBoxDelegate, self ).__init__( parent )
+        
+
+    def createEditor( self, parent, op, idx ):
+        
+        self.editor = QW.QCheckBox( parent )
+        
+    
+
+class CollectComboCtrl( QW.QComboBox ):
+    
+    itemChanged = QC.Signal()
+    
+    def __init__( self, parent, media_collect ):
+        
+        QW.QComboBox.__init__( self, parent )
+        
+        self.view().pressed.connect( self._HandleItemPressed )
+        
+        # this was previously 'if Fusion style only', but as it works for normal styles too, it is more helpful to have it always on
+        self.setItemDelegate( CheckBoxDelegate() )
+        
+        self.setModel( QG.QStandardItemModel( self ) )
+        
+        self._InitialiseChoices()
+        
+        # Trick to display custom text
+        
+        self._cached_text = ''
+        
+        if media_collect.DoesACollect():
+            
+            QP.CallAfter( self.SetCollectByValue, media_collect )
+            
+        
+    
+    def _InitialiseChoices( self ):
+        
+        text_and_data_tuples = set()
+        
+        for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts():
+            
+            namespaces = media_sort.GetNamespaces()
+            
+            try:
+                
+                text_and_data_tuples.update( namespaces )
+                
+            except:
+                
+                HydrusData.DebugPrint( 'Bad namespaces: {}'.format( namespaces ) )
+                
+                HydrusData.ShowText( 'Hey, your namespace-based sorts are likely damaged. Details have been written to the log, please let hydev know!' )
+                
+            
+        
+        text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
+        
+        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        for ratings_service in ratings_services:
+            
+            text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
+            
+        
+        for ( text, data ) in text_and_data_tuples:
+            
+            self.Append( text, data )
+            
+        
+    
+    def paintEvent( self, e ):
+        
+        painter = QW.QStylePainter( self )
+        painter.setPen( self.palette().color( QG.QPalette.Text ) )
+
+        opt = QW.QStyleOptionComboBox()
+        self.initStyleOption( opt )
+
+        opt.currentText = self._cached_text
+
+        painter.drawComplexControl( QW.QStyle.CC_ComboBox, opt )
+
+        painter.drawControl( QW.QStyle.CE_ComboBoxLabel, opt )
+        
+    
+    def GetValues( self ):
+        
+        namespaces = []
+        rating_service_keys = []
+        
+        for index in self.GetCheckedIndices():
+            
+            ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
+            
+            if collect_type == 'namespace':
+                
+                namespaces.append( collect_data )
+                
+            elif collect_type == 'rating':
+                
+                rating_service_keys.append( collect_data )
+                
+            
+        
+        collect_strings = self.GetCheckedStrings()
+        
+        if len( collect_strings ) > 0:
+            
+            description = 'collect by ' + '-'.join( collect_strings )
+            
+        else:
+            
+            description = 'no collections'
+            
+        
+        return ( namespaces, rating_service_keys, description )
+        
+    
+    def hidePopup(self):
+        
+        if not self.view().underMouse():
+            
+            QW.QComboBox.hidePopup( self )
+            
+            
+    def SetValue( self, text ):
+        
+        self._cached_text = text
+        
+        self.setCurrentText( text )
+        
+        
+    def SetCollectByValue( self, media_collect ):
+
+        try:
+            
+            indices_to_check = []
+
+            for index in range( self.count() ):
+
+                ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
+
+                p1 = collect_type == 'namespace' and collect_data in media_collect.namespaces
+                p2 = collect_type == 'rating' and collect_data in media_collect.rating_service_keys
+
+                if p1 or p2:
+                    
+                    indices_to_check.append( index )
+                    
+                
+
+            self.SetCheckedIndices( indices_to_check )
+            
+            self.itemChanged.emit()
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Failed to set a collect-by value!' )
+
+            HydrusData.ShowException( e )
+            
+        
+
+    def SetCheckedIndices( self, indices_to_check ):
+        
+        for idx in range( self.count() ):
+
+            item = self.model().item( idx )
+            
+            if idx in indices_to_check:
+                
+                item.setCheckState( QC.Qt.Checked )
+                
+            else:
+                
+                item.setCheckState( QC.Qt.Unchecked )
+                
+            
+        
+    
+    def GetCheckedIndices( self ):
+        
+        indices = []
+        
+        for idx in range( self.count() ):
+
+            item = self.model().item( idx )
+            
+            if item.checkState() == QC.Qt.Checked:
+                
+                indices.append( idx )
+                
+            
+        
+        return indices
+        
+
+    def GetCheckedStrings( self ):
+        
+        strings = [ ]
+        
+        for idx in range( self.count() ):
+            
+            item = self.model().item( idx )
+            
+            if item.checkState() == QC.Qt.Checked:
+                
+                strings.append( item.text() )
+                
+            
+        
+        return strings
+        
+    
+    def Append( self, str, data ):
+        
+        self.addItem( str, userData = data )
+        
+        item = self.model().item( self.count() - 1, 0 )
+        
+        item.setCheckState( QC.Qt.Unchecked )
+        
+    
+    def ReinitialiseChoices( self ):
+        
+        self.clear()
+        
+        self._InitialiseChoices()
+        
+    
+    def _HandleItemPressed( self, index ):
+        
+        item = self.model().itemFromIndex( index )
+        
+        if item.checkState() == QC.Qt.Checked:
+            
+            item.setCheckState( QC.Qt.Unchecked )
+            
+        else:
+            
+            item.setCheckState( QC.Qt.Checked )
+            
+        self.SetValue( self._cached_text )
+        self.itemChanged.emit()
 
 class MediaCollectControl( QW.QWidget ):
     
@@ -42,7 +295,7 @@ class MediaCollectControl( QW.QWidget ):
         
         self._silent = silent
         
-        self._collect_comboctrl = QP.CollectComboCtrl( self, self._media_collect )
+        self._collect_comboctrl = CollectComboCtrl( self, self._media_collect )
         
         choice_tuples = [
             ( 'collect unmatched', True ),
@@ -146,12 +399,26 @@ class MediaCollectControl( QW.QWidget ):
         return self._media_collect
         
     
+    def ListenForNewOptions( self ):
+        
+        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        
+    
     def NotifyAdvancedMode( self ):
         
         self._UpdateButtonsVisible()
         
     
-    def SetCollect( self, media_collect: ClientMedia.MediaCollect ):
+    def NotifyNewOptions( self ):
+        
+        media_collect = self._media_collect.Duplicate()
+        
+        self._collect_comboctrl.ReinitialiseChoices()
+        
+        self.SetCollect( media_collect, do_broadcast = False )
+        
+    
+    def SetCollect( self, media_collect: ClientMedia.MediaCollect, do_broadcast = True ):
         
         self._media_collect = media_collect
         
@@ -166,7 +433,10 @@ class MediaCollectControl( QW.QWidget ):
         self._collect_comboctrl.blockSignals( False )
         self._collect_unmatched.blockSignals( False )
         
-        self._BroadcastCollect()
+        if do_broadcast:
+            
+            self._BroadcastCollect()
+            
         
     
     def SetCollectFromPage( self, page_key, media_collect ):

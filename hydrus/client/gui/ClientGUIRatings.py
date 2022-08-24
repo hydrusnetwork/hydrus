@@ -24,20 +24,7 @@ default_numerical_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 
 default_numerical_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
 default_numerical_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 
-STAR_COORDS = []
-
-STAR_COORDS.append( QC.QPointF( 6, 0 ) ) # top
-STAR_COORDS.append( QC.QPointF( 9, 4 ) )
-STAR_COORDS.append( QC.QPointF( 12, 4 ) ) # right
-STAR_COORDS.append( QC.QPointF( 9, 8 ) )
-STAR_COORDS.append( QC.QPointF( 10, 12 ) ) # bottom right
-STAR_COORDS.append( QC.QPointF( 6, 10 ) )
-STAR_COORDS.append( QC.QPointF( 2, 12 ) ) # bottom left
-STAR_COORDS.append( QC.QPointF( 3, 8 ) )
-STAR_COORDS.append( QC.QPointF( 0, 4 ) ) # left
-STAR_COORDS.append( QC.QPointF( 3, 4 ) )
-
-STAR_COORDS = [
+PENTAGRAM_STAR_COORDS = [
     QC.QPointF( 6, 0 ), # top
     QC.QPointF( 7.5, 4.5 ),
     QC.QPointF( 12, 4.5 ), # right
@@ -48,6 +35,19 @@ STAR_COORDS = [
     QC.QPointF( 3.7, 7.2 ),
     QC.QPointF( 0, 4.5 ), # left
     QC.QPointF( 4.5, 4.5 )
+]
+
+FAT_STAR_COORDS = [
+    QC.QPointF( 6, 0 ), # top
+    QC.QPointF( 7.8, 4.1 ),
+    QC.QPointF( 12, 4.6 ), # right
+    QC.QPointF( 8.9, 7.6 ),
+    QC.QPointF( 9.8, 12 ), # bottom right
+    QC.QPointF( 6, 9.8 ),
+    QC.QPointF( 2.2, 12 ), # bottom left
+    QC.QPointF( 3.1, 7.6 ),
+    QC.QPointF( 0, 4.5 ), # left
+    QC.QPointF( 4.2, 4.1 )
 ]
 
 def DrawLike( painter, x, y, service_key, rating_state ):
@@ -69,13 +69,15 @@ def DrawLike( painter, x, y, service_key, rating_state ):
         
         painter.drawRect( x+2, y+2, 12, 12 )
         
-    elif shape == ClientRatings.STAR:
+    elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
         
         offset = QC.QPoint( x + 1, y + 1 )
         
         painter.translate( offset )
         
-        painter.drawPolygon( QG.QPolygonF( STAR_COORDS ) )
+        coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
+        
+        painter.drawPolygon( QG.QPolygonF( coords ) )
         
         painter.translate( -offset )
         
@@ -104,13 +106,15 @@ def DrawNumerical( painter, x, y, service_key, rating_state, rating ):
                 
                 painter.drawRect( x + 2 + x_delta, y + 2, 12, 12 )
                 
-            elif shape == ClientRatings.STAR:
+            elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
                 
                 offset = QC.QPoint( x + 1 + x_delta, y + 1 )
                 
                 painter.translate( offset )
                 
-                painter.drawPolygon( QG.QPolygonF( STAR_COORDS ) )
+                coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
+                
+                painter.drawPolygon( QG.QPolygonF( coords ) )
                 
                 painter.translate( -offset )
                 
@@ -162,7 +166,7 @@ def GetStars( service_key, rating_state, rating ):
         
     except HydrusExceptions.DataMissing:
         
-        return ( ClientRatings.STAR, 0 )
+        return ( ClientRatings.FAT_STAR, 0 )
         
     
     shape = service.GetShape()

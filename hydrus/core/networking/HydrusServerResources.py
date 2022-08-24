@@ -432,10 +432,6 @@ class HydrusResource( Resource ):
         self._service_key = self._service.GetServiceKey()
         self._domain = domain
         
-        service_type = self._service.GetServiceType()
-        
-        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
-        
     
     def _callbackCheckAccountRestrictions( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -732,6 +728,11 @@ class HydrusResource( Resource ):
                     ( client, network_version ) = user_agent.split( '/', 1 )
                     
                     if client == 'hydrus':
+                        
+                        if ' ' in network_version:
+                            
+                            ( network_version, software_version_gumpf ) = network_version.split( ' ', 1 )
+                            
                         
                         request.is_hydrus_user_agent = True
                         

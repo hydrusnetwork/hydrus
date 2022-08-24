@@ -208,7 +208,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
         self._this_is_a_random_sample_sub.setToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' )
         
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'file publication' )
         
@@ -335,6 +335,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
+        
+        self._checker_options.valueChanged.connect( self._CheckerOptionsUpdated )
         
         self._UpdateDelayText()
         

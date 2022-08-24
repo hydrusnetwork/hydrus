@@ -27,7 +27,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
@@ -45,6 +44,7 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.pages import ClientGUIResults
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
@@ -974,6 +974,8 @@ class ManagementPanel( QW.QScrollArea ):
         silent_collect = not self.SHOW_COLLECT
         
         self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self, management_controller = self._management_controller, silent = silent_collect )
+        
+        self._media_collect.ListenForNewOptions()
         
         if not self.SHOW_COLLECT:
             
@@ -2206,7 +2208,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             ( importer, ) = selected_importers
             
-            single_selected_presentation_import_options = importer.GetFileImportOptions().GetPresentationImportOptions()
+            fio = importer.GetFileImportOptions()
+            
+            single_selected_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( fio, FileImportOptions.IMPORT_TYPE_LOUD )
             
         
         AddPresentationSubmenu( menu, 'downloader', single_selected_presentation_import_options, self._ShowSelectedImportersFiles )
@@ -2757,7 +2761,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watcher_url_input.setPlaceholderText( 'watcher url' )
         
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._watchers_panel, checker_options, self._OptionsUpdated )
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._watchers_panel, checker_options )
         
         show_downloader_options = True
         allow_default_selection = True
@@ -2810,6 +2814,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._import_options_button.fileImportOptionsChanged.connect( self._OptionsUpdated )
         self._import_options_button.noteImportOptionsChanged.connect( self._OptionsUpdated )
         self._import_options_button.tagImportOptionsChanged.connect( self._OptionsUpdated )
+        
+        self._checker_options.valueChanged.connect( self._OptionsUpdated )
         
     
     def _AddURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
@@ -3076,7 +3082,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             ( watcher, ) = selected_watchers
             
-            single_selected_presentation_import_options = watcher.GetFileImportOptions().GetPresentationImportOptions()
+            fio = watcher.GetFileImportOptions()
+            
+            single_selected_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( fio, FileImportOptions.IMPORT_TYPE_LOUD )
             
         
         AddPresentationSubmenu( menu, 'watcher', single_selected_presentation_import_options, self._ShowSelectedImportersFiles )
@@ -3780,7 +3788,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 formula = simple_downloader_formula.GetFormula()
                 
-                control = ClientGUIParsing.EditFormulaPanel( panel, formula, lambda: ClientParsing.ParsingTestData( {}, ( '', ) ) )
+                control = ClientGUIParsingFormulae.EditFormulaPanel( panel, formula, lambda: ClientParsing.ParsingTestData( {}, ( '', ) ) )
                 
                 panel.SetControl( control )
                 

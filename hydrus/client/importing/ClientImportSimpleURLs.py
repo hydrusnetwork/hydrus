@@ -312,10 +312,10 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 parsing_context[ 'url' ] = url
                 
                 parsing_formula = simple_downloader_formula.GetFormula()
-                
+                collapse_newlines = True
                 file_seeds = []
                 
-                for parsed_text in parsing_formula.Parse( parsing_context, parsing_text ):
+                for parsed_text in parsing_formula.Parse( parsing_context, parsing_text, collapse_newlines ):
                     
                     try:
                         

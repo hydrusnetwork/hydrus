@@ -39,12 +39,13 @@ from hydrus.client.metadata import ClientTags
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, checker_options, update_callable = None ):
+    valueChanged = QC.Signal( ClientImportOptions.CheckerOptions )
+    
+    def __init__( self, parent, checker_options: ClientImportOptions.CheckerOptions ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'checker options', self._EditOptions )
         
         self._checker_options = checker_options
-        self._update_callable = update_callable
         
         self._SetToolTip()
         
@@ -77,10 +78,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
         
         self._SetToolTip()
         
-        if self._update_callable is not None:
-            
-            self._update_callable( self._checker_options )
-            
+        self.valueChanged.emit( self._checker_options )
         
     
     def GetValue( self ):
@@ -1547,7 +1545,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         checker_options = ClientImportOptions.CheckerOptions()
         
-        self._checker_options_button = CheckerOptionsButton( checker_panel, checker_options, update_callable = self._SetCheckerOptions )
+        self._checker_options_button = CheckerOptionsButton( checker_panel, checker_options )
         
         self._checker_download_control = ClientGUINetworkJobControl.NetworkJobControl( checker_panel )
         
@@ -1614,6 +1612,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._import_options_button.fileImportOptionsChanged.connect( self._SetFileImportOptions )
         self._import_options_button.noteImportOptionsChanged.connect( self._SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._SetTagImportOptions )
+        
+        self._checker_options_button.valueChanged.connect( self._SetCheckerOptions )
         
         self._UpdateControlsForNewWatcher()
         

@@ -244,6 +244,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_taglists' ] = True
         self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_autocomplete_taglists' ] = True
         
+        self._dictionary[ 'booleans' ][ 'show_parent_decorators_on_storage_taglists' ] = True
+        self._dictionary[ 'booleans' ][ 'show_parent_decorators_on_storage_autocomplete_taglists' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'show_sibling_decorators_on_storage_taglists' ] = True
+        self._dictionary[ 'booleans' ][ 'show_sibling_decorators_on_storage_autocomplete_taglists' ] = True
+        
         self._dictionary[ 'booleans' ][ 'show_session_size_warnings' ] = True
         
         self._dictionary[ 'booleans' ][ 'delete_lock_for_archived_files' ] = False

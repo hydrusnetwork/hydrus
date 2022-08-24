@@ -2618,7 +2618,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         favs_list = ListBoxTagsStringsAC( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, height_num_chars = height_num_chars )
         
-        favs_list.SetChildRowsAllowed( HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+        favs_list.SetExtraParentRowsAllowed( HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+        favs_list.SetParentDecoratorsAllowed( HG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )
+        favs_list.SetSiblingDecoratorsAllowed( HG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
         
         return favs_list
         
@@ -2629,7 +2631,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         preds_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, height_num_chars = height_num_chars )
         
-        preds_list.SetChildRowsAllowed( HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+        preds_list.SetExtraParentRowsAllowed( HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+        preds_list.SetParentDecoratorsAllowed( HG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )
+        preds_list.SetSiblingDecoratorsAllowed( HG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
         
         return preds_list
         

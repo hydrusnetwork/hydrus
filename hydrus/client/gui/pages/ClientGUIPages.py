@@ -1559,7 +1559,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
         
-        do_tooltip = len( page_name ) != len( full_page_name )
+        do_tooltip = len( page_name ) != len( full_page_name ) or HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' )
         
         num_string = ''
         

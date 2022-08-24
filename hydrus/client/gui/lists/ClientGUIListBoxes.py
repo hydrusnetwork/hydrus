@@ -927,7 +927,7 @@ class ListBox( QW.QScrollArea ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent: QW.QWidget, child_rows_allowed: bool, terms_may_have_child_rows: bool, height_num_chars = 10, has_async_text_info = False ):
+    def __init__( self, parent: QW.QWidget, terms_may_have_sibling_or_parent_info: bool, height_num_chars = 10, has_async_text_info = False ):
         
         QW.QScrollArea.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -956,8 +956,11 @@ class ListBox( QW.QScrollArea ):
         
         self._num_rows_per_page = 0
         
-        self._child_rows_allowed = child_rows_allowed
-        self._terms_may_have_child_rows = terms_may_have_child_rows
+        self._show_sibling_decorators = True
+        self._show_parent_decorators = True
+        self._extra_parent_rows_allowed = True
+        
+        self._terms_may_have_sibling_or_parent_info = terms_may_have_sibling_or_parent_info
         
         #
         
@@ -1068,7 +1071,9 @@ class ListBox( QW.QScrollArea ):
                 self._StartAsyncTextInfoLookup( term )
                 
             
-            self._total_positional_rows += term.GetRowCount( self._child_rows_allowed )
+            show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+            
+            self._total_positional_rows += term.GetRowCount( show_parent_rows )
             
         
         if len( previously_selected_terms ) > 0:
@@ -1650,7 +1655,9 @@ class ListBox( QW.QScrollArea ):
             self._terms_to_positional_indices[ term ] = self._total_positional_rows
             self._positional_indices_to_terms[ self._total_positional_rows ] = term
             
-            self._total_positional_rows += term.GetRowCount( self._child_rows_allowed )
+            show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+            
+            self._total_positional_rows += term.GetRowCount( show_parent_rows )
             
         
     
@@ -2006,11 +2013,11 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def SetChildRowsAllowed( self, value: bool ):
+    def SetExtraParentRowsAllowed( self, value: bool ):
         
-        if self._terms_may_have_child_rows and self._child_rows_allowed != value:
+        if self._terms_may_have_sibling_or_parent_info and self._extra_parent_rows_allowed != value:
             
-            self._child_rows_allowed = value
+            self._extra_parent_rows_allowed = value
             
             self._RegenTermsToIndices()
             
@@ -2023,6 +2030,34 @@ class ListBox( QW.QScrollArea ):
     def SetMinimumHeightNumChars( self, minimum_height_num_chars ):
         
         self._minimum_height_num_chars = minimum_height_num_chars
+        
+    
+    def SetParentDecoratorsAllowed( self, value: bool ):
+        
+        if self._terms_may_have_sibling_or_parent_info and self._show_parent_decorators != value:
+            
+            self._show_parent_decorators = value
+            
+            # i.e. if we just hid/showed parent sub-rows
+            if self._extra_parent_rows_allowed:
+                
+                self._RegenTermsToIndices()
+                
+                self._SetVirtualSize()
+                
+            
+            self.widget().update()
+            
+        
+    
+    def SetSiblingDecoratorsAllowed( self, value: bool ):
+        
+        if self._terms_may_have_sibling_or_parent_info and self._show_sibling_decorators != value:
+            
+            self._show_sibling_decorators = value
+            
+            self.widget().update()
+            
         
     
     def sizeHint( self ):
@@ -2055,14 +2090,19 @@ class ListBoxTags( ListBox ):
         
         self._tag_display_type = tag_display_type
         
-        child_rows_allowed = HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
-        terms_may_have_child_rows = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
+        terms_may_have_sibling_or_parent_info = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
-        ListBox.__init__( self, parent, child_rows_allowed, terms_may_have_child_rows, *args, **kwargs )
+        ListBox.__init__( self, parent, terms_may_have_sibling_or_parent_info, *args, **kwargs )
+        
+        if terms_may_have_sibling_or_parent_info:
+            
+            self._show_parent_decorators = HG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' )
+            self._show_sibling_decorators = HG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' )
+            
+            self._extra_parent_rows_allowed = HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
+            
         
         self._render_for_user = not self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
-        
-        self._sibling_decoration_allowed = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
@@ -2135,7 +2175,9 @@ class ListBoxTags( ListBox ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._sibling_decoration_allowed, self._child_rows_allowed )
+        show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+        
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._show_parent_decorators, show_parent_rows )
         
         rows_of_texts_and_colours = []
         
@@ -2391,32 +2433,39 @@ class ListBoxTags( ListBox ):
             
             menu = QW.QMenu()
             
-            if self._terms_may_have_child_rows:
+            if self._terms_may_have_sibling_or_parent_info:
                 
-                add_it = True
-                
-                if self._child_rows_allowed:
+                if self._show_parent_decorators:
                     
-                    if len( self._ordered_terms ) == self._total_positional_rows:
+                    if self._extra_parent_rows_allowed:
                         
-                        # no parents to hide!
+                        if len( self._ordered_terms ) != self._total_positional_rows:
+                            
+                            ClientGUIMenus.AppendMenuItem( menu, 'collapse parent rows', 'Show/hide parents.', self.SetExtraParentRowsAllowed, not self._extra_parent_rows_allowed )
+                            
                         
-                        add_it = False
+                    else:
+                        
+                        ClientGUIMenus.AppendMenuItem( menu, 'expand parent rows', 'Show/hide parents.', self.SetExtraParentRowsAllowed, not self._extra_parent_rows_allowed )
                         
                     
-                    message = 'hide parent rows'
+                    ClientGUIMenus.AppendMenuItem( menu, 'hide parent decorators', 'Show/hide parent info.', self.SetParentDecoratorsAllowed, not self._show_parent_decorators )
                     
                 else:
                     
-                    message = 'show parent rows'
+                    ClientGUIMenus.AppendMenuItem( menu, 'show parent decorators', 'Show/hide parent info.', self.SetParentDecoratorsAllowed, not self._show_parent_decorators )
                     
                 
-                if add_it:
+                if self._show_sibling_decorators:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, message, 'Show/hide parents.', self.SetChildRowsAllowed, not self._child_rows_allowed )
+                    ClientGUIMenus.AppendMenuItem( menu, 'hide sibling decorators', 'Show/hide sibling info.', self.SetSiblingDecoratorsAllowed, not self._show_sibling_decorators )
                     
-                    ClientGUIMenus.AppendSeparator( menu )
+                else:
                     
+                    ClientGUIMenus.AppendMenuItem( menu, 'show sibling decorators', 'Show/hide sibling info.', self.SetSiblingDecoratorsAllowed, not self._show_sibling_decorators )
+                    
+                
+                ClientGUIMenus.AppendSeparator( menu )
                 
             
             copy_menu = QW.QMenu( menu )
@@ -3612,7 +3661,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         item_to_tag_key_wrapper = lambda term: term.GetTag()
         item_to_sibling_key_wrapper = item_to_tag_key_wrapper
         
-        if self._sibling_decoration_allowed:
+        if self._show_sibling_decorators:
             
             item_to_sibling_key_wrapper = lambda term: term.GetBestTag()
             
