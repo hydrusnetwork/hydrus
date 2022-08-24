@@ -345,28 +345,13 @@ jobs:
           pyinstaller server-win.spec
           pyinstaller client-win.spec
           dir -r
-      - 
-      # yo pretty sure we'll need to install this manually once we are on windows server 2022
-      # https://github.com/actions/virtual-environments/issues/4856
-        name: InnoSetup
-        run: |
-          move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
-          ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }}
       -
         name: Compress Client
         run: |
           cd .\dist
           7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract5.zip 'Hydrus Network'
           cd ..
-      - 
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Windows-Install
-          path: dist\HydrusInstaller.exe
-          if-no-files-found: error
-          retention-days: 2
-      - 
+      -
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
@@ -448,11 +433,26 @@ jobs:
           pyinstaller client-win.spec
           dir -r
       -
+        # yo pretty sure we'll need to install this manually once we are on windows server 2022
+        # https://github.com/actions/virtual-environments/issues/4856
+        name: InnoSetup
+        run: |
+          move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
+          ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }}
+      -
         name: Compress Client
         run: |
           cd .\dist
           7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract6.zip 'Hydrus Network'
           cd ..
+      -
+        name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Windows-Install
+          path: dist\HydrusInstaller.exe
+          if-no-files-found: error
+          retention-days: 2
       -
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
@@ -485,7 +485,7 @@ jobs:
           mkdir ubuntu windows
           mv MacOS-DMG5/HydrusNetwork5.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt5.-.App.dmg
           mv MacOS-DMG6/HydrusNetwork6.dmg          Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.macOS.Qt6.-.App.dmg
-          mv Windows-Install/HydrusInstaller.exe  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Installer.exe
+          mv Windows-Install/HydrusInstaller.exe  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Installer.exe
           mv Windows-Extract5/Windows-Extract5.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Extract.only.zip
           mv Windows-Extract6/Windows-Extract6.zip  Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Extract.only.zip
           mv Ubuntu-Extract5/Ubuntu-Extract5.tar.gz Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt5.-.Executable.tar.gz
@@ -496,7 +496,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Installer.exe
+            Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Installer.exe
             Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt5.-.Extract.only.zip
             Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Windows.Qt6.-.Extract.only.zip
             Hydrus.Network.${{ steps.meta.outputs.version_short }}.-.Linux.Qt5.-.Executable.tar.gz
