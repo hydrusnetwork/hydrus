@@ -675,6 +675,7 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
             request.setHeader( 'Content-Disposition', content_disposition )
+            request.setHeader( 'Cache-Control', 'max-age={}'.format( 4 ) ) #hydurs won't change its mind about dynamic data under 4 seconds even if you ask repeatedly
             
             request.write( body_bytes )
             
