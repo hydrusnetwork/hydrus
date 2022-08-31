@@ -3085,7 +3085,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             affected_pairs = []
             
             if len( new_pairs ) > 0:
-            
+                
                 do_it = True
                 
                 if not self._i_am_local_tag_service:
@@ -3127,7 +3127,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if do_it:
                         
-                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
+                        for pair in new_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
                         
                     
                 
@@ -3199,7 +3202,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                             if do_it:
                                 
-                                for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                for pair in current_pairs:
+                                    
+                                    self._pairs_to_reasons[ pair ] = reason
+                                    
                                 
                             
                             
@@ -3911,6 +3917,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     class _Panel( QW.QWidget ):
         
+        AUTO_PETITION_REASON = 'TO BE AUTO-PETITIONED'
+        
         def __init__( self, parent, service_key, tags = None ):
             
             QW.QWidget.__init__( self, parent )
@@ -4134,7 +4142,28 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if do_it:
                         
-                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
+                        we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
+                        
+                        if we_are_autopetitioning:
+                            
+                            reason = 'REPLACEMENT: {}'.format( reason )
+                            
+                        
+                        for pair in new_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
+                        
+                        if we_are_autopetitioning:
+                            
+                            for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                                
+                                if r == self.AUTO_PETITION_REASON:
+                                    
+                                    self._pairs_to_reasons[ p ] = reason
+                                    
+                                
+                            
                         
                     
                 
@@ -4196,11 +4225,26 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if do_it:
                         
-                        if reason is not None:
+                        we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
+                        
+                        if we_are_autopetitioning:
                             
-                            for pair in current_pairs:
+                            reason = 'REPLACEMENT: {}'.format( reason )
+                            
+                        
+                        for pair in current_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
+                        
+                        if we_are_autopetitioning:
+                            
+                            for ( p, r ) in list( self._pairs_to_reasons.items() ):
                                 
-                                self._pairs_to_reasons[ pair ] = reason
+                                if r == self.AUTO_PETITION_REASON:
+                                    
+                                    self._pairs_to_reasons[ p ] = reason
+                                    
                                 
                             
                         
@@ -4295,7 +4339,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs_to_auto_petition = list( pairs_to_auto_petition )
                 
-                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
+                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
                 
             
         
@@ -4321,7 +4365,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             pairs_to_auto_petition = [ ( loop_new, next_new ) ]
                             
-                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO BREAK LOOP FOR: {}->{}'.format( potential_old, potential_new ) )
+                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
                             
                             current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
                             

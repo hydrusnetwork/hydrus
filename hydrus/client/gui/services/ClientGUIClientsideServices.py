@@ -2632,6 +2632,8 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self._network_panel, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
         self._update_downloading_paused_button.setToolTip( 'pause/play update downloading' )
         
+        self._service_info_button = ClientGUICommon.BetterButton( self._network_panel, 'fetch service info', self._FetchServiceInfo )
+        
         self._sync_remote_now_button = ClientGUICommon.BetterButton( self._network_panel, 'download now', self._SyncRemoteNow )
         
         reset_menu_items = []
@@ -2705,6 +2707,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
+        QP.AddToLayout( hbox, self._service_info_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_downloading_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -2874,6 +2877,58 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
         
     
+    def _FetchServiceInfo( self ):
+        
+        service = self._service
+        
+        def work_callable():
+            
+            result = service.Request( HC.GET, 'service_info' )
+            
+            return dict( result[ 'service_info' ] )
+            
+        
+        def publish_callable( service_info_dict ):
+            
+            if self._service.GetServiceType() == HC.TAG_REPOSITORY:
+                
+                l = HC.TAG_REPOSITORY_SERVICE_INFO_TYPES
+                
+            else:
+                
+                l = HC.FILE_REPOSITORY_SERVICE_INFO_TYPES
+                
+            
+            message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your review services value, which is only for current content.'
+            message += os.linesep * 2
+            
+            message += os.linesep.join( ( '{}: {}'.format( HC.service_info_enum_str_lookup[ int( info_type ) ], HydrusData.ToHumanInt( info ) ) for ( info_type, info ) in service_info_dict.items() ) )
+            
+            QW.QMessageBox.information( self, 'Service Info', message )
+            
+            self._my_updater.Update()
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            if not isinstance( etype, HydrusExceptions.ServerBusyException ):
+                
+                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+                
+            
+            QW.QMessageBox.critical( self, 'Error', str( value ) )
+            
+            self._my_updater.Update()
+            
+        
+        self._service_info_button.setEnabled( False )
+        self._service_info_button.setText( 'fetching\u2026' )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        
+        job.start()
+        
+    
     def _PausePlayUpdateDownloading( self ):
         
         self._service.PausePlayUpdateDownloading()
@@ -2904,6 +2959,13 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().pause )
             
+        
+        #
+        
+        
+        self._service_info_button.setText( 'service info' )
+        self._service_info_button.setEnabled( True )
+        self._service_info_button.setVisible( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
         
         #
         
@@ -3803,7 +3865,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
         
-        num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+        num_files = service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
         
         text = HydrusData.ToHumanInt( num_files ) + ' files are rated'
         
@@ -3877,7 +3939,7 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
         
         service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
         
-        num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+        num_files = service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
         num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
         num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
         

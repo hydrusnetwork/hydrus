@@ -418,6 +418,8 @@ def THREADUploadPending( service_key ):
         
     finally:
         
+        HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
+        
         HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
@@ -454,8 +456,6 @@ def THREADUploadPending( service_key ):
             
         
         HG.client_controller.Write( 'delete_service_info', service_key, types_to_delete )
-        
-        HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
     
 
@@ -2917,6 +2917,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'change anonymisation period', 'Change the account history nullification period for this service.', self._ManageServiceOptionsNullificationPeriod, service_key )
                         
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'maintenance: regen service info', 'Add, edit, and delete this server\'s services.', self._ServerMaintenanceRegenServiceInfo, service_key )
+                        
                     
                     if can_overrule_services and service_type == HC.SERVER_ADMIN:
                         
@@ -3378,7 +3382,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
         ClientGUIMenus.AppendMenuItem( tests, 'run the client api test', 'Run hydrus_dev\'s weekly Client API Test. Guaranteed to work and not mess up your session, ha ha.', self._RunClientAPITest )
-        ClientGUIMenus.AppendMenuItem( tests, 'run the server test', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._RunServerTest )
+        ClientGUIMenus.AppendMenuItem( tests, 'run the server test', 'This will try to boot the server in your install folder and initialise it.', self._RunServerTest )
+        ClientGUIMenus.AppendMenuItem( tests, 'run the server test on fresh server', 'This will try to initialise an already running server.', self._RunServerTest, do_boot = False )
         
         ClientGUIMenus.AppendMenu( debug, tests, 'tests, do not touch' )
         
@@ -6047,84 +6052,87 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         HG.client_controller.CallToThread( do_it )
         
     
-    def _RunServerTest( self ):
+    def _RunServerTest( self, do_boot = True ):
         
         def do_it():
             
             host = '127.0.0.1'
             port = HC.DEFAULT_SERVER_ADMIN_PORT
             
-            if HydrusNetworking.LocalPortInUse( port ):
+            if do_boot:
                 
-                HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
-                
-                return
-                
-            else:
-                
-                try:
+                if HydrusNetworking.LocalPortInUse( port ):
                     
-                    HydrusData.ShowText( 'Starting server\u2026' )
-                    
-                    db_param = '-d=' + self._controller.GetDBDir()
-                    
-                    if HC.PLATFORM_WINDOWS:
-                        
-                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
-                        
-                    else:
-                        
-                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
-                        
-                    
-                    if os.path.exists( server_frozen_path ):
-                        
-                        cmd = [ server_frozen_path, db_param ]
-                        
-                    else:
-                        
-                        python_executable = sys.executable
-                        
-                        if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
-                            
-                            raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
-                            
-                        
-                        if 'pythonw' in python_executable:
-                            
-                            python_executable = python_executable.replace( 'pythonw', 'python' )
-                            
-                        
-                        server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
-                        
-                        cmd = [ python_executable, server_script_path, db_param ]
-                        
-                    
-                    sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
-                    
-                    HydrusData.CheckProgramIsNotShuttingDown()
-                    
-                    subprocess.Popen( cmd, **sbp_kwargs )
-                    
-                    time_waited = 0
-                    
-                    while not HydrusNetworking.LocalPortInUse( port ):
-                        
-                        time.sleep( 3 )
-                        
-                        time_waited += 3
-                        
-                        if time_waited > 30:
-                            
-                            raise Exception( 'The server\'s port did not appear!' )
-                            
-                        
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
+                    HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
                     
                     return
+                    
+                else:
+                    
+                    try:
+                        
+                        HydrusData.ShowText( 'Starting server\u2026' )
+                        
+                        db_param = '-d=' + self._controller.GetDBDir()
+                        
+                        if HC.PLATFORM_WINDOWS:
+                            
+                            server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
+                            
+                        else:
+                            
+                            server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
+                            
+                        
+                        if os.path.exists( server_frozen_path ):
+                            
+                            cmd = [ server_frozen_path, db_param ]
+                            
+                        else:
+                            
+                            python_executable = sys.executable
+                            
+                            if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
+                                
+                                raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
+                                
+                            
+                            if 'pythonw' in python_executable:
+                                
+                                python_executable = python_executable.replace( 'pythonw', 'python' )
+                                
+                            
+                            server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
+                            
+                            cmd = [ python_executable, server_script_path, db_param ]
+                            
+                        
+                        sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
+                        
+                        HydrusData.CheckProgramIsNotShuttingDown()
+                        
+                        subprocess.Popen( cmd, **sbp_kwargs )
+                        
+                        time_waited = 0
+                        
+                        while not HydrusNetworking.LocalPortInUse( port ):
+                            
+                            time.sleep( 3 )
+                            
+                            time_waited += 3
+                            
+                            if time_waited > 30:
+                                
+                                raise Exception( 'The server\'s port did not appear!' )
+                                
+                            
+                        
+                    except:
+                        
+                        HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
+                        
+                        return
+                        
                     
                 
             
@@ -6206,7 +6214,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
         
-        text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
+        text = 'Woe unto you unless you click "no" NOW.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
@@ -6223,6 +6231,49 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         if page is not None:
             
             ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            
+        
+    
+    def _ServerMaintenanceRegenServiceInfo( self, service_key: bytes ):
+        
+        def do_it( service ):
+            
+            started = HydrusData.GetNow()
+            
+            service.Request( HC.POST, 'maintenance_regen_service_info' )
+            
+            HydrusData.ShowText( 'Maintenance started!' )
+            
+            time.sleep( 10 )
+            
+            result_bytes = service.Request( HC.GET, 'busy' )
+            
+            while result_bytes == b'1':
+                
+                if HG.started_shutdown:
+                    
+                    return
+                    
+                
+                time.sleep( 10 )
+                
+                result_bytes = service.Request( HC.GET, 'busy' )
+                
+            
+            it_took = HydrusData.GetNow() - started
+            
+            HydrusData.ShowText( 'Server maintenance done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
+            
+        
+        message = 'This will tell the server to recalculate the cached numbers for number of files, mappings, actionable petitions and so on. It may take a little while to complete, during which time it will not be able to serve any requests.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            service = self._controller.services_manager.GetService( service_key )
+            
+            self._controller.CallToThread( do_it, service )
             
         
     

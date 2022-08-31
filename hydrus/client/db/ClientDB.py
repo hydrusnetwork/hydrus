@@ -3182,11 +3182,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_type = self.modules_services.GetServiceType( service_id )
                 
-                service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES }, calculate_missing = False )
+                info_type = HC.SERVICE_INFO_NUM_FILE_HASHES
                 
-                if HC.SERVICE_INFO_NUM_FILES in service_info:
+                service_info = self._GetServiceInfoSpecific( service_id, service_type, { info_type }, calculate_missing = False )
+                
+                if info_type in service_info:
                     
-                    num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    num_everything = service_info[ info_type ]
                     
                     system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
                     
@@ -5753,15 +5755,15 @@ class DB( HydrusDB.HydrusDB ):
             
         elif service_type == HC.LOCAL_TAG:
             
-            info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS }
+            info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS }
             
         elif service_type == HC.TAG_REPOSITORY:
             
-            info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS }
+            info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS }
             
         elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
             
-            info_types = { HC.SERVICE_INFO_NUM_FILES }
+            info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES }
             
         elif service_type == HC.LOCAL_BOORU:
             
@@ -5839,7 +5841,7 @@ class DB( HydrusDB.HydrusDB ):
                         save_it = False
                         
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES:
+                    if info_type == HC.SERVICE_INFO_NUM_FILE_HASHES:
                         
                         info = self.modules_mappings_storage.GetCurrentFilesCount( service_id )
                         
@@ -5888,7 +5890,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES:
+                    if info_type == HC.SERVICE_INFO_NUM_FILE_HASHES:
                         
                         ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM local_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
                         
@@ -6584,7 +6586,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 our_results = self._GetServiceInfo( tag_service_key )
                 
-                our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILES ]
+                our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
                 
                 other_services = [ service for service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
                 
@@ -6594,7 +6596,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     other_results = self._GetServiceInfo( other_service.GetServiceKey() )
                     
-                    other_num_files.append( other_results[ HC.SERVICE_INFO_NUM_FILES ] )
+                    other_num_files.append( other_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ] )
                     
                 
                 if len( other_num_files ) == 0:
@@ -7379,7 +7381,7 @@ class DB( HydrusDB.HydrusDB ):
                                 ratings_added += self._GetRowCount()
                                 
                             
-                            self._Execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            self._Execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
                             
                         
                     elif action == HC.CONTENT_UPDATE_ADVANCED:
@@ -7394,7 +7396,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             ratings_deleted = self._GetRowCount()
                             
-                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
                             
                         elif action == 'delete_for_non_local_files':
                             
@@ -7404,13 +7406,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                             ratings_deleted = self._GetRowCount()
                             
-                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
                             
                         elif action == 'delete_for_all_files':
                             
                             self._Execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
                             
-                            self._Execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            self._Execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
                             
                         
                     
@@ -9251,7 +9253,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if HC.CONTENT_TYPE_MAPPINGS in content_types:
                 
-                service_info_types_to_delete.extend( { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS } )
+                service_info_types_to_delete.extend( { HC.SERVICE_INFO_NUM_FILE_HASHES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS } )
                 
                 if service_type in HC.REAL_TAG_SERVICES:
                     
@@ -11477,6 +11479,45 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 497:
+            
+            try:
+                
+                file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES )
+                
+                # updating some borked enums that were overwriting tag enums
+                for service_id in file_service_ids:
+                    
+                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_PENDING_FILES, service_id, 15 ) )
+                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_PETITIONED_FILES, service_id, 16 ) )
+                    
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.ALL_TAG_SERVICES )
+                
+                # moving 'file count' to 'file hash count'
+                for service_id in tag_service_ids:
+                    
+                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_FILE_HASHES, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                    
+                
+                rating_service_ids = self.modules_services.GetServiceIds( HC.RATINGS_SERVICES )
+                
+                # moving 'file count' to 'file hash count'
+                for service_id in rating_service_ids:
+                    
+                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_FILE_HASHES, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some cached numbers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11695,7 +11736,7 @@ class DB( HydrusDB.HydrusDB ):
         if change_in_num_deleted_mappings != 0: service_info_updates.append( ( change_in_num_deleted_mappings, tag_service_id, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ) )
         if change_in_num_pending_mappings != 0: service_info_updates.append( ( change_in_num_pending_mappings, tag_service_id, HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ) )
         if change_in_num_petitioned_mappings != 0: service_info_updates.append( ( change_in_num_petitioned_mappings, tag_service_id, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ) )
-        if change_in_num_files != 0: service_info_updates.append( ( change_in_num_files, tag_service_id, HC.SERVICE_INFO_NUM_FILES ) )
+        if change_in_num_files != 0: service_info_updates.append( ( change_in_num_files, tag_service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
         
         if len( service_info_updates ) > 0: self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         

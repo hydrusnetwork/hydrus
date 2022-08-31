@@ -4344,12 +4344,19 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._sort_by_left.setEnabled( False )
         self._sort_by_right.setEnabled( False )
         
-        self._contents = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
-        self._contents.itemDoubleClicked.connect( self.EventContentDoubleClick )
+        self._contents_add = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
+        self._contents_add.itemDoubleClicked.connect( self.ContentsAddDoubleClick )
         
-        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents, ( 16, 20 ) )
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_add, ( 16, 20 ) )
         
-        self._contents.setMinimumHeight( min_height )
+        self._contents_add.setMinimumHeight( min_height )
+        
+        self._contents_delete = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
+        self._contents_delete.itemDoubleClicked.connect( self.ContentsDeleteDoubleClick )
+        
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_delete, ( 16, 20 ) )
+        
+        self._contents_delete.setMinimumHeight( min_height )
         
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.EventProcess )
@@ -4388,7 +4395,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( sort_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._petition_panel.Add( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.Add( self._contents_add, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.Add( self._contents_delete, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._copy_account_key_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -4414,24 +4422,35 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self.widget().setLayout( vbox )
         
-        self._contents.rightClicked.connect( self.EventRowRightClick )
+        self._contents_add.rightClicked.connect( self.EventAddRowRightClick )
+        self._contents_delete.rightClicked.connect( self.EventDeleteRowRightClick )
         
         self._DrawCurrentPetition()
         
     
     def _CheckAll( self ):
         
-        for i in range( self._contents.count() ):
+        for i in range( self._contents_add.count() ):
             
-            self._contents.Check( i, True )
+            self._contents_add.Check( i, True )
+            
+        
+        for i in range( self._contents_delete.count() ):
+            
+            self._contents_delete.Check( i, True )
             
         
     
     def _CheckNone( self ):
         
-        for i in range( self._contents.count() ):
+        for i in range( self._contents_add.count() ):
             
-            self._contents.Check( i, False )
+            self._contents_add.Check( i, False )
+            
+        
+        for i in range( self._contents_delete.count() ):
+            
+            self._contents_delete.Check( i, False )
             
         
     
@@ -4457,7 +4476,12 @@ class ManagementPanelPetitions( ManagementPanel ):
             self._reason_text.clear()
             self._reason_text.setProperty( 'hydrus_text', 'default' )
             
-            self._contents.clear()
+            self._contents_add.clear()
+            self._contents_delete.clear()
+            
+            self._contents_add.hide()
+            self._contents_delete.hide()
+            
             self._process.setEnabled( False )
             self._copy_account_key_button.setEnabled( False )
             
@@ -4471,24 +4495,45 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         else:
             
-            ( action_text, action ) = self._current_petition.GetActionTextAndAction()
+            add_contents = self._current_petition.GetContents( HC.CONTENT_UPDATE_PEND )
+            delete_contents = self._current_petition.GetContents( HC.CONTENT_UPDATE_PETITION )
             
-            if action == HC.CONTENT_UPDATE_PEND:
+            have_add = len( add_contents ) > 0
+            have_delete = len( delete_contents ) > 0
+            
+            action_text = 'UNKNOWN'
+            hydrus_text = 'default'
+            object_name = 'normal'
+            
+            if have_add or have_delete:
                 
-                hydrus_text = 'valid'
-                
-            elif action == HC.CONTENT_UPDATE_PETITION:
-                
-                hydrus_text = 'invalid'
+                if have_add and have_delete:
+                    
+                    action_text = 'REPLACE'
+                    
+                elif have_add:
+                    
+                    action_text = 'ADD'
+                    hydrus_text = 'valid'
+                    object_name = 'HydrusValid'
+                    
+                else:
+                    
+                    action_text = 'DELETE'
+                    hydrus_text = 'invalid'
+                    object_name = 'HydrusInvalid'
+                    
                 
             
             self._action_text.setText( action_text )
-            self._action_text.setProperty( 'hydrus_text', hydrus_text )
+            self._action_text.setObjectName( object_name )
+            #self._action_text.setProperty( 'hydrus_text', hydrus_text )
             
             reason = self._current_petition.GetReason()
             
             self._reason_text.setPlainText( reason )
-            self._reason_text.setProperty( 'hydrus_text', hydrus_text )
+            self._reason_text.setObjectName( object_name )
+            #self._reason_text.setProperty( 'hydrus_text', hydrus_text )
             
             if self._last_petition_type_fetched[0] in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
                 
@@ -4501,11 +4546,16 @@ class ManagementPanelPetitions( ManagementPanel ):
                 self._sort_by_right.setEnabled( False )
                 
             
-            contents = self._current_petition.GetContents()
+            self._contents_add.setVisible( have_add )
+            self._contents_delete.setVisible( have_delete )
             
-            contents_and_checks = [ ( c, True ) for c in contents ]
+            contents_and_checks = [ ( c, True ) for c in add_contents ]
             
-            self._SetContentsAndChecks( contents_and_checks, 'right' )
+            self._SetContentsAndChecks( HC.CONTENT_UPDATE_PEND, contents_and_checks, 'right' )
+            
+            contents_and_checks = [ ( c, True ) for c in delete_contents ]
+            
+            self._SetContentsAndChecks( HC.CONTENT_UPDATE_PETITION, contents_and_checks, 'right' )
             
             self._process.setEnabled( True )
             self._copy_account_key_button.setEnabled( True )
@@ -4530,7 +4580,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
                 ( st, button ) = self._petition_types_to_controls[ petition_type ]
                 
-                st.setText( HydrusData.ToHumanInt(count)+' petitions' )
+                st.setText( HydrusData.ToHumanInt( count )+' petitions' )
                 
                 if count > 0:
                     
@@ -4645,7 +4695,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._DrawCurrentPetition()
             
-            self._ShowHashes( [ ])
+            self._ShowHashes( [] )
             
         
         def qt_done():
@@ -4690,22 +4740,38 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _FlipSelected( self ):
         
-        for i in self._contents.GetSelectedIndices():
+        for i in self._contents_add.GetSelectedIndices():
             
-            flipped_state = not self._contents.IsChecked( i )
+            flipped_state = not self._contents_add.IsChecked( i )
             
-            self._contents.Check( i, flipped_state )
+            self._contents_add.Check( i, flipped_state )
+            
+        
+        for i in self._contents_delete.GetSelectedIndices():
+            
+            flipped_state = not self._contents_delete.IsChecked( i )
+            
+            self._contents_delete.Check( i, flipped_state )
             
         
     
-    def _GetContentsAndChecks( self ):
+    def _GetContentsAndChecks( self, action ):
+        
+        if action == HC.CONTENT_UPDATE_PEND:
+            
+            contents = self._contents_add
+            
+        else:
+            
+            contents = self._contents_delete
+            
         
         contents_and_checks = []
         
-        for i in range( self._contents.count() ):
+        for i in range( contents.count() ):
             
-            content = self._contents.GetData( i )
-            check = self._contents.IsChecked( i )
+            content = contents.GetData( i )
+            check = contents.IsChecked( i )
             
             contents_and_checks.append( ( content, check ) )
             
@@ -4713,7 +4779,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         return contents_and_checks
         
     
-    def _SetContentsAndChecks( self, contents_and_checks, sort_type ):
+    def _SetContentsAndChecks( self, action, contents_and_checks, sort_type ):
         
         def key( c_and_s ):
             
@@ -4750,15 +4816,22 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         contents_and_checks.sort( key = key )
         
-        self._contents.clear()
+        if action == HC.CONTENT_UPDATE_PEND:
+            
+            contents = self._contents_add
+            
+        else:
+            
+            contents = self._contents_delete
+            
         
-        to_check = []
+        contents.clear()
         
         for ( i, ( content, check ) ) in enumerate( contents_and_checks ):
             
             content_string = content.ToString()
             
-            self._contents.Append( content_string, content, starts_checked = check )
+            contents.Append( content_string, content, starts_checked = check )
             
         
     
@@ -4782,140 +4855,174 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _SortBy( self, sort_type ):
         
-        contents_and_checks = self._GetContentsAndChecks()
-        
-        self._SetContentsAndChecks( contents_and_checks, sort_type )
+        for action in [ HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ]:
+            
+            contents_and_checks = self._GetContentsAndChecks( action )
+            
+            self._SetContentsAndChecks( action, contents_and_checks, sort_type )
+            
         
     
-    def EventContentDoubleClick( self, item ):
+    def ContentsAddDoubleClick( self, item ):
         
-        selected_indices = self._contents.GetSelectedIndices()
+        selected_indices = self._contents_add.GetSelectedIndices()
         
         if len( selected_indices ) > 0:
             
             selection = selected_indices[0]
             
-            content = self._contents.GetData( selection )
+            content = self._contents_add.GetData( selection )
             
-            if content.HasHashes():
+            self.EventContentsDoubleClick( content )
+            
+        
+    
+    def ContentsDeleteDoubleClick( self, item ):
+        
+        selected_indices = self._contents_delete.GetSelectedIndices()
+        
+        if len( selected_indices ) > 0:
+            
+            selection = selected_indices[0]
+            
+            content = self._contents_delete.GetData( selection )
+            
+            self.EventContentsDoubleClick( content )
+            
+        
+    
+    def EventContentsDoubleClick( self, content ):
+        
+        if content.HasHashes():
+            
+            hashes = content.GetHashes()
+            
+            num_files_to_show = self._num_files_to_show.GetValue()
+            
+            if num_files_to_show is not None and len( hashes ) > num_files_to_show:
                 
-                hashes = content.GetHashes()
+                hashes = random.sample( hashes, num_files_to_show )
                 
-                num_files_to_show = self._num_files_to_show.GetValue()
-                
-                if num_files_to_show is not None and len( hashes ) > num_files_to_show:
-                    
-                    hashes = random.sample( hashes, num_files_to_show )
-                    
-                
-                self._ShowHashes( hashes )
-                
+            
+            self._ShowHashes( hashes )
             
         
     
     def EventProcess( self ):
         
-        def break_approved_contents_into_chunks( approved_contents ):
+        def break_contents_into_chunks( some_contents ):
             
-            chunks_of_approved_contents = []
-            chunk_of_approved_contents = []
+            chunks_of_some_contents = []
+            chunk_of_some_contents = []
             
             weight = 0
             
-            for content in approved_contents:
+            for content in some_contents:
                 
                 for content_chunk in content.IterateUploadableChunks(): # break 20K-strong mappings petitions into smaller bits to POST back
                     
-                    chunk_of_approved_contents.append( content_chunk )
+                    chunk_of_some_contents.append( content_chunk )
                     
                     weight += content.GetVirtualWeight()
                     
                     if weight > 50:
                         
-                        chunks_of_approved_contents.append( chunk_of_approved_contents )
+                        chunks_of_some_contents.append( chunk_of_some_contents )
                         
-                        chunk_of_approved_contents = []
+                        chunk_of_some_contents = []
                         
                         weight = 0
                         
                     
                 
             
-            if len( chunk_of_approved_contents ) > 0:
+            if len( chunk_of_some_contents ) > 0:
                 
-                chunks_of_approved_contents.append( chunk_of_approved_contents )
+                chunks_of_some_contents.append( chunk_of_some_contents )
                 
             
-            return chunks_of_approved_contents
+            return chunks_of_some_contents
             
         
-        def do_it( controller, service, petition_service_key, approved_contents, denied_contents, petition ):
+        def do_it( controller, service, petition_service_key, add_approved_contents, add_denied_contents, delete_approved_contents, delete_denied_contents, petition ):
+            
+            jobs = [
+                ( HC.CONTENT_UPDATE_PEND, True, add_approved_contents ),
+                ( HC.CONTENT_UPDATE_PEND, False, add_denied_contents ),
+                ( HC.CONTENT_UPDATE_PETITION, True, delete_approved_contents ),
+                ( HC.CONTENT_UPDATE_PETITION, False, delete_denied_contents ),
+            ]
+            
+            num_done = 0
+            num_to_do = 0
+            
+            for ( action, approved, contents ) in jobs:
+                
+                num_to_do += len( contents )
+                
+            
+            if num_to_do > 1:
+                
+                job_key = ClientThreading.JobKey( cancellable = True )
+                
+                job_key.SetStatusTitle( 'committing petitions' )
+                
+                HG.client_controller.pub( 'message', job_key )
+                
+            else:
+                
+                job_key = None
+                
+            
+            reason = petition.GetReason()
             
             try:
                 
-                num_done = 0
-                num_to_do = len( approved_contents )
-                
-                if len( denied_contents ) > 0:
+                for ( action, approved, contents ) in jobs:
                     
-                    num_to_do += 1
-                    
-                
-                if num_to_do > 1:
-                    
-                    job_key = ClientThreading.JobKey( cancellable = True )
-                    
-                    job_key.SetStatusTitle( 'committing petitions' )
-                    
-                    HG.client_controller.pub( 'message', job_key )
-                    
-                else:
-                    
-                    job_key = None
-                    
-                
-                chunks_of_approved_contents = break_approved_contents_into_chunks( approved_contents )
-                
-                num_approved_to_do = len( chunks_of_approved_contents )
-                
-                for chunk_of_approved_contents in chunks_of_approved_contents:
-                    
-                    if job_key is not None:
+                    if len( contents ) == 0:
                         
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                        continue
                         
-                        if should_quit:
+                    
+                    chunks_of_contents = break_contents_into_chunks( contents )
+                    
+                    num_to_do += len( chunks_of_contents ) - 1
+                    
+                    for chunk_of_contents in chunks_of_contents:
+                        
+                        if job_key is not None:
                             
-                            return
+                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                            
+                            if should_quit:
+                                
+                                return
+                                
+                            
+                            job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                             
                         
-                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_approved_to_do ) )
+                        content_updates = []
                         
-                    
-                    ( update, content_updates ) = petition.GetApproval( chunk_of_approved_contents )
-                    
-                    service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
-                    
-                    controller.WriteSynchronous( 'content_updates', { petition_service_key : content_updates } )
-                    
-                    num_done += 1
-                    
-                
-                if len( denied_contents ) > 0:
-                    
-                    if job_key is not None:
-                        
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if should_quit:
+                        if approved:
                             
-                            return
+                            ( update, content_updates ) = petition.GetApproval( action, chunk_of_contents, reason )
+                            
+                        else:
+                            
+                            update = petition.GetDenial( action, chunk_of_contents, reason )
                             
                         
-                    
-                    update = petition.GetDenial( denied_contents )
-                    
-                    service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                        service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                        
+                        if len( content_updates ) > 0:
+                            
+                            controller.WriteSynchronous( 'content_updates', { petition_service_key : content_updates } )
+                            
+                        
+                        num_done += 1
+                        
                     
                 
             finally:
@@ -4939,24 +5046,35 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        approved_contents = []
-        denied_contents = []
+        add_approved_contents = []
+        add_denied_contents = []
         
-        for index in range( self._contents.count() ):
+        delete_approved_contents = []
+        delete_denied_contents = []
+        
+        jobs = [
+            ( self._contents_add, add_approved_contents, add_denied_contents ),
+            ( self._contents_delete, delete_approved_contents, delete_denied_contents )
+        ]
+        
+        for ( contents, approved_contents, denied_contents ) in jobs:
             
-            content = self._contents.GetData( index )
-            
-            if self._contents.IsChecked( index ):
+            for index in range( contents.count() ):
                 
-                approved_contents.append( content )
+                content = contents.GetData( index )
                 
-            else:
-                
-                denied_contents.append( content )
+                if contents.IsChecked( index ):
+                    
+                    approved_contents.append( content )
+                    
+                else:
+                    
+                    denied_contents.append( content )
+                    
                 
             
         
-        HG.client_controller.CallToThread( do_it, self._controller, self._service, self._petition_service_key, approved_contents, denied_contents, self._current_petition )
+        HG.client_controller.CallToThread( do_it, self._controller, self._service, self._petition_service_key, add_approved_contents, add_denied_contents, delete_approved_contents, delete_denied_contents, self._current_petition )
         
         self._current_petition = None
         
@@ -4978,23 +5096,44 @@ class ManagementPanelPetitions( ManagementPanel ):
         frame.SetPanel( panel )
         
     
-    def EventRowRightClick( self ):
+    def EventAddRowRightClick( self ):
         
-        selected_indices = self._contents.GetSelectedIndices()
+        selected_indices = self._contents_add.GetSelectedIndices()
         
         selected_contents = []
         
         for i in selected_indices:
             
-            content = self._contents.GetData( i )
+            content = self._contents_add.GetData( i )
             
             selected_contents.append( content )
             
         
+        self.EventContentsRightClick( selected_contents )
+        
+    
+    def EventDeleteRowRightClick( self ):
+        
+        selected_indices = self._contents_delete.GetSelectedIndices()
+        
+        selected_contents = []
+        
+        for i in selected_indices:
+            
+            content = self._contents_delete.GetData( i )
+            
+            selected_contents.append( content )
+            
+        
+        self.EventContentsRightClick( selected_contents )
+        
+    
+    def EventContentsRightClick( self, contents ):
+        
         copyable_items_a = []
         copyable_items_b = []
         
-        for content in selected_contents:
+        for content in contents:
             
             content_type = content.GetContentType()
             

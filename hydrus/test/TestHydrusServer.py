@@ -383,12 +383,11 @@ class TestServer( unittest.TestCase ):
         
         # petition
         
-        action = HC.CONTENT_UPDATE_PETITION
         petitioner_account = HydrusNetwork.Account.GenerateUnknownAccount()
         reason = 'it sucks'
-        contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ]
+        actions_and_contents = ( HC.CONTENT_UPDATE_PETITION, [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ] )
         
-        petition = HydrusNetwork.Petition( action, petitioner_account, reason, contents )
+        petition = HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
         
         HG.test_controller.SetRead( 'petition', petition )
         
