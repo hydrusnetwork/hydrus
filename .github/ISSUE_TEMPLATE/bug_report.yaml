@@ -19,7 +19,7 @@ body:
         required: true
         
     - type: dropdown
-      id: hydrus_qt
+      id: qt_version
       attributes:
         label: Qt major version
         description: You can find this in the "about Qt" dialog from the "help" menu.
