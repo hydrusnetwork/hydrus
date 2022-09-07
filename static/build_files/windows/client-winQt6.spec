@@ -22,7 +22,7 @@ a = Analysis(['hydrus\\client.pyw'],
                ('hydrus\\db', 'db'),
                ('hydrus\\hydrus', 'hydrus'),
                ('hydrus\\sqlite3.dll', '.'),
-               ('hydrus\\mpv-1.dll', '.'),
+               ('hydrus\\mpv-2.dll', '.'),
                (cloudscraper_dir, 'cloudscraper')
              ],
              hiddenimports=['hydrus\\server.py', 'cloudscraper'],

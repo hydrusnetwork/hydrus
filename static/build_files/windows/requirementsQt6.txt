@@ -14,7 +14,7 @@ pylzma>=0.5.0
 pyOpenSSL>=19.1.0
 PySide6>=6.0.0
 PySocks>=1.7.0
-python-mpv==0.5.2
+python-mpv==1.0.1
 PyYAML>=5.0.0
 QtPy>=1.9.0
 requests==2.23.0
