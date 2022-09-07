@@ -1,5 +1,5 @@
 ---
-title: Searching and sorting
+title: Searching and Sorting
 ---
 
 # Searching and sorting

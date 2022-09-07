@@ -2413,7 +2413,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
                     suggestions = []
                     
                     suggestions.append( 'mangled parse/typo' )
-                    suggestions.append( 'not applicable' )
+                    suggestions.append( 'not applicable/incorrect' )
+                    suggestions.append( 'clearing mass-pasted junk' )
                     suggestions.append( 'splitting filename/title/etc... into individual tags' )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:

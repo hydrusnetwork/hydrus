@@ -334,7 +334,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'notebook_tab_alignment' ] = CC.DIRECTION_UP
         
-        self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
+        self._dictionary[ 'integers' ][ 'video_buffer_size' ] = 96 * 1024 * 1024
         
         self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
         self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000

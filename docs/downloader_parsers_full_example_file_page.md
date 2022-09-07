@@ -1,3 +1,7 @@
+---
+title: File Page Example
+---
+
 # file page example  
 
 Let's look at this page: [https://gelbooru.com/index.php?page=post&s=view&id=3837615](https://gelbooru.com/index.php?page=post&s=view&id=3837615).

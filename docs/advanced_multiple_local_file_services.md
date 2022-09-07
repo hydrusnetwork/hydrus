@@ -1,6 +1,8 @@
 ---
-title: multiple local file services
+title: Multiple Local File Services
 --- 
+
+# multiple local file services
 
 The client lets you store your files in different overlapping partitions. This can help management workflows and privacy.
 

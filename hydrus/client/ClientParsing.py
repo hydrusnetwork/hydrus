@@ -2799,7 +2799,9 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     
     def ParseURLs( self, job_key, parsing_text, referral_url ):
         
-        basic_urls = self._formula.Parse( {}, parsing_text )
+        collapse_newlines = True
+        
+        basic_urls = self._formula.Parse( {}, parsing_text, collapse_newlines )
         
         absolute_urls = [ urllib.parse.urljoin( referral_url, basic_url ) for basic_url in basic_urls ]
         

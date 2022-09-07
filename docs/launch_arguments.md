@@ -1,5 +1,5 @@
 ---
-title: launch arguments
+title: Launch Arguments
 ---
 
 # launch arguments

@@ -174,7 +174,11 @@ def AppendSeparator( menu ):
         
         last_item = menu.actions()[-1]
         
-        if not last_item.isSeparator():
+        # got this once, who knows what happened, so we test for QAction now
+        # 'PySide2.QtGui.QStandardItem' object has no attribute 'isSeparator'
+        last_item_is_separator = isinstance( last_item, QW.QAction ) and last_item.isSeparator()
+        
+        if not last_item_is_separator:
             
             menu.addSeparator()
             

@@ -1209,6 +1209,7 @@ class CallAfterEventCatcher( QC.QObject ):
         
         return False
         
+    
 
 def CallAfter( fn, *args, **kwargs ):
     

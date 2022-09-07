@@ -1,8 +1,10 @@
 ---
-title: financial support
+title: Financial Support
 ---  
 
-# can I contribute to hydrus development? { id="support" }
+# Financial Support
+
+## can I contribute to hydrus development? { id="support" }
 
 I do not expect anything from anyone. I'm amazed and grateful that anyone wants to use my software and share tags with others. I enjoy the feedback and work, and I hope to keep putting completely free weekly releases out as long as there is more to do.
 

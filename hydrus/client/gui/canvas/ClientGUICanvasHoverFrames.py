@@ -1372,7 +1372,7 @@ class NotePanel( QW.QWidget ):
             return True
             
         
-        return QW.QWidget.eventFilter( self, object, event )
+        return False
         
     
     def heightForWidth( self, width: int ):

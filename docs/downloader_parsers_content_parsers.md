@@ -1,3 +1,7 @@
+---
+title: Content Parsers
+---
+
 # Content Parsers
 
 So, we can now generate some strings from a document. Content Parsers will let us apply a single metadata type to those strings to inform hydrus what they are.

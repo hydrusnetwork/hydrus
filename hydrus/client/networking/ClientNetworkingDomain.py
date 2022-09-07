@@ -1619,6 +1619,31 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def RenameGUG( self, original_name, new_name ):
+        
+        with self._lock:
+            
+            existing_gug_names_to_gugs = { gug.GetName() : gug for gug in self._gugs }
+            
+        
+        if original_name in existing_gug_names_to_gugs:
+            
+            gug = existing_gug_names_to_gugs[ original_name ]
+            
+            del existing_gug_names_to_gugs[ original_name ]
+            
+            gug.SetName( new_name )
+            
+            gug.SetNonDupeName( set( existing_gug_names_to_gugs.keys() ) )
+            
+            existing_gug_names_to_gugs[ gug.GetName() ] = gug
+            
+            new_gugs = list( existing_gug_names_to_gugs.values() )
+            
+            self.SetGUGs( new_gugs )
+            
+        
+    
     def ReportNetworkInfrastructureError( self, url ):
         
         with self._lock:

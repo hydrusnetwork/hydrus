@@ -528,7 +528,18 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 with self._MakeTemporaryIntegerTable( rebalance_perceptual_hash_ids, 'phash_id' ) as temp_table_name:
                     
                     # temp perceptual hashes to tree
-                    ( biggest_perceptual_hash_id, ) = self._Execute( 'SELECT phash_id FROM {} CROSS JOIN shape_vptree USING ( phash_id ) ORDER BY inner_population + outer_population DESC;'.format( temp_table_name ) ).fetchone()
+                    result = self._Execute( 'SELECT phash_id FROM {} CROSS JOIN shape_vptree USING ( phash_id ) ORDER BY inner_population + outer_population DESC;'.format( temp_table_name ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        self._Execute( 'DELETE FROM shape_maintenance_branch_regen;' )
+                        
+                        return
+                        
+                    else:
+                        
+                        ( biggest_perceptual_hash_id, ) = result
+                        
                     
                 
                 self._RegenerateBranch( job_key, biggest_perceptual_hash_id )

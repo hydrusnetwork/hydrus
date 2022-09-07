@@ -1,7 +1,48 @@
+---
+title: Changelog
+---
+
 # changelog
 
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
+
+## [Version 499](https://github.com/hydrusnetwork/hydrus/releases/tag/v499)
+
+### mpv
+* updated the mpv version for Windows. this is more complicated than it sounds and has been fraught with difficulty at times, so I do not try it often, but the situation seems to be much better now. today we are updating about twelve months. I may be imagining it, but things seem a bit smoother. a variety of weird file support should be better--an old transparent apng that I know crashed older mpv no longer causes a crash--and there's some acceleration now for very new CPU chipsets. I've also insisted on precise seeking (rather than keyframe seeking, which some users may have defaulted to). mpv-1.dll is now mpv-2.dll
+* I don't have an easy Linux testbed any more, so I would be interested in a Linux 'running from source' user trying out a similar update and letting me know how it goes. try getting the latest libmpv1 and then update python-mpv to 1.0.1 on pip. your 'mpv api version' in _help->about_ should now be 2.0. this new python-mpv seems to have several compatibility improvements, which is what has plagued us before here
+* mpv on macOS is still a frustrating question mark, but if this works on Linux, it may open another door. who knows, maybe the new version doesn't crash instantly on load
+
+### search change for potential duplicates
+* this is subtle and complicated, so if you are a casual user of duplicates, don't worry about it. duplicates page = better now
+* for those who are more invested in dupes, I have altered the main potential duplicate search query. when the filter prepares some potential dupes to compare, or you load up some random thumbs in the page, or simply when the duplicates processing page presents counts, this all now only tests kings. previously, it could compare any member of a duplicate group to any other, and it would nominate kings as group representatives, but this lead to some odd situations where if you said 'must be pixel dupes', you could get two low quality pixel dupes offering their better king(s) up for actual comparison, giving you a comparison that was not a pixel dupe. same for the general searching of potentials, where if you search for 'bad quality', any bad quality file you set as a dupe but didn't delete could get matched (including in 'both match' mode), and offer a 'nicer' king as tribute that didn't have the tag. now, it only searches kings. kings match searches, and it is those kings that must match pixel dupe rules. this also means that kings will always be available on the current file domain, and no fallback king-nomination-from-filtered-members routine is needed any more
+* the knock-on effect here is minimal, but in general all database work in the duplicate filter should be a little faster, and some of your numbers may be a few counts smaller, typically after discounting weird edge case split-up duplicate groups that aren't real/common enough to really worry about. if you use a waterfall of multiple local file services to process your files, you might see significantly smaller counts due to kings not always being in the same file domain as their bad members, so you may want to try 'all my files' or just see how it goes--might be far less confusing, now you are only given unambiguous kings. anyway, in general, I think no big differences here for most users except better precision in searching!
+* but let me know how you get on IRL!
+
+### misc
+* thank's to a user's hard work, the default twitter downloader gets some upgrades this week: you can now download from twitter lists, a twitter user's likes, and twitter collections (which are curated lists of tweets). the downloaders still get a lot of 'ignored' results for text-only tweets, and you still have to be logged in to get nsfw, but this adds some neat tools to the toolbox
+* thanks to a user, the Client API now reports brief caching information and should boost Hydrus Companion performance (issue #605)
+* the simple shortcut list in the edit shortcut action dialog now no longer shows any duplicates (such as 'close media viewer' in the dupes window)
+* added a new default reason for tag petitions, 'clearing mass-pasted junk'. 'not applicable' is now 'not applicable/incorrect'
+* in the petition processing page, the content boxes now specifically say ADD or DELETE to reinforce what you are doing and to differentiate the two boxes when you have a pixel petition
+* in the petition processing page, the content boxes now grow and shrink in height, up to a max of 20 rows, depending on how much stuff is in them. I _think_ I have pixel perfect heights here, so let me know if yours are wrong!
+* the 'service info' rows in review services are now presented in nicer order
+* updated the header/title formatting across the help documentation. when you search for a page title, it should now show up in results (e.g. you type 'running from source', you get that nicely at the top, not a confusing sub-header of that article). the section links are also all now capitalised
+* misc refactoring
+
+### bunch of fixes
+* fixed a weird and possible crash-inducing scrolling bug in the tag list some users had in Qt6
+* fixed a typo error in file lookup scripts from when I added multi-line support to the parsing system (issue #1221)
+* fixed some bad labels in 'speed and memory' that talked about 'MB' when the widget allowed setting different units. also, I updated the 'video buffer' option on that page to a full 'bytes value' widget too (issue #1223)
+* the 'bytes value' widget, where you can set '100 MB' and similar, now gives the 'unit' dropdown a little more minimum width. it was getting a little thin on some styles and not showing the full text in the dropdown menu (issue #1222)
+* fixed a bug in similar-shape-search-tree-rebalancing maintenance in the rare case that the queue of branches in need of regeneration become out of sync with the main tree (issue #1219)
+* fixed a bug in archive/delete filter where clicks that were making actions would start borked drag-and-drop panning states if you dragged before releasing the click. it would cause warped media movement if you then clicked on hover window greyspace
+* fixed the 'this was a cloudflare problem' scanner for the new 1.2.64 version of cloudscraper
+* updated the popupmanager's positioning update code to use a nicer event filter and gave its position calculation code a quick pass. it might fix some popup toaster position bugs, not sure
+* fixed a weird menu creation bug involving a QStandardItem appearing in the menu actions
+* fixed a similar weird QStandardItem bug in the media viewer canvas code
+* fixed an error that could appear on force-emptied pages that receive sort signals
 
 ## [Version 498](https://github.com/hydrusnetwork/hydrus/releases/tag/v498)
 
@@ -335,19 +376,3 @@ _almost all the changes this week are only important to server admins and janito
 * I also cleaned some of the maintenance code, and made it more aggressive, so 'do a full metadata resync' is now be even more uncompromising
 * also, the repository updates file service gets a bit of cleanup. it seems some ghost files have snuck in there over time, and today their records are corrected. the bug that let this happen in the first place is also fixed
 * there remains an issue where some users' clients have tried to hit the PTR with 404ing update file hashes. I am still investigating this
-
-## [Version 488](https://github.com/hydrusnetwork/hydrus/releases/tag/v488)
-
-### all misc this week
-* the client now supports 'wavpack' files. these are basically a kind of compressed wav. mpv seems to play them fine too!
-* added a new file maintenance action, 'if file is missing, note it in log', which records the metadata about missing files to the database directory but makes no other action
-* the 'file is missing/incorrect' file maintenance jobs now also export the files' tags to the database directory, to further help identify them
-* simplified the logic behind the 'remove files if they are trashed' option. it should fire off more reliably now, even if you have a weird multiple-domain location for the current page, and still not fire if you are actually looking at the trash
-* if you paste an URL into the normal 'urls' downloader page, and it already has that URL and the URL has status 'failed', that existing URL will now be tried again. let's see how this works IRL, maybe it needs an option, maybe this feels natural when it comes up
-* the default bandwidth rules are boosted. the client is more efficient these days and doesn't need so many forced breaks on big import lists, and the internet has generally moved on. thanks to the users who helped talk out what the new limits should aim at. if you are an existing user, you can change your current defaults under _network->data->review bandwidth usage and edit rules_--there's even a button to revert your defaults 'back' to these new rules
-* now like all its neighbours, the cog icon on the duplicate right-side hover no longer annoyingly steals keyboard focus on a click.
-* did some code and logic cleanup around 'delete files', particularly to improve repository update deletes now we have multiple local file services, and in planning for future maintenance in this area
-* all the 'yes yes no' dialogs--the ones with multiple yes options--are moved to the newer panel system and will render their size and layout a bit more uniformly
-* may have fixed an issue with a very slow to boot client trying to politely wait on the thumbnail cache before it instantiates
-* misc UI text rewording and layout flag fixes
-* fixed some jank formatting on database migration help

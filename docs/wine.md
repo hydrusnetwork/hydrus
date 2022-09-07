@@ -1,5 +1,5 @@
 ---
-title: running in wine
+title: Running In Wine
 ---
 
 # running a client or server in wine

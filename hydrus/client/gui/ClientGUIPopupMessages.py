@@ -588,6 +588,7 @@ class PopupMessage( PopupWindow ):
             
         
     
+
 class PopupMessageManager( QW.QWidget ):
     
     def __init__( self, parent ):
@@ -625,9 +626,7 @@ class PopupMessageManager( QW.QWidget ):
         
         self._pending_job_keys = []
         
-        self._gui_event_filter = QP.WidgetEventFilter( parent )
-        self._gui_event_filter.EVT_SIZE( self.EventParentMovedOrResized )
-        self._gui_event_filter.EVT_MOVE( self.EventParentMovedOrResized )
+        parent.installEventFilter( self )
         
         HG.client_controller.sub( self, 'AddMessage', 'message' )
         
@@ -781,15 +780,13 @@ class PopupMessageManager( QW.QWidget ):
         
         try:
             
-            gui_frame = self.parentWidget()
+            gui_frame = HG.client_controller.gui
             
             gui_is_hidden = not gui_frame.isVisible()
             
             going_to_bug_out_at_hide_or_show = gui_is_hidden
             
             current_focus_tlw = QW.QApplication.activeWindow()
-            
-            self_is_active = current_focus_tlw == self
             
             main_gui_or_child_window_is_active = ClientGUIFunctions.TLWOrChildIsActive( gui_frame )
             
@@ -798,6 +795,18 @@ class PopupMessageManager( QW.QWidget ):
             there_is_stuff_to_display = num_messages_displayed > 0
             
             if there_is_stuff_to_display:
+                
+                # Unhiding tends to raise the main gui tlw in some window managers, which is annoying if a media viewer window has focus
+                show_is_not_annoying = main_gui_or_child_window_is_active or self._DisplayingError()
+                
+                ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
+                
+                if ok_to_show:
+                    
+                    self.show()
+                    
+                
+                #
                 
                 parent_size = gui_frame.size()
                 
@@ -814,16 +823,6 @@ class PopupMessageManager( QW.QWidget ):
                         
                         self.move( my_position )
                         
-                    
-                
-                # Unhiding tends to raise the main gui tlw in some window managers, which is annoying if a media viewer window has focus
-                show_is_not_annoying = main_gui_or_child_window_is_active or self._DisplayingError()
-                
-                ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
-                
-                if ok_to_show:
-                    
-                    self.show()
                     
                 
             else:
@@ -1098,6 +1097,22 @@ class PopupMessageManager( QW.QWidget ):
         self.MakeSureEverythingFits()
         
     
+    def eventFilter( self, watched, event ):
+        
+        if watched == self.parentWidget():
+            
+            if event.type() in ( QC.QEvent.Resize, QC.QEvent.Move ):
+                
+                if self._OKToAlterUI():
+                    
+                    self._SizeAndPositionAndShow()
+                    
+                
+            
+        
+        return False
+        
+    
     def resizeEvent( self, event ):
         
         if not self or not QP.isValid( self ): # funny runtime error caused this
@@ -1111,21 +1126,6 @@ class PopupMessageManager( QW.QWidget ):
             
         
         event.ignore()
-        
-    
-    def EventParentMovedOrResized( self, event ):
-        
-        if not self or not QP.isValid( self ): # funny runtime error caused this
-            
-            return
-            
-        
-        if self._OKToAlterUI():
-            
-            self._SizeAndPositionAndShow()
-            
-        
-        return True # was: event.ignore()
         
     
     def MakeSureEverythingFits( self ):

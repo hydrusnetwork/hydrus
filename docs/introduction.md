@@ -1,6 +1,8 @@
 ---
-title: introduction and statement of principles  
+title: Introduction and Statement of Principles  
 ---
+
+# introduction and statement of principles
 
 ## on being anonymous { id="anonymous" }
 

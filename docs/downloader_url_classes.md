@@ -1,3 +1,7 @@
+---
+title: URL Classes
+---
+
 # URL Classes
 
 The fundamental connective tissue of the downloader system is the 'URL Class'. This object identifies and normalises URLs and links them to other components. Whenever the client handles a URL, it tries to match it to a URL Class to figure out what to do.

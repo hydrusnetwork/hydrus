@@ -1,6 +1,8 @@
 ---
-title: Putting it All Together
+title: Putting It All Together
 ---
+
+# Putting it all together
 
 Now you know what GUGs, URL Classes, and Parsers are, you should have some ideas of how URL Classes could steer what happens when the downloader is faced with an URL to process. Should a URL be imported as a media file, or should it be parsed? If so, how?
 

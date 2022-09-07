@@ -11,6 +11,7 @@ from hydrus.core import HydrusText
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -293,6 +294,10 @@ class BytesControl( QW.QWidget ):
         QP.AddToLayout( hbox, self._unit, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
+
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._unit, 8 )
+        
+        self._unit.setMinimumWidth( min_width )
         
         self._spin.valueChanged.connect( self._HandleValueChanged )
         self._unit.currentIndexChanged.connect( self._HandleValueChanged )

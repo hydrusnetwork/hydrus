@@ -1,6 +1,8 @@
 ---
-title: tag siblings
+title: Tag Siblings
 --- 
+
+# tag siblings
 
 Tag siblings let you replace a bad tag with a better tag.
 

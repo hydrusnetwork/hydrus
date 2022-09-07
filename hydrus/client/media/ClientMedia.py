@@ -1229,7 +1229,7 @@ class MediaList( object ):
         self._collected_media = set()
         
         self._selected_media = set()
-        self._sorted_media = []
+        self._sorted_media = SortedList()
         
         self._RecalcAfterMediaRemove()
         

@@ -790,12 +790,12 @@ class NetworkJob( object ):
                 
                 # cloudscraper refactored a bit around 1.2.60, so we now have some different paths to what we want
                 
-                old_module = None
-                new_module = None
+                old_class_object = None
+                new_class_instance = None
                 
                 if hasattr( cloudscraper, 'CloudScraper' ):
                     
-                    old_module = getattr( cloudscraper, 'CloudScraper' )
+                    old_class_object = getattr( cloudscraper, 'CloudScraper' )
                     
                 
                 if hasattr( cloudscraper, 'cloudflare' ):
@@ -804,13 +804,17 @@ class NetworkJob( object ):
                     
                     if hasattr( m, 'Cloudflare' ):
                         
-                        new_module = getattr( m, 'Cloudflare' )
+                        new_class_object = getattr( m, 'Cloudflare' )
+                        
+                        cs = cloudscraper.CloudScraper()
+                        
+                        new_class_instance = new_class_object( cs )
                         
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_Firewall_Blocked' ),
-                    ( new_module, 'is_Firewall_Blocked' )
+                    ( old_class_object, 'is_Firewall_Blocked' ),
+                    ( new_class_instance, 'is_Firewall_Blocked' )
                 ]
                 
                 is_firewall = False
@@ -834,9 +838,9 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_reCaptcha_Challenge' ),
-                    ( old_module, 'is_Captcha_Challenge' ),
-                    ( new_module, 'is_Captcha_Challenge' )
+                    ( old_class_object, 'is_reCaptcha_Challenge' ),
+                    ( old_class_object, 'is_Captcha_Challenge' ),
+                    ( new_class_instance, 'is_Captcha_Challenge' )
                 ]
                 
                 is_captcha = False
@@ -860,9 +864,9 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_IUAM_Challenge' ),
-                    ( new_module, 'is_IUAM_Challenge' ),
-                    ( new_module, 'is_New_IUAM_Challenge' )
+                    ( old_class_object, 'is_IUAM_Challenge' ),
+                    ( new_class_instance, 'is_IUAM_Challenge' ),
+                    ( new_class_instance, 'is_New_IUAM_Challenge' )
                 ]
                 
                 is_iuam = False

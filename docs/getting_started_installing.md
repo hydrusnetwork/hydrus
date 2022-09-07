@@ -1,6 +1,8 @@
 ---
-title: installing and updating  
+title: Installing and Updating  
 ---
+
+# installing and updating
 
 If any of this is confusing, a simpler guide is [here](https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md), and some video guides are [here](https://github.com/CuddleBear92/Hydrus-guides)!
 

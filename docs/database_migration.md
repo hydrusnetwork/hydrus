@@ -1,6 +1,8 @@
 ---
-title: database migration
+title: Database Migration
 ---
+
+# database migration
 
 ## the hydrus database { id="intro" }
 

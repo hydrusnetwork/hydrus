@@ -1,6 +1,8 @@
 ---
-title: tag parents
+title: Tag Parents
 ---
+
+# tag parents
 
 Tag parents let you automatically add a particular tag every time another tag is added. The relationship will also apply retroactively.
 

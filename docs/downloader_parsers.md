@@ -1,3 +1,7 @@
+---
+title: Parsers
+---
+
 # Parsers
 
 In hydrus, a parser is an object that takes a single block of HTML or JSON data and returns many kinds of hydrus-level metadata.

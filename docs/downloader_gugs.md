@@ -2,6 +2,8 @@
 title: Gallery URL Generators
 ---
 
+# Gallery URL Generators
+
 Gallery URL Generators, or **GUGs** are simple objects that take a simple string from the user, like:
 
 *   blue_eyes

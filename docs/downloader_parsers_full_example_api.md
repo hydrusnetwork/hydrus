@@ -1,3 +1,7 @@
+---
+title: API Example
+---
+
 # api example  
 
 Some sites offer API calls for their pages. Depending on complexity and quality of content, using these APIs may or may not be a good idea. Artstation has a good one--let's first review our URL Classes:

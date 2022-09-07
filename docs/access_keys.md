@@ -1,6 +1,8 @@
 ---
-title: PTR access keys
+title: PTR Access Keys
 ---
+
+# PTR access keys
 
 The PTR is now run by users with more bandwidth than I had to give, so the bandwidth limits are gone! If you would like to talk with the new management, please check the [discord](https://discord.gg/wPHPCUZ).
 

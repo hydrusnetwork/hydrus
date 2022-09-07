@@ -2864,8 +2864,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
             
-            self._video_buffer_size_mb = ClientGUICommon.BetterSpinBox( buffer_panel, min=48, max= 16 * 1024 )
-            self._video_buffer_size_mb.valueChanged.connect( self.EventVideoBufferUpdate )
+            self._video_buffer_size = ClientGUIControls.BytesControl( buffer_panel )
+            self._video_buffer_size.valueChanged.connect( self.EventVideoBufferUpdate )
             
             self._estimated_number_video_frames = QW.QLabel( '', buffer_panel )
             
@@ -2881,7 +2881,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ideal_tile_dimension.setValue( self._new_options.GetInteger( 'ideal_tile_dimension' ) )
             
-            self._video_buffer_size_mb.setValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
+            self._video_buffer_size.SetValue( self._new_options.GetInteger( 'video_buffer_size' ) )
             
             self._media_viewer_prefetch_delay_base_ms.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
             self._media_viewer_prefetch_num_previous.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_previous' ) )
@@ -2929,7 +2929,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             video_buffer_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( video_buffer_sizer, self._video_buffer_size_mb, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( video_buffer_sizer, self._video_buffer_size, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( video_buffer_sizer, self._estimated_number_video_frames, CC.FLAGS_CENTER_PERPENDICULAR )
             
             #
@@ -2942,7 +2942,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'MB memory reserved for thumbnail cache:', thumbnails_sizer ) )
+            rows.append( ( 'Memory reserved for thumbnail cache:', thumbnails_sizer ) )
             rows.append( ( 'Thumbnail cache timeout:', self._thumbnail_cache_timeout ) )
             
             gridbox = ClientGUICommon.WrapInGrid( thumbnail_cache_panel, rows )
@@ -2965,7 +2965,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'MB memory reserved for image cache:', fullscreens_sizer ) )
+            rows.append( ( 'Memory reserved for image cache:', fullscreens_sizer ) )
             rows.append( ( 'Image cache timeout:', self._image_cache_timeout ) )
             rows.append( ( 'Maximum image size (in % of cache) that can be cached:', image_cache_storage_sizer ) )
             rows.append( ( 'Maximum image size (in % of cache) that will be prefetched:', image_cache_prefetch_sizer ) )
@@ -2989,7 +2989,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'MB memory reserved for image tile cache:', image_tiles_sizer ) )
+            rows.append( ( 'Memory reserved for image tile cache:', image_tiles_sizer ) )
             rows.append( ( 'Image tile cache timeout:', self._image_tile_cache_timeout ) )
             rows.append( ( 'Ideal tile width/height px:', self._ideal_tile_dimension ) )
             
@@ -3019,7 +3019,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'MB memory for video buffer: ', video_buffer_sizer ) )
+            rows.append( ( 'Memory for video buffer: ', video_buffer_sizer ) )
             
             gridbox = ClientGUICommon.WrapInGrid( buffer_panel, rows )
             
@@ -3041,7 +3041,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.EventImageCacheUpdate()
             self.EventThumbnailsUpdate()
             self.EventImageTilesUpdate()
-            self.EventVideoBufferUpdate( self._video_buffer_size_mb.value() )
+            self.EventVideoBufferUpdate()
             
         
         def EventImageCacheUpdate( self ):
@@ -3105,9 +3105,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._estimated_number_thumbnails.setText( '(at '+res_string+', about '+HydrusData.ToHumanInt(estimated_thumbs)+' thumbnails)' )
             
         
-        def EventVideoBufferUpdate( self, value ):
+        def EventVideoBufferUpdate( self ):
             
-            estimated_720p_frames = int( ( value * 1024 * 1024 ) // ( 1280 * 720 * 3 ) )
+            value = self._video_buffer_size.GetValue()
+            
+            estimated_720p_frames = int( value // ( 1280 * 720 * 3 ) )
             
             self._estimated_number_video_frames.setText( '(about '+HydrusData.ToHumanInt(estimated_720p_frames)+' frames of 720p video)' )
             
@@ -3131,7 +3133,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'image_cache_storage_limit_percentage', self._image_cache_storage_limit_percentage.value() )
             self._new_options.SetInteger( 'image_cache_prefetch_limit_percentage', self._image_cache_prefetch_limit_percentage.value() )
             
-            self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.value() )
+            self._new_options.SetInteger( 'video_buffer_size', self._video_buffer_size.GetValue() )
             
         
     

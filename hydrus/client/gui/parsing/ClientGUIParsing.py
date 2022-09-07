@@ -707,8 +707,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         label = 'Try to make sure you will only ever parse one text result here. A single content parser with a single note name producing eleven different note texts is going to be conflict hell for the user at the end.'
-        label += os.linesep * 2
-        label += 'Also this is prototype, it does not do anything yet!'
         
         st = ClientGUICommon.BetterStaticText( self._notes_panel, label = label )
         

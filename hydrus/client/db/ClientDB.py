@@ -11518,6 +11518,72 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 498:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.RenameGUG( 'twitter syndication profile lookup (limited)', 'twitter syndication profile lookup' )
+                domain_manager.RenameGUG( 'twitter syndication profile lookup (limited) (with replies)', 'twitter syndication profile lookup (with replies)' )
+                
+                domain_manager.OverwriteDefaultGUGs( ( 'twitter syndication list lookup', 'twitter syndication likes lookup', 'twitter syndication collection lookup' ) )
+                
+                domain_manager.OverwriteDefaultParsers( ( 'twitter syndication api profile parser', 'twitter syndication api tweet parser' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( (
+                    'twitter list',
+                    'twitter syndication api collection',
+                    'twitter syndication api likes (user_id)',
+                    'twitter syndication api likes',
+                    'twitter syndication api list (list_id)',
+                    'twitter syndication api list (screen_name and slug)',
+                    'twitter syndication api list (user_id and slug)',
+                    'twitter syndication api profile (user_id)',
+                    'twitter syndication api profile',
+                    'twitter syndication api tweet',
+                    'twitter tweet'
+                ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetInteger( 'video_buffer_size', new_options.GetInteger( 'video_buffer_size_mb' ) * 1024 * 1024 )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update the video buffer option value failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

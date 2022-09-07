@@ -229,6 +229,19 @@ class CanvasLayout( QW.QLayout ):
         
     
 
+class LayoutEventSilencer( QC.QObject ):
+    
+    def eventFilter( self, watched, event ):
+        
+        if watched == self.parent() and event.type() == QC.QEvent.LayoutRequest:
+            
+            return True
+            
+        
+        return False
+        
+    
+
 class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
@@ -260,6 +273,9 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         ignore_activating_mouse_click = catch_mouse and self.CANVAS_TYPE != CC.CANVAS_PREVIEW
         
         self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'media_viewer' ], catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
+        
+        self._layout_silencer = LayoutEventSilencer( self )
+        self.installEventFilter( self._layout_silencer )
         
         self._click_drag_reporting_filter = MediaContainerDragClickReportingFilter( self )
         
@@ -660,18 +676,6 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         ClientGUIMediaActions.UndeleteMedia( self, ( self._current_media, ) )
         
     
-    def event( self, event ):
-        
-        if event.type() == QC.QEvent.LayoutRequest:
-            
-            return True
-            
-        else:
-            
-            return QW.QWidget.event( self, event )
-            
-        
-    
     def CleanBeforeDestroy( self ):
         
         self.ClearMedia()
@@ -704,7 +708,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
                 self._media_container.ResetCenterPosition()
                 
-                self._last_drag_pos = None
+                self.EndDrag()
                 
             
         
@@ -979,7 +983,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._media_container.ResetCenterPosition()
         
-        self._last_drag_pos = None
+        self.EndDrag()
         
     
     def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
@@ -1005,6 +1009,8 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
         
         if media != self._current_media:
+            
+            self.EndDrag()
             
             HG.client_controller.ResetIdleTimer()
             
@@ -2661,7 +2667,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._media_container.ResetCenterPosition()
         
-        self._last_drag_pos = None
+        self.EndDrag()
         
         self._media_container.show()
         
@@ -3979,7 +3985,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             
-            self._last_drag_pos = None # to stop successive right-click drag warp bug
+            self.EndDrag() # to stop successive right-click drag warp bug
             
             locations_manager = self._current_media.GetLocationsManager()
             

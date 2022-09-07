@@ -2,7 +2,9 @@
 title: recovering after disaster
 ---
 
-# you just had a database problem
+# Recovering After Disaster
+
+## you just had a database problem
 
 I have helped quite a few users recover a mangled database from disk failure or accidental deletion. You just had similar and have been pointed here. This is a simple spiel on the next step that I, hydev, like to give people once we are done.
 

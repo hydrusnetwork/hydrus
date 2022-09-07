@@ -141,6 +141,15 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
         
+        try:
+            
+            self.we_are_newer_api = float( GetClientAPIVersionString() ) >= 2.0
+            
+        except:
+            
+            self.we_are_newer_api = False
+            
+        
     
     def _GetAudioOptionNames( self ):
         
@@ -422,7 +431,7 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         try:
             
-            self._player.seek( time_index_s, reference = 'absolute' )
+            self._player.seek( time_index_s, reference = 'absolute', precision = 'exact' )
             
         except:
             

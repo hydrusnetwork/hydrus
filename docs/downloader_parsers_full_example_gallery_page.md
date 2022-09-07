@@ -1,3 +1,7 @@
+---
+title: Gallery Page Example
+---
+
 # gallery page example
 
 !!! caution

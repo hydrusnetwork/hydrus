@@ -1,5 +1,5 @@
 ---
-title: tags
+title: Tags
 ---
 
 # getting started with tags

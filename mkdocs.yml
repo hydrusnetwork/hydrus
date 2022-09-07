@@ -23,7 +23,7 @@ nav:
     - Next Steps:
       - adding_new_downloaders.md
       - getting_started_subscriptions.md
-      - filtering duplicates: duplicates.md
+      - duplicates.md
   - Advanced:
     - advanced_siblings.md
     - advanced_parents.md
@@ -54,7 +54,7 @@ nav:
           - downloader_parsers_full_example_file_page.md
           - downloader_parsers_full_example_api.md
       - downloader_completion.md
-      - Sharing: downloader_sharing.md
+      - downloader_sharing.md
       - downloader_login.md
   - API: 
     - client_api.md

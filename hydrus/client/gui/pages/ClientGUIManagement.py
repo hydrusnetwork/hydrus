@@ -4332,7 +4332,10 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._reason_text = QW.QTextEdit( self._petition_panel )
         self._reason_text.setReadOnly( True )
-        self._reason_text.setMinimumHeight( 80 )
+        
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._reason_text, ( 16, 6 ) )
+        
+        self._reason_text.setFixedHeight( min_height )
         
         check_all = ClientGUICommon.BetterButton( self._petition_panel, 'check all', self._CheckAll )
         flip_selected = ClientGUICommon.BetterButton( self._petition_panel, 'flip selected', self._FlipSelected )
@@ -4349,14 +4352,14 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_add, ( 16, 20 ) )
         
-        self._contents_add.setMinimumHeight( min_height )
+        self._contents_add.setFixedHeight( min_height )
         
         self._contents_delete = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_delete.itemDoubleClicked.connect( self.ContentsDeleteDoubleClick )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_delete, ( 16, 20 ) )
         
-        self._contents_delete.setMinimumHeight( min_height )
+        self._contents_delete.setFixedHeight( min_height )
         
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.EventProcess )
@@ -4395,8 +4398,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( sort_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._petition_panel.Add( self._contents_add, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._petition_panel.Add( self._contents_delete, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.Add( self._contents_add, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._contents_delete, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._copy_account_key_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -4407,7 +4410,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         QP.AddToLayout( vbox, self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._petition_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if service_type == HC.TAG_REPOSITORY:
             
@@ -4820,18 +4823,33 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             contents = self._contents_add
             
+            string_template = 'ADD: {}'
+            
         else:
             
             contents = self._contents_delete
+            
+            string_template = 'DELETE: {}'
             
         
         contents.clear()
         
         for ( i, ( content, check ) ) in enumerate( contents_and_checks ):
             
-            content_string = content.ToString()
+            content_string = string_template.format( content.ToString() )
             
             contents.Append( content_string, content, starts_checked = check )
+            
+        
+        if contents.count() > 0:
+            
+            ideal_height_in_rows = min( 20, len( contents_and_checks ) )
+            
+            pixels_per_row = contents.sizeHintForRow( 0 )
+            
+            ideal_height_in_pixels = ( ideal_height_in_rows * pixels_per_row ) + ( contents.frameWidth() * 2 )
+            
+            contents.setFixedHeight( ideal_height_in_pixels )
             
         
     
