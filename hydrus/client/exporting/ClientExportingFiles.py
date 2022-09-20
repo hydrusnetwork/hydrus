@@ -22,7 +22,7 @@ from hydrus.client.metadata import ClientTagSorting
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
-def GenerateExportFilename( destination_directory, media, terms, do_not_use_filenames = None ):
+def GenerateExportFilename( destination_directory, media, terms, count, do_not_use_filenames = None ):
     
     def clean_tag_text( t ):
         
@@ -92,7 +92,10 @@ def GenerateExportFilename( destination_directory, media, terms, do_not_use_file
                 hash_id = media.GetHashId()
                 
                 filename += str( hash_id )
-                
+
+            elif term == '#':
+
+                filename += str( count )
             
         elif term_type == 'tag':
             
