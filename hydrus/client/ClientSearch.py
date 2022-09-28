@@ -207,13 +207,6 @@ def CollapseWildcardCharacters( text ):
         text = text.replace( '**', '*' )
         
     
-    ( namespace, subtag ) = HydrusTags.SplitTag( text )
-    
-    if namespace == '*':
-        
-        text = subtag
-        
-    
     return text
     
 def IsComplexWildcard( search_text ):
@@ -1512,6 +1505,39 @@ class PredicateCount( object ):
         return PredicateCount( current_count, pending_count, None, None )
         
     
+
+EDIT_PRED_TYPES = {
+    PREDICATE_TYPE_SYSTEM_AGE,
+    PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+    PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    PREDICATE_TYPE_SYSTEM_HEIGHT,
+    PREDICATE_TYPE_SYSTEM_WIDTH,
+    PREDICATE_TYPE_SYSTEM_RATIO,
+    PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
+    PREDICATE_TYPE_SYSTEM_DURATION,
+    PREDICATE_TYPE_SYSTEM_FRAMERATE,
+    PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+    PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+    PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    PREDICATE_TYPE_SYSTEM_HASH,
+    PREDICATE_TYPE_SYSTEM_LIMIT,
+    PREDICATE_TYPE_SYSTEM_MIME,
+    PREDICATE_TYPE_SYSTEM_RATING,
+    PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+    PREDICATE_TYPE_SYSTEM_NUM_NOTES,
+    PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
+    PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    PREDICATE_TYPE_SYSTEM_SIZE,
+    PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+    PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
+    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
+    PREDICATE_TYPE_OR_CONTAINER,
+    PREDICATE_TYPE_NAMESPACE,
+    PREDICATE_TYPE_WILDCARD,
+    PREDICATE_TYPE_TAG
+}
+
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
@@ -1529,6 +1555,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         if predicate_type == PREDICATE_TYPE_SYSTEM_MIME and value is not None:
             
             value = tuple( ConvertSpecificFiletypesToSummary( value ) )
+            
+        
+        if predicate_type == PREDICATE_TYPE_OR_CONTAINER:
+            
+            value = list( value )
+            
+            value.sort( key = lambda p: HydrusTags.ConvertTagToSortable( p.ToString() ) )
             
         
         if isinstance( value, ( list, set ) ):
@@ -1778,7 +1811,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 ( operator, num ) = serialisable_value
                 
-                namespace = None
+                namespace = '*'
                 
                 serialisable_value = ( namespace, operator, num )
                 
@@ -1998,6 +2031,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def HasParentPredicates( self ):
         
         return len( self._parent_predicates ) > 0
+        
+    
+    def IsEditable( self ):
+        
+        return self._predicate_type in EDIT_PRED_TYPES
         
     
     def IsInclusive( self ):
@@ -2261,9 +2299,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     number_test = NumberTest.STATICCreateFromCharacters( operator, value )
                     
+                    any_namespace = namespace is None or namespace == '*'
+                    
                     if number_test.IsAnythingButZero():
                         
-                        if namespace is None:
+                        if any_namespace:
                             
                             base = 'has tags'
                             
@@ -2275,7 +2315,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     elif number_test.IsZero():
                         
-                        if namespace is None:
+                        if any_namespace:
                             
                             base = 'untagged'
                             
@@ -2287,7 +2327,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        if namespace is not None:
+                        if not any_namespace:
                             
                             base = 'number of {} tags'.format( ClientTags.RenderNamespaceForUser( namespace ) )
                             
@@ -2604,9 +2644,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( namespace, operator, num ) = self._value
                     
-                    if namespace == '':
+                    if namespace == '*':
                         
-                        n_text = 'tag'
+                        n_text = 'any namespace'
+                        
+                    elif namespace == '':
+                        
+                        n_text = 'lone number'
                         
                     else:
                         
@@ -2887,7 +2931,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
     
     return matches
     
-def MergePredicates( predicates, add_namespaceless = False ):
+def MergePredicates( predicates ):
     
     master_predicate_dict = {}
     
@@ -2905,46 +2949,9 @@ def MergePredicates( predicates, add_namespaceless = False ):
             
         
     
-    if add_namespaceless:
-        
-        # we want to include the count for namespaced tags in the namespaceless version when:
-        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
-        
-        unnamespaced_predicate_dict = {}
-        subtag_nonzero_instance_counter = collections.Counter()
-        
-        for predicate in master_predicate_dict.values():
-            
-            if predicate.GetCount().HasNonZeroCount():
-                
-                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
-                
-                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
-                
-                if unnamespaced_predicate in unnamespaced_predicate_dict:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ].GetCount().AddCounts( unnamespaced_predicate.GetCount() )
-                    
-                else:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
-                    
-                
-            
-        
-        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
-            
-            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
-            
-            if count > 1:
-                
-                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
-                
-            
-        
-    
     return list( master_predicate_dict.values() )
     
+
 def SearchTextIsFetchAll( search_text: str ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
@@ -3079,6 +3086,14 @@ class ParsedAutocompleteText( object ):
             elif self.IsExplicitWildcard():
                 
                 search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
+                
+                for s in list( search_texts ):
+                    
+                    if ':' not in s:
+                        
+                        search_texts.append( '*:{}'.format( s ) )
+                        
+                    
                 
                 search_texts = HydrusData.DedupeList( search_texts )
                 

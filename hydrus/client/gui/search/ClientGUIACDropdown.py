@@ -183,10 +183,6 @@ def ReadFetch(
         strict_search_text = parsed_autocomplete_text.GetSearchText( False )
         autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
         
-        # if user searches 'blah', then we include 'blah (23)' for 'series:blah (10)', 'blah (13)'
-        # if they search for 'series:blah', then we don't!
-        add_namespaceless = ':' not in strict_search_text
-        
         if fetch_from_db:
             
             is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard()
@@ -199,7 +195,7 @@ def ReadFetch(
                 
                 if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key )
                     
                     results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                     
@@ -225,7 +221,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, add_namespaceless = add_namespaceless, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_key.IsCancelled():
                         
@@ -328,7 +324,7 @@ def ReadFetch(
                 return
                 
             
-            predicates = ClientSearch.MergePredicates( predicates, add_namespaceless = add_namespaceless )
+            predicates = ClientSearch.MergePredicates( predicates )
             
             matches = predicates
             
@@ -433,7 +429,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             if not results_cache.CanServeTagResults( parsed_autocomplete_text, True ):
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, job_key = job_key )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, job_key = job_key )
                 
                 results_cache = ClientSearch.PredicateResultsCacheTag( predicates, strict_search_text, True )
                 
@@ -459,7 +455,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
                 
                 search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                 
                 if is_explicit_wildcard:
                     
@@ -480,7 +476,7 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
             
             # we always do this, because results cache will not have current text input data
             
-            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, add_namespaceless = False, zero_count_ok = True, job_key = job_key )
+            input_text_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, zero_count_ok = True, job_key = job_key )
             
             for input_text_predicate in input_text_predicates:
                 
@@ -2333,7 +2329,10 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def _AddEditMenu( self, menu: QW.QMenu ):
         
-        ( editable_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._GetPredicatesFromTerms( self._selected_terms ) )
+        ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._GetPredicatesFromTerms( self._selected_terms ) )
+        
+        editable_predicates = list( editable_predicates )
+        editable_predicates.extend( only_invertible_predicates )
         
         if len( editable_predicates ) > 0:
             

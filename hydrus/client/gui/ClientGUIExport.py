@@ -21,7 +21,6 @@ from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -105,11 +104,9 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
         
-        if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
-            
-            pretty_export_type = 'regular'
-            
-        elif export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+        pretty_export_type = 'regular'
+        
+        if export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
             pretty_export_type = 'synchronise'
             
@@ -544,6 +541,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         new_options = HG.client_controller.new_options
         
         self._media_to_paths = {}
+        self._media_to_number_indices = { media : i + 1 for ( i, media ) in enumerate( flat_media ) }
         self._existing_filenames = set()
         self._last_phrase_used = ''
         self._last_dir_used = ''
@@ -560,7 +558,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
-        self._paths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
+        self._paths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, self._ConvertDataToListCtrlTuples, delete_key_callback = self._DeletePaths )
         
         self._paths.Sort()
         
@@ -616,7 +614,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._export_tag_txts.setChecked( True )
             
         
-        self._paths.SetData( list( enumerate( flat_media ) ) )
+        self._paths.SetData( flat_media )
         
         self._delete_files_after_export.setChecked( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
         self._delete_files_after_export.clicked.connect( self.EventDeleteFilesChanged )
@@ -679,13 +677,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _ConvertDataToListCtrlTuples( self, data ):
+    def _ConvertDataToListCtrlTuples( self, media ):
         
         directory = self._directory_picker.GetPath()
         
-        ( ordering_index, media ) = data
-        
-        number = ordering_index
+        number = self._media_to_number_indices[ media ]
         mime = media.GetMime()
         
         try:
@@ -697,7 +693,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             path = str( e )
             
         
-        pretty_number = HydrusData.ToHumanInt( ordering_index + 1 )
+        pretty_number = HydrusData.ToHumanInt( number )
         pretty_mime = HC.mime_string_lookup[ mime ]
         
         pretty_path = path
@@ -711,6 +707,40 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         sort_tuple = ( number, pretty_mime, path )
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _DeletePaths( self ):
+        
+        if not self._paths.HasSelected():
+            
+            return
+            
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._paths.DeleteSelected()
+            
+            kept_media = set( self._paths.GetData() )
+            
+            media_in_correct_order = [ media for ( i, media ) in sorted( ( ( i, media ) for ( media, i ) in self._media_to_number_indices.items() ) ) ]
+            
+            i = 1
+            self._media_to_number_indices = {}
+            
+            for media in media_in_correct_order:
+                
+                if media in kept_media:
+                    
+                    self._media_to_number_indices[ media ] = i
+                    
+                    i += 1
+                    
+                
+            
+            self._paths.UpdateDatas()
+            
         
     
     def _DoExport( self, quit_afterwards = False ):
@@ -785,9 +815,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.setEnabled( False )
         
-        to_do = self._paths.GetData()
+        flat_media = self._paths.GetData()
         
-        to_do = [ ( ordering_index, media, self._GetPath( media ) ) for ( ordering_index, media ) in to_do ]
+        to_do = [ ( media, self._GetPath( media ) ) for media in flat_media ]
         
         num_to_do = len( to_do )
         
@@ -831,7 +861,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             metadata_router = ClientExportingMetadata.SingleFileMetadataRouter( importers = importers, exporter = exporter )
             
-            for ( index, ( ordering_index, media, path ) ) in enumerate( to_do ):
+            for ( index, ( media, path ) ) in enumerate( to_do ):
+                
+                number = self._media_to_number_indices[ media ]
                 
                 if job_key.IsCancelled():
                     
@@ -881,7 +913,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 except:
                     
-                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file with index '+str(ordering_index+1)+':'+os.linesep*2+traceback.format_exc() )
+                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file with index {}:'.format( HydrusData.ToHumanInt( number + 1 ) ) + os.linesep * 2 + traceback.format_exc() )
                     
                     break
                     
@@ -893,7 +925,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
-                possible_deletee_medias = { media for ( ordering_index, media, path ) in to_do }
+                possible_deletee_medias = { media for ( media, path ) in to_do }
                 
                 deletee_medias = ClientMedia.FilterAndReportDeleteLockFailures( possible_deletee_medias )
                 
@@ -956,9 +988,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         terms = ClientExportingFiles.ParseExportPhrase( pattern )
 
-        count = len(self._media_to_paths) + 1
+        number = self._media_to_number_indices[ media ]
         
-        filename = ClientExportingFiles.GenerateExportFilename( directory, media, terms, count, do_not_use_filenames = self._existing_filenames )
+        filename = ClientExportingFiles.GenerateExportFilename( directory, media, terms, number, do_not_use_filenames = self._existing_filenames )
         
         path = os.path.join( directory, filename )
         
@@ -993,16 +1025,14 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _RefreshTags( self ):
         
-        data = self._paths.GetData( only_selected = True )
+        flat_media = self._paths.GetData( only_selected = True )
         
-        if len( data ) == 0:
+        if len( flat_media ) == 0:
             
-            data = self._paths.GetData()
+            flat_media = self._paths.GetData()
             
         
-        all_media = [ media for ( ordering_index, media ) in data ]
-        
-        self._tags_box.SetTagsByMedia( all_media )
+        self._tags_box.SetTagsByMedia( flat_media )
         
     
     def _SetTxtServices( self ):

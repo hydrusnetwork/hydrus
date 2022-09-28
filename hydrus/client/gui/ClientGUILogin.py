@@ -259,7 +259,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 8, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 16, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
         
         self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         

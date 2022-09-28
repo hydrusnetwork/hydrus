@@ -782,6 +782,11 @@ class PopupMessageManager( QW.QWidget ):
             
             gui_frame = HG.client_controller.gui
             
+            if gui_frame is None:
+                
+                return
+                
+            
             gui_is_hidden = not gui_frame.isVisible()
             
             going_to_bug_out_at_hide_or_show = gui_is_hidden

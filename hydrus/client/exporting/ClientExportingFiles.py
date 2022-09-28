@@ -22,7 +22,7 @@ from hydrus.client.metadata import ClientTagSorting
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
-def GenerateExportFilename( destination_directory, media, terms, count, do_not_use_filenames = None ):
+def GenerateExportFilename( destination_directory, media, terms, file_index, do_not_use_filenames = None ):
     
     def clean_tag_text( t ):
         
@@ -92,11 +92,11 @@ def GenerateExportFilename( destination_directory, media, terms, count, do_not_u
                 hash_id = media.GetHashId()
                 
                 filename += str( hash_id )
-
+                
             elif term == '#':
-
-                filename += str( count )
-            
+                
+                filename += str( file_index )
+                
         elif term_type == 'tag':
             
             tag = term
@@ -466,7 +466,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         num_copied = 0
         
-        for media_result in media_results:
+        for ( i, media_result ) in enumerate( media_results ):
             
             if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
@@ -486,7 +486,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'A file to be exported, hash "{}", was missing! You should run file maintenance (under database->maintenance->files) to check the files for the export folder\'s search, and possibly all your files.' )
                 
             
-            filename = GenerateExportFilename( self._path, media_result, terms )
+            filename = GenerateExportFilename( self._path, media_result, terms, i + 1 )
             
             dest_path = os.path.normpath( os.path.join( self._path, filename ) )
             

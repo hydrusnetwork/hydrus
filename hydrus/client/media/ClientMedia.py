@@ -3481,7 +3481,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context )
             
-            media_results_list.sort( sort_key, reverse = reverse )
+            media_results_list.sort( sort_key = sort_key, reverse = reverse )
             
         
     

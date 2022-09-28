@@ -35,6 +35,7 @@ class QMimeDataHydrusFiles( QC.QMimeData ):
         self._hydrus_files = ( page_key, hashes )
         
     
+
 def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     drop_source = QG.QDrag( window )
@@ -102,13 +103,13 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
         dnd_paths = []
         
-        for ( m, original_path ) in media_and_original_paths:
+        for ( i, ( m, original_path ) ) in enumerate( media_and_original_paths ):
             
-            filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, filename_terms )
+            filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, filename_terms, i + 1 )
             
             if filename == HC.mime_ext_lookup[ m.GetMime() ]:
                 
-                filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, fallback_filename_terms )
+                filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, fallback_filename_terms, i + 1 )
                 
             
             dnd_path = os.path.join( temp_dir, filename )

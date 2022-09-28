@@ -4,9 +4,12 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
+from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -52,6 +55,162 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return chained_tag_ids
         
     
+    def GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, inclusive, job_key = None ):
+        
+        tag_ids = set( tag_ids_to_full_counts.keys() )
+        
+        predicates = []
+        
+        if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+            
+            if display_tag_service_id != self.modules_services.combined_tag_service_id:
+                
+                tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
+                
+                tag_ids_that_are_sibling_chained = self.modules_tag_siblings.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids )
+                
+                tag_ids_to_ideal_tag_ids_for_siblings = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids.items() if tag_id in tag_ids_that_are_sibling_chained }
+                
+                ideal_tag_ids_to_sibling_chain_tag_ids = self.modules_tag_siblings.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_siblings.values() ) )
+                
+                #
+                
+                ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
+                
+                ideal_tag_ids_that_are_parent_chained = self.modules_tag_parents.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, ideal_tag_ids )
+                
+                tag_ids_to_ideal_tag_ids_for_parents = { tag_id : ideal_tag_id for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids.items() if ideal_tag_id in ideal_tag_ids_that_are_parent_chained }
+                
+                ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_ideal_tag_ids_for_parents.values() ) )
+                
+            else:
+                
+                # shouldn't ever happen with storage display
+                
+                tag_ids_to_ideal_tag_ids_for_siblings = {}
+                tag_ids_to_ideal_tag_ids_for_parents = {}
+                
+                ideal_tag_ids_to_sibling_chain_tag_ids = {}
+                
+                ideal_tag_ids_to_ancestor_tag_ids = {}
+                
+            
+            tag_ids_we_want_to_look_up = set( tag_ids )
+            tag_ids_we_want_to_look_up.update( itertools.chain.from_iterable( ideal_tag_ids_to_sibling_chain_tag_ids.values() ) )
+            tag_ids_we_want_to_look_up.update( itertools.chain.from_iterable( ideal_tag_ids_to_ancestor_tag_ids.values() ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = tag_ids_we_want_to_look_up )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            ideal_tag_ids_to_chain_tags = { ideal_tag_id : { tag_ids_to_tags[ chain_tag_id ] for chain_tag_id in chain_tag_ids } for ( ideal_tag_id, chain_tag_ids ) in ideal_tag_ids_to_sibling_chain_tag_ids.items() }
+            
+            ideal_tag_ids_to_ancestor_tags = { ideal_tag_id : { tag_ids_to_tags[ ancestor_tag_id ] for ancestor_tag_id in ancestor_tag_ids } for ( ideal_tag_id, ancestor_tag_ids ) in ideal_tag_ids_to_ancestor_tag_ids.items() }
+            
+            for ( tag_id, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tag_ids_to_full_counts.items():
+                
+                tag = tag_ids_to_tags[ tag_id ]
+                
+                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearch.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
+                
+                if tag_id in tag_ids_to_ideal_tag_ids_for_siblings:
+                    
+                    ideal_tag_id = tag_ids_to_ideal_tag_ids_for_siblings[ tag_id ]
+                    
+                    if ideal_tag_id != tag_id:
+                        
+                        predicate.SetIdealSibling( tag_ids_to_tags[ ideal_tag_id ] )
+                        
+                    
+                    predicate.SetKnownSiblings( ideal_tag_ids_to_chain_tags[ ideal_tag_id ] )
+                    
+                
+                if tag_id in tag_ids_to_ideal_tag_ids_for_parents:
+                    
+                    ideal_tag_id = tag_ids_to_ideal_tag_ids_for_parents[ tag_id ]
+                    
+                    parents = ideal_tag_ids_to_ancestor_tags[ ideal_tag_id ]
+                    
+                    if len( parents ) > 0:
+                        
+                        predicate.SetKnownParents( parents )
+                        
+                    
+                
+                predicates.append( predicate )
+                
+            
+        elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+            
+            tag_ids_to_known_chain_tag_ids = collections.defaultdict( set )
+            
+            if display_tag_service_id == self.modules_services.combined_tag_service_id:
+                
+                search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                search_tag_service_ids = ( display_tag_service_id, )
+                
+            
+            for search_tag_service_id in search_tag_service_ids:
+                
+                tag_ids_that_are_sibling_chained = self.modules_tag_siblings.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids )
+                
+                tag_ids_to_ideal_tag_ids_for_siblings = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, tag_ids_that_are_sibling_chained )
+                
+                ideal_tag_ids = set( tag_ids_to_ideal_tag_ids_for_siblings.values() )
+                
+                ideal_tag_ids_to_sibling_chain_tag_ids = self.modules_tag_siblings.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_ACTUAL, search_tag_service_id, ideal_tag_ids )
+                
+                for ( tag_id, ideal_tag_id ) in tag_ids_to_ideal_tag_ids_for_siblings.items():
+                    
+                    tag_ids_to_known_chain_tag_ids[ tag_id ].update( ideal_tag_ids_to_sibling_chain_tag_ids[ ideal_tag_id ] )
+                    
+                
+            
+            tag_ids_we_want_to_look_up = set( tag_ids ).union( itertools.chain.from_iterable( tag_ids_to_known_chain_tag_ids.values() ) )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = tag_ids_we_want_to_look_up )
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            for ( tag_id, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tag_ids_to_full_counts.items():
+                
+                tag = tag_ids_to_tags[ tag_id ]
+                
+                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearch.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
+                
+                if tag_id in tag_ids_to_known_chain_tag_ids:
+                    
+                    chain_tags = { tag_ids_to_tags[ chain_tag_id ] for chain_tag_id in tag_ids_to_known_chain_tag_ids[ tag_id ] }
+                    
+                    predicate.SetKnownSiblings( chain_tags )
+                    
+                
+                predicates.append( predicate )
+                
+            
+        
+        return predicates
+        
+    
     def GetApplication( self ):
         
         service_keys_to_sibling_applicable_service_keys = self.modules_tag_siblings.GetApplication()
@@ -81,7 +240,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         # all parent definitions are sibling collapsed, so are terminus of their sibling chains
         # so get all of the parent chain, then get all chains that point to those
         
-        ideal_tag_ids = self.modules_tag_siblings.GetIdeals( display_type, tag_service_id, tag_ids )
+        ideal_tag_ids = self.modules_tag_siblings.GetIdealTagIds( display_type, tag_service_id, tag_ids )
         
         parent_chain_members = self.modules_tag_parents.GetChainsMembers( display_type, tag_service_id, ideal_tag_ids )
         
@@ -95,7 +254,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
                 
-                self.modules_tag_siblings.GetIdealsIntoTable( display_type, tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
+                self.modules_tag_siblings.GetIdealTagIdsIntoTable( display_type, tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
                 
                 with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_parent_chain_members_table_name:
                     
@@ -115,7 +274,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
     
     def GetImpliedBy( self, display_type, tag_service_id, tag_id ) -> typing.Set[ int ]:
         
-        ideal_tag_id = self.modules_tag_siblings.GetIdeal( display_type, tag_service_id, tag_id )
+        ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( display_type, tag_service_id, tag_id )
         
         if ideal_tag_id == tag_id:
             
@@ -142,7 +301,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
         # a tag implies its ideal sibling and any ancestors
         
-        ideal_tag_id = self.modules_tag_siblings.GetIdeal( display_type, tag_service_id, tag_id )
+        ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( display_type, tag_service_id, tag_id )
         
         implies = { ideal_tag_id }
         
@@ -154,6 +313,56 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
     def GetInterestedServiceIds( self, tag_service_id ) -> typing.Set[ int ]:
         
         return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
+        
+    
+    def GetMediaPredicates( self, tag_context: ClientSearch.TagContext, tags_to_counts, inclusive, job_key = None ):
+        
+        display_tag_service_id = self.modules_services.GetServiceId( tag_context.display_service_key )
+        
+        max_current_count = None
+        max_pending_count = None
+        
+        tag_ids_to_full_counts = {}
+        
+        showed_bad_tag_error = False
+        
+        for ( i, ( tag, ( current_count, pending_count ) ) ) in enumerate( tags_to_counts.items() ):
+            
+            try:
+                
+                tag_id = self.modules_tags.GetTagId( tag )
+                
+            except HydrusExceptions.TagSizeException:
+                
+                if not showed_bad_tag_error:
+                    
+                    showed_bad_tag_error = True
+                    
+                    HydrusData.ShowText( 'Hey, you seem to have an invalid tag in view right now! Please run the \'repair invalid tags\' routine under the \'database\' menu asap!' )
+                    
+                
+                continue
+                
+            
+            tag_ids_to_full_counts[ tag_id ] = ( current_count, max_current_count, pending_count, max_pending_count )
+            
+            if i % 100 == 0:
+                
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return []
+                    
+                
+            
+        
+        if job_key is not None and job_key.IsCancelled():
+            
+            return []
+            
+        
+        predicates = self.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_ACTUAL, display_tag_service_id, tag_ids_to_full_counts, inclusive, job_key = job_key )
+        
+        return predicates
         
     
     def GetSiblingsAndParentsForTags( self, tags ):
@@ -182,11 +391,11 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
             
-            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
             
             ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
             
-            ideal_tag_ids_to_sibling_chain_ids = self.modules_tag_siblings.GetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_sibling_chain_ids = self.modules_tag_siblings.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             
             ideal_tag_ids_to_descendant_tag_ids = self.modules_tag_parents.GetTagsToDescendants( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
@@ -235,7 +444,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
         else:
             
-            tag_ids_to_ideals = self.modules_tag_siblings.GetTagsToIdeals( display_type, tag_service_id, tag_ids )
+            tag_ids_to_ideals = self.modules_tag_siblings.GetTagIdsToIdealTagIds( display_type, tag_service_id, tag_ids )
             
             tag_ids_that_exist_in_display = set()
             
@@ -262,7 +471,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         all_tags_and_descendants.update( itertools.chain.from_iterable( tag_ids_to_descendants.values() ) )
         
         # these are all ideal_tag_ids
-        all_tags_and_descendants_to_chains = self.modules_tag_siblings.GetIdealsToChains( display_type, tag_service_id, all_tags_and_descendants )
+        all_tags_and_descendants_to_chains = self.modules_tag_siblings.GetIdealTagIdsToChains( display_type, tag_service_id, all_tags_and_descendants )
         
         for ( tag_id, descendants ) in tag_ids_to_descendants.items():
             
@@ -281,7 +490,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
         tag_ids_to_implies = collections.defaultdict( set )
         
-        tag_ids_to_ideals = self.modules_tag_siblings.GetTagsToIdeals( display_type, tag_service_id, tag_ids )
+        tag_ids_to_ideals = self.modules_tag_siblings.GetTagIdsToIdealTagIds( display_type, tag_service_id, tag_ids )
         
         ideal_tag_ids = set( tag_ids_to_ideals.values() )
         
@@ -313,7 +522,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
         existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
         
-        existing_tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+        existing_tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
         
         ideal_tag_ids = set( existing_tag_ids_to_ideal_tag_ids.values() )
         
@@ -436,4 +645,3 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
         
-    

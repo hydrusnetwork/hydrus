@@ -521,7 +521,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 'samus*', 'samus*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:samus*' ) ] ] )
         
         #
         
@@ -546,7 +546,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s' ) ] ] )
         
         #
         
@@ -554,7 +554,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, False ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s', inclusive = False ) ] ] )
         
         #
         
@@ -576,7 +576,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s a*n', 's*s a*n*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n' ) ] ] )
         
         #
         
@@ -1855,7 +1855,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '<', 2 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '<', 2 ) )
         
         self.assertEqual( p.ToString(), 'system:number of tags < 2' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1945,16 +1945,16 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
         
-        self.assertEqual( p.ToString(), 'system:height < 2,000 OR blue eyes OR character:samus aran' )
+        self.assertEqual( p.ToString(), 'blue eyes OR character:samus aran OR system:height < 2,000' )
         self.assertEqual( p.GetNamespace(), '' )
         
         or_texts_and_namespaces = []
         
-        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'system' ) )
-        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
         or_texts_and_namespaces.append( ( 'blue eyes', '' ) )
         or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
         or_texts_and_namespaces.append( ( 'character:samus aran', 'character' ) )
+        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
+        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'system' ) )
         
         
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), or_texts_and_namespaces )

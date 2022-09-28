@@ -401,7 +401,46 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         self._Execute( 'INSERT OR IGNORE INTO {} ( tag_id ) SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( results_table_name, ideal_tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
         
     
-    def GetIdeal( self, display_type, tag_service_id, tag_id ) -> int:
+    def GetIdeals( self, tag_display_type, service_key, tags ) -> typing.Set[ str ]:
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            tag_service_ids = ( self.modules_services.GetServiceId( service_key ), )
+            
+        
+        existing_tags = { tag for tag in tags if self.modules_tags.TagExists( tag ) }
+        
+        existing_tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = existing_tags ).keys() )
+        
+        result_ideal_tag_ids = set()
+        
+        for tag_service_id in tag_service_ids:
+            
+            ideal_tag_ids = self.GetIdealTagIds( tag_display_type, tag_service_id, existing_tag_ids )
+            
+            result_ideal_tag_ids.update( ideal_tag_ids )
+            
+        
+        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = result_ideal_tag_ids )
+        
+        ideal_tags = set( tag_ids_to_tags.values() )
+        
+        for tag in tags:
+            
+            if tag not in existing_tags:
+                
+                ideal_tags.add( tag )
+                
+            
+        
+        return ideal_tags
+        
+    
+    def GetIdealTagId( self, display_type, tag_service_id, tag_id ) -> int:
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
         
@@ -419,7 +458,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetIdeals( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
+    def GetIdealTagIds( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
         
         if not isinstance( tag_ids, set ):
             
@@ -434,7 +473,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
             ( tag_id, ) = tag_ids
             
-            return { self.GetIdeal( display_type, tag_service_id, tag_id ) }
+            return { self.GetIdealTagId( display_type, tag_service_id, tag_id ) }
             
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
@@ -474,7 +513,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         '''
         
     
-    def GetIdealsIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):
+    def GetIdealTagIdsIntoTable( self, display_type, tag_service_id, tag_ids_table_name, results_table_name ):
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
         
@@ -492,7 +531,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return self._STS( cursor )
         
     
-    def GetIdealsToChains( self, display_type, tag_service_id, ideal_tag_ids ):
+    def GetIdealTagIdsToChains( self, display_type, tag_service_id, ideal_tag_ids ):
         
         # this only takes ideal_tag_ids
         
@@ -552,7 +591,45 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def GetTagSiblingsForTags( self, service_key, tags ):
+    def GetTagIdsToIdealTagIds( self, display_type, tag_service_id, tag_ids ):
+        
+        if not isinstance( tag_ids, set ):
+            
+            tag_ids = set( tag_ids )
+            
+        
+        if len( tag_ids ) == 0:
+            
+            return {}
+            
+        elif len( tag_ids ) == 1:
+            
+            ( tag_id, ) = tag_ids
+            
+            return { tag_id : self.GetIdealTagId( display_type, tag_service_id, tag_id ) }
+            
+        
+        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
+        
+        no_ideal_found_tag_ids = set( tag_ids )
+        tag_ids_to_ideal_tag_ids = {}
+        
+        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
+            
+            # temp tags to lookup
+            for ( tag_id, ideal_tag_id ) in self._Execute( 'SELECT tag_id, ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ):
+                
+                no_ideal_found_tag_ids.discard( tag_id )
+                tag_ids_to_ideal_tag_ids[ tag_id ] = ideal_tag_id
+                
+            
+            tag_ids_to_ideal_tag_ids.update( { tag_id : tag_id for tag_id in no_ideal_found_tag_ids } )
+            
+        
+        return tag_ids_to_ideal_tag_ids
+        
+    
+    def GetTagSiblingsForTags( self, service_key, tags ) -> typing.Dict[ str, str ]:
         
         if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -571,11 +648,11 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         for tag_service_id in tag_service_ids:
             
-            tag_ids_to_ideal_tag_ids = self.GetTagsToIdeals( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            tag_ids_to_ideal_tag_ids = self.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
             
             ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
             
-            ideal_tag_ids_to_chain_tag_ids = self.GetIdealsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_chain_tag_ids = self.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             
             for tag_id in existing_tag_ids:
                 
@@ -618,44 +695,6 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         tags_to_ideals = { tag_ids_to_tags[ bad_tag_id ] : tag_ids_to_tags[ good_tag_id ] for ( bad_tag_id, good_tag_id ) in pair_ids }
         
         return tags_to_ideals
-        
-    
-    def GetTagsToIdeals( self, display_type, tag_service_id, tag_ids ):
-        
-        if not isinstance( tag_ids, set ):
-            
-            tag_ids = set( tag_ids )
-            
-        
-        if len( tag_ids ) == 0:
-            
-            return {}
-            
-        elif len( tag_ids ) == 1:
-            
-            ( tag_id, ) = tag_ids
-            
-            return { tag_id : self.GetIdeal( display_type, tag_service_id, tag_id ) }
-            
-        
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
-        
-        no_ideal_found_tag_ids = set( tag_ids )
-        tag_ids_to_ideal_tag_ids = {}
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # temp tags to lookup
-            for ( tag_id, ideal_tag_id ) in self._Execute( 'SELECT tag_id, ideal_tag_id FROM {} CROSS JOIN {} ON ( bad_tag_id = tag_id );'.format( temp_table_name, cache_tag_siblings_lookup_table_name ) ):
-                
-                no_ideal_found_tag_ids.discard( tag_id )
-                tag_ids_to_ideal_tag_ids[ tag_id ] = ideal_tag_id
-                
-            
-            tag_ids_to_ideal_tag_ids.update( { tag_id : tag_id for tag_id in no_ideal_found_tag_ids } )
-            
-        
-        return tag_ids_to_ideal_tag_ids
         
     
     def GetTagSiblings( self, service_key ):
@@ -866,7 +905,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
             tag_ids_to_clear_and_regen = set( tag_ids )
             
-            ideal_tag_ids = self.GetIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
+            ideal_tag_ids = self.GetIdealTagIds( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
             
             tag_ids_to_clear_and_regen.update( self.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
             

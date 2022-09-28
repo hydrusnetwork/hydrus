@@ -193,7 +193,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         
         tables_and_columns = []
         
-        if content_type == HC.CONTENT_TYPE_TAG:
+        if content_type == HC.CONTENT_TYPE_FILES:
             
             tables_and_columns.append( ( 'main.url_map', 'hash_id' ) )
             

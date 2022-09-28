@@ -1722,7 +1722,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         return tag_service_key
         
     
-    def _GetTagMatches( self, tag_service_key, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> typing.List[ ClientSearch.Predicate ]:
+    def _GetTagMatches( self, request: HydrusServerRequest.HydrusRequest, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> typing.List[ ClientSearch.Predicate ]:
         
         matches = []
         
@@ -1736,13 +1736,15 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
             
             file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = tag_context )
             
-            job_key = ClientThreading.JobKey()
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            request.disconnect_callables.append( job_key.Cancel )
             
             search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
             
             # TODO: update this request to take storage/display for add vs search tags
             # we could even roll in parent/sibling info from the predicates I think
-            predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+            predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
             
             display_tag_service_key = tag_context.display_service_key
             
@@ -1762,7 +1764,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText( search, tag_service_key )
         
-        matches = self._GetTagMatches( tag_service_key, parsed_autocomplete_text )
+        matches = self._GetTagMatches( request, tag_service_key, parsed_autocomplete_text )
         
         matches = request.client_api_permissions.FilterTagPredicateResponse( matches )
         
@@ -2201,7 +2203,11 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             return_file_ids = request.parsed_request_args.GetValue( 'return_file_ids', bool )
             
         
-        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        request.disconnect_callables.append( job_key.Cancel )
+        
+        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, job_key = job_key, sort_by = sort_by, apply_implicit_limit = False )
         
         request.client_api_permissions.SetLastSearchResults( hash_ids )
         

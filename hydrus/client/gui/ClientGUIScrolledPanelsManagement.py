@@ -1582,13 +1582,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             label = 'If you have enough pages in a row, left/right arrows will appear to navigate them back and forth.'
             label += os.linesep
-            label += 'Due to an unfortunate Qt issue, the tab bar will scroll so the current tab is right-most visible whenever a page is renamed.'
+            label += 'Due to an unfortunate Qt issue, the tab bar will scroll so the current tab is right-most visible whenever you change page or a page is renamed. This is very annoying to live with.'
             label += os.linesep
-            label += 'Therefore, if you set pages to have current file count or import progress in their name (which will update from time to time), do not put import pages in a long row of tabs, as it will reset scroll position on every progress update.'
+            label += 'Therefore, do not put import pages in a long row of tabs, as it will reset scroll position on every progress update. Try to avoid long rows in general.'
             label += os.linesep
             label += 'Just make some nested \'page of pages\' so they are not all in the same row.'
             
             st = ClientGUICommon.BetterStaticText( self._page_names_panel, label )
+            
+            st.setToolTip( 'https://bugreports.qt.io/browse/QTBUG-45381' )
             
             st.setWordWrap( True )
             

@@ -3362,6 +3362,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     self._PublishSelectionIncrement( thumbnails )
                     
+                else:
+                    
+                    self.statusTextChanged.emit( self._GetPrettyStatusForStatusBar() )
+                    
                 
             
         

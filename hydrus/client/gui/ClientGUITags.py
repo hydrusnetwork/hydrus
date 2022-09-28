@@ -3089,7 +3089,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 do_it = True
                 
-                if not self._i_am_local_tag_service:
+                if self._i_am_local_tag_service:
+                    
+                    reason = 'added by user'
+                    
+                else:
                     
                     if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
                         
@@ -3126,16 +3130,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if do_it:
-                        
-                        for pair in new_pairs:
-                            
-                            self._pairs_to_reasons[ pair ] = reason
-                            
-                        
-                    
                 
                 if do_it:
+                    
+                    for pair in new_pairs:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
                     
                     self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
@@ -3148,7 +3149,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    if not self._i_am_local_tag_service:
+                    if self._i_am_local_tag_service:
+                        
+                        reason = 'removed by user'
+                        
+                    else:
                         
                         if len( current_pairs ) > 10:
                             
@@ -3201,22 +3206,19 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                     
                                 
                             
-                            if do_it:
-                                
-                                for pair in current_pairs:
-                                    
-                                    self._pairs_to_reasons[ pair ] = reason
-                                    
-                                
-                            
-                            
                         else:
                             
                             do_it = False
                             
                         
                     
+                    
                     if do_it:
+                        
+                        for pair in current_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
@@ -4100,13 +4102,17 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 do_it = True
                 
-                if not self._i_am_local_tag_service:
+                if default_reason is not None:
                     
-                    if default_reason is not None:
-                        
-                        reason = default_reason
-                        
-                    elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
+                    reason = default_reason
+                    
+                elif self._i_am_local_tag_service:
+                    
+                    reason = 'added by user'
+                    
+                else:
+                    
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                         
                         reason = 'admin'
                         
@@ -4141,34 +4147,38 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if do_it:
+                
+                if do_it:
+                    
+                    we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
+                    
+                    if we_are_autopetitioning:
                         
-                        we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                        
-                        if we_are_autopetitioning:
+                        if self._i_am_local_tag_service:
+                            
+                            reason = 'REPLACEMENT: by user'
+                            
+                        else:
                             
                             reason = 'REPLACEMENT: {}'.format( reason )
                             
                         
-                        for pair in new_pairs:
-                            
-                            self._pairs_to_reasons[ pair ] = reason
-                            
+                    
+                    for pair in new_pairs:
                         
-                        if we_are_autopetitioning:
-                            
-                            for ( p, r ) in list( self._pairs_to_reasons.items() ):
-                                
-                                if r == self.AUTO_PETITION_REASON:
-                                    
-                                    self._pairs_to_reasons[ p ] = reason
-                                    
-                                
-                            
+                        self._pairs_to_reasons[ pair ] = reason
                         
                     
-                
-                if do_it:
+                    if we_are_autopetitioning:
+                        
+                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                            
+                            if r == self.AUTO_PETITION_REASON:
+                                
+                                self._pairs_to_reasons[ p ] = reason
+                                
+                            
+                        
                     
                     self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
@@ -4179,9 +4189,15 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    reason = default_reason
-                    
-                    if reason is None and not self._i_am_local_tag_service:
+                    if default_reason is not None:
+                        
+                        reason = default_reason
+                        
+                    elif self._i_am_local_tag_service:
+                        
+                        reason = 'removed by user'
+                        
+                    else:
                         
                         if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                             
@@ -4230,7 +4246,14 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if we_are_autopetitioning:
                             
-                            reason = 'REPLACEMENT: {}'.format( reason )
+                            if self._i_am_local_tag_service:
+                                
+                                reason = 'REPLACEMENT: by user'
+                                
+                            else:
+                                
+                                reason = 'REPLACEMENT: {}'.format( reason )
+                                
                             
                         
                         for pair in current_pairs:
@@ -4450,15 +4473,33 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             ( old, new ) = pair
             
-            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+            note = ''
+            
+            in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+            in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+            
+            if in_pending or in_petitioned:
                 
-                status = HC.CONTENT_STATUS_PENDING
+                if pair in self._pairs_to_reasons:
+                    
+                    note = self._pairs_to_reasons[ pair ]
+                    
+                    if note is None:
+                        
+                        note = 'unknown'
+                        
+                    
                 
-            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                if in_pending:
+                    
+                    status = HC.CONTENT_STATUS_PENDING
+                    
+                else:
+                    
+                    status = HC.CONTENT_STATUS_PETITIONED
+                    
                 
-                status = HC.CONTENT_STATUS_PETITIONED
-                
-            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+            else:
                 
                 status = HC.CONTENT_STATUS_CURRENT
                 
@@ -4468,13 +4509,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             pretty_status = sign
             
             existing_olds = self._old_siblings.GetTags()
-            
-            note = ''
-            
-            if pair in self._pairs_to_reasons:
-                
-                note = self._pairs_to_reasons[ pair ]
-                
             
             if old in existing_olds:
                 

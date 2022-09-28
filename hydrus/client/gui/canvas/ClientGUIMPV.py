@@ -71,6 +71,29 @@ def log_handler( loglevel, component, message ):
     
     HydrusData.DebugPrint( '[{}] {}: {}'.format( loglevel, component, message ) )
     
+
+MPVFileLoadedEventType = QP.registerEventType()
+
+class MPVFileLoadedEvent( QC.QEvent ):
+    
+    def __init__( self ):
+        
+        QC.QEvent.__init__( self, MPVFileLoadedEventType )
+        
+    
+
+MPVFileSeekedEventType = QP.registerEventType()
+
+class MPVFileSeekedEvent( QC.QEvent ):
+    
+    def __init__( self ):
+        
+        QC.QEvent.__init__( self, MPVFileSeekedEventType )
+        
+    
+
+LOCALE_IS_SET = False
+
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
 class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
@@ -86,16 +109,23 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._stop_for_slideshow = False
         
-        # This is necessary since PyQT stomps over the locale settings needed by libmpv.
-        # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
-        locale.setlocale( locale.LC_NUMERIC, 'C' )
+        global LOCALE_IS_SET
+        
+        if not LOCALE_IS_SET:
+            
+            # This is necessary since PyQT stomps over the locale settings needed by libmpv.
+            # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
+            locale.setlocale( locale.LC_NUMERIC, 'C' )
+            
+            LOCALE_IS_SET = True
+            
         
         self.setAttribute( QC.Qt.WA_DontCreateNativeAncestors )
         self.setAttribute( QC.Qt.WA_NativeWindow )
         
+        # loglevels: fatal, error, debug
         loglevel = 'debug' if HG.mpv_report_mode else 'fatal'
         
-        # loglevels: fatal, error, debug
         self._player = mpv.MPV( wid = str( int( self.winId() ) ), log_handler = log_handler, loglevel = loglevel )
         
         # hydev notes on OSC:
@@ -103,7 +133,8 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         # difficult to get this to intercept mouse/key events naturally, so you have to pipe them to the window with 'command', but this is not excellent
         # general recommendation when using libmpv is to just implement your own stuff anyway, so let's do that for prototype
         
-        #self._player[ 'input-default-bindings' ] = True
+        # self._player[ 'osd-level' ] = 1
+        # self._player[ 'input-default-bindings' ] = True
         
         self.UpdateConf()
         
@@ -138,6 +169,8 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
         HG.client_controller.sub( self, 'UpdateConf', 'notify_new_options' )
         HG.client_controller.sub( self, 'SetLogLevel', 'set_mpv_log_level' )
+        
+        self.installEventFilter( self )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
         
@@ -213,22 +246,35 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def _InitialiseMPVCallbacks( self ):
         
-        def qt_file_loaded_event():
+        player = self._player
+        
+        @player.event_callback( mpv.MpvEventID.SEEK )
+        def seek_event( event ):
             
-            if not QP.isValid( self ):
-                
-                return
-                
+            QW.QApplication.instance().postEvent( self, MPVFileSeekedEvent() )
+            
+        
+        @player.event_callback( mpv.MpvEventID.FILE_LOADED )
+        def file_loaded_event( event ):
+            
+            QW.QApplication.instance().postEvent( self, MPVFileLoadedEvent() )
+            
+        
+    
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == MPVFileLoadedEventType:
             
             self._file_is_loaded = True
             
-        
-        def qt_seek_event():
+            return True
             
-            if not QP.isValid( self ):
-                
-                return
-                
+        elif event.type() == MPVFileSeekedEventType:
             
             if not self._file_is_loaded:
                 
@@ -252,26 +298,10 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                 
             
+            return True
             
         
-        player = self._player
-        
-        @player.event_callback( mpv.MpvEventID.SEEK )
-        def seek_event( event ):
-            
-            QP.CallAfter( qt_seek_event )
-            
-        
-        @player.event_callback( mpv.MpvEventID.FILE_LOADED )
-        def file_loaded_event( event ):
-            
-            QP.CallAfter( qt_file_loaded_event )
-            
-        
-    
-    def ClearMedia( self ):
-        
-        self.SetMedia( None )
+        return False
         
     
     def GetAnimationBarStatus( self ):

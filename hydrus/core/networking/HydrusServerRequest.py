@@ -14,6 +14,7 @@ class HydrusRequest( Request ):
         self.hydrus_response_context = None
         self.hydrus_account = None
         self.client_api_permissions = None
+        self.disconnect_callables = []
         self.preferred_mime = HC.APPLICATION_JSON
         
     

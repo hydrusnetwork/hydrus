@@ -131,20 +131,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*', add_namespaceless = True )
-        
-        preds = set()
-        
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'car', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
-        preds.add( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'series:cars', count = ClientSearch.PredicateCount.STATICCreateCurrentCount( 1 ) ) )
-        
-        for p in result: self.assertEqual( p.GetCount().GetMinCount( HC.CONTENT_STATUS_CURRENT ), 1 )
-        
-        self.assertEqual( set( result ), preds )
-        
-        # cars
-        
-        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = 'c*' )
         
         preds = set()
         
@@ -603,9 +590,9 @@ class TestClientDB( unittest.TestCase ):
         tests = []
         
         tests.append( ( True, 'maker:ford', 1 ) )
-        tests.append( ( True, 'ford', 1 ) )
+        tests.append( ( True, 'ford', 0 ) )
         tests.append( ( False, 'maker:ford', 0 ) )
-        tests.append( ( False, 'ford', 0 ) )
+        tests.append( ( False, 'ford', 1 ) )
         
         run_tag_predicate_tests( tests )
         

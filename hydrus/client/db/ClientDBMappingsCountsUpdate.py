@@ -40,6 +40,26 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
             
         
     
+    def FilterExistingTags( self, service_key: bytes, tags: typing.Collection[ str ] ):
+        
+        service_id = self.modules_services.GetServiceId( service_key )
+        
+        tag_ids_to_tags = { self.modules_tags_local_cache.GetTagId( tag ) : tag for tag in tags }
+        
+        tag_ids = set( tag_ids_to_tags.keys() )
+        
+        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_tag_id_table_name:
+            
+            counts = self.modules_mappings_counts.GetCountsForTags( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, service_id, temp_tag_id_table_name )
+            
+        
+        existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
+        
+        filtered_tags = { tag_ids_to_tags[ tag_id ] for tag_id in existing_tag_ids }
+        
+        return filtered_tags
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         tables_and_columns = []
@@ -136,4 +156,3 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
             self.ReduceCounts( tag_display_type, file_service_id, tag_service_id, reduce_ac_cache_changes )
             
         
-    

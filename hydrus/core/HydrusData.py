@@ -277,6 +277,7 @@ def ConvertStatusToPrefix( status ):
     elif status == HC.CONTENT_STATUS_PENDING: return '(+) '
     elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
     elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
+    else: return '(?)'
     
 def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
     

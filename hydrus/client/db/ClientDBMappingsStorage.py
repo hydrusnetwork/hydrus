@@ -129,6 +129,189 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
         self._Execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_mappings_table_name ) )
         
     
+    def FilterExistingUpdateMappings( self, tag_service_id, mappings_ids, action ):
+        
+        if len( mappings_ids ) == 0:
+            
+            return mappings_ids
+            
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+        
+        culled_mappings_ids = []
+        
+        for row in mappings_ids:
+            
+            # mappings_ids here can have 'reason_id' for petitions, so we'll index our values here
+            
+            tag_id = row[0]
+            hash_ids = row[1]
+            
+            if len( hash_ids ) == 0:
+                
+                continue
+                
+            elif len( hash_ids ) == 1:
+                
+                ( hash_id, ) = hash_ids
+                
+                if action == HC.CONTENT_UPDATE_ADD:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( current_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_DELETE:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( deleted_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_PEND:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( current_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( pending_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                        
+                        if result is None:
+                            
+                            valid_hash_ids = hash_ids
+                            
+                        else:
+                            
+                            continue
+                            
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( pending_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        continue
+                        
+                    else:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        continue
+                        
+                    else:
+                        
+                        valid_hash_ids = hash_ids
+                        
+                    
+                else:
+                    
+                    valid_hash_ids = set()
+                    
+                
+            else:
+                
+                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    if action == HC.CONTENT_UPDATE_ADD:
+                        
+                        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( tag_id, ) ) )
+                        
+                        valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
+                        
+                    elif action == HC.CONTENT_UPDATE_DELETE:
+                        
+                        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, deleted_mappings_table_name ), ( tag_id, ) ) )
+                        
+                        valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
+                        
+                    elif action == HC.CONTENT_UPDATE_PEND:
+                        
+                        # prohibited hash_ids
+                        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( tag_id, ) ) )
+                        # existing_hash_ids
+                        existing_hash_ids.update( self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) ) )
+                        
+                        valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
+                        
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                        
+                        valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) )
+                        
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        # we are technically ok with deleting tags that don't exist yet!
+                        existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) )
+                        
+                        valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
+                        
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                        
+                        valid_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) )
+                        
+                    else:
+                        
+                        valid_hash_ids = set()
+                        
+                    
+                
+            
+            if len( valid_hash_ids ) > 0:
+                
+                if action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    reason_id = row[2]
+                    
+                    culled_mappings_ids.append( ( tag_id, valid_hash_ids, reason_id ) )
+                    
+                else:
+                    
+                    culled_mappings_ids.append( ( tag_id, valid_hash_ids ) )
+                    
+                
+            
+        
+        return culled_mappings_ids
+        
+    
     def GenerateMappingsTables( self, service_id: int ):
         
         table_generation_dict = self._GetServiceTableGenerationDict( service_id )

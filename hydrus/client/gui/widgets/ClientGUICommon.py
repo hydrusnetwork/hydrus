@@ -1659,14 +1659,16 @@ class NoneableTextCtrl( QW.QWidget ):
         
         self._checkbox.stateChanged.connect( self._HandleValueChanged )
         self._text.textChanged.connect( self._HandleValueChanged )
+        
     
     def _HandleValueChanged( self, val ):
         
         self.valueChanged.emit()
         
         
-    def EventCheckBox( self, state ):
     
+    def EventCheckBox( self, state ):
+        
         if self._checkbox.isChecked():
         
             self._text.setEnabled( False )
@@ -1687,6 +1689,11 @@ class NoneableTextCtrl( QW.QWidget ):
             
             return self._text.text()
             
+        
+    
+    def setPlaceholderText( self, text: str ):
+        
+        self._text.setPlaceholderText( text )
         
     
     def setToolTip( self, text ):

@@ -131,7 +131,7 @@ Clients and servers of different versions can usually connect to one another, bu
 
 ## clean installs
 
-**This is only relevant if you update and cannot boot at all.**
+**This is only relevant if you know you have a dll conflict or otherwise update and cannot boot at all.**
 
 Very rarely, hydrus needs a clean install. This can be due to a special update like when we moved from 32-bit to 64-bit or needing to otherwise 'reset' a custom install situation. The problem is usually that a library file has been renamed in a new version and hydrus has trouble figuring out whether to use the older one (from a previous version) or the newer.
 

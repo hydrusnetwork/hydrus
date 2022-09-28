@@ -33,6 +33,59 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_500"><a href="#version_500">version 500</a></h3></li>
+				<ul>
+					<li>crashes:</li>
+					<li>I messed the mpv update up in v499. my golden rule is never to put out bleeding-edge library updates, but without thinking I gave everyone a dll from late august. it turns out this thing was pretty crashy, and many users were getting other unusual behaviour as well. it seems like people on very new versions of Windows were mostly ok, but a little instability, whereas some older-Windows users were unable to start the client or could boot but couldn't load mpv at all. these latter cases were plagued with other problems. thanks to user help, we discovered it was the newer mpv dll causing all the problems, and an older one, from early May, seems to be fine</li>
+					<li>so, I am rolling back the mpv in the windows releases. the 'v3' 2022-08-29 I bundled in 499 was causing several users serious problems, possibly because of the advanced 'v3' chipset instructions or related advanced compiler tech. for the Qt6 release, we are going back to 2022-05-01, which several users report as stable, and for the Qt5 we are rolling back to the 498 version, 2021-02-28, which is back to mpv-1.dll. Since Qt5 users are increasingly going to be Win 7, we'll go super safe. THEREFORE, Qt5 extract users will want to perform a clean install this week: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs</li>
+					<li>(you can alternately just delete the now-surplus mpv-2.dll in your install directory, but a full clean install is good to do from time to time, so may as well)</li>
+					<li>updated the sqlite dll in the windows release to 2022-05, and the exe in the db directory to 2022-09</li>
+					<li>rewrote how some internal MPV events are signalled to Qt. they now have their own clean custom event types rather than piggy-backing on some bad old hydrus pubsub code</li>
+					<li>I either fixed a rare boot crash related to the popup messaging system, maybe exclusively on macOS, or I improved it and we'll get a richer error now</li>
+					<li>.</li>
+					<li>tag sibling search:</li>
+					<li>if you search explicitly for a tag that has a better sibling (one way this can happen is when loading up an old favourite search), the client will now auto-convert that tag to the ideal in the search code and give you results for the siblinged tag</li>
+					<li>this started off as a predicted five minute thing and spilled out into a multi-hour saga of me realising some tag sibling search code was A) wrong in edge cases and B) slow in edge cases. I have subtly reshaped how core file-tag search works in the client so that it consults each tag service in turn based on its siblings and its mappings, rather than mixing them together. this does not matter for 99.98% of cases, but if you have some weird overlapping siblings across different services, you should now get the correct results. also, some optimisations are more effective, so any instance of searching for tags on small tag services on 'all known tags' is now a bit quicker</li>
+					<li>big brain: please note the logic here is complex, and I have not yet updated autocomplete counting to handle this situation. if you type 'cat' and get 'cat (3)' from the three 'cat' tags on 'my tags', but 'cat' is siblinged to 'species:feline' on a big service like the PTR, it will still say (3), rather than (403) or whatever from the auto-corrected PTR results. I have a plan to fix this in a future cleanup round</li>
+					<li>.</li>
+					<li>tag subtags and namespace wildcards:</li>
+					<li>searching for 'samus aran' no longer delivers files that have 'character:samus aran'. the subtag->namespace logic no longer applies. this was a fun idea from the very start of the program, but it was never all that useful as default behaviour and added several headaches, now eliminated. if you wish to perform this search going forward, please enter '*:samus aran', which is now an acceptable wildcard input</li>
+					<li>tag lookup is unaffected. typing 'samus aran' will still provide 'character:samus aran' as a tag to choose from</li>
+					<li>a heap of rinky-dink counting logic went along with this, such as providing tag search results like ('character:samus aran (100)', 'samus aran (100-105)'), where it tried to predict how many results would come with the unnamespaced search. this no longer exists, and a decent bit of CPU is now saved in any large tag search</li>
+					<li>wildcard searching works on similar rules now, so if you enter 'sa*s ar', you will see 'character:samus aran' as a result in the tag list, but searching for it will not give results with 'character:samus aran'. again, enter '*:sa*s ar*' to search for all namespaces (which is now provided as a quick suggestion any time you enter an unnamespaced wildcard), or enter 'character:sa*s ar*' explicitly</li>
+					<li>'system:tag as number' also now follows similar rules, so if you leave the namespace field blank, it will search unnamespaced numbers. it now supports namespace wildcards, so you can enter '*' to get the old behaviour. the placeholder text on the namespace input now states this</li>
+					<li>'system:number of tags' now uses the same UI as 'system:tag as number', where you enter '*' as the namespace to mean all namespaces, rather than checking a box</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>all tag, namespace, and wildcard search predicates are now properly editable from the active search box. shift+double-click or select from the right-click menu, and you now get a simple text input alongside any system predicate panels. previously, this would only offer you a button to invert the tag to -tag and _vice versa_. now, you can add or remove the '-' and '*' characters yourself info to freely convert between tags, namespace:anything, and wildcard search predicates (issue #1235)</li>
+					<li>thanks to a user, you can now add '{#}' to an export filename pattern to get the '#' column in your filename (useful if you want to export files in the order they are currently in on the page)</li>
+					<li>furthermore, if you delete items from the manual file export window, the '#' column now recalculates itself to stay contiguous and in order (previously, it left gaps)</li>
+					<li>fixed a bug when deleting siblings on a local tags service. sorry for the trouble!</li>
+					<li>on manage siblings, when you remove, add, or replace a pair on a local tags service, you will now get a simple 'note' reason informing you more on what is going on. the 'REPLACEMENT:' thing recently added to tag repositories should now work for you too</li>
+					<li>when a downloader or similar adds files to a page, and you have at least one existing file selected, the status bar now updates correctly</li>
+					<li>fixed a critical issue that was affecting some users with damaged similar file search trees. when starting similar file search tree rebalancing maintenence, their client would go into an infinite loop and spool the cyclic branch into an ever-growing journal file in their temp directory until their system drive briefly ran out of space. sorry for the trouble, and thank you for the excellent reports that helped to figure this out (issue #1239)</li>
+					<li>the similar files search tree rebalance maintenance now detects more sorts of damaged trees and handles them gracefully, and the full tree regeneration clears out any damaged maintenance information too</li>
+					<li>fixed another problem with the tree branch maintenance system when the root was accidentally queued for branch rebalance</li>
+					<li>when you right-click->copy a wildcard search tag, it now copies the actual wildcard text, not the display text with (wildcard search) over the top</li>
+					<li>I added ',' to the list of non-decodable characters in the hacky URL Class encoding/decoding routine. sites that use an encoded comma (%_2C) for regular path components or query parameters should now work</li>
+					<li>a user has fixed a regex parsing problem in the predicate parser for system:hash</li>
+					<li>OR search predicates now sort their sub-predicates on construction/editing, meaning the label is always of set order, and they can now compare with and hence reliably nullify each other</li>
+					<li>the manage logins dialog now boots a little taller</li>
+					<li>the main gui tab bar may look a bit nicer/more appropriate in macOS</li>
+					<li>updated the help text on gui pages where it talks about overflowing rows of tabs, which auto-scroll even worse in Qt6, hooray</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the  client api now handles request disconnects better. the hydrus server code benefits from the same engine improvements</li>
+					<li>the 'twisted.internet.defer.CancelledError' logspam is cleaned up!</li>
+					<li>if a client disconnects before a client api autocomplete tag search or a file search is complete, that database job is now cancelled quickly just like when you type new characters in the client UI or stop a slow search</li>
+					<li>if you are a client api dev, please let me know how this works out IRL. I'm not 100% sure what a 'disconnect' means in this context, but if you want to develope autocomplete quick lookup as the user types, and you have a way clientside to cancel/kill an ongoing request before it is complete, please give it a go and let me know if this all works. cancelled requests don't make a log record right now, but you should see the client's db lock free up instantly. at the very least, I have the proper infrastructure for this now, so I can add more/better 'cancel' hooks as we need them</li>
+					<li>.</li>
+					<li>uninteresting code cleanup:</li>
+					<li>refactored the file note mapping db code to a new module</li>
+					<li>refactored the file service pathing db code (this does directory structures and multihashes for ipfs) to a new module</li>
+					<li>refactored some tag display, tag filtering, and tag autocomplete calls down to appropriate db modules</li>
+					<li>refactored and extended some tag sibling database methods and names to clarify whether they were working with ids or strings</li>
+				</ul>
 				<li><h3 id="version_499"><a href="#version_499">version 499</a></h3></li>
 				<ul>
 					<li>mpv:</li>
@@ -47,7 +100,7 @@
 					<li>but let me know how you get on IRL!</li>
 					<li>.</li>
 					<li>misc:</li>
-					<li>thank's to a user's hard work, the default twitter downloader gets some upgrades this week: you can now download from twitter lists, a twitter user's likes, and twitter collections (which are curated lists of tweets). the downloaders still get a lot of 'ignored' results for text-only tweets, and you still have to be logged in to get nsfw, but this adds some neat tools to the toolbox</li>
+					<li>thank's to a user's hard work, the default twitter downloader gets some upgrades this week: you can now download from twitter lists, a twitter user's likes, and twitter collections (which are curated lists of tweets). the downloaders still get a lot of 'ignored' results for text-only tweets, but this adds some neat tools to the toolbox</li>
 					<li>thanks to a user, the Client API now reports brief caching information and should boost Hydrus Companion performance (issue #605)</li>
 					<li>the simple shortcut list in the edit shortcut action dialog now no longer shows any duplicates (such as 'close media viewer' in the dupes window)</li>
 					<li>added a new default reason for tag petitions, 'clearing mass-pasted junk'. 'not applicable' is now 'not applicable/incorrect'</li>

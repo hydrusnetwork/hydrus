@@ -453,6 +453,12 @@ class ListBoxItemPredicate( ListBoxItem ):
             
             text = HydrusTags.CleanTag( self._predicate.GetValue() )
             
+        elif self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_WILDCARD:
+            
+            wildcard = self._predicate.GetValue()
+            
+            text = wildcard
+            
         else:
             
             text = self._predicate.ToString( with_count = with_counts )

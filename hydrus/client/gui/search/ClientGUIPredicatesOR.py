@@ -80,3 +80,4 @@ class ORPredicateControl( QW.QWidget ):
         
         return [ or_predicate ]
         
+    

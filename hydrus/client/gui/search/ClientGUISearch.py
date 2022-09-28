@@ -21,35 +21,6 @@ from hydrus.client.gui.search import ClientGUIPredicatesSingle
 from hydrus.client.gui.search import ClientGUIPredicatesOR
 from hydrus.client.gui.widgets import ClientGUICommon
 
-EDIT_PRED_TYPES = {
-    ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
-    ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
-    ClientSearch.PREDICATE_TYPE_OR_CONTAINER
-}
-
 FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
@@ -76,20 +47,20 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
 
 def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
     
-    ( editable_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
+    ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
     
     window = widget.window()
     
     from hydrus.client.gui import ClientGUITopLevelWindowsPanels
     
-    if len( editable_predicates ) == 1 and editable_predicates[0].IsInvertible():
+    if len( editable_predicates ) == 0 and len( only_invertible_predicates ) == 1:
         
         result = list( non_editable_predicates )
-        result.append( editable_predicates[0].GetInverseCopy() )
+        result.append( only_invertible_predicates[0].GetInverseCopy() )
         
         return result
         
-    elif len( editable_predicates ) > 0:
+    elif len( editable_predicates ) > 0 or len( only_invertible_predicates ) > 0:
         
         title = 'edit predicates'
         
@@ -139,7 +110,7 @@ def FilterAndConvertLabelPredicates( predicates: typing.Collection[ ClientSearch
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_UNTAGGED:
             
-            predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '=', 0 ) )
+            predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) )
             
         
         good_predicates.append( predicate )
@@ -198,10 +169,11 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ Clien
     
 def GetEditablePredicates( predicates: typing.Collection[ ClientSearch.Predicate ] ):
     
-    editable_predicates = [ predicate for predicate in predicates if predicate.GetType() in EDIT_PRED_TYPES or predicate.IsInvertible() ]
-    non_editable_predicates = [ predicate for predicate in predicates if predicate not in editable_predicates ]
+    editable_predicates = [ predicate for predicate in predicates if predicate.IsEditable() ]
+    only_invertible_predicates = [ predicate for predicate in predicates if predicate.IsInvertible() and not predicate.IsEditable() ]
+    non_editable_predicates = [ predicate for predicate in predicates if not predicate.IsInvertible() and not predicate.IsEditable() ]
     
-    return ( editable_predicates, non_editable_predicates )
+    return ( editable_predicates, only_invertible_predicates, non_editable_predicates )
     
 class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -239,6 +211,10 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             if predicate_type == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesOR.ORPredicateControl( self, predicate ) )
+                
+            elif predicate_type in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSimpleTagTypes( self, predicate ) )
                 
             elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
                 
@@ -588,8 +564,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '>', 0 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '=', 0 ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ), ) ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumTags, predicate ) )
             

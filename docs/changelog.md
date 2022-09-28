@@ -7,6 +7,59 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 500](https://github.com/hydrusnetwork/hydrus/releases/tag/v500)
+
+### crashes
+* I messed the mpv update up in v499. my golden rule is never to put out bleeding-edge library updates, but without thinking I gave everyone a dll from late august. it turns out this thing was pretty crashy, and many users were getting other unusual behaviour as well. it seems like people on very new versions of Windows were mostly ok, but a little instability, whereas some older-Windows users were unable to start the client or could boot but couldn't load mpv at all. these latter cases were plagued with other problems. thanks to user help, we discovered it was the newer mpv dll causing all the problems, and an older one, from early May, seems to be fine
+* so, I am rolling back the mpv in the windows releases. the 'v3' 2022-08-29 I bundled in 499 was causing several users serious problems, possibly because of the advanced 'v3' chipset instructions or related advanced compiler tech. for the Qt6 release, we are going back to 2022-05-01, which several users report as stable, and for the Qt5 we are rolling back to the 498 version, 2021-02-28, which is back to mpv-1.dll. Since Qt5 users are increasingly going to be Win 7, we'll go super safe. THEREFORE, Qt5 extract users will want to perform a clean install this week: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs
+* (you can alternately just delete the now-surplus mpv-2.dll in your install directory, but a full clean install is good to do from time to time, so may as well)
+* updated the sqlite dll in the windows release to 2022-05, and the exe in the db directory to 2022-09
+* rewrote how some internal MPV events are signalled to Qt. they now have their own clean custom event types rather than piggy-backing on some bad old hydrus pubsub code
+* I either fixed a rare boot crash related to the popup messaging system, maybe exclusively on macOS, or I improved it and we'll get a richer error now
+
+### tag sibling search
+* if you search explicitly for a tag that has a better sibling (one way this can happen is when loading up an old favourite search), the client will now auto-convert that tag to the ideal in the search code and give you results for the siblinged tag
+* this started off as a predicted five minute thing and spilled out into a multi-hour saga of me realising some tag sibling search code was A) wrong in edge cases and B) slow in edge cases. I have subtly reshaped how core file-tag search works in the client so that it consults each tag service in turn based on its siblings and its mappings, rather than mixing them together. this does not matter for 99.98% of cases, but if you have some weird overlapping siblings across different services, you should now get the correct results. also, some optimisations are more effective, so any instance of searching for tags on small tag services on 'all known tags' is now a bit quicker
+* big brain: please note the logic here is complex, and I have not yet updated autocomplete counting to handle this situation. if you type 'cat' and get 'cat (3)' from the three 'cat' tags on 'my tags', but 'cat' is siblinged to 'species:feline' on a big service like the PTR, it will still say (3), rather than (403) or whatever from the auto-corrected PTR results. I have a plan to fix this in a future cleanup round
+
+### tag subtags and namespace wildcards
+* searching for 'samus aran' no longer delivers files that have 'character:samus aran'. the subtag->namespace logic no longer applies. this was a fun idea from the very start of the program, but it was never all that useful as default behaviour and added several headaches, now eliminated. if you wish to perform this search going forward, please enter '*:samus aran', which is now an acceptable wildcard input
+* tag lookup is unaffected. typing 'samus aran' will still provide 'character:samus aran' as a tag to choose from
+* a heap of rinky-dink counting logic went along with this, such as providing tag search results like ('character:samus aran (100)', 'samus aran (100-105)'), where it tried to predict how many results would come with the unnamespaced search. this no longer exists, and a decent bit of CPU is now saved in any large tag search
+* wildcard searching works on similar rules now, so if you enter 'sa*s ar', you will see 'character:samus aran' as a result in the tag list, but searching for it will not give results with 'character:samus aran'. again, enter '*:sa*s ar*' to search for all namespaces (which is now provided as a quick suggestion any time you enter an unnamespaced wildcard), or enter 'character:sa*s ar*' explicitly
+* 'system:tag as number' also now follows similar rules, so if you leave the namespace field blank, it will search unnamespaced numbers. it now supports namespace wildcards, so you can enter '*' to get the old behaviour. the placeholder text on the namespace input now states this
+* 'system:number of tags' now uses the same UI as 'system:tag as number', where you enter '*' as the namespace to mean all namespaces, rather than checking a box
+
+### misc
+* all tag, namespace, and wildcard search predicates are now properly editable from the active search box. shift+double-click or select from the right-click menu, and you now get a simple text input alongside any system predicate panels. previously, this would only offer you a button to invert the tag to -tag and _vice versa_. now, you can add or remove the '-' and '*' characters yourself info to freely convert between tags, namespace:anything, and wildcard search predicates (issue #1235)
+* thanks to a user, you can now add '{#}' to an export filename pattern to get the '#' column in your filename (useful if you want to export files in the order they are currently in on the page)
+* furthermore, if you delete items from the manual file export window, the '#' column now recalculates itself to stay contiguous and in order (previously, it left gaps)
+* fixed a bug when deleting siblings on a local tags service. sorry for the trouble!
+* on manage siblings, when you remove, add, or replace a pair on a local tags service, you will now get a simple 'note' reason informing you more on what is going on. the 'REPLACEMENT:' thing recently added to tag repositories should now work for you too
+* when a downloader or similar adds files to a page, and you have at least one existing file selected, the status bar now updates correctly
+* fixed a critical issue that was affecting some users with damaged similar file search trees. when starting similar file search tree rebalancing maintenence, their client would go into an infinite loop and spool the cyclic branch into an ever-growing journal file in their temp directory until their system drive briefly ran out of space. sorry for the trouble, and thank you for the excellent reports that helped to figure this out (issue #1239)
+* the similar files search tree rebalance maintenance now detects more sorts of damaged trees and handles them gracefully, and the full tree regeneration clears out any damaged maintenance information too
+* fixed another problem with the tree branch maintenance system when the root was accidentally queued for branch rebalance
+* when you right-click->copy a wildcard search tag, it now copies the actual wildcard text, not the display text with (wildcard search) over the top
+* I added ',' to the list of non-decodable characters in the hacky URL Class encoding/decoding routine. sites that use an encoded comma (%_2C) for regular path components or query parameters should now work
+* a user has fixed a regex parsing problem in the predicate parser for system:hash
+* OR search predicates now sort their sub-predicates on construction/editing, meaning the label is always of set order, and they can now compare with and hence reliably nullify each other
+* the manage logins dialog now boots a little taller
+* the main gui tab bar may look a bit nicer/more appropriate in macOS
+* updated the help text on gui pages where it talks about overflowing rows of tabs, which auto-scroll even worse in Qt6, hooray
+
+### client api
+* the  client api now handles request disconnects better. the hydrus server code benefits from the same engine improvements
+* the 'twisted.internet.defer.CancelledError' logspam is cleaned up!
+* if a client disconnects before a client api autocomplete tag search or a file search is complete, that database job is now cancelled quickly just like when you type new characters in the client UI or stop a slow search
+* if you are a client api dev, please let me know how this works out IRL. I'm not 100% sure what a 'disconnect' means in this context, but if you want to develope autocomplete quick lookup as the user types, and you have a way clientside to cancel/kill an ongoing request before it is complete, please give it a go and let me know if this all works. cancelled requests don't make a log record right now, but you should see the client's db lock free up instantly. at the very least, I have the proper infrastructure for this now, so I can add more/better 'cancel' hooks as we need them
+
+### uninteresting code cleanup
+* refactored the file note mapping db code to a new module
+* refactored the file service pathing db code (this does directory structures and multihashes for ipfs) to a new module
+* refactored some tag display, tag filtering, and tag autocomplete calls down to appropriate db modules
+* refactored and extended some tag sibling database methods and names to clarify whether they were working with ids or strings
+
 ## [Version 499](https://github.com/hydrusnetwork/hydrus/releases/tag/v499)
 
 ### mpv
@@ -347,32 +400,3 @@ _almost all the changes this week are only important to server admins and janito
 * fixed some issues related to deleting files from the repository updates file domain.
 * the 'clear orphan file records' maintenance command now fixes the 'all my files' umbrella services as well as the 'all local files' one. it also has nicer description, does some additional file-removal cleanup, and triggers a file recount if problems are found
 * moved 'clear orphan files' to the 'files' maintenance menu
-
-## [Version 489](https://github.com/hydrusnetwork/hydrus/releases/tag/v489)
-
-### downloader pages
-* greatly improved the status reporting for downloader pages. the way the little text updates on your file and gallery progress are generated and presented is overhauled, and tests are unified across the different downloader pages. you now get specific texts on all possible reasons the queue cannot currently process, such as the emergency pause states under the _network_ menu or specific info like hitting the file limit, and all the code involved here is much cleaner
-* the 'working/pending' status, when you have a whole bunch of galleries or watchers wanting to run at the same time, is now calculated more reliably, and the UI will report 'waiting for a work slot' on pending jobs. no more blank pending!
-* when you pause mid-job, the 'pausing - status' text is generated is a little neater too
-* with luck, we'll also have fewer examples of 64KB of 503 error html spamming the UI
-* any critical unhandled errors during importing proper now stop that queue until a client restart and make an appropriate status text and popup (in some situations, they previously could spam every thirty seconds)
-* the simple downloader and urls downloader now support the 'delay work until later' error system. actual UI for status reporting on these downloaders remains limited, however
-* a bunch of misc downloader page cleanup
-
-### archive/delete
-* the final 'commit/forget/back' confirmation dialog on the archive/delete filter now lists all the possible local file domains you could delete from with separate file counts and 'commit' buttons, including 'all my files' if there are multiple, defaulting to the parent page's location at the top of the list. this let's you do a 'yes, purge all these from everywhere' delete or a 'no, just from here' delete as needed and generally makes what is going on more visible
-* fixed archive/delete commit for users with the 'archived file delete lock' turned on
-
-### misc
-* fixed a bug in the parsing sanity check that makes sure bad 'last modified' timestamps are not added. some ~1970-01-01 results were slipping through. on update, all modified dates within a week of this epoch will be retroactively removed
-* the 'connection' panel in the options now lets you configure how many times a network request can retry connections and requests. the logic behind these values is improved, too--network jobs now count connection and request errors separately
-* optimised the master tag update routine when you petition tags
-* the Client API help for /add_tags/add_tags now clarifies that deleting a tag that does not exist _will_ make a change--it makes a deletion record
-* thanks to a user, the 'getting started with files' help has had a pass
-* I looked into memory bloat some users are seeing after media viewer use, but I couldn't reproduce it locally. I am now making a plan to finally integrate a memory profiler and add some memory debug UI so we can better see what is going on when a couple gigs suddenly appear
-
-### important repository processing fixes
-* I've been trying to chase down a persistent processing bug some users got, where no matter what resyncs or checks they do, a content update seems to be cast as a definition update. fingers crossed, I have finally fixed it this week. it turns out there was a bug near my 'is this a definition or a content update?' check that is used for auto-repair maintenance here (long story short, ffmpeg was false-positive discovering mpegs in json). whatever the case, I have scheduled all users for a repository update file metadata check, so with luck anyone with a bad record will be fixed automatically in the background within a few hours of background work. anyone who encounters this problem in future should be fixed by the automatic repair too. thank you very much to the patient users who sent in reports about this and worked with me to figure this out. please try processing again, and let me know if you still have any issues
-* I also cleaned some of the maintenance code, and made it more aggressive, so 'do a full metadata resync' is now be even more uncompromising
-* also, the repository updates file service gets a bit of cleanup. it seems some ghost files have snuck in there over time, and today their records are corrected. the bug that let this happen in the first place is also fixed
-* there remains an issue where some users' clients have tried to hit the PTR with 404ing update file hashes. I am still investigating this

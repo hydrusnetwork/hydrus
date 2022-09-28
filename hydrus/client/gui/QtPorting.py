@@ -321,6 +321,11 @@ class TabBar( QW.QTabBar ):
         
         QW.QTabBar.__init__( self, parent )
         
+        if HC.PLATFORM_MACOS:
+            
+            self.setDocumentMode( True )
+            
+        
         self.setMouseTracking( True )
         self.setAcceptDrops( True )
         self._supplementary_drop_target = None
@@ -940,28 +945,31 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             
         
     else:
-
+        
         if isinstance( item, QW.QLayout ):
-
+            
             layout.addLayout( item )
             
             if alignment is not None:
                 
                 layout.setAlignment( item, alignment )
-
+                
+            
         elif isinstance( item, QW.QWidget ):
-
+            
             layout.addWidget( item )
             
             if alignment is not None:
                 
                 layout.setAlignment( item, alignment )
-
+                
+            
         elif isinstance( item, tuple ):
-
+            
             layout.addStretch( 1 )
             
             return
+            
         
     
     zero_border = False
@@ -1076,6 +1084,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
         
         item.setContentsMargins( margin, margin, margin, margin )
         
+    
 
 def ScrollAreaVisibleRect( scroll_area ):
     

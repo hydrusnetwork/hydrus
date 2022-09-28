@@ -1,3 +1,4 @@
+import collections
 import sqlite3
 import typing
 
@@ -6,14 +7,17 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
+from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagDisplay
+from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.metadata import ClientTags
 
 # Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1
@@ -129,11 +133,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay, modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts ):
         
         self.modules_services = modules_services
         self.modules_tags = modules_tags
         self.modules_tag_display = modules_tag_display
+        self.modules_tag_siblings = modules_tag_siblings
+        self.modules_mappings_counts = modules_mappings_counts
         
         ClientDBModule.ClientDBModule.__init__( self, 'client tag search', cursor )
         
@@ -449,6 +455,202 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         
         tag_ids.update( loop_of_tag_ids )
+        
+        return tag_ids
+        
+    
+    def GetAutocompletePredicates(
+        self,
+        tag_display_type: int,
+        file_search_context: ClientSearch.FileSearchContext,
+        search_text: str = '',
+        exact_match = False,
+        inclusive = True,
+        search_namespaces_into_full_tags = False,
+        zero_count_ok = False,
+        job_key = None
+    ):
+        
+        # TODO: So I think I should interleave this, perhaps with the SearchLeaf object, or just as GetHashIdsFromTag now does, for each tag service. don't throw 'all known tags' down to lower methods
+        # _Then_, you do the GeneratePredicatesFromTagIdsAndCounts for each tag service in turn (don't worry, it is quick since servces won't share tags much), and then you can do some clever sibling counting
+        # For instance, if we search for A on a domain where one tag service has A->B, we return the B results. Well, let's increment the A (x) count according to that, based on each service!
+        # and then obviously a nice big merge at the end
+        
+        location_context = file_search_context.GetLocationContext()
+        tag_context = file_search_context.GetTagContext()
+        
+        display_tag_service_id = self.modules_services.GetServiceId( tag_context.display_service_key )
+        
+        if tag_context.IsAllKnownTags() and location_context.IsAllKnownFiles():
+            
+            return []
+            
+        
+        include_current = tag_context.include_current_tags
+        include_pending = tag_context.include_pending_tags
+        
+        all_predicates = []
+        
+        file_search_context_branch = self.modules_services.GetFileSearchContextBranch( file_search_context )
+        
+        for leaf in file_search_context_branch.IterateLeaves():
+            
+            tag_ids = self.GetAutocompleteTagIds( tag_display_type, leaf, search_text, exact_match, job_key = job_key )
+            
+            if ':' not in search_text and search_namespaces_into_full_tags and not exact_match:
+                
+                # 'char' -> 'character:samus aran'
+                
+                special_search_text = '{}*:*'.format( search_text )
+                
+                tag_ids.update( self.GetAutocompleteTagIds( tag_display_type, leaf, special_search_text, exact_match, job_key = job_key ) )
+                
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+            domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_deleted_file_service_id
+            
+            for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
+                
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return []
+                    
+                
+                ids_to_count = self.modules_mappings_counts.GetCounts( tag_display_type, leaf.tag_service_id, leaf.file_service_id, group_of_tag_ids, include_current, include_pending, domain_is_cross_referenced = domain_is_cross_referenced, zero_count_ok = zero_count_ok, job_key = job_key )
+                
+                if len( ids_to_count ) == 0:
+                    
+                    continue
+                    
+                
+                #
+                
+                predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, ids_to_count, inclusive, job_key = job_key )
+                
+                all_predicates.extend( predicates )
+                
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return []
+                
+            
+        
+        predicates = ClientSearch.MergePredicates( all_predicates )
+        
+        return predicates
+        
+    
+    def GetAutocompleteTagIds( self, tag_display_type: int, leaf: ClientDBServices.FileSearchContextLeaf, search_text, exact_match, job_key = None ):
+        
+        if search_text == '':
+            
+            return set()
+            
+        
+        ( namespace, half_complete_searchable_subtag ) = HydrusTags.SplitTag( search_text )
+        
+        if half_complete_searchable_subtag == '':
+            
+            return set()
+            
+        
+        if exact_match:
+            
+            if '*' in namespace or '*' in half_complete_searchable_subtag:
+                
+                return []
+                
+            
+        
+        if '*' in namespace:
+            
+            namespace_ids = self.GetNamespaceIdsFromWildcard( namespace )
+            
+        else:
+            
+            if not self.modules_tags.NamespaceExists( namespace ):
+                
+                return set()
+                
+            
+            namespace_ids = ( self.modules_tags.GetNamespaceId( namespace ), )
+            
+        
+        if half_complete_searchable_subtag == '*':
+            
+            if namespace == '':
+                
+                # hellmode 'get all tags' search
+                
+                tag_ids = self.GetAllTagIds( leaf, job_key = job_key )
+                
+            else:
+                
+                tag_ids = self.GetTagIdsFromNamespaceIds( leaf, namespace_ids, job_key = job_key )
+                
+            
+        else:
+            
+            tag_ids = set()
+            
+            with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
+                
+                self.GetSubtagIdsFromWildcardIntoTable( leaf.file_service_id, leaf.tag_service_id, half_complete_searchable_subtag, temp_subtag_ids_table_name, job_key = job_key )
+                
+                if namespace == '':
+                    
+                    loop_of_tag_ids = self.GetTagIdsFromSubtagIdsTable( leaf.file_service_id, leaf.tag_service_id, temp_subtag_ids_table_name, job_key = job_key )
+                    
+                else:
+                    
+                    with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
+                        
+                        loop_of_tag_ids = self.GetTagIdsFromNamespaceIdsSubtagIdsTables( leaf.file_service_id, leaf.tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_key = job_key )
+                        
+                    
+                
+                tag_ids.update( loop_of_tag_ids )
+                
+            
+        
+        # now fetch siblings, add to set
+        
+        if not isinstance( tag_ids, set ):
+            
+            tag_ids = set( tag_ids )
+            
+        
+        tag_ids_without_siblings = list( tag_ids )
+        
+        seen_ideal_tag_ids = collections.defaultdict( set )
+        
+        for batch_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
+            
+            with self._MakeTemporaryIntegerTable( batch_of_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+                
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+                with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
+                    
+                    self.modules_tag_siblings.FilterChainedIdealsIntoTable( ClientTags.TAG_DISPLAY_ACTUAL, leaf.tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
+                    
+                    with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_chained_tag_ids_table_name:
+                        
+                        self.modules_tag_siblings.GetChainsMembersFromIdealsTables( ClientTags.TAG_DISPLAY_ACTUAL, leaf.tag_service_id, temp_ideal_tag_ids_table_name, temp_chained_tag_ids_table_name )
+                        
+                        tag_ids.update( self._STI( self._Execute( 'SELECT tag_id FROM {};'.format( temp_chained_tag_ids_table_name ) ) ) )
+                        
+                    
+                
+            
         
         return tag_ids
         
