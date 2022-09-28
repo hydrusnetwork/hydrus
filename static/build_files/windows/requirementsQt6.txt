@@ -26,3 +26,4 @@ PyWin32
 pypiwin32
 pywin32-ctypes
 pefile
+setuptools>=65.0.0
