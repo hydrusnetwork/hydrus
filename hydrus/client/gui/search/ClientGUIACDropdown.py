@@ -2331,25 +2331,25 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         
         ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = ClientGUISearch.GetEditablePredicates( self._GetPredicatesFromTerms( self._selected_terms ) )
         
-        editable_predicates = list( editable_predicates )
-        editable_predicates.extend( only_invertible_predicates )
-        
         if len( editable_predicates ) > 0:
+            
+            editable_and_invertible_predicates = list( editable_predicates )
+            editable_and_invertible_predicates.extend( only_invertible_predicates )
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            if len( editable_predicates ) == 1:
+            if len( editable_and_invertible_predicates ) == 1:
                 
-                desc = list( editable_predicates )[0].ToString()
+                desc = list( editable_and_invertible_predicates )[0].ToString()
                 
             else:
                 
-                desc = '{} search terms'.format( HydrusData.ToHumanInt( len( editable_predicates ) ) )
+                desc = '{} search terms'.format( HydrusData.ToHumanInt( len( editable_and_invertible_predicates ) ) )
                 
             
             label = 'edit {}'.format( desc )
             
-            ClientGUIMenus.AppendMenuItem( menu, label, 'Edit these predicates and refresh the search. Not all predicates are editable.', self._EditPredicates, editable_predicates )
+            ClientGUIMenus.AppendMenuItem( menu, label, 'Edit these predicates and refresh the search. Not all predicates are editable.', self._EditPredicates, editable_and_invertible_predicates )
             
         
     
@@ -2486,10 +2486,6 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         elif command == 'add_inverse_predicates':
             
             self._EnterPredicates( inverse_predicates, permit_remove = False )
-            
-        elif command == 'remove_inverse_predicates':
-            
-            self._EnterPredicates( inverse_predicates, permit_add = False )
             
         elif command == 'add_namespace_predicate':
             

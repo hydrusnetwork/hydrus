@@ -601,6 +601,23 @@ class LocationsManager( object ):
             
         
     
+    def GetServiceFilename( self, service_key ) -> typing.Optional[ str ]:
+        
+        if service_key in self._service_keys_to_filenames:
+            
+            return self._service_keys_to_filenames[ service_key ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def GetServiceFilenames( self ) -> typing.Dict[ bytes, str ]:
+        
+        return dict( self._service_keys_to_filenames )
+        
+    
     def GetTimestampManager( self ) -> TimestampManager:
         
         return self._timestamp_manager

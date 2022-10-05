@@ -1101,7 +1101,7 @@ class AnimationBar( QW.QWidget ):
             
             self._media_window.GotoFrame( current_frame_index )
             
-        elif isinstance( self._media_window, ClientGUIMPV.mpvWidget ):
+        elif isinstance( self._media_window, ClientGUIMPV.MPVWidget ):
             
             time_index_ms = int( proportion * self._duration_ms )
             
@@ -1384,7 +1384,7 @@ class MediaContainer( QW.QWidget ):
         
         if media_window is not None:
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage )
             
             media_window.removeEventFilter( self._additional_event_filter )
             
@@ -1411,7 +1411,7 @@ class MediaContainer( QW.QWidget ):
                 
                 media_window.hide()
                 
-                if isinstance( media_window, ClientGUIMPV.mpvWidget ):
+                if isinstance( media_window, ClientGUIMPV.MPVWidget ):
                     
                     HG.client_controller.gui.ReleaseMPVWidget( media_window )
                     
@@ -1514,7 +1514,7 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.installEventFilter( self._additional_event_filter )
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.mpvWidget, StaticImage )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage )
             
             if isinstance( self._media_window, launch_media_viewer_classes ):
                 
@@ -1851,7 +1851,7 @@ class MediaContainer( QW.QWidget ):
                     
                     self._media_window.GotoFrame( current_frame_index )
                     
-                elif isinstance( self._media_window, ClientGUIMPV.mpvWidget ):
+                elif isinstance( self._media_window, ClientGUIMPV.MPVWidget ):
                     
                     self._media_window.GotoPreviousOrNextFrame( direction )
                     
@@ -1861,7 +1861,7 @@ class MediaContainer( QW.QWidget ):
     
     def IsPaused( self ):
         
-        if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+        if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
             
             return self._media_window.IsPaused()
             
@@ -1925,7 +1925,7 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
                 
                 self._media_window.Pause()
                 
@@ -1936,7 +1936,7 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
                 
                 self._media_window.PausePlay()
                 
@@ -1951,7 +1951,7 @@ class MediaContainer( QW.QWidget ):
             
         else:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
                 
                 if not self._media_window.HasPlayedOnceThrough():
                     
@@ -2049,7 +2049,7 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
                 
                 self._media_window.SeekDelta( direction, duration_ms )
                 
@@ -2118,7 +2118,7 @@ class MediaContainer( QW.QWidget ):
             return False
             
         
-        return isinstance( self._media_window, ClientGUIMPV.mpvWidget ) and self._media.HasAudio()
+        return isinstance( self._media_window, ClientGUIMPV.MPVWidget ) and self._media.HasAudio()
         
     
     def sizeHint(self) -> QC.QSize:
@@ -2135,7 +2135,7 @@ class MediaContainer( QW.QWidget ):
     
     def StopForSlideshow( self, value ):
         
-        if isinstance( self._media_window, ( Animation, ClientGUIMPV.mpvWidget ) ):
+        if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
             
             self._media_window.StopForSlideshow( value )
             

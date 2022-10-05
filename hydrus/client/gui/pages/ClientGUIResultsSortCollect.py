@@ -245,6 +245,7 @@ class CollectComboCtrl( QW.QComboBox ):
     
     def Append( self, str, data ):
         
+        # TODO: This is the line that crashes
         self.addItem( str, userData = data )
         
         item = self.model().item( self.count() - 1, 0 )
@@ -401,7 +402,8 @@ class MediaCollectControl( QW.QWidget ):
     
     def ListenForNewOptions( self ):
         
-        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        # TODO: Disabled because it causes a crash
+        pass # HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def NotifyAdvancedMode( self ):

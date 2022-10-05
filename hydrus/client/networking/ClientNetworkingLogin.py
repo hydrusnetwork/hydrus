@@ -1498,7 +1498,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._subdomain is not None:
             
-            self._subdomain = re.sub( '[^a-z\\.]+', '', self._subdomain )
+            self._subdomain = re.sub( '[^a-z.]+', '', self._subdomain )
             
         
         if not self._path.startswith( '/' ):

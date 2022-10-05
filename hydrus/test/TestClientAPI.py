@@ -1487,6 +1487,46 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( expected_answer, d )
         
+        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        
+        self.assertEqual( args[0], ClientTags.TAG_DISPLAY_STORAGE )
+        
+        #
+        
+        path = '/add_tags/search_tags?search={}&tag_display_type={}'.format( 'gre', 'display' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        # note this also tests sort
+        expected_answer = {
+            'tags' : [
+                {
+                    'value' : 'green car',
+                    'count' : 5
+                },
+                {
+                    'value' : 'green',
+                    'count' : 2
+                }
+            ]
+        }
+        
+        self.assertEqual( expected_answer, d )
+        
+        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        
+        self.assertEqual( args[0], ClientTags.TAG_DISPLAY_ACTUAL )
+        
         #
         
         # the db won't be asked in this case since default rule for all known tags is not to run this search
@@ -1511,6 +1551,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( expected_answer, d )
         
+    
     def _test_add_urls( self, connection, set_up_permissions ):
         
         # get url files
@@ -2824,9 +2865,12 @@ class TestClientAPI( unittest.TestCase ):
             random_file_service_hex_deleted = HydrusData.GenerateKey()
             
             current_import_timestamp = 500
+            ipfs_import_timestamp = 123456
             deleted_import_timestamp = 300
             deleted_deleted_timestamp = 450
             file_modified_timestamp = 20
+            
+            done_a_multihash = False
             
             for ( file_id, hash ) in file_ids_to_hashes.items():
                 
@@ -2844,6 +2888,19 @@ class TestClientAPI( unittest.TestCase ):
                 service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
                 service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
                 
+                service_keys_to_filenames = {}
+                
+                current_to_timestamps = { random_file_service_hex_current : current_import_timestamp }
+                
+                if not done_a_multihash:
+                    
+                    done_a_multihash = True
+                    
+                    current_to_timestamps[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp
+                    
+                    service_keys_to_filenames[ HG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
+                    
+                
                 tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
                 
                 timestamp_manager = ClientMediaManagers.TimestampManager()
@@ -2851,12 +2908,13 @@ class TestClientAPI( unittest.TestCase ):
                 timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
                 
                 locations_manager = ClientMediaManagers.LocationsManager(
-                    { random_file_service_hex_current : current_import_timestamp },
+                    current_to_timestamps,
                     { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) },
                     set(),
                     set(),
                     inbox = False,
                     urls = urls,
+                    service_keys_to_filenames = service_keys_to_filenames,
                     timestamp_manager = timestamp_manager
                 )
                 ratings_manager = ClientMediaManagers.RatingsManager( {} )
@@ -2912,12 +2970,25 @@ class TestClientAPI( unittest.TestCase ):
                             }
                         }
                     },
+                    'ipfs_multihashes' : {},
                     'time_modified' : file_modified_timestamp,
                     'is_inbox' : False,
                     'is_local' : False,
                     'is_trashed' : False,
                     'known_urls' : list( sorted_urls )
                 } )
+                
+                locations_manager = media_result.GetLocationsManager()
+                
+                if len( locations_manager.GetServiceFilenames() ) > 0:
+                    
+                    for ( i_s_k, multihash ) in locations_manager.GetServiceFilenames().items():
+                        
+                        metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = { 'time_imported' : ipfs_import_timestamp }
+                        
+                        metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
+                        
+                    
                 
                 tags_manager = media_result.GetTagsManager()
                 
@@ -3086,6 +3157,23 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 200 )
         
         d = json.loads( text )
+        
+        # quick print-inspect on what went wrong
+        '''
+        m = d[ 'metadata' ]
+        m_e = expected_metadata_result[ 'metadata' ]
+        
+        for ( i, file_post ) in enumerate( m ):
+            
+            file_post_e = m_e[ i ]
+            
+            for j in file_post.keys():
+                
+                HydrusData.Print( ( j, file_post[j] ) )
+                HydrusData.Print( ( j, file_post_e[j] ) )
+                
+            
+        '''
         
         self.assertEqual( d, expected_metadata_result )
         

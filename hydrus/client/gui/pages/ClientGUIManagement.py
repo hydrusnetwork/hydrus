@@ -915,11 +915,6 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             p = inverse_predicates
             permit_remove = False
             
-        elif command == 'remove_inverse_predicates':
-            
-            p = predicates
-            permit_add = False
-            
         elif command == 'add_namespace_predicate':
             
             p = ( namespace_predicate, )

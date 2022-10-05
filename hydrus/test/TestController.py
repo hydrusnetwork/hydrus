@@ -228,6 +228,7 @@ class Controller( object ):
         self._param_read_responses = {}
         
         self.example_tag_repo_service_key = HydrusData.GenerateKey()
+        self.example_ipfs_service_key = HydrusData.GenerateKey()
         
         services = []
         
@@ -244,6 +245,7 @@ class Controller( object ):
         services.append( ClientServices.GenerateService( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ) )
         services.append( ClientServices.GenerateService( LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'example local rating like service' ) )
         services.append( ClientServices.GenerateService( LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'example local rating numerical service' ) )
+        services.append( ClientServices.GenerateService( self.example_ipfs_service_key, HC.IPFS, 'example ipfs service' ) )
         
         self._name_read_responses[ 'services' ] = services
         

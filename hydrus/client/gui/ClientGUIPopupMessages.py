@@ -22,13 +22,14 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class PopupWindow( QW.QFrame ):
     
-    def __init__( self, parent, manager ):
+    dismiss = QC.Signal( QW.QWidget )
+    iJustChangedSize = QC.Signal()
+    
+    def __init__( self, parent ):
         
         QW.QFrame.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
-        
-        self._manager = manager
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventDismiss )
@@ -36,7 +37,7 @@ class PopupWindow( QW.QFrame ):
     
     def TryToDismiss( self ):
         
-        self._manager.Dismiss( self )
+        self.dismiss.emit( self )
         
     
     def EventDismiss( self, event ):
@@ -48,15 +49,15 @@ class PopupMessage( PopupWindow ):
     
     TEXT_CUTOFF = 1024
     
-    def __init__( self, parent, manager, job_key: ClientThreading.JobKey ):
+    def __init__( self, parent, job_key: ClientThreading.JobKey ):
         
-        PopupWindow.__init__( self, parent, manager )
-        
-        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Fixed )
+        PopupWindow.__init__( self, parent )
         
         self._job_key = job_key
         
-        vbox = QP.VBoxLayout()
+        vbox_margin = 2
+        
+        vbox = QP.VBoxLayout( vbox_margin )
         
         self._title = ClientGUICommon.BetterStaticText( self )
         self._title.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
@@ -71,7 +72,6 @@ class PopupMessage( PopupWindow ):
         
         if HG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
             
-            #QP.SetMinClientSize( self, ( wrap_width, -1 ) )
             self.setFixedWidth( popup_char_width )
             
         else:
@@ -79,13 +79,20 @@ class PopupMessage( PopupWindow ):
             self.setMaximumWidth( popup_char_width )
             
         
+        popup_char_width_sub_widget = popup_char_width - ( vbox_margin * 2 )
+        
+        # I discovered if I set the maxWidth to the static texts themselves, the sizehints here stop borking out and long multiline text paragraphs will happily size themselves
+        # if not set, they will be clipped by higher sizeHint somehow. 500x90 is told to fit in a 400x90 hole, the QWidget PopupWindow is not clever enough to propagate the max width down to (dynamic, height-for-width) children?
+        
         self._title.setWordWrap( True )
+        self._title.setMaximumWidth( popup_char_width_sub_widget )
         self._title_ev = QP.WidgetEventFilter( self._title )
         self._title_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._title.hide()
         
         self._text_1 = ClientGUICommon.BetterStaticText( self )
         self._text_1.setWordWrap( True )
+        self._text_1.setMaximumWidth( popup_char_width_sub_widget )
         self._text_1_ev = QP.WidgetEventFilter( self._text_1 )
         self._text_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._text_1.hide()
@@ -98,6 +105,7 @@ class PopupMessage( PopupWindow ):
         
         self._text_2 = ClientGUICommon.BetterStaticText( self )
         self._text_2.setWordWrap( True )
+        self._text_2.setMaximumWidth( popup_char_width_sub_widget )
         self._text_2_ev = QP.WidgetEventFilter( self._text_2 )
         self._text_2_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._text_2.hide()
@@ -144,9 +152,10 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.hide()
         
         self._tb_text = ClientGUICommon.BetterStaticText( self )
+        self._tb_text.setWordWrap( True )
+        self._tb_text.setMaximumWidth( popup_char_width_sub_widget )
         self._tb_text_ev = QP.WidgetEventFilter( self._tb_text )
         self._tb_text_ev.EVT_RIGHT_DOWN( self.EventDismiss )
-        self._tb_text.setWordWrap( True )
         self._tb_text.hide()
         
         self._copy_tb_button = ClientGUICommon.BetterButton( self, 'copy traceback information', self.CopyTB )
@@ -180,14 +189,14 @@ class PopupMessage( PopupWindow ):
         QP.AddToLayout( vbox, self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, yes_no_hbox )
-        QP.AddToLayout( vbox, self._network_job_ctrl )
-        QP.AddToLayout( vbox, self._copy_to_clipboard_button )
-        QP.AddToLayout( vbox, self._show_files_button )
-        QP.AddToLayout( vbox, self._user_callable_button )
-        QP.AddToLayout( vbox, self._show_tb_button )
-        QP.AddToLayout( vbox, self._tb_text )
-        QP.AddToLayout( vbox, self._copy_tb_button )
+        QP.AddToLayout( vbox, yes_no_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._user_callable_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
@@ -314,7 +323,9 @@ class PopupMessage( PopupWindow ):
             self._tb_text.show()
             
         
-        self._manager.MakeSureEverythingFits()
+        self.updateGeometry()
+        
+        self.iJustChangedSize.emit()
         
     
     def GetJobKey( self ):
@@ -510,7 +521,7 @@ class PopupMessage( PopupWindow ):
             
             hashes = popup_files
             
-            text = popup_files_name + ' - show ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
+            text = '{} - show {} files'.format( popup_files_name, HydrusData.ToHumanInt( len( hashes ) ) )
             
             if self._show_files_button.text() != text:
                 
@@ -580,30 +591,24 @@ class PopupMessage( PopupWindow ):
             
             self._cancel_button.hide()
         
-        # Dirty hack to reduce unnecessary resizing
-        
-        if self.minimumWidth() < self.sizeHint().width():
-            
-            self.setMinimumWidth( self.sizeHint().width() )
-            
-        
     
 
-class PopupMessageManager( QW.QWidget ):
+class PopupMessageManager( QW.QFrame ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        QW.QFrame.__init__( self, parent )
         
-        self.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+        self.setLineWidth( 1 )
         
-        self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
-        
-        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
+        # We need this, or else if the QSS does not define a Widget background color (the default), these 'raised' windows are transparent lmao
+        self.setAutoFillBackground( True )
         
         self._last_best_size_i_fit_on = ( 0, 0 )
         
         self._max_messages_to_display = 10
+        self._current_num_messages = 0
         
         vbox = QP.VBoxLayout()
         
@@ -611,16 +616,14 @@ class PopupMessageManager( QW.QWidget ):
         
         self._message_vbox = QP.VBoxLayout( margin = 0 )
         
-        vbox.setSizeConstraint( QW.QLayout.SetFixedSize )
+        #vbox.setSizeConstraint( QW.QLayout.SetFixedSize )
         
         self._message_panel.setLayout( self._message_vbox )
-        self._message_panel.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
-        self._summary_bar = PopupMessageSummaryBar( self, self )
-        self._summary_bar.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
+        self._summary_bar = PopupMessageSummaryBar( self )
         
-        QP.AddToLayout( vbox, self._message_panel )
-        QP.AddToLayout( vbox, self._summary_bar )
+        QP.AddToLayout( vbox, self._message_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._summary_bar, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
         
@@ -644,8 +647,9 @@ class PopupMessageManager( QW.QWidget ):
         
         job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, 'repeating popup message update', self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
         
+        self._summary_bar.dismissAll.connect( self.DismissAll )
         self._summary_bar.expandCollapse.connect( self.ExpandCollapse )
         
         HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_key )
@@ -657,28 +661,47 @@ class PopupMessageManager( QW.QWidget ):
         
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
         
+        we_added_some = False
+        
         while len( self._pending_job_keys ) > 0 and self._message_vbox.count() < self._max_messages_to_display:
+            
+            we_added_some = True
             
             job_key = self._pending_job_keys.pop( 0 )
             
-            window = PopupMessage( self._message_panel, self, job_key )
+            window = PopupMessage( self._message_panel, job_key )
+            
+            window.dismiss.connect( self.Dismiss )
+            window.iJustChangedSize.connect( self.MakeSureEverythingFits )
             
             window.UpdateMessage()
             
-            QP.AddToLayout( self._message_vbox, window )
+            QP.AddToLayout( self._message_vbox, window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         total_messages = len( self._pending_job_keys ) + self._message_vbox.count()
         
-        self._summary_bar.SetNumMessages( total_messages )            
-        
-        if self._NeedsSizeOrShow():
+        if total_messages != self._current_num_messages:
             
-            self._SizeAndPositionAndShow()
+            self._current_num_messages = total_messages
+            
+            self._summary_bar.SetNumMessages( self._current_num_messages )
+            
+        
+        if we_added_some:
+            
+            # for whatever reason, self._message_vbox.activate does not cause the vbox.sizeHint to be recalculated at this point. it just sits at the last value unless original was (0,0)?!?
+            # so we'll do it callafter. it works
+            
+            QP.CallAfter( self.MakeSureEverythingFits )
             
         
     
     def _DisplayingError( self ):
+        
+        # this was used when we didn't update if the mouse wasn't on the same screen
+        # we wouldn't be annoying unless there was a good reason such as this
+        # let's hang on to this for a while, just in case
         
         for i in range( self._message_vbox.count() ):
             
@@ -702,98 +725,15 @@ class PopupMessageManager( QW.QWidget ):
         return False
         
     
-    def _DoDebugHide( self ):
-        
-        if not QP.isValid( self ):
-            
-            return
-            
-        
-        parent = self.parentWidget()
-        
-        possibly_on_hidden_virtual_desktop = not ClientGUIFunctions.MouseIsOnMyDisplay( parent )
-        
-        going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
-        
-        new_options = HG.client_controller.new_options
-        
-        if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) and not self._DisplayingError():
-            
-            if parent.isMinimized():
-                
-                self.hide()
-                
-                return
-                
-            
-        
-        current_focus_tlw = QW.QApplication.activeWindow()
-        
-        main_gui_is_active = current_focus_tlw in ( self, parent )
-        
-        if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) and not self._DisplayingError():
-            
-            if not main_gui_is_active:
-                
-                if not going_to_bug_out_at_hide_or_show:
-                    
-                    self.hide()
-                    
-                
-            
-        
-    
-    def _NeedsSizeOrShow( self ):
-        
-        num_messages_displayed = self._message_vbox.count()
-        
-        there_is_stuff_to_display = num_messages_displayed > 0
-        
-        is_shown = self.isVisible()
-        
-        if there_is_stuff_to_display:
-            
-            if not is_shown:
-                
-                return True
-                
-            
-            best_size = self.sizeHint()
-            
-            if best_size != self.size():
-                
-                return True
-                
-            
-        else:
-            
-            if is_shown:
-                
-                return True
-                
-            
-        
-        return False
-        
-    
     def _SizeAndPositionAndShow( self ):
         
         try:
             
-            gui_frame = HG.client_controller.gui
-            
-            if gui_frame is None:
-                
-                return
-                
+            gui_frame = self.parentWidget()
             
             gui_is_hidden = not gui_frame.isVisible()
             
             going_to_bug_out_at_hide_or_show = gui_is_hidden
-            
-            current_focus_tlw = QW.QApplication.activeWindow()
-            
-            main_gui_or_child_window_is_active = ClientGUIFunctions.TLWOrChildIsActive( gui_frame )
             
             num_messages_displayed = self._message_vbox.count()
             
@@ -801,38 +741,39 @@ class PopupMessageManager( QW.QWidget ):
             
             if there_is_stuff_to_display:
                 
-                # Unhiding tends to raise the main gui tlw in some window managers, which is annoying if a media viewer window has focus
-                show_is_not_annoying = main_gui_or_child_window_is_active or self._DisplayingError()
-                
-                ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
-                
-                if ok_to_show:
+                if not self.isVisible() and not going_to_bug_out_at_hide_or_show:
                     
                     self.show()
                     
                 
+                self.raise_()
+                
                 #
+                
+                my_ideal_size = self.sizeHint()
+                
+                if my_ideal_size != self.size():
+                    
+                    self.resize( my_ideal_size )
+                    
                 
                 parent_size = gui_frame.size()
                 
-                my_size = self.size()
+                my_x = ( parent_size.width() - my_ideal_size.width() ) - 20
+                my_y = ( parent_size.height() - my_ideal_size.height() ) - 25
                 
-                my_x = ( parent_size.width() - my_size.width() ) - 20
-                my_y = ( parent_size.height() - my_size.height() ) - 25
+                my_ideal_position = QC.QPoint( my_x, my_y )
                 
-                if gui_frame.isVisible():
+                if my_ideal_position != self.pos():
                     
-                    my_position = ClientGUIFunctions.ClientToScreen( gui_frame, QC.QPoint( my_x, my_y ) )
+                    self.move( my_ideal_position )
                     
-                    if my_position != self.pos():
-                        
-                        self.move( my_position )
-                        
-                    
+                
+                self.layout()
                 
             else:
                 
-                if not going_to_bug_out_at_hide_or_show:
+                if self.isVisible() and not going_to_bug_out_at_hide_or_show:
                     
                     self.hide()
                     
@@ -852,14 +793,12 @@ class PopupMessageManager( QW.QWidget ):
             
             self.CleanBeforeDestroy()
             
-            self.deleteLater()
-            
         
     
     def _GetAllMessageJobKeys( self ):
         
         job_keys = []
-
+        
         for i in range( self._message_vbox.count() ):
             
             sizer_item = self._message_vbox.itemAt( i )
@@ -880,23 +819,21 @@ class PopupMessageManager( QW.QWidget ):
     
     def _OKToAlterUI( self ):
 
-        if not QP.isValid( self ): return
+        if not QP.isValid( self ):
+            
+            return False
+            
         
         main_gui = self.parentWidget()
         
-        gui_is_hidden = not main_gui.isVisible()
-        
-        if gui_is_hidden:
+        if not main_gui.isVisible():
             
             return False
             
         
         if HG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor' ):
             
-            # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
-            # this may need a better test for virtual display dismissal
-            # this is also a proxy for hidden/virtual displays, which is really what it is going on about
-            on_my_monitor = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui ) or ClientGUIFunctions.MouseIsOnMyDisplay( self )
+            on_my_monitor = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui )
             
             if not on_my_monitor:
                 
@@ -971,10 +908,6 @@ class PopupMessageManager( QW.QWidget ):
             
             self.CleanBeforeDestroy()
             
-            self.deleteLater()
-            
-            return
-            
         
         for i in range( self._message_vbox.count() ):
             
@@ -1036,7 +969,10 @@ class PopupMessageManager( QW.QWidget ):
             
             message_window = self._message_vbox.itemAt( i ).widget()
             
-            if not message_window: continue
+            if not message_window:
+                
+                continue
+                
             
             job_key = message_window.GetJobKey()
             
@@ -1057,11 +993,19 @@ class PopupMessageManager( QW.QWidget ):
         
         self._message_vbox.removeWidget( window )
         
+        window.hide()
+        
+        # sizeHints are not immediately updated without this, lmao
+        # note we have to do it on the sub vbox, not the self.layout() wew, so I guess it doesn't propagate down
+        self._message_vbox.activate()
+        
         window.deleteLater()
         
         if self._OKToAlterUI():
             
             self._CheckPending()
+            
+            self._SizeAndPositionAndShow()
             
         
     
@@ -1118,21 +1062,6 @@ class PopupMessageManager( QW.QWidget ):
         return False
         
     
-    def resizeEvent( self, event ):
-        
-        if not self or not QP.isValid( self ): # funny runtime error caused this
-            
-            return
-            
-        
-        if self._OKToAlterUI():
-            
-            self._SizeAndPositionAndShow()
-            
-        
-        event.ignore()
-        
-    
     def MakeSureEverythingFits( self ):
         
         if self._OKToAlterUI():
@@ -1145,13 +1074,13 @@ class PopupMessageManager( QW.QWidget ):
         
         try:
             
-            self._DoDebugHide()
-            
             if self._OKToAlterUI():
                 
                 self._Update()
                 
                 self._CheckPending()
+                
+                self._SizeAndPositionAndShow()
                 
             
         except:
@@ -1175,7 +1104,9 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._job_key = job_key
         
-        self._message_window = PopupMessage( self, self, self._job_key )
+        self._message_window = PopupMessage( self, self._job_key )
+        
+        self._message_window.dismiss.connect( self.Dismiss )
         
         vbox = QP.VBoxLayout()
         
@@ -1362,13 +1293,16 @@ class PopupMessageDialogPanel( QW.QWidget ):
             
         
 
-class PopupMessageSummaryBar( PopupWindow ):
+class PopupMessageSummaryBar( QW.QFrame ):
     
+    dismissAll = QC.Signal()
     expandCollapse = QC.Signal()
     
-    def __init__( self, parent, manager ):
+    def __init__( self, parent ):
         
-        PopupWindow.__init__( self, parent, manager )
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
         
         hbox = QP.HBoxLayout()
         
@@ -1376,7 +1310,7 @@ class PopupMessageSummaryBar( PopupWindow ):
         
         self._expand_collapse = ClientGUICommon.BetterButton( self, '\u25bc', self.ExpandCollapse )
         
-        dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self._manager.DismissAll )
+        dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self.dismissAll.emit )
         
         QP.AddToLayout( hbox, self._text, CC.FLAGS_CENTER_PERPENDICULAR )
         hbox.addStretch( 1 )
@@ -1402,11 +1336,6 @@ class PopupMessageSummaryBar( PopupWindow ):
             
         
         self._expand_collapse.setText( new_text )
-        
-    
-    def TryToDismiss( self ):
-        
-        pass
         
     
     def SetNumMessages( self, num_messages_pending ):

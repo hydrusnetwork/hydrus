@@ -315,7 +315,7 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], datetime.date( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
         raise ValueError( "Invalid value, expected a date or a time interval" )
     elif spec == Value.TIME_SEC_MSEC:
-        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|milliseconds|msecs|msec|ms))?', string )
+        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
             seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
             mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0

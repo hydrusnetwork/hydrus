@@ -551,7 +551,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             hash = media.GetHash()
             
-            ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
+            filename = media.GetLocationsManager().GetServiceFilename( service_key )
+            
+            if filename is None:
+                
+                return
+                
             
             service = HG.client_controller.services_manager.GetService( service_key )
             
@@ -577,11 +582,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             prefix = service.GetMultihashPrefix()
             
         
-        hashes = self._GetSelectedHashes( is_in_file_service_key = service_key )
+        flat_media = self._GetSelectedFlatMedia( is_in_file_service_key = service_key )
         
-        if len( hashes ) > 0:
+        if len( flat_media ) > 0:
             
-            filenames = [ prefix + filename for filename in HG.client_controller.Read( 'service_filenames', service_key, hashes ) ]
+            filenames_or_none = [ media.GetLocationsManager().GetServiceFilename( service_key ) for media in flat_media ]
+            
+            filenames = [ prefix + filename for filename in filenames_or_none if filename is not None ]
             
             if len( filenames ) > 0:
                 

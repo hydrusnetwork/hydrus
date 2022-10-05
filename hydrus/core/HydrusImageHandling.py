@@ -53,12 +53,12 @@ if not hasattr( PILImage, 'DecompressionBombError' ):
     
     # super old versions don't have this, so let's just make a stub, wew
     
-    class DBE_stub( Exception ):
+    class dbe_stub( Exception ):
         
         pass
         
     
-    PILImage.DecompressionBombError = DBE_stub
+    PILImage.DecompressionBombError = dbe_stub
     
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     

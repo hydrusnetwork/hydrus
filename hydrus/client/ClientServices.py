@@ -3057,9 +3057,9 @@ class ServiceIPFS( ServiceRemote ):
                 
                 mime = media_result.GetMime()
                 
-                result = HG.client_controller.Read( 'service_filenames', self._service_key, { hash } )
+                multihash = media_result.GetLocationsManager().GetServiceFilename( self._service_key )
                 
-                if len( result ) == 0:
+                if multihash is None:
                     
                     try:
                         
@@ -3071,10 +3071,6 @@ class ServiceIPFS( ServiceRemote ):
                         
                         continue
                         
-                    
-                else:
-                    
-                    ( multihash, ) = result
                     
                 
                 file_info.append( ( hash, mime, multihash ) )

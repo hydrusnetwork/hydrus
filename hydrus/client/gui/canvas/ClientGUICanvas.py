@@ -3675,6 +3675,8 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
 class CanvasMediaListNavigable( CanvasMediaList ):
     
+    userChangedMedia = QC.Signal()
+    
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
         CanvasMediaList.__init__( self, parent, page_key, location_context, media_results )
@@ -3732,17 +3734,25 @@ class CanvasMediaListNavigable( CanvasMediaList ):
                 
                 self._ShowFirst()
                 
+                self.userChangedMedia.emit()
+                
             elif action == CAC.SIMPLE_VIEW_LAST:
                 
                 self._ShowLast()
+                
+                self.userChangedMedia.emit()
                 
             elif action == CAC.SIMPLE_VIEW_PREVIOUS:
                 
                 self._ShowPrevious()
                 
+                self.userChangedMedia.emit()
+                
             elif action == CAC.SIMPLE_VIEW_NEXT:
                 
                 self._ShowNext()
+                
+                self.userChangedMedia.emit()
                 
             else:
                 
@@ -3768,6 +3778,8 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
             self._ShowFirst()
             
+            self.userChangedMedia.emit()
+            
         
     
     def ShowLast( self, canvas_key ):
@@ -3775,6 +3787,8 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         if canvas_key == self._canvas_key:
             
             self._ShowLast()
+            
+            self.userChangedMedia.emit()
             
         
     
@@ -3784,6 +3798,8 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
             self._ShowNext()
             
+            self.userChangedMedia.emit()
+            
         
     
     def ShowPrevious( self, canvas_key ):
@@ -3791,6 +3807,8 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         if canvas_key == self._canvas_key:
             
             self._ShowPrevious()
+            
+            self.userChangedMedia.emit()
             
         
     
@@ -3834,10 +3852,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         
+        self.userChangedMedia.connect( self.NotifyUserChangedMedia )
+        
     
     def _PausePlaySlideshow( self ):
         
-        if self._RunningSlideshow():
+        if self._SlideshowIsRunning():
             
             self._StopSlideshow()
             
@@ -3847,7 +3867,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def _RunningSlideshow( self ):
+    def _SlideshowIsRunning( self ):
         
         return self._timer_slideshow_job is not None
         
@@ -3886,7 +3906,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def _StopSlideshow( self ):
         
-        if self._RunningSlideshow():
+        if self._SlideshowIsRunning():
             
             self._timer_slideshow_job.Cancel()
             
@@ -3905,7 +3925,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             # if longer movie, it has prob not played through but will now stop when it has and wait for us to change it then
             self._media_container.StopForSlideshow( True )
             
-            if self._current_media is not None and self._RunningSlideshow():
+            if self._current_media is not None and self._SlideshowIsRunning():
                 
                 if self._media_container.ReadyToSlideshow() and not CGC.core().MenuIsOpen():
                     
@@ -3934,6 +3954,15 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         if event.reason() == QG.QContextMenuEvent.Keyboard:
             
             self.ShowMenu()
+            
+        
+    
+    def NotifyUserChangedMedia( self ):
+        
+        # reset the timer if user overrode
+        if self._SlideshowIsRunning():
+            
+            self._StartSlideshow( interval = self._timer_slideshow_interval )
             
         
     
@@ -4054,7 +4083,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             
-            if self._RunningSlideshow():
+            if self._SlideshowIsRunning():
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
                 

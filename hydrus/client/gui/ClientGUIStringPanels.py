@@ -1328,7 +1328,12 @@ SELECT_RANGE = 1
 
 class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: typing.Sequence[ str ] = [] ):
+    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+        
+        if test_data is None:
+            
+            test_data = []
+            
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1518,7 +1523,12 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Sequence[ str ] = [] ):
+    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+        
+        if test_data is None:
+            
+            test_data = []
+            
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         

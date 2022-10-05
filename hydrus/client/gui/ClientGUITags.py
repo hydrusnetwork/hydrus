@@ -70,7 +70,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
             
             edited_string = dlg.GetValue()
             
-            edited_escaped_namespaces = re.split( r'(?<!\\)\-', edited_string )
+            edited_escaped_namespaces = re.split( r'(?<!\\)-', edited_string )
             
             edited_namespaces = [ namespace.replace( escaped_char, correct_char ) for namespace in edited_escaped_namespaces ]
             

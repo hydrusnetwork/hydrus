@@ -69,9 +69,9 @@ For GET, encode the parameter value in base64, like this:
 
 ```py
 base64.urlsafe_b64encode( cbor2.dumps( argument ) )
-
+```
 -or-
-
+```py
 str( base64.urlsafe_b64encode( cbor2.dumps( argument ) ), 'ascii' )
 ```
 
@@ -527,6 +527,7 @@ Arguments:
 * `search`: (the tag text to search for, enter exactly what you would in the client UI)
 * `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
 * `tag_service_name`: (optional, selective, string, the tag domain on which to search)
+* `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags)
 
 Example request:
 :   
@@ -558,6 +559,8 @@ Response:
 ```
 
 The `tags` list will be sorted by descending count. If you do not specify a tag service, it will default to 'all known tags'. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
+
+The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
 
 Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
 
@@ -1287,6 +1290,8 @@ Arguments (in percent-encoded JSON):
 
 If the access key's permissions only permit search for certain tags, at least one positive whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.
 
+File searches occur in the `display` `tag_display_type`. If you want to pair autocomplete tag lookup from [/search_tags](#add_tags_search_tags) to this file search (e.g. for making a standard booru search interface), then make sure you are searching `display` tags there.
+
 Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
 
 **Many system predicates are also supported using a text parser!** The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). **Here's a big list of examples that are supported:**
@@ -1496,6 +1501,7 @@ Response:
         "current": {},
         "deleted": {}
       },
+      "ipfs_multihashes": {},
       "has_audio": false,
       "num_frames": null,
       "num_words": null,
@@ -1530,6 +1536,9 @@ Response:
             "time_imported": 1641044491
           }
         }
+      },
+      "ipfs_multihashes": {
+        "55af93e0deabd08ce15ffb2b164b06d1254daab5a18d145e56fa98f71ddb6f11" : "QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb"
       },
       "has_audio": true,
       "num_frames": 102,
@@ -1637,7 +1646,9 @@ Response:
 
 Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
-file_services stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
+`file_services` stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
+
+`ipfs_multihashes` stores the ipfs service key to any known multihash for the file. 
 
 The `service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags` structures are similar to the `/add_tags/add_tags` scheme, excepting that the status numbers are:
 

@@ -428,7 +428,12 @@ class HydrusTagArchive( object ):
         self._c.execute( 'ANALYZE;' )
         
     
-    def RebuildNamespaces( self, namespaces_to_exclude = set() ):
+    def RebuildNamespaces( self, namespaces_to_exclude = None ):
+        
+        if namespaces_to_exclude is None:
+            
+            namespaces_to_exclude = set()
+            
         
         self._namespaces = set()
         self._namespaces.add( '' )

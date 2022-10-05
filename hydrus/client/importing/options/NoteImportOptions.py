@@ -123,7 +123,8 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
                     
                     name_and_note_exists = existing_note == note
                     
-                    new_note_is_an_extension = existing_note in note
+                    new_note_is_an_extension = len( note ) > len( existing_note ) and existing_note in note
+                    
                     
                 else:
                     
@@ -152,17 +153,39 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
                             
                         elif self._conflict_resolution == NOTE_IMPORT_CONFLICT_RENAME:
                             
-                            existing_names = set( existing_names_to_notes.keys() )
+                            note_already_exists_under_different_name = note in existing_names_to_notes.values()
                             
-                            name = HydrusData.GetNonDupeName( name, existing_names )
+                            if note_already_exists_under_different_name:
+                                
+                                do_it = False
+                                
+                            else:
+                                
+                                existing_names = set( existing_names_to_notes.keys() )
+                                
+                                name = HydrusData.GetNonDupeName( name, existing_names )
+                                
                             
                         elif self._conflict_resolution == NOTE_IMPORT_CONFLICT_APPEND:
                             
                             existing_note = existing_names_to_notes[ name ]
                             
-                            sep = os.linesep * 2
+                            existing_note_already_includes_note = len( existing_note ) > len( note ) and note in existing_note
                             
-                            note = sep.join( ( existing_note, note ) )
+                            if existing_note_already_includes_note:
+                                
+                                do_it = False
+                                
+                            else:
+                                
+                                sep = os.linesep * 2
+                                
+                                note = sep.join( ( existing_note, note ) )
+                                
+                            
+                        elif self._conflict_resolution == NOTE_IMPORT_CONFLICT_REPLACE:
+                            
+                            pass # yes, just do it
                             
                         
                     

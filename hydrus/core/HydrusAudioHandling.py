@@ -28,7 +28,7 @@ def ParseFFMPEGAudio( lines ):
         
         try:
             
-            match = re.search( r'(?<=Audio\:\s).+?(?=,)', line )
+            match = re.search( r'(?<=Audio:\s).+?(?=,)', line )
             
             audio_format = match.group()
             

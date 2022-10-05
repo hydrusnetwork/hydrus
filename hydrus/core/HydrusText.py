@@ -256,7 +256,7 @@ def NonFailingUnicodeDecode( data, encoding ):
     
 def RemoveNewlines( text ):
     
-    text = re.sub( r'\r|\n', '', text )
+    text = re.sub( r'[\r\n]', '', text )
     
     return text
     

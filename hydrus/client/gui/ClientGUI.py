@@ -7178,7 +7178,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if len( self._persistent_mpv_widgets ) == 0:
             
-            mpv_widget = ClientGUIMPV.mpvWidget( parent )
+            mpv_widget = ClientGUIMPV.MPVWidget( parent )
             
             self._persistent_mpv_widgets.append( mpv_widget )
             

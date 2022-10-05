@@ -96,7 +96,7 @@ LOCALE_IS_SET = False
 
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
-class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
+class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     launchMediaViewer = QC.Signal()
     
@@ -278,7 +278,7 @@ class mpvWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             if not self._file_is_loaded:
                 
-                return
+                return True
                 
             
             current_timestamp_s = self._player.time_pos

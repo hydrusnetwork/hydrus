@@ -166,16 +166,15 @@ class DirPickerCtrl( QW.QWidget ):
         
         existing_path = self._path_edit.text()
         
+        kwargs = {}
+        
         if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
-            
-        else:
-            
-            options = QW.QFileDialog.Options()
+            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
+            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
             
         
-        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, options = options )
+        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, **kwargs )
         
         if path == '':
             
@@ -254,35 +253,34 @@ class FilePickerCtrl( QW.QWidget ):
             existing_path = self._starting_directory
             
         
+        kwargs = {}
+        
         if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
-            
-        else:
-            
-            options = QW.QFileDialog.Options()
+            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
+            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
             
         
         if self._save_mode:
             
             if self._wildcard:
                 
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
                 
             else:
                 
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, options = options )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, **kwargs )[0]
                 
             
         else:
             
             if self._wildcard:
                 
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
                 
             else:
                 
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, options = options )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, **kwargs )[0]
                 
             
         
