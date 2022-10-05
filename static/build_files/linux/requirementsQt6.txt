@@ -22,3 +22,4 @@ Send2Trash>=1.5.0
 service-identity>=18.1.0
 six>=1.14.0
 Twisted>=20.3.0
+setuptools>=65.0.0

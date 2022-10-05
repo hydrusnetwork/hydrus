@@ -1,4 +1,4 @@
-PyInstaller==5.3
+PyInstaller==5.4.1
 PyWin32
 pypiwin32
 pywin32-ctypes
