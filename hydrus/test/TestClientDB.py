@@ -2,8 +2,6 @@ import os
 import time
 import unittest
 
-from mock import patch
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
@@ -18,7 +16,6 @@ from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui.pages import ClientGUIManagement
-from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportFiles

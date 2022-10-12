@@ -52,7 +52,7 @@ class CollectComboCtrl( QW.QComboBox ):
         
         self.setModel( QG.QStandardItemModel( self ) )
         
-        self._InitialiseChoices()
+        self._ReinitialiseChoices()
         
         # Trick to display custom text
         
@@ -64,7 +64,25 @@ class CollectComboCtrl( QW.QComboBox ):
             
         
     
-    def _InitialiseChoices( self ):
+    def _HandleItemPressed( self, index ):
+        
+        item = self.model().itemFromIndex( index )
+        
+        if item.checkState() == QC.Qt.Checked:
+            
+            item.setCheckState( QC.Qt.Unchecked )
+            
+        else:
+            
+            item.setCheckState( QC.Qt.Checked )
+            
+        
+        self.SetValue( self._cached_text )
+        
+        self.itemChanged.emit()
+        
+    
+    def _ReinitialiseChoices( self ):
         
         text_and_data_tuples = set()
         
@@ -93,25 +111,76 @@ class CollectComboCtrl( QW.QComboBox ):
             text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
             
         
-        for ( text, data ) in text_and_data_tuples:
+        current_text_and_data_tuples = []
+        
+        for i in range( self.count() ):
             
-            self.Append( text, data )
+            item = self.model().item( i, 0 )
             
+            t = item.text()
+            d = self.itemData( i, QC.Qt.UserRole )
+            
+            current_text_and_data_tuples.append( ( t, d ) )
+            
+        
+        made_changes = False
+        
+        if current_text_and_data_tuples != text_and_data_tuples:
+            
+            if self.count() > 0:
+                
+                # PRO TIP 4 U: if you say self.clear() here, the program has a ~15% chance to crash instantly if you have previously done a clear/add cycle!
+                # this affects PyQt and PySide, 5 and 6, running from source, so must be something in Qt core. some argument between the model and widget
+                self.model().clear()
+                
+            
+            for ( text, data ) in text_and_data_tuples:
+                
+                self.addItem( text, userData = data )
+                
+                item = self.model().item( self.count() - 1, 0 )
+                
+                item.setCheckState( QC.Qt.Unchecked )
+                
+            
+            made_changes = True
+            
+        
+        return made_changes
         
     
-    def paintEvent( self, e ):
+    def GetCheckedIndices( self ):
         
-        painter = QW.QStylePainter( self )
-        painter.setPen( self.palette().color( QG.QPalette.Text ) )
+        indices = []
+        
+        for idx in range( self.count() ):
 
-        opt = QW.QStyleOptionComboBox()
-        self.initStyleOption( opt )
+            item = self.model().item( idx )
+            
+            if item.checkState() == QC.Qt.Checked:
+                
+                indices.append( idx )
+                
+            
+        
+        return indices
+        
 
-        opt.currentText = self._cached_text
-
-        painter.drawComplexControl( QW.QStyle.CC_ComboBox, opt )
-
-        painter.drawControl( QW.QStyle.CE_ComboBoxLabel, opt )
+    def GetCheckedStrings( self ):
+        
+        strings = [ ]
+        
+        for idx in range( self.count() ):
+            
+            item = self.model().item( idx )
+            
+            if item.checkState() == QC.Qt.Checked:
+                
+                strings.append( item.text() )
+                
+            
+        
+        return strings
         
     
     def GetValues( self ):
@@ -154,6 +223,28 @@ class CollectComboCtrl( QW.QComboBox ):
             QW.QComboBox.hidePopup( self )
             
             
+        
+    
+    def paintEvent( self, e ):
+        
+        painter = QW.QStylePainter( self )
+        painter.setPen( self.palette().color( QG.QPalette.Text ) )
+
+        opt = QW.QStyleOptionComboBox()
+        self.initStyleOption( opt )
+
+        opt.currentText = self._cached_text
+
+        painter.drawComplexControl( QW.QStyle.CC_ComboBox, opt )
+
+        painter.drawControl( QW.QStyle.CE_ComboBoxLabel, opt )
+        
+    
+    def ReinitialiseChoices( self ):
+        
+        return self._ReinitialiseChoices()
+        
+    
     def SetValue( self, text ):
         
         self._cached_text = text
@@ -161,6 +252,7 @@ class CollectComboCtrl( QW.QComboBox ):
         self.setCurrentText( text )
         
         
+    
     def SetCollectByValue( self, media_collect ):
 
         try:
@@ -209,71 +301,6 @@ class CollectComboCtrl( QW.QComboBox ):
             
         
     
-    def GetCheckedIndices( self ):
-        
-        indices = []
-        
-        for idx in range( self.count() ):
-
-            item = self.model().item( idx )
-            
-            if item.checkState() == QC.Qt.Checked:
-                
-                indices.append( idx )
-                
-            
-        
-        return indices
-        
-
-    def GetCheckedStrings( self ):
-        
-        strings = [ ]
-        
-        for idx in range( self.count() ):
-            
-            item = self.model().item( idx )
-            
-            if item.checkState() == QC.Qt.Checked:
-                
-                strings.append( item.text() )
-                
-            
-        
-        return strings
-        
-    
-    def Append( self, str, data ):
-        
-        # TODO: This is the line that crashes
-        self.addItem( str, userData = data )
-        
-        item = self.model().item( self.count() - 1, 0 )
-        
-        item.setCheckState( QC.Qt.Unchecked )
-        
-    
-    def ReinitialiseChoices( self ):
-        
-        self.clear()
-        
-        self._InitialiseChoices()
-        
-    
-    def _HandleItemPressed( self, index ):
-        
-        item = self.model().itemFromIndex( index )
-        
-        if item.checkState() == QC.Qt.Checked:
-            
-            item.setCheckState( QC.Qt.Unchecked )
-            
-        else:
-            
-            item.setCheckState( QC.Qt.Checked )
-            
-        self.SetValue( self._cached_text )
-        self.itemChanged.emit()
 
 class MediaCollectControl( QW.QWidget ):
     
@@ -402,8 +429,7 @@ class MediaCollectControl( QW.QWidget ):
     
     def ListenForNewOptions( self ):
         
-        # TODO: Disabled because it causes a crash
-        pass # HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def NotifyAdvancedMode( self ):
@@ -415,9 +441,12 @@ class MediaCollectControl( QW.QWidget ):
         
         media_collect = self._media_collect.Duplicate()
         
-        self._collect_comboctrl.ReinitialiseChoices()
+        made_changes = self._collect_comboctrl.ReinitialiseChoices()
         
-        self.SetCollect( media_collect, do_broadcast = False )
+        if made_changes:
+            
+            self.SetCollect( media_collect, do_broadcast = False )
+            
         
     
     def SetCollect( self, media_collect: ClientMedia.MediaCollect, do_broadcast = True ):

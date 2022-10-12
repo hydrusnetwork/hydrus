@@ -371,8 +371,6 @@ class NewDialog( QP.Dialog ):
         
         self.setWindowTitle( title )
         
-        self._last_move_pub = 0.0
-        
         self._new_options = HG.client_controller.new_options
         
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
@@ -380,18 +378,6 @@ class NewDialog( QP.Dialog ):
         HG.client_controller.ResetIdleTimer()
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        
-    
-    def moveEvent( self, event ):
-        
-        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
-            
-            HG.client_controller.pub( 'top_level_window_move_event' )
-            
-            self._last_move_pub = HydrusData.GetNowPrecise()
-            
-        
-        event.ignore()
         
     
     def _DoClose( self, value ):
@@ -600,14 +586,11 @@ class Frame( QW.QWidget ):
         
         self._new_options = HG.client_controller.new_options
         
-        self._last_move_pub = 0.0
-        
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
-        self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_MOVE( self.EventMove )
-        
         HG.client_controller.ResetIdleTimer()
+        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
         
     
     def CleanBeforeDestroy( self ):
@@ -618,18 +601,6 @@ class Frame( QW.QWidget ):
     def closeEvent( self, event ):
         
         self.CleanBeforeDestroy()
-        
-    
-    def EventMove( self, event ):
-        
-        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
-            
-            HG.client_controller.pub( 'top_level_window_move_event' )
-            
-            self._last_move_pub = HydrusData.GetNowPrecise()
-            
-        
-        return True # was: event.ignore()
         
     
 class MainFrame( QW.QMainWindow ):

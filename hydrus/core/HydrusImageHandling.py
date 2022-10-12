@@ -53,23 +53,23 @@ if not hasattr( PILImage, 'DecompressionBombError' ):
     
     # super old versions don't have this, so let's just make a stub, wew
     
-    class dbe_stub( Exception ):
+    class DBEStub( Exception ):
         
         pass
         
     
-    PILImage.DecompressionBombError = dbe_stub
+    PILImage.DecompressionBombError = DBEStub
     
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     # super old versions don't have this, so let's just make a stub, wew
     
-    class DBW_stub( Exception ):
+    class DBWStub( Exception ):
         
         pass
         
     
-    PILImage.DecompressionBombWarning = DBW_stub
+    PILImage.DecompressionBombWarning = DBWStub
     
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )

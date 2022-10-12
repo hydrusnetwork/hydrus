@@ -421,11 +421,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         return self._result
         
     
-class Page( QW.QSplitter ):
+class Page( QW.QWidget ):
     
     def __init__( self, parent, controller, management_controller, initial_hashes ):
         
-        QW.QSplitter.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._parent_notebook = parent
         
@@ -444,7 +444,8 @@ class Page( QW.QSplitter ):
         
         self._pretty_status = ''
         
-        self._search_preview_split = QW.QSplitter( self )
+        self._management_media_split = QW.QSplitter( self )
+        self._search_preview_split = QW.QSplitter( self._management_media_split )
         
         self._done_split_setups = False
         
@@ -460,18 +461,26 @@ class Page( QW.QSplitter ):
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
+        self._management_media_split.addWidget( self._media_panel )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._management_media_split, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
         vbox = QP.VBoxLayout( margin = 0 )
         
         QP.AddToLayout( vbox, self._preview_canvas, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._preview_panel.setLayout( vbox )
         
-        self.widget( 0 ).setMinimumWidth( 120 )
-        self.widget( 1 ).setMinimumWidth( 120 )
-        self.setStretchFactor( 0, 0 )
-        self.setStretchFactor( 1, 1 )
+        self._management_media_split.widget( 0 ).setMinimumWidth( 120 )
+        self._management_media_split.widget( 1 ).setMinimumWidth( 120 )
+        self._management_media_split.setStretchFactor( 0, 0 )
+        self._management_media_split.setStretchFactor( 1, 1 )
         
-        self._handle_event_filter = QP.WidgetEventFilter( self.handle( 1 ) )
+        self._handle_event_filter = QP.WidgetEventFilter( self._management_media_split.handle( 1 ) )
         self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )
         
         self._search_preview_split.widget( 0 ).setMinimumHeight( 180 )
@@ -527,10 +536,7 @@ class Page( QW.QSplitter ):
     
     def _SwapMediaPanel( self, new_panel ):
         
-        # if a new media page comes in while its menu is open, we can enter program instability.
-        # so let's just put it off.
-        
-        previous_sizes = self.sizes()
+        previous_sizes = self._management_media_split.sizes()
         
         self._preview_canvas.ClearMedia()
         
@@ -547,17 +553,18 @@ class Page( QW.QSplitter ):
             new_panel.Sort( media_sort )
             
         
-        self._media_panel.setParent( None )
+        new_panel.setMinimumWidth( 120 )
         
         old_panel = self._media_panel
-        
-        self.addWidget( new_panel )
-        
-        self.setSizes( previous_sizes )
-        
-        self.setStretchFactor( 1, 1 )
-        
         self._media_panel = new_panel
+        
+        # this sets parent of new panel to self and sets parent of old panel to None
+        # rumao, it doesn't work if new_panel is already our child
+        self._management_media_split.replaceWidget( 1, new_panel )
+        
+        self._management_media_split.setSizes( previous_sizes )
+        
+        self._management_media_split.setStretchFactor( 1, 1 )
         
         self._ConnectMediaPanelSignals()
         
@@ -565,6 +572,8 @@ class Page( QW.QSplitter ):
         
         self._controller.pub( 'notify_new_pages_count' )
         
+        # if we try to kill a media page while a menu is open on it, we can enter program instability.
+        # so let's just put it off.
         def clean_up_old_panel():
             
             if CGC.core().MenuIsOpen():
@@ -626,7 +635,7 @@ class Page( QW.QSplitter ):
     
     def EventUnsplit( self, event ):
         
-        QP.Unsplit( self, self._search_preview_split )
+        QP.Unsplit( self._management_media_split, self._search_preview_split )
         
         self._media_panel.SetFocusedMedia( None )
         
@@ -802,7 +811,7 @@ class Page( QW.QSplitter ):
         
         hpos = HC.options[ 'hpos' ]
         
-        sizes = self.sizes()
+        sizes = self._management_media_split.sizes()
         
         if len( sizes ) > 1:
             
@@ -970,7 +979,7 @@ class Page( QW.QSplitter ):
         
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
         
-        QP.SplitVertically( self, self._search_preview_split, self._media_panel, hpos )
+        QP.SplitVertically( self._management_media_split, self._search_preview_split, self._media_panel, hpos )
         
         if HC.options[ 'hide_preview' ]:
             

@@ -500,7 +500,7 @@ class HydrusController( object ):
         return threads
         
     
-    def GetTimestamp( self, name: str ) -> str:
+    def GetTimestamp( self, name: str ) -> int:
         
         with self._timestamps_lock:
             

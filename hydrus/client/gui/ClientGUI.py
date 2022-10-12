@@ -520,9 +520,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
         
-        self._widget_event_filter.EVT_MOVE( self.EventMove )
-        self._last_move_pub = 0.0
-        
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'CreateNewSubscriptionGapDownloader', 'make_new_subscription_gap_downloader' )
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
@@ -7036,18 +7033,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._FlipShowHideWholeUI()
                 
             
-        
-    
-    def EventMove( self, event ):
-        
-        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
-            
-            self._controller.pub( 'top_level_window_move_event' )
-            
-            self._last_move_pub = HydrusData.GetNowPrecise()
-            
-        
-        return True # was: event.ignore()
         
     
     def TIMEREventAnimationUpdate( self ):

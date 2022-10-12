@@ -20,13 +20,15 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 
-class StaticSystemPredicateButton( QW.QPushButton ):
+class StaticSystemPredicateButton( QW.QWidget ):
     
-    def __init__( self, parent, ok_panel, predicates, forced_label = None ):
+    predicatesChosen = QC.Signal( QW.QWidget )
+    predicatesRemoved = QC.Signal( QW.QWidget )
+    
+    def __init__( self, parent, predicates, forced_label = None, show_remove_button = True ):
         
-        QW.QPushButton.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._ok_panel = ok_panel
         self._predicates = predicates
         self._forced_label = forced_label
         
@@ -39,16 +41,73 @@ class StaticSystemPredicateButton( QW.QPushButton ):
             label = forced_label
             
         
-        self.setText( label )
+        self._predicates_button = ClientGUICommon.BetterButton( self, label, self._DoPredicatesChoose )
+        self._remove_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, self._DoPredicatesRemove )
         
-        self.clicked.connect( self.DoOK )
+        hbox = QP.HBoxLayout()
+        
+        if show_remove_button:
+            
+            flag = CC.FLAGS_EXPAND_BOTH_WAYS
+            
+        else:
+            
+            flag = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
+            
+            self._remove_button.hide()
+            
+        
+        QP.AddToLayout( hbox, self._predicates_button, flag )
+        QP.AddToLayout( hbox, self._remove_button, CC.FLAGS_CENTER )
+        
+        self.setLayout( hbox )
         
     
-    def DoOK( self ):
+    def _DoPredicatesChoose( self ):
         
-        self._ok_panel.SubPanelOK( self._predicates )
+        self.predicatesChosen.emit( self )
         
     
+    def _DoPredicatesRemove( self ):
+        
+        self.predicatesRemoved.emit( self )
+        
+    
+    def GetPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+        
+        return self._predicates
+        
+    
+
+class TimeDateOperator( QP.DataRadioBox ):
+    
+    def __init__( self, parent ):
+        
+        choice_tuples = [
+            ( 'before', '<' ),
+            ( 'since', '>' ),
+            ( 'the day of', '=' ),
+            ( '+/- a month of', CC.UNICODE_ALMOST_EQUAL_TO )
+        ]
+        
+        QP.DataRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        
+    
+
+class TimeDeltaOperator( QP.DataRadioBox ):
+    
+    def __init__( self, parent ):
+        
+        choice_tuples = [
+            ( 'before', '>' ),
+            ( 'since', '<' ),
+            ( '+/- 15% of', CC.UNICODE_ALMOST_EQUAL_TO )
+        ]
+        
+        QP.DataRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        
+    
+
 class InvertiblePredicateButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate ):
@@ -288,7 +347,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
+        self._sign = TimeDateOperator( self )
         
         self._date = QW.QCalendarWidget( self )
         
@@ -298,7 +357,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         qt_dt = QC.QDate( years, months, days )
         
@@ -338,7 +397,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         month = qt_dt.month()
         day = qt_dt.day()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetStringSelection(), 'date', ( year, month, day ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
         
         return predicates
         
@@ -349,7 +408,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
+        self._sign = TimeDeltaOperator( self )
         
         self._years = ClientGUICommon.BetterSpinBox( self, max=30, width = 60 )
         self._months = ClientGUICommon.BetterSpinBox( self, max=60, width = 60 )
@@ -362,7 +421,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._years.setValue( years )
         self._months.setValue( months )
@@ -382,7 +441,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -396,7 +455,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetStringSelection(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -407,7 +466,7 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
+        self._sign = TimeDateOperator( self )
         
         self._date = QW.QCalendarWidget( self )
         
@@ -417,7 +476,7 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         qt_dt = QC.QDate( years, months, days )
         
@@ -457,7 +516,7 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
         month = qt_dt.month()
         day = qt_dt.day()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'date', ( year, month, day ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
         
         return predicates
         
@@ -468,7 +527,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
+        self._sign = TimeDeltaOperator( self )
         
         self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
         self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
@@ -481,7 +540,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._years.setValue( years )
         self._months.setValue( months )
@@ -501,7 +560,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -515,7 +574,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -526,7 +585,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'=','>'] )
+        self._sign = TimeDateOperator( self )
         
         self._date = QW.QCalendarWidget( self )
         
@@ -536,7 +595,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         qt_dt = QC.QDate( years, months, days )
         
@@ -576,7 +635,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemSingle ):
         month = qt_dt.month()
         day = qt_dt.day()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetStringSelection(), 'date', ( year, month, day ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
         
         return predicates
         
@@ -587,7 +646,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',CC.UNICODE_ALMOST_EQUAL_TO,'>'] )
+        self._sign = TimeDeltaOperator( self )
         
         self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
         self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
@@ -600,7 +659,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._years.setValue( years )
         self._months.setValue( months )
@@ -620,7 +679,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -634,7 +693,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         

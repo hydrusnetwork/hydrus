@@ -359,7 +359,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     return ( parsed_request_args, total_bytes_read )
     
-def ParseClientAPISearchPredicates( request ):
+def ParseClientAPISearchPredicates( request ) -> typing.List[ ClientSearch.Predicate ]:
     
     default_search_values = {}
     
@@ -382,7 +382,23 @@ def ParseClientAPISearchPredicates( request ):
     
     predicates = ConvertTagListToPredicates( request, tags )
     
+    if system_inbox:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        
+    elif system_archive:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+    
     if len( predicates ) == 0:
+        
+        return predicates
+        
+    
+    we_have_at_least_one_inclusive_tag = True in ( predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG and predicate.IsInclusive() for predicate in predicates )
+    
+    if not we_have_at_least_one_inclusive_tag:
         
         try:
             
@@ -392,15 +408,6 @@ def ParseClientAPISearchPredicates( request ):
             
             raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, you do not have permission to see all files on this client. Please add a regular tag to your search.' )
             
-        
-    
-    if system_inbox:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
-        
-    elif system_archive:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
     
     return predicates
@@ -533,7 +540,7 @@ def ParseRequestedResponseMime( request: HydrusServerRequest.HydrusRequest ):
     return HC.APPLICATION_JSON
     
 
-def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) -> list:
+def ConvertTagListToPredicates( request, tag_list, do_permission_check = True, error_on_invalid_tag = True ) -> typing.List[ ClientSearch.Predicate ]:
     
     or_tag_lists = [ tag for tag in tag_list if isinstance( tag, list ) ]
     tag_strings = [ tag for tag in tag_list if isinstance( tag, str ) ]
@@ -544,12 +551,47 @@ def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) 
     negated_tags = [ tag for tag in tags if tag.startswith( '-' ) ]
     tags = [ tag for tag in tags if not tag.startswith( '-' ) ]
     
-    negated_tags = HydrusTags.CleanTags( negated_tags )
-    tags = HydrusTags.CleanTags( tags )
+    dirty_negated_tags = negated_tags
+    dirty_tags = tags
+    
+    negated_tags = HydrusTags.CleanTags( dirty_negated_tags )
+    tags = HydrusTags.CleanTags( dirty_tags )
+    
+    if error_on_invalid_tag:
+        
+        jobs = [
+            ( dirty_negated_tags, negated_tags ),
+            ( dirty_tags, tags )
+        ]
+        
+        for ( dirty_ts, ts ) in jobs:
+            
+            if len( ts ) != dirty_ts:
+                
+                for dirty_t in dirty_ts:
+                    
+                    try:
+                        
+                        clean_t = HydrusTags.CleanTag( dirty_t )
+                        
+                        HydrusTags.CheckTagNotEmpty( clean_t )
+                        
+                    except Exception as e:
+                        
+                        message = 'Could not understand the tag: "{}"'.format( dirty_t )
+                        
+                        raise HydrusExceptions.BadRequestException( message )
+                        
+                    
+                
+            
+        
     
     if do_permission_check:
         
-        if len( tags ) == 0:
+        raw_inclusive_tags = [ tag for tag in tags if '*' not in tags ]
+        
+        if len( raw_inclusive_tags ) == 0:
             
             if len( negated_tags ) > 0:
                 
@@ -2167,6 +2209,9 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         predicates = ParseClientAPISearchPredicates( request )
         
+        return_hashes = False
+        return_file_ids = True
+        
         if len( predicates ) == 0:
             
             hash_ids = []
@@ -2199,14 +2244,10 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             # newest first
             sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = sort_order )
             
-            return_hashes = False
-            
             if 'return_hashes' in request.parsed_request_args:
                 
                 return_hashes = request.parsed_request_args.GetValue( 'return_hashes', bool )
                 
-            
-            return_file_ids = True
             
             if 'return_file_ids' in request.parsed_request_args:
                 

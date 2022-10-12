@@ -254,6 +254,11 @@ def GetTLWParents( widget ):
     
 def IsQtAncestor( child: QW.QWidget, ancestor: QW.QWidget, through_tlws = False ):
     
+    if child is None:
+        
+        return False
+        
+    
     if child == ancestor:
         
         return True

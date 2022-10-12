@@ -12,7 +12,6 @@ from hydrus.core import HydrusTags
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB

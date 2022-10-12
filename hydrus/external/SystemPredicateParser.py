@@ -206,6 +206,7 @@ SYSTEM_PREDICATES = {
 # The parse_* functions consume some of the string and return a (remaining part of the string, parsed value) tuple.
 def parse_system_predicate( string: str ):
     string = string.lower().strip()
+    string = string.replace( '_', ' ' )
     if string.startswith( "-" ):
         raise ValueError( "System predicate can't start with negation" )
     if not string.startswith( SYSTEM_PREDICATE_PREFIX ):
@@ -470,6 +471,7 @@ examples = [
     "system:import time > 2011-06-04",
     "system:import time > 7 years 2 months",
     "system:import time < 1 day",
+    "system:import time = 1 day",
     "system:import time < 0 years 1 month 1 day 1 hour",
     " system:import time ~= 2011-1-3 ",
     "system:import time ~= 1996-05-2",

@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
 
 from hydrus.external import SystemPredicateParser
@@ -71,12 +72,19 @@ def date_pred_generator( pred_type, o, v ):
     #Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
     #a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
     
-    date_type = 'delta'
-    
     if isinstance( v, datetime.date ):
         
         date_type = 'date'
         v = ( v.year, v.month, v.day )
+        
+    else:
+        
+        date_type = 'delta'
+        
+        if o == '=':
+            
+            o = CC.UNICODE_ALMOST_EQUAL_TO
+            
         
     
     return ClientSearch.Predicate( pred_type, ( o, date_type, tuple( v ) ) )

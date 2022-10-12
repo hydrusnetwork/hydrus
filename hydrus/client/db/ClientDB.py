@@ -3011,7 +3011,7 @@ class DB( HydrusDB.HydrusDB ):
         
         or_predicates = file_search_context.GetORPredicates()
         
-        need_file_domain_cross_reference = not location_context.IsAllKnownFiles()
+        not_all_known_files = not location_context.IsAllKnownFiles()
         there_are_tags_to_search = len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0
         
         # ok, let's set up the big list of simple search preds
@@ -3358,60 +3358,89 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if need_file_domain_cross_reference:
+        timestamp_ranges = system_predicates.GetTimestampRanges()
+        
+        if not_all_known_files:
             
-            # in future we will hang an explicit service off this predicate and specify import/deleted time
-            # for now we'll wangle a compromise and just check all, and if domain is deleted, then search deletion time
+            # in future we will hang an explicit locationcontext off this predicate
+            # for now we'll check current domain
+            # if domain is deleted, we search deletion time
             
-            import_timestamp_predicates = []
-            
-            if 'min_import_timestamp' in simple_preds: import_timestamp_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_import_timestamp' ] ) )
-            if 'max_import_timestamp' in simple_preds: import_timestamp_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_import_timestamp' ] ) )
-            
-            if len( import_timestamp_predicates ) > 0:
+            if ClientSearch.PREDICATE_TYPE_SYSTEM_AGE in timestamp_ranges:
                 
-                pred_string = ' AND '.join( import_timestamp_predicates )
+                import_timestamp_predicates = []
                 
-                table_names = []
-                table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_CURRENT ) for service_key in location_context.current_service_keys ) )
-                table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_DELETED ) for service_key in location_context.deleted_service_keys ) )
+                ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
                 
-                import_timestamp_hash_ids = set()
-                
-                for table_name in table_names:
+                if '>' in ranges:
                     
-                    import_timestamp_hash_ids.update( self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) ) )
+                    import_timestamp_predicates.append( 'timestamp >= {}'.format( ranges[ '>' ] ) )
                     
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
+                if '<' in ranges:
+                    
+                    import_timestamp_predicates.append( 'timestamp <= {}'.format( ranges[ '<' ] ) )
+                    
                 
-                have_cross_referenced_file_locations = True
+                if len( import_timestamp_predicates ) > 0:
+                    
+                    pred_string = ' AND '.join( import_timestamp_predicates )
+                    
+                    table_names = []
+                    table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_CURRENT ) for service_key in location_context.current_service_keys ) )
+                    table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_DELETED ) for service_key in location_context.deleted_service_keys ) )
+                    
+                    import_timestamp_hash_ids = set()
+                    
+                    for table_name in table_names:
+                        
+                        import_timestamp_hash_ids.update( self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) ) )
+                        
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
+                    
+                    have_cross_referenced_file_locations = True
+                    
                 
             
         
-        modified_timestamp_predicates = []
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in timestamp_ranges:
+            
+            modified_timestamp_predicates = []
+            
+            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
+            
+            if '>' in ranges:
+                
+                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) >= {}'.format( ranges[ '>' ] ) )
+                
+            
+            if '<' in ranges:
+                
+                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) <= {}'.format( ranges[ '<' ] ) )
+                
+            
+            if len( modified_timestamp_predicates ) > 0:
+                
+                pred_string = ' AND '.join( modified_timestamp_predicates )
+                
+                q1 = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps'
+                q2 = 'SELECT hash_id, file_modified_timestamp FROM file_domain_modified_timestamps'
+                
+                query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
+                
+                modified_timestamp_hash_ids = self._STS( self._Execute( query ) )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
+                
+            
         
-        if 'min_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) >= ' + str( simple_preds[ 'min_modified_timestamp' ] ) )
-        if 'max_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) <= ' + str( simple_preds[ 'max_modified_timestamp' ] ) )
-        
-        if len( modified_timestamp_predicates ) > 0:
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME in timestamp_ranges:
             
-            pred_string = ' AND '.join( modified_timestamp_predicates )
+            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
             
-            q1 = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps'
-            q2 = 'SELECT hash_id, file_modified_timestamp FROM file_domain_modified_timestamps'
-            
-            query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
-            
-            modified_timestamp_hash_ids = self._STS( self._Execute( query ) )
-            
-            query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
-            
-        
-        if 'min_last_viewed_timestamp' in simple_preds or 'max_last_viewed_timestamp' in simple_preds:
-            
-            min_last_viewed_timestamp = simple_preds.get( 'min_last_viewed_timestamp', None )
-            max_last_viewed_timestamp = simple_preds.get( 'max_last_viewed_timestamp', None )
+            min_last_viewed_timestamp = ranges.get( '>', None )
+            max_last_viewed_timestamp = ranges.get( '<', None )
             
             last_viewed_timestamp_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromLastViewed( min_last_viewed_timestamp = min_last_viewed_timestamp, max_last_viewed_timestamp = max_last_viewed_timestamp )
             
@@ -3670,7 +3699,7 @@ class DB( HydrusDB.HydrusDB ):
         done_files_info_predicates = False
         
         we_need_some_results = query_hash_ids is None
-        we_need_to_cross_reference = need_file_domain_cross_reference and not have_cross_referenced_file_locations
+        we_need_to_cross_reference = not_all_known_files and not have_cross_referenced_file_locations
         
         if we_need_some_results or we_need_to_cross_reference:
             
@@ -8876,7 +8905,19 @@ class DB( HydrusDB.HydrusDB ):
                     query = 'SELECT hash_id, archived_timestamp FROM {temp_table} CROSS JOIN archive_timestamps USING ( hash_id );'
                     
                 
-                if sort_data == CC.SORT_FILES_BY_RATIO:
+                if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
+                    
+                    def key( row ):
+                        
+                        hash_id = row[0]
+                        timestamp = row[1]
+                        
+                        # hash_id to differentiate files imported in the same second
+                        
+                        return ( timestamp, hash_id )
+                        
+                    
+                elif sort_data == CC.SORT_FILES_BY_RATIO:
                     
                     def key( row ):
                         

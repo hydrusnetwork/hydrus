@@ -2324,6 +2324,11 @@ class MediaCollection( MediaList, Media ):
         return self._duration
         
     
+    def GetEarliestHashId( self ):
+        
+        return min( ( m.GetEarliestHashId() for m in self._sorted_media ) )
+        
+    
     def GetFileViewingStatsManager( self ):
         
         return self._file_viewing_stats_manager
@@ -2515,6 +2520,11 @@ class MediaSingleton( Media ):
     def GetDuration( self ):
         
         return self._media_result.GetDuration()
+        
+    
+    def GetEarliestHashId( self ):
+        
+        return self._media_result.GetFileInfoManager().hash_id
         
     
     def GetFileViewingStatsManager( self ):
@@ -3245,7 +3255,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetLocationsManager().GetBestCurrentTimestamp( location_context ) )
+                    # note we use hash_id here, thanks to a user for pointing it out, as a nice way to break 1-second-resolution ties
+                    
+                    return ( deal_with_none( x.GetLocationsManager().GetBestCurrentTimestamp( location_context ) ), x.GetEarliestHashId() )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:

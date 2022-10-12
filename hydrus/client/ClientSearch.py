@@ -16,6 +16,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientLocation
+from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
@@ -356,6 +357,7 @@ class FileSystemPredicates( object ):
         self._not_local = False
         
         self._common_info = {}
+        self._timestamp_ranges = collections.defaultdict( dict )
         
         self._limit = None
         self._similar_to = None
@@ -421,22 +423,6 @@ class FileSystemPredicates( object ):
             
             if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
-                if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
-                    
-                    min_label = 'min_import_timestamp'
-                    max_label = 'max_import_timestamp'
-                    
-                elif predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
-                    
-                    min_label = 'min_last_viewed_timestamp'
-                    max_label = 'max_last_viewed_timestamp'
-                    
-                elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
-                    
-                    min_label = 'min_modified_timestamp'
-                    max_label = 'max_modified_timestamp'
-                    
-                
                 ( operator, age_type, age_value ) = value
                 
                 if age_type == 'delta':
@@ -449,53 +435,64 @@ class FileSystemPredicates( object ):
                     
                     # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
                     
+                    # the before/since semantic logic is:
+                    # '<' 7 days age means 'since that date'
+                    # '>' 7 days ago means 'before that date'
+                    
                     if operator == '<':
                         
-                        self._common_info[ min_label ] = now - age
+                        time_pivot = now - age
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
                         
                     elif operator == '>':
                         
-                        self._common_info[ max_label ] = now - age
+                        time_pivot = now - age
+                        
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        self._common_info[ min_label ] = now - int( age * 1.15 )
-                        self._common_info[ max_label ] = now - int( age * 0.85 )
+                        earliest = now - int( age * 1.15 )
+                        latest = now - int( age * 0.85 )
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = earliest
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = latest
                         
                     
                 elif age_type == 'date':
                     
                     ( year, month, day ) = age_value
                     
-                    # convert this dt, which is in local time, to a gmt timestamp
+                    dt = ClientTime.GetDateTime( year, month, day )
                     
-                    try:
-                        
-                        day_dt = datetime.datetime( year, month, day )
-                        timestamp = int( time.mktime( day_dt.timetuple() ) )
-                        
-                    except:
-                        
-                        timestamp = HydrusData.GetNow()
-                        
+                    time_pivot = ClientTime.CalendarToTimestamp( dt )
+                    next_day_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, day_delta = 1 ) )
+                    
+                    # the before/since semantic logic is:
+                    # '<' 2022-05-05 means 'before that date'
+                    # '>' 2022-05-05 means 'since that date'
                     
                     if operator == '<':
                         
-                        self._common_info[ max_label ] = timestamp
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
                     elif operator == '>':
                         
-                        self._common_info[ min_label ] = timestamp + 86400
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = next_day_timestamp
                         
                     elif operator == '=':
                         
-                        self._common_info[ min_label ] = timestamp
-                        self._common_info[ max_label ] = timestamp + 86400
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_day_timestamp
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        self._common_info[ min_label ] = timestamp - 86400 * 30
-                        self._common_info[ max_label ] = timestamp + 86400 * 30
+                        previous_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
+                        next_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = previous_month_timestamp
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_month_timestamp
                         
                     
                 
@@ -757,7 +754,7 @@ class FileSystemPredicates( object ):
                 
                 ( operator, status, service_key ) = value
                 
-                if operator == True:
+                if operator:
                     
                     self._required_file_service_statuses[ service_key ].add( status )
                     
@@ -845,11 +842,6 @@ class FileSystemPredicates( object ):
         return namespaces_to_tests
         
     
-    def GetSimpleInfo( self ):
-        
-        return self._common_info
-        
-    
     def GetRatingsPredicates( self ):
         
         return self._ratings_predicates
@@ -858,6 +850,16 @@ class FileSystemPredicates( object ):
     def GetSimilarTo( self ):
         
         return self._similar_to
+        
+    
+    def GetSimpleInfo( self ):
+        
+        return self._common_info
+        
+    
+    def GetTimestampRanges( self ):
+        
+        return self._timestamp_ranges
         
     
     def HasSimilarTo( self ):
@@ -2602,8 +2604,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, status, service_key ) = self._value
                     
-                    if operator == True: base = 'is'
-                    else: base = 'is not'
+                    base = 'is' if operator else 'is not'
                     
                     if status == HC.CONTENT_STATUS_CURRENT:
                         

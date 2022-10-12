@@ -4,9 +4,7 @@ import threading
 import time
 import typing
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -25,7 +23,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP

@@ -444,9 +444,9 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_AGE:
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDelta, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDate, predicate ) )
@@ -460,9 +460,9 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 1, 0 ) ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 1, 0, 0 ) ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDelta, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDate, predicate ) )
@@ -491,13 +491,13 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS ]
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 9, 16 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 1080 ) ) ), forced_label = '1080p' ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1280 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 720 ) ) ), forced_label = '720p' ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 3840 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 2160 ) ) ), forced_label = '4k' ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 9, 16 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 1080 ) ) ), forced_label = '1080p', show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1280 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 720 ) ) ), forced_label = '720p', show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 3840 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 2160 ) ) ), forced_label = '4k', show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemHeight, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemWidth, predicate ) )
@@ -508,10 +508,10 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 30 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 60 ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 30 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( '=', 60 ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemDuration, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemFramerate, predicate ) )
@@ -532,15 +532,15 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = []
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
             
             recent_predicate_types = []
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
             
@@ -552,9 +552,9 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             label += os.linesep * 2
             label += 'For all the simpler sorts (filesize, duration, etc...), it will select the n largest/smallest in the result set appropriate for that sort. For complicated sorts like tags, it will sample randomly.'
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemLimit, predicate ) )
             
@@ -564,8 +564,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumTags, predicate ) )
             
@@ -573,8 +573,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME ]
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumNotes, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemHasNoteName, predicate ) )
@@ -608,8 +608,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
             
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, False ), ) ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, True ), ) ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, True ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemDuplicateRelationships, predicate ) )
             
@@ -661,7 +661,10 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     for recent_predicate in recent_predicates:
                         
-                        button = ClientGUIPredicatesSingle.StaticSystemPredicateButton( recent_predicates_box, self, ( recent_predicate, ) )
+                        button = ClientGUIPredicatesSingle.StaticSystemPredicateButton( recent_predicates_box, ( recent_predicate, ) )
+                        
+                        button.predicatesChosen.connect( self.StaticButtonClicked )
+                        button.predicatesRemoved.connect( self.StaticRemoveButtonClicked )
                         
                         recent_predicates_box.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
                         
@@ -673,6 +676,9 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             for button in static_pred_buttons:
                 
                 QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                button.predicatesChosen.connect( self.StaticButtonClicked )
+                button.predicatesRemoved.connect( self.StaticRemoveButtonClicked )
                 
             
             for panel in editable_pred_panels:
@@ -703,6 +709,34 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ):
         
         return self._predicates
+        
+    
+    def StaticButtonClicked( self, button: ClientGUIPredicatesSingle.StaticSystemPredicateButton ):
+        
+        predicates = button.GetPredicates()
+        
+        self.SubPanelOK( predicates )
+        
+    
+    def StaticRemoveButtonClicked( self, button: ClientGUIPredicatesSingle.StaticSystemPredicateButton ):
+        
+        predicates = button.GetPredicates()
+        
+        for predicate in predicates:
+            
+            HG.client_controller.new_options.RemoveRecentPredicate( predicate )
+            
+        
+        button.hide()
+        
+        recent_static_box = button.parentWidget()
+        
+        static_buttons = [ w for w in recent_static_box.children() if isinstance( w, ClientGUIPredicatesSingle.StaticSystemPredicateButton ) ]
+        
+        if True not in ( w.isVisible() for w in static_buttons ):
+            
+            recent_static_box.hide()
+            
         
     
     def SubPanelOK( self, predicates ):

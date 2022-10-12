@@ -2039,11 +2039,14 @@ class JobDatabase( object ):
         
         while True:
             
-            if self._result_ready.wait( 2 ) == True:
+            result_was_ready = self._result_ready.wait( 2 )
+            
+            if result_was_ready:
                 
                 break
                 
-            elif HG.model_shutdown:
+            
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
                 

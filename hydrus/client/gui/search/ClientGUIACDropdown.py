@@ -513,14 +513,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         if self._float_mode:
             
-            widget = self.window().parentWidget()
-            
-            if not QP.isValid( widget ):
-                
-                # seems to be a dialog posting late or similar
-                
-                return False
-                
+            widget = self.window()
             
         else:
             
@@ -647,7 +640,7 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         if self._float_mode:
             
-            widget = self.window().parentWidget()
+            widget = self.window()
             
         else:
             
@@ -666,23 +659,7 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         return False
         
     
-class CloseACDropdownCatcher( QC.QObject ):
-    
-    def eventFilter( self, watched, event ):
-        
-        if event.type() == QC.QEvent.Close:
-            
-            HG.client_controller.gui.close()
-            
-            event.accept()
-            
-            return True
-            
-        
-        return False
-        
-    
-# much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
+
 class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     movePageLeft = QC.Signal()
@@ -703,10 +680,11 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
         else:
             
-            use_float_mode = HG.client_controller.new_options.GetBoolean( 'autocomplete_float_frames' )
+            use_float_mode = False
             
         
         self._float_mode = use_float_mode
+        self._temporary_focus_widget = None
         
         self._text_input_panel = QW.QWidget( self )
         
@@ -740,29 +718,38 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         if self._float_mode:
             
-            self._dropdown_window = QW.QFrame( self )
+            # needs to have bigger parent in order to draw fully, otherwise it is clipped by our little panel box
+            p = self.parentWidget()
             
-            self._dropdown_window.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+            # we don't want the .window() since that clusters all these a/cs as children of it. not beautiful, and page deletion won't delete them
+            # let's try and chase page
+            while not ( p is None or p == self.window() or isinstance( p.parentWidget(), QW.QTabWidget ) ):
+                
+                p = p.parentWidget()
+                
             
-            self._dropdown_window.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+            parent_to_use = p
+            
+            self._dropdown_window = QW.QFrame( parent_to_use )
             
             self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
             self._dropdown_window.setLineWidth( 2 )
-            
-            self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, QC.QPoint( 0, 0 ) ) )
-            
-            self._dropdown_window.installEventFilter( CloseACDropdownCatcher( self._dropdown_window ) )
             
             self._dropdown_hidden = True
             
             self._force_dropdown_hide = False
             
+            # We need this, or else if the QSS does not define a Widget background color (the default), these 'raised' windows are transparent lmao
+            self._dropdown_window.setAutoFillBackground( True )
+            
+            self._dropdown_window.hide()
+            
         else:
             
             self._dropdown_window = QW.QWidget( self )
             
-        
-        self._dropdown_window.installEventFilter( self )
+            QP.AddToLayout( self._main_vbox, self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         self._dropdown_notebook = QW.QTabWidget( self._dropdown_window )
         
@@ -773,11 +760,6 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._dropdown_notebook.setCurrentIndex( self._dropdown_notebook.addTab( self._search_results_list, 'results' ) )
         
         #
-        
-        if not self._float_mode:
-            
-            QP.AddToLayout( self._main_vbox, self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
         
         self.setLayout( self._main_vbox )
         
@@ -797,8 +779,6 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             self._widget_event_filter.EVT_MOVE( self.EventMove )
             self._widget_event_filter.EVT_SIZE( self.EventMove )
             
-            HG.client_controller.sub( self, '_DropdownHideShow', 'top_level_window_move_event' )
-            
             parent = self
             
             self._scroll_event_filters = []
@@ -809,13 +789,14 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                     parent = parent.parentWidget()
                     
+                    if parent is None or parent == self.window():
+                        
+                        break
+                        
+                    
                     if isinstance( parent, QW.QScrollArea ):
                         
-                        scroll_event_filter = QP.WidgetEventFilter( parent )
-                        
-                        self._scroll_event_filters.append( scroll_event_filter )
-                        
-                        scroll_event_filter.EVT_SCROLLWIN( self.EventMove )
+                        parent.verticalScrollBar().valueChanged.connect( self.ParentWasScrolled )
                         
                     
                 except:
@@ -934,14 +915,7 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         # if an event came from clicking the dropdown, we want to put focus back on textctrl
         
-        if self._float_mode:
-            
-            self.window().activateWindow()
-            
-        else:
-            
-            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
-            
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
     def _ScheduleResultsRefresh( self, delay ):
@@ -1001,17 +975,18 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         text_panel_size = self._text_input_panel.size()
         
         text_input_width = text_panel_size.width()
-        text_input_height = text_panel_size.height()
         
         if self._text_input_panel.isVisible():
             
-            desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_input_panel, QC.QPoint( 0, text_input_height ) )
+            desired_dropdown_position = self.mapTo( self._dropdown_window.parent(), self._text_input_panel.geometry().bottomLeft() )
             
             if self.pos() != desired_dropdown_position:
                 
                 self._dropdown_window.move( desired_dropdown_position )
                 
             
+        
+        self._dropdown_window.raise_()
         
         #
         
@@ -1027,6 +1002,8 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             self._dropdown_window.setFixedWidth( text_input_width )
             
             self._last_attempted_dropdown_width = text_input_width
+            
+            self._dropdown_window.adjustSize()
             
         
     
@@ -1161,41 +1138,84 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                     return True
                     
-                else:
+                elif event.modifiers() & QC.Qt.ControlModifier:
                     
-                    if event.modifiers() & QC.Qt.ControlModifier:
+                    if event.angleDelta().y() > 0:
                         
-                        if event.angleDelta().y() > 0:
-                            
-                            current_results_list.MoveSelectionUp()
-                            
-                        else:
-                            
-                            current_results_list.MoveSelectionDown()
-                            
+                        current_results_list.MoveSelectionUp()
                         
-                        event.accept()
+                    else:
                         
-                        return True
+                        current_results_list.MoveSelectionDown()
                         
+                    
+                    event.accept()
+                    
+                    return True
+                    
+                elif self._float_mode and not self._dropdown_hidden:
+                    
+                    # it is annoying to scroll on this lad when float is around, so swallow it here
+                    
+                    event.accept()
+                    
+                    return True
                     
                 
             elif self._float_mode:
                 
-                if event.type() in ( QC.QEvent.FocusOut, QC.QEvent.FocusIn ):
+                # I could probably wangle this garbagewith setFocusProxy on all the children of the dropdown, assuming that wouldn't break anything, but this seems to work ok nonetheless
+                
+                if event.type() == QC.QEvent.FocusIn:
                     
                     self._DropdownHideShow()
                     
                     return False
                     
+                elif event.type() == QC.QEvent.FocusOut:
+                    
+                    current_focus_widget = QW.QApplication.focusWidget()
+                    
+                    if current_focus_widget is not None and ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
+                        
+                        self._temporary_focus_widget = current_focus_widget
+                        
+                        self._temporary_focus_widget.installEventFilter( self )
+                        
+                    else:
+                        
+                        self._DropdownHideShow()
+                        
+                    
+                    return False
+                    
                 
             
-        elif watched == self._dropdown_window:
+        elif self._temporary_focus_widget is not None and watched == self._temporary_focus_widget:
             
-            if self._float_mode and event.type() in ( QC.QEvent.WindowActivate, QC.QEvent.WindowDeactivate ):
+            if self._float_mode and event.type() == QC.QEvent.FocusOut:
                 
-                # we delay this slightly because when you click from dropdown to text, the deactivate event fires before the focusin, leading to a frame of hide
-                HG.client_controller.CallLaterQtSafe( self, 0.05, 'hide/show dropdown', self._DropdownHideShow )
+                self._temporary_focus_widget.removeEventFilter( self )
+                
+                self._temporary_focus_widget = None
+                
+                current_focus_widget = QW.QApplication.focusWidget()
+                
+                if current_focus_widget is None:
+                    
+                    # happens sometimes when moving tabs in the tags dropdown list
+                    ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+                    
+                elif ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
+                    
+                    self._temporary_focus_widget = current_focus_widget
+                    
+                    self._temporary_focus_widget.installEventFilter( self )
+                    
+                else:
+                    
+                    self._DropdownHideShow()
+                    
                 
                 return False
                 
@@ -1235,14 +1255,6 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
         
     
-    def ForceSizeCalcNow( self ):
-        
-        if self._float_mode:
-            
-            self._DropdownHideShow()
-            
-        
-    
     def MoveNotebookPageFocus( self, index = None, direction = None ):
         
         new_index = None
@@ -1269,6 +1281,11 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
+        
+    
+    def ParentWasScrolled( self ):
+        
+        self._DropdownHideShow()
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -1703,6 +1720,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             
         
+        self._RestoreTextCtrlFocus()
+        
     
     def _BroadcastChoices( self, predicates, shift_down ):
         
@@ -1779,12 +1798,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         except HydrusExceptions.CancelledException:
             
+            self._RestoreTextCtrlFocus()
+            
             return
             
         
         shift_down = False
         
         self._BroadcastChoices( predicates, shift_down )
+        
+        self._RestoreTextCtrlFocus()
         
     
     def _FavouriteSearchesMenu( self ):

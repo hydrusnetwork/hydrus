@@ -1,24 +1,35 @@
+import datetime
+from dateutil.relativedelta import relativedelta
+import time
 import typing
 
-def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: typing.Optional[ int ] ) -> bool:
+from hydrus.core import HydrusData
+
+def CalendarToTimestamp( dt: datetime.datetime ) -> int:
     
-    if not TimestampIsSensible( new_timestamp ):
+    try:
         
-        return False
+        # mktime is local calendar time to timestamp, so this is client specific
+        timestamp = int( time.mktime( dt.timetuple() ) )
         
-    
-    if not TimestampIsSensible( existing_timestamp ):
+    except:
         
-        return True
-        
-    
-    # only go backwards, in general
-    if new_timestamp >= existing_timestamp:
-        
-        return False
+        timestamp = HydrusData.GetNow()
         
     
-    return True
+    return timestamp
+    
+
+def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
+    
+    delta = relativedelta( months = month_delta, days = day_delta )
+    
+    return dt + delta
+    
+
+def GetDateTime( year: int, month: int, day: int ) -> datetime.datetime:
+    
+    return datetime.datetime( year, month, day )
     
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:
     
@@ -40,6 +51,27 @@ def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestam
         
         return existing_timestamp
         
+    
+
+def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: typing.Optional[ int ] ) -> bool:
+    
+    if not TimestampIsSensible( new_timestamp ):
+        
+        return False
+        
+    
+    if not TimestampIsSensible( existing_timestamp ):
+        
+        return True
+        
+    
+    # only go backwards, in general
+    if new_timestamp >= existing_timestamp:
+        
+        return False
+        
+    
+    return True
     
 
 def TimestampIsSensible( timestamp: typing.Optional[ int ] ) -> bool:

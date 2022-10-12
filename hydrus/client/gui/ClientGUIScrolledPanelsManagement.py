@@ -2498,12 +2498,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._default_search_synchronised.setToolTip( tt )
             
             self._autocomplete_float_main_gui = QW.QCheckBox( self._autocomplete_panel )
-            tt = 'The autocomplete dropdown can either \'float\' on top of the main window, or if that does not work well for you, it can embed into the parent panel.'
+            tt = 'The autocomplete dropdown can either \'float\' on top of the main window, or if that does not work well for you, it can embed into the parent page panel.'
             self._autocomplete_float_main_gui.setToolTip( tt )
-            
-            self._autocomplete_float_frames = QW.QCheckBox( self._autocomplete_panel )
-            tt = 'The autocomplete dropdown can either \'float\' on top of dialogs like _manage tags_, or if that does not work well for you (it can sometimes annoyingly overlap the ok/cancel buttons), it can embed into the parent dialog panel.'
-            self._autocomplete_float_frames.setToolTip( tt )
             
             self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._autocomplete_panel, min = 1, max = 128 )
             tt = 'Read autocompletes are those in search pages, where you are looking through existing tags to find your files.'
@@ -2533,7 +2529,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._default_search_synchronised.setChecked( self._new_options.GetBoolean( 'default_search_synchronised' ) )
             
             self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
-            self._autocomplete_float_frames.setChecked( self._new_options.GetBoolean( 'autocomplete_float_frames' ) )
             
             self._ac_read_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_read_list_height_num_chars' ) )
             self._ac_write_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_write_list_height_num_chars' ) )
@@ -2559,8 +2554,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             rows.append( ( 'Start new search pages in \'searching immediately\': ', self._default_search_synchronised ) )
-            rows.append( ( 'Autocomplete results float in main gui: ', self._autocomplete_float_main_gui ) )
-            rows.append( ( 'Autocomplete results float in other windows: ', self._autocomplete_float_frames ) )
+            rows.append( ( 'Autocomplete results float in file search pages: ', self._autocomplete_float_main_gui ) )
             rows.append( ( '\'Read\' autocomplete list height: ', self._ac_read_list_height_num_chars ) )
             rows.append( ( '\'Write\' autocomplete list height: ', self._ac_write_list_height_num_chars ) )
             rows.append( ( 'show system:everything even if total files is over 10,000: ', self._always_show_system_everything ) )
@@ -2597,7 +2591,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'default_search_synchronised', self._default_search_synchronised.isChecked() )
             
             self._new_options.SetBoolean( 'autocomplete_float_main_gui', self._autocomplete_float_main_gui.isChecked() )
-            self._new_options.SetBoolean( 'autocomplete_float_frames', self._autocomplete_float_frames.isChecked() )
             
             self._new_options.SetInteger( 'ac_read_list_height_num_chars', self._ac_read_list_height_num_chars.value() )
             self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )

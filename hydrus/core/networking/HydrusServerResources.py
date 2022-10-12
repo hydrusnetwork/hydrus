@@ -1065,6 +1065,7 @@ class HydrusResource( Resource ):
                 request.setHeader( 'Access-Control-Allow-Headers', '*' )
                 request.setHeader( 'Access-Control-Allow-Origin', '*' )
                 request.setHeader( 'Access-Control-Allow-Methods', allowed_methods_string )
+                request.setHeader( 'Access-Control-Max-Age', "86400" )
                 
             else:
                 

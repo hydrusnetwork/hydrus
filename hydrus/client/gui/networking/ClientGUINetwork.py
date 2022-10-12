@@ -1131,7 +1131,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         position = network_engine_status
         url = job.GetURL()
         ( status, current_speed, num_bytes_read, num_bytes_to_read ) = job.GetStatus()
-        progress = ( num_bytes_read, num_bytes_to_read )
+        progress = ( num_bytes_read, num_bytes_to_read if num_bytes_to_read is not None else 0 )
         
         pretty_position = ClientNetworking.job_status_str_lookup[ position ]
         pretty_url = url

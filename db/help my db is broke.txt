@@ -79,6 +79,12 @@ And when you are ready to close the shell cleanly, go:
 
 It can be slow. A few MB a second is typical on an HDD (SSDs obviously faster), so expect a 10GB file to take a while. If it takes hours and hours, and your Task Manager suggests only 50KB/s read, consider again if your hard drive is healthy or not.
 
+Please note that newer versions of SQLite support a second check command:
+
+PRAGMA quick_check;
+
+You can swap this in place of any 'integrity_check'. It does most of the work of the full check and runs significantly faster, so you may like to run it first just to see if your databases have any critical damage. If your SQLite supports this command, it will say 'ok' (or error information) after a delay; if it does not support it, it will immediately return with a new prompt line, no response.
+
 The integrity check doesn't correct anything, but it lets you know the magnitude of the problem: if only a couple of issues are found, you may be in luck. There are several .db files in the database, and client.db is likely not the one broken. client.mappings.db is usually the largest and busiest file in most people's databases, so it is a common victim. If you do not know which file is already broken, try opening the other files in new shells to figure out the extent of the damage. This is the same as with client.db, like so:
 
 (Do each of these in fresh new shells of sqlite3--you can usually also copy/paste multiple lines)

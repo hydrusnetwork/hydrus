@@ -3,6 +3,7 @@
 import os
 
 import qtpy
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -1640,15 +1641,17 @@ class RadioBox( QW.QFrame ):
             
             self.layout().addWidget( radiobutton )
             
+        
         if vertical and len( self._choices ):
             
             self._choices[0].setChecked( True )
-        
+            
         elif len( self._choices ):
             
             self._choices[-1].setChecked( True )
+            
         
-        
+    
     def _GetCurrentChoiceWidget( self ):
         
         for choice in self._choices:
@@ -1661,14 +1664,16 @@ class RadioBox( QW.QFrame ):
         
         return None
         
+    
     def GetCurrentIndex( self ):
         
         for i in range( len( self._choices ) ):
             
             if self._choices[ i ].isChecked(): return i
             
+        
         return -1
-    
+        
     
     def SetStringSelection( self, str ):
 
@@ -1714,6 +1719,101 @@ class RadioBox( QW.QFrame ):
     
         self._choices[ idx ].setChecked( True )
 
+
+class DataRadioBox( QW.QFrame ):
+    
+    radioBoxChanged = QC.Signal()
+    
+    def __init__( self, parent = None, choice_tuples = [], vertical = False ):
+    
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+        
+        if vertical:
+            
+            self.setLayout( VBoxLayout() )
+            
+        else:
+            
+            self.setLayout( HBoxLayout() )
+            
+        
+        self._choices = []
+        self._buttons_to_data = {}
+        
+        for ( text, data ) in choice_tuples:
+            
+            radiobutton = QW.QRadioButton( text, self )
+            
+            self._choices.append( radiobutton )
+            
+            self._buttons_to_data[ radiobutton ] = data
+            
+            radiobutton.clicked.connect( self.radioBoxChanged )
+            
+            self.layout().addWidget( radiobutton )
+            
+        
+        if vertical and len( self._choices ):
+            
+            self._choices[0].setChecked( True )
+            
+        elif len( self._choices ) > 0:
+            
+            self._choices[-1].setChecked( True )
+            
+        
+    
+    def _GetCurrentChoiceWidget( self ):
+        
+        for choice in self._choices:
+            
+            if choice.isChecked():
+                
+                return choice
+                
+            
+        
+        return None
+        
+    
+    def GetValue( self ):
+        
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            if button.isChecked():
+                
+                return data
+                
+            
+        
+        raise Exception( 'No button selected!' )
+        
+    
+    def setFocus( self, reason ):
+        
+        for button in self._choices:
+            
+            if button.isChecked():
+                
+                button.setFocus( reason )
+                
+                return
+                
+            
+        
+        QW.QFrame.setFocus( self, reason )
+        
+    
+    def SetValue( self, select_data ):
+        
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            button.setChecked( data == select_data )
+            
+        
+    
 
 # Adapted from https://doc.qt.io/qt-5/qtwidgets-widgets-elidedlabel-example.html
 class EllipsizedLabel( QW.QLabel ):

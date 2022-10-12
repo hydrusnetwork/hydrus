@@ -2022,6 +2022,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:import time: since 2011-06-04', "system:import time > 2011-06-04" ),
             ( 'system:import time: before 7 years 2 months ago', "system:import time > 7 years 2 months" ),
             ( 'system:import time: since 1 day ago', "system:import time < 1 day" ),
+            ( 'system:import time: around 1 day ago', "system:import time = 1 day" ),
             ( 'system:import time: since 1 month 1 day ago', "system:import time < 0 years 1 month 1 day 1 hour" ),
             ( 'system:import time: a month either side of 2011-01-03', " system:import time ~= 2011-1-3 " ),
             ( 'system:import time: a month either side of 1996-05-02', "system:import time ~= 1996-05-2" ),

@@ -932,10 +932,6 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
         
     
-def managementScrollbarValueChanged( value ):
-    
-    HG.client_controller.pub( 'top_level_window_move_event' )
-    
 class ManagementPanel( QW.QScrollArea ):
     
     locationChanged = QC.Signal( ClientLocation.LocationContext )
@@ -953,8 +949,6 @@ class ManagementPanel( QW.QScrollArea ):
         #self.setLineWidth( 2 )
         #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
-        
-        self.verticalScrollBar().valueChanged.connect( managementScrollbarValueChanged )
         
         self._controller = controller
         self._management_controller = management_controller

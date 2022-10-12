@@ -633,7 +633,7 @@ class Controller( object ):
     
     def IsConnected( self ):
         
-        False
+        return False
         
     
     def IsCurrentPage( self, page_key ):

@@ -621,7 +621,7 @@ class TestClientAPI( unittest.TestCase ):
         response = connection.getresponse()
         
         data = response.read()
-        
+        print( data )
         self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Access-Control-Allow-Methods' ), 'GET' )
@@ -1454,6 +1454,32 @@ class TestClientAPI( unittest.TestCase ):
         access_key_hex = api_permissions.GetAccessKey().hex()
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/add_tags/search_tags?search={}'.format( '' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = {
+            'tags' : []
+        }
+        
+        self.assertEqual( expected_answer, d )
+        
+        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        
+        self.assertEqual( args[0], ClientTags.TAG_DISPLAY_STORAGE )
         
         #
         
@@ -2291,24 +2317,6 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
-        tags = []
-        
-        path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
-        
-        connection.request( 'GET', path, headers = headers )
-        
-        response = connection.getresponse()
-        
-        data = response.read()
-        
-        self.assertEqual( response.status, 403 )
-        
-        #
-        
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
-        
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
-        
         tags = [ 'kino' ]
         
         path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
@@ -2693,6 +2701,31 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 400 )
         
+        # empty
+        
+        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        
+        # set it, just to check we aren't ever asking
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = []
+        
+        path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'file_ids' ], [] )
+        
+        self.assertEqual( response.status, 200 )
+        
     
     def _test_search_files_predicate_parsing( self, connection, set_up_permissions ):
         
@@ -2729,6 +2762,30 @@ class TestClientAPI( unittest.TestCase ):
         pretend_request = PretendRequest()
         
         pretend_request.parsed_request_args = { 'tags' : [ '-green' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green*' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ '*r:green' ] }
         pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
         
         with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
@@ -2827,6 +2884,44 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( { pred for pred in predicates if pred.GetType() != ClientSearch.PREDICATE_TYPE_OR_CONTAINER }, { pred for pred in expected_predicates if pred.GetType() != ClientSearch.PREDICATE_TYPE_OR_CONTAINER } )
         self.assertEqual( { frozenset( pred.GetValue() ) for pred in predicates if pred.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER }, { frozenset( pred.GetValue() ) for pred in expected_predicates if pred.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER } )
+        
+        #
+        
+        # bad tag
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'bad_tag:' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'everything' ]
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        # bad negated
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ '-bad_tag:' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'everything' ]
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        # bad system pred
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'system:bad_system_pred' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'everything' ]
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
         
     
     def _test_file_metadata( self, connection, set_up_permissions ):

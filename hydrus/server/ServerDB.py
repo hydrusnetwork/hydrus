@@ -2104,7 +2104,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        account_ids = self._RepositoryGetAccountIdsWithActionableAddTagParentPetitions( service_id, child_master_tag_id, parent_master_tag_id )
+        account_ids = self._RepositoryGetAccountIdsWithProbableActionableAddTagParentPetitions( service_id, child_master_tag_id, parent_master_tag_id )
         
         pre_change_count = self._RepositoryGetCountOfActionableAddTagParentPetitionsForAccounts( service_id, account_ids )
         
@@ -2121,7 +2121,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        account_ids = self._RepositoryGetAccountIdsWithActionableAddTagSiblingPetitions( service_id, bad_master_tag_id, good_master_tag_id )
+        account_ids = self._RepositoryGetAccountIdsWithProbableActionableAddTagSiblingPetitions( service_id, bad_master_tag_id, good_master_tag_id )
         
         pre_change_count = self._RepositoryGetCountOfActionableAddTagSiblingPetitionsForAccounts( service_id, account_ids )
         
@@ -2471,46 +2471,24 @@ class DB( HydrusDB.HydrusDB ):
         return updates
         
     
-    def _RepositoryGetAccountIdsWithActionableAddTagSiblingPetitions( self, service_id: int, bad_master_tag_id: int, good_master_tag_id: int ):
+    def _RepositoryGetAccountIdsWithProbableActionableAddTagSiblingPetitions( self, service_id: int, bad_master_tag_id: int, good_master_tag_id: int ):
+        
+        # this isn't precise, but being precise takes a bunch of work, you have to do SELECT DISTINCT account_id, reason_id from pending ... EXCEPT SELECT DISTINCT account_id, reason_id from petitioned
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        bad_exists = self._RepositoryServiceTagIdExists( service_id, bad_master_tag_id )
-        good_exists = self._RepositoryServiceTagIdExists( service_id, good_master_tag_id )
-        
-        if bad_exists and good_exists:
-            
-            bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, HydrusData.GetNow() )
-            good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, HydrusData.GetNow() )
-            
-            account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE bad_master_tag_id = ? AND good_master_tag_id = ? EXCEPT SELECT DISTINCT account_id FROM {} WHERE bad_service_tag_id = ? AND good_service_tag_id = ?;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ), ( bad_master_tag_id, good_master_tag_id, bad_service_tag_id, good_service_tag_id ) ) )
-            
-        else:
-            
-            account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE bad_master_tag_id = ? AND good_master_tag_id = ?;'.format( pending_tag_siblings_table_name ), ( bad_master_tag_id, good_master_tag_id ) ) )
-            
+        account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE bad_master_tag_id = ? AND good_master_tag_id = ?;'.format( pending_tag_siblings_table_name ), ( bad_master_tag_id, good_master_tag_id ) ) )
         
         return account_ids
         
     
-    def _RepositoryGetAccountIdsWithActionableAddTagParentPetitions( self, service_id: int, child_master_tag_id: int, parent_master_tag_id: int ):
+    def _RepositoryGetAccountIdsWithProbableActionableAddTagParentPetitions( self, service_id: int, child_master_tag_id: int, parent_master_tag_id: int ):
+        
+        # this isn't precise, but being precise takes a bunch of work, you have to do SELECT DISTINCT account_id, reason_id from pending ... EXCEPT SELECT DISTINCT account_id, reason_id from petitioned
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        child_exists = self._RepositoryServiceTagIdExists( service_id, child_master_tag_id )
-        parent_exists = self._RepositoryServiceTagIdExists( service_id, parent_master_tag_id )
-        
-        if child_exists and parent_exists:
-            
-            child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, HydrusData.GetNow() )
-            parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, HydrusData.GetNow() )
-            
-            account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE child_master_tag_id = ? AND parent_master_tag_id = ? EXCEPT SELECT DISTINCT account_id FROM {} WHERE child_service_tag_id = ? AND parent_service_tag_id = ?;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ), ( child_master_tag_id, parent_master_tag_id, child_service_tag_id, parent_service_tag_id ) ) )
-            
-        else:
-            
-            account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE child_master_tag_id = ? AND parent_master_tag_id = ?;'.format( pending_tag_parents_table_name ), ( child_master_tag_id, parent_master_tag_id ) ) )
-            
+        account_ids = self._STS( self._Execute( 'SELECT DISTINCT account_id FROM {} WHERE child_master_tag_id = ? AND parent_master_tag_id = ?;'.format( pending_tag_parents_table_name ), ( child_master_tag_id, parent_master_tag_id ) ) )
         
         return account_ids
         
@@ -2995,35 +2973,80 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        if content_type == HC.CONTENT_TYPE_FILES:
+        try:
             
-            petition = self._RepositoryGetFilePetition( service_id )
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                petition = self._RepositoryGetFilePetition( service_id )
+                
+            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                petition = self._RepositoryGetMappingPetition( service_id )
+                
+            elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    petition = self._RepositoryGetTagParentPend( service_id )
+                    
+                else:
+                    
+                    petition = self._RepositoryGetTagParentPetition( service_id )
+                    
+                
+            elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    petition = self._RepositoryGetTagSiblingPend( service_id )
+                    
+                else:
+                    
+                    petition = self._RepositoryGetTagSiblingPetition( service_id )
+                    
+                
             
-        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+        except HydrusExceptions.NotFoundException:
             
-            petition = self._RepositoryGetMappingPetition( service_id )
+            info_type = None
             
-        elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS
+                
+            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS
+                
+            elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS
+                    
+                else:
+                    
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS
+                    
+                
+            elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS
+                    
+                else:
+                    
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS
+                    
+                
             
-            if status == HC.CONTENT_STATUS_PENDING:
+            if info_type is not None:
                 
-                petition = self._RepositoryGetTagParentPend( service_id )
-                
-            else:
-                
-                petition = self._RepositoryGetTagParentPetition( service_id )
+                self._Execute( 'DELETE info FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
                 
             
-        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
-            
-            if status == HC.CONTENT_STATUS_PENDING:
-                
-                petition = self._RepositoryGetTagSiblingPend( service_id )
-                
-            else:
-                
-                petition = self._RepositoryGetTagSiblingPetition( service_id )
-                
+            raise
             
         
         return petition
