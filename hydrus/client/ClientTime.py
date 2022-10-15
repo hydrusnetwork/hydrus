@@ -1,7 +1,17 @@
 import datetime
-from dateutil.relativedelta import relativedelta
 import time
 import typing
+
+try:
+    
+    from dateutil.relativedelta import relativedelta
+    
+    DATEUTIL_OK = True
+    
+except:
+    
+    DATEUTIL_OK = False
+    
 
 from hydrus.core import HydrusData
 
@@ -22,9 +32,18 @@ def CalendarToTimestamp( dt: datetime.datetime ) -> int:
 
 def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
     
-    delta = relativedelta( months = month_delta, days = day_delta )
-    
-    return dt + delta
+    if DATEUTIL_OK:
+        
+        delta = relativedelta( months = month_delta, days = day_delta )
+        
+        return dt + delta
+        
+    else:
+        
+        total_days = ( 30 * month_delta ) + day_delta
+        
+        return dt + datetime.timedelta( days = total_days )
+        
     
 
 def GetDateTime( year: int, month: int, day: int ) -> datetime.datetime:
