@@ -459,8 +459,8 @@ jobs:
         name: Extract version metadata
         id: meta
         run: |
-          echo "name=version::${GITHUB_REF##*/}" >> $GITHUB_ENV
-          echo "name=version_short::${GITHUB_REF##*/v}" >> $GITHUB_ENV
+          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
       - 
         name: Rename Files
         run: |

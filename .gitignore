@@ -50,6 +50,16 @@ db/client_files/
 db/server_files/
 db/missing_and_invalid_files/
 
+# in case user adds their own
+bin/ffmpeg.exe
+mpv-1.dll
+mpv-2.dll
+sqlite3.dll
+
+# python venv
+venv/
+client-user.bat
+
 # docs builds
 site/
 help/
