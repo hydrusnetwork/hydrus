@@ -9361,7 +9361,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultParsers( ( 'pixiv artist gallery page api parser new urls' ) )
+                domain_manager.OverwriteDefaultParsers( ( 'pixiv artist gallery page api parser new urls', ) )
                 
                 #
                 
@@ -10498,6 +10498,43 @@ class DB( HydrusDB.HydrusDB ):
                 
                 domain_manager.OverwriteDefaultURLClasses( (
                     'deviant art file page',
+                ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 502:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( (
+                    'deviant art embedded video player',
+                ) )
+                
+                domain_manager.OverwriteDefaultParsers( (
+                    'deviant art file page parser',
+                    'deviantart backend video embed parser'
                 ) )
                 
                 #

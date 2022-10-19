@@ -103,20 +103,23 @@ def GetAPNGDuration( apng_bytes: bytes ) -> float:
     
     total_duration = 0
     
+    CRAZY_FRAME_TIME = 0.1
+    MIN_FRAME_TIME = 0.001
+    
     for ( chunk_name, chunk_data ) in chunks:
         
         if chunk_name == frame_control_chunk_name and len( chunk_data ) >= 24:
-    
+            
             ( delay_numerator, ) = struct.unpack( '>H', chunk_data[20:22] )
             ( delay_denominator, ) = struct.unpack( '>H', chunk_data[22:24] )
             
             if delay_denominator == 0:
                 
-                duration = 0.1
+                duration = CRAZY_FRAME_TIME
                 
             else:
                 
-                duration = delay_numerator / delay_denominator
+                duration = max( delay_numerator / delay_denominator, MIN_FRAME_TIME )
                 
             
             total_duration += duration
@@ -333,7 +336,14 @@ def GetFFMPEGAPNGProperties( path ):
     
     resolution = ParseFFMPEGVideoResolution( lines, png_ok = True )
     
+    duration_in_ms_float = duration * 1000
+    
     duration_in_ms = int( duration * 1000 )
+    
+    if duration_in_ms == 0 and duration_in_ms_float > 0:
+        
+        duration_in_ms = 1
+        
     
     has_audio = False
     

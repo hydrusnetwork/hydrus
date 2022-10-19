@@ -989,15 +989,19 @@ class Page( QW.QWidget ):
     
     def ShowHideSplit( self ):
         
-        if QP.SplitterVisibleCount( self ) > 1:
+        if QP.SplitterVisibleCount( self._management_media_split ) > 1:
             
-            QP.Unsplit( self, self._search_preview_split )
+            QP.Unsplit( self._management_media_split, self._search_preview_split )
+            
+            self.SetMediaFocus()
             
             self._media_panel.SetFocusedMedia( None )
             
         else:
             
             self.SetSplitterPositions()
+            
+            self.SetSearchFocus()
             
         
     

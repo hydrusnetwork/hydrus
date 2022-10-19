@@ -653,9 +653,16 @@ class LocationsManager( object ):
         return CC.TRASH_SERVICE_KEY in self._current
         
     
-    def _AddToService( self, service_key, do_undelete = False ):
+    def _AddToService( self, service_key, do_undelete = False, forced_import_time = None ):
         
-        import_time = HydrusData.GetNow()
+        if forced_import_time is None:
+            
+            import_time = HydrusData.GetNow()
+            
+        else:
+            
+            import_time = forced_import_time
+            
         
         if service_key in self._deleted_to_timestamps:
             
@@ -688,8 +695,10 @@ class LocationsManager( object ):
                 self._current.discard( CC.TRASH_SERVICE_KEY )
                 
             
-            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            # forced import time here to handle do_undelete, ensuring old timestamp is propagated
+            
+            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time = import_time )
+            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, forced_import_time = import_time )
             
         
         if service_key not in self._current_to_timestamps:

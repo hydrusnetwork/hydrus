@@ -7,6 +7,39 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 503](https://github.com/hydrusnetwork/hydrus/releases/tag/v503)
+
+### misc
+* fixed show/hiding the main gui splitters after a regression in v502. also, keyboard focus after these events should now be less jank
+* thanks to a user, the Deviant Art parser we rolled back to recently now gets video support. I also added artist tag parsing like the api parser used to do
+* if you use the internal client database backup system, it now says in the menu when it was last run. this menu doesn't update often, so I put a bit of buffer in where it says 'did one recently'. let me know if the numbers here are ever confusing
+* fixed a bug where the database menu was not immediately updating the first time you set a backup location
+* if an apng has sub-millisecond frame durations (seems to be jitter-apngs that were created oddly), these are now each rounded up to 1ms. any apngs that previously appeared to have 0 duration now have borked-tiny but valid duration and will now import ok
+* the client now catches 529 error responses from servers (service is overloaded) and treats them like a 429/509 bandwidth problem, waiting for a bit before retrying. more work may be needed here
+* the new popup toaster should restore from minimised better
+* fixed a subtle bug where trashing and untrashing a file when searching the special 'all my files' domain would temporarily sort that file at the front/end of sorting by 'import time'
+* added 'dateutil present' to _help->about_ and reordered all the entries for readability
+* brushed up the network job response-bytes-size counting logic a little more
+* cleaned up the EVT_ICONIZE event processing wx/Qt patch
+
+### running from source is now easy on Windows
+* as I expect to drop Qt5 support in the builds next week, we need an easy way for Windows 7 and other older-OS users to run from source. I am by no means an expert at this, but I have written some easy-setup scripts that can get you running the client in Windows from nothing in a few minutes with no python experience
+* the help is updated to reflect this, with more pointers to 'running from source', and that page now has a new guide that takes you through it all in simple steps
+* there's a client-user.bat you can edit to add your own launch parameters, and a setup_help.bat to build the help too
+* all the requirements.txts across the program have had a full pass. all are now similarly formatted for easy future editing. it is now simple to select whether you want Qt5 or Qt6, and seeing the various differences between the documents is now obvious
+* the .gitignore has been updated to not stomp over your venv, mpv/ffmpeg/sqlite, or client-user.bat
+* feedback on how this works and how to make it better would be appreciated, and once we are happy with the workflow, I will invite Linux and macOS users to generate equivalent .sh and .command scripts so we are multiplatform-easy
+
+### build stuff
+* _this is all wizard nonsense, so you can ignore it. I am mostly just noting it here for my records. tl;dr: I fixed more boot problems, now and in the future_
+* just when I was getting on top of the latest boot problems, we had another one last week, caused by yet another external library that updated unusually, this time just a day after the normal release. it struck some users who run from source (such as AUR), and the macOS hotfix I put out on saturday. it turns out PySide6 6.4.0 is not yet supported by qtpy. since these big libraries' bleeding edge versions are common problems, I have updated all the requirements.txts across the program to set specific versions for qtpy, PySide2/PySide6, opencv-python-headless, requests, python-mpv, and setuptools (issue #1254)
+* updated all the requirements.txts with 'python-dateutil', which has spotty default support and whose absence broke some/all of the macOS and Docker deployments last week
+* added failsafe code in case python-dateutil is not available
+* pylzma is no longer in the main requirements.txt. it doesn't have a wheel (and hence needs compiler tech to pip install), and it is only useful for some weird flash files. UPDATE: with the blessed assistance of stackexchange, I rewrote the 'decompress lzma-compressed flash file' routine to re-munge the flash header into a proper lzma header and use the python default 'lzma' library, so 'pylzma' is no longer needed and removed from all requirements.txts
+* updated most of the actions in the build script to use updated node16 versions. node12 just started getting deprecation warnings. there is more work to do
+* replaced the node12 pip installer action with a manual command on the reworked requirements.txts
+* replaced most of the build script's uses of 'set-output', which just started getting deprecation warnings. there is more work to do
+
 ## [Version 502](https://github.com/hydrusnetwork/hydrus/releases/tag/v502)
 
 ### autocomplete dropdown
@@ -380,38 +413,3 @@ _almost all the changes this week are only important to server admins and janito
 * I think I fixed an instance where the archive/delete filter's confirmation dialog could present 'delete from hard disk' as an option when it wasn't appropriate
 * in an attempt to reduce the media-change flickering we've recently seen in the media viewer, I untangled a bunch of the canvas size/position code this week. I'm preparing a complete overhaul and neat Qt layout integration, which this starts. I _think_ I've made some things less flickery on occasion, but we'll see IRL. much more to do
 * added a '--profile_mode' launch argument, which allows you to capture the performance of boot and also try out profile mode on the server (although support there is very limited atm)
-
-## [Version 492](https://github.com/hydrusnetwork/hydrus/releases/tag/v492)
-
-### sort and collect updates
-* for big brain users, the collect control now has a tag domain button. it only shows if you are in advanced mode (issue #572)
-* the sort control also has a tag domain button hidden behind advanced mode. it applies to system:num tags and namespace sorting
-* the collect control now appears on all import pages
-
-### archived file delete lock
-* the duplicate processing action code now no longer archives files that are due for deletion right before that deletion. this was hitting the archive delete lock
-* if archive delete lock is on and the 'other' file in the duplicate filter is archived, the option to 'this is better, delete the other' is now disabled
-* if you attempt to delete a delete-locked file during normal browsing, or if an automatic system like export folders wants to but fails on some, a popup is now made with a button to show the files that were filtered out so you can review the situation and fix it if you want
-* I am considering adding a dialog to say 'hey, this is locked, want to send back to inbox?' to fix these situations in a nice way, but I think this is probably a bad idea in terms of workflow, design, and my sanity given all the edge cases and potential future expansions of lock rules. maybe I'll add a simple 'delete and override lock checks' option, but a lock is a lock tbh. for now, I will focus on this better UI feedback of currently delete-locked files and make it simpler for humans to remove any locks
-
-### misc
-* using black magic, I have made it so the shortcuts for 'move left/right one page' 'and 'move home/end' do not dip down to the lowest level of a neighbouring page of pages for the next command. it now stays on the current tab level for three seconds after the most recent move command. this works in testing but may be jank in some IRL situations, so if this matters to you, let me know how it works out
-* fixed a bug in 'do a full metadata resync' that meant unprocessed row orphans were not being deleted, which lead to lingering 1950/2000-style processed gauges that didn't actually cause any work to be done on 'process now'
-* the duplicate filter now shows if one or both files have an icc profile. for now the score for this is always 0, neutral
-* I think I have reduced general lag on some busy clients
-
-### code cleaning and minor fixes
-* refactored file viewing stats management to a new database module
-* refactored file physical storage management to a new database module
-* cleaned up an ugly bridge that made inbox/archive work and moved it all to a clean new separate database module
-* improved some client file physical storage repair code, both in how it repairs and how it recovers in the current boot
-* updated the yes/no dialog texts when you apply 'not related' or 'alternates' to a selection
-* added a bunch of tooltips to the 'speed and memory' options panel. also clarified the example image sizes in number of pixels
-* improved how my grid layout propagates tooltips from the widget to the text when the widget is compound and in its own layout
-* consolidated where the delete lock test occurs to just one location for db, gui
-* added infrastructure to filter and report delete-locked files. callers no longer care about specific lock rules, opening this up to future expansion
-* cleaned and simplified some duplicate action processing code
-* cleaned up some file collect code, optimised it a bit too
-* the sort control now only changes sort type on mouse wheel events if the mouse is over that button
-* renamed 'tag search context' to 'tag context' across the program, mirroring a recent change with the location context, and gave it some bells and whistles. in future, the tag context will hold multiple tag services
-* wrote a new button to edit tag contexts

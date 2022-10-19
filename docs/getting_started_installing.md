@@ -21,8 +21,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
     *   If you want the easy solution, download the .exe installer. Run it, hit ok several times.
     *   If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time (it stores all its user data inside its own folder). You probably want something like D:\\hydrus.
-    *   _Note if you run <Win10, you may need [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145), if you don't already have it for vidya. If you run Win7, you will need some/all core OS updates released before 2017._
-    *   If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check [here](https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions).  
+    *   _If you run <Win10, you need [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145) if you don't already have it for vidya._
+    *   _If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check [here](https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions)._  
+    *   _If you run Win7, you cannot run Qt6 programs, so you cannot run the official executable release. You have options by [running from source](running_from_source.md)._
     *   **Third parties (not maintained by Hydrus Developer)**:  
         * [Chocolatey](https://community.chocolatey.org/packages/hydrus-network)
         * [Scoop](https://github.com/ScoopInstaller/Scoop) (`hydrus-network` in the 'Extras' bucket)    
@@ -31,24 +32,28 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 === "macOS"
 
     *   Get the .dmg App. Open it, drag it to Applications, and check the readme inside.
+    *   macOS users have no mpv support for now, so no audio, and video may be laggy.
+    *   _This release has always been a little buggy. Many macOS users are having better success [running from source](running_from_source.md)._
 
 === "Linux"
 
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.
-    *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it with `apt`.  
-    If the about window provides you an error popup like this:  
+    *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
+        * `apt-get install libmpv1`
+        * Use _options->media_ to set your audio/video/animations to 'show using mpv' once you have it installed.
+        * If the about window provides you an mpv error popup like this:  
     ```
     OSError: /lib/x86_64-linux-gnu/libgio-2.0.so.0: undefined symbol: g_module_open_full
     (traceback)
     pyimod04_ctypes.install.<locals>.PyInstallerImportError: Failed to load dynlib/dll 'libmpv.so.1'. Most likely this dynlib/dll was not found when the application was frozen.
     ```  
     Then please do this:  
-        1. Search your /usr/ dir for `libgmodule*`. You are looking for something like `libgmodule-2.0.so`. Users report finding it in `/usr/lib64/` and `/usr/lib/x86_64-linux-gnu`.
-        2. Copy that .so file to the hydrus install base directory.
-        3. Boot the client and hit _help->about_ to see if it reports a version.
-        4. If it all seems good, hit _options->media_ to set up mpv as your player for video/audio and try to view some things.
-        5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
+            1. Search your /usr/ dir for `libgmodule*`. You are looking for something like `libgmodule-2.0.so`. Users report finding it in `/usr/lib64/` and `/usr/lib/x86_64-linux-gnu`.
+            2. Copy that .so file to the hydrus install base directory.
+            3. Boot the client and hit _help->about_ to see if it reports a version.
+            4. If it all seems good, hit _options->media_ to set up mpv as your player for video/audio and try to view some things.
+            5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
     *   You can also try [running the Windows version in wine](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
         * (These both run from source, so if you have trouble with the built release, they may work better for you!)
@@ -58,7 +63,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "From Source"
 
-    *   If you have some python experience, you can [run from source](running_from_source.md).
+    *   You can also [run from source](running_from_source.md). This is often the best way to fix compatibility problems.
 
 By default, hydrus stores all its data—options, files, subscriptions, _everything_—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.
 
@@ -131,7 +136,7 @@ Clients and servers of different versions can usually connect to one another, bu
 
 ## clean installs
 
-**This is only relevant if you know you have a dll conflict or otherwise update and cannot boot at all.**
+**This is usually only relevant if you know you have a dll conflict or otherwise update and cannot boot at all.**
 
 Very rarely, hydrus needs a clean install. This can be due to a special update like when we moved from 32-bit to 64-bit or needing to otherwise 'reset' a custom install situation. The problem is usually that a library file has been renamed in a new version and hydrus has trouble figuring out whether to use the older one (from a previous version) or the newer.
 
@@ -179,7 +184,7 @@ Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cann
 Some of those you can mitigate (don't run the database over a network!) and some will always be a problem, but if you have a backup, none of them can kill you.
 
 !!! note "This mostly means your database, not your files"
-    Note that nearly all the serious and difficult-to-fix problems occur to the _database_, which is four large .db files, not your media. All your images and movies are read-only in hydrus, and there's less worry if they are on a network share with bad locks or a machine that suddenly loses power. The database, however, maintains a live connection, with regular complex writes, and here a hardware failure can lead to corruption (Basically the failure scrambles the data that is written, so when you try to boot back up, a small section of the database is incomprehensible garbage).
+    Note that nearly all the serious and difficult-to-fix problems occur to the _database_, which is four large .db files, not your media. All your images and movies are read-only in hydrus, and there's less worry if they are on a network share with bad locks or a machine that suddenly loses power. The database, however, maintains a live connection, with regular complex writes, and here a hardware failure can lead to corruption (basically the failure scrambles the data that is written, so when you try to boot back up, a small section of the database is incomprehensible garbage).
 
 If you do not already have a backup routine for your files, this is a great time to start. I now run a backup every week of all my data so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it felt awful. If you are new to saving a lot of media, I hope you can avoid what I felt. ;\_;
 

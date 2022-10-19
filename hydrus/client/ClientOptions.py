@@ -483,6 +483,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'animated_scanbar_hide_height' ] = 5
         
+        self._dictionary[ 'noneable_integers' ][ 'last_backup_time' ] = None
+        
         #
         
         self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList()

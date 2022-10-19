@@ -2331,8 +2331,6 @@ class WidgetEventFilter ( QC.QObject ):
             
             if isValid( self._parent_widget ):
                 
-                if self._parent_widget.isMinimized() or (event.oldState() & QC.Qt.WindowMinimized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_ICONIZE', event )
-            
                 if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
         
         elif type == QC.QEvent.MouseMove:
@@ -2424,10 +2422,6 @@ class WidgetEventFilter ( QC.QObject ):
             self._parent_widget.setFocusPolicy( QC.Qt.StrongFocus )
             
         self._callback_map[ evt_name ].append( callback )
-
-    def EVT_ICONIZE( self, callback ):
-        
-        self._AddCallback( 'EVT_ICONIZE', callback )
 
     def EVT_KEY_DOWN( self, callback ):
         

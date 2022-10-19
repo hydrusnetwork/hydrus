@@ -23,6 +23,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
@@ -42,6 +43,7 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
@@ -498,6 +500,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         self._done_save_and_close = False
         
+        self._did_a_backup_this_session = False
+        
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         self._garbage_snapshot = collections.Counter()
@@ -507,6 +511,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         self._last_clipboard_watched_text = ''
         self._clipboard_watcher_destination_page_watcher = None
         self._clipboard_watcher_destination_page_urls = None
+        
+        self.installEventFilter( self )
         
         drop_target = ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped )
         self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped ) )
@@ -518,12 +524,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
-        self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
-        
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'CreateNewSubscriptionGapDownloader', 'make_new_subscription_gap_downloader' )
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
         self._controller.sub( self, 'DoFileStorageRebalance', 'do_file_storage_rebalance' )
+        self._controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
@@ -653,21 +658,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
         
         library_versions.append( ( 'python', v ) )
-        library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
-        
-        from hydrus.core import HydrusEncryption
-        
-        if HydrusEncryption.OPENSSL_OK:
-            
-            library_versions.append( ( 'PyOpenSSL', 'available' ) )
-            
-        else:
-            
-            library_versions.append( ( 'PyOpenSSL', 'not available' ) )
-            
-        
-        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
-        library_versions.append( ( 'Pillow', PIL.__version__ ) )
+        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
             
@@ -689,31 +680,23 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
             
         
-        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
-        
-        library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
-        
-        library_versions.append( ( 'qtpy', qtpy.__version__ ) )
-        
-        library_versions.append( ( 'Qt', QC.__version__ ) )
+        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
+        library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
+        library_versions.append( ( 'Pillow', PIL.__version__ ) )
         
         if QtInit.WE_ARE_QT5:
             
             if QtInit.WE_ARE_PYSIDE:
                 
                 import PySide2
-                import shiboken2
                 
                 library_versions.append( ( 'PySide2', PySide2.__version__ ) )
-                library_versions.append( ( 'shiboken2', shiboken2.__version__ ) )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-                from PyQt5.sip import SIP_VERSION_STR # pylint: disable=E0401,E0611
                 
                 library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
-                library_versions.append( ( 'sip', SIP_VERSION_STR ) )
                 
             
         elif QtInit.WE_ARE_QT6:
@@ -721,20 +704,22 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             if QtInit.WE_ARE_PYSIDE:
                 
                 import PySide6
-                import shiboken6
                 
                 library_versions.append( ( 'PySide6', PySide6.__version__ ) )
-                library_versions.append( ( 'shiboken6', shiboken6.__version__ ) )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-                from PyQt6.sip import SIP_VERSION_STR # pylint: disable=E0401,E0611
                 
                 library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
-                library_versions.append( ( 'sip', SIP_VERSION_STR ) )
                 
             
+        
+        library_versions.append( ( 'qtpy', qtpy.__version__ ) )
+        
+        library_versions.append( ( 'Qt', QC.__version__ ) )
+        
+        library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         
         CBOR_AVAILABLE = False
         
@@ -746,32 +731,37 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         except:
             
             pass
+            
         
         library_versions.append( ( 'cbor2 present: ', str( CBOR_AVAILABLE ) ) )
         
         from hydrus.client.networking import ClientNetworkingJobs
         
+        library_versions.append( ( 'chardet present: ', str( HydrusText.CHARDET_OK ) ) )
+        
         if ClientNetworkingJobs.CLOUDSCRAPER_OK:
             
-            library_versions.append( ( 'cloudscraper', ClientNetworkingJobs.cloudscraper.__version__ ) )
+            library_versions.append( ( 'cloudscraper present:', ClientNetworkingJobs.cloudscraper.__version__ ) )
             
         else:
             
             library_versions.append( ( 'cloudscraper present: ', 'False' ) )
             
         
-        library_versions.append( ( 'pyparsing present: ', str( ClientNetworkingJobs.PYPARSING_OK ) ) )
+        library_versions.append( ( 'dateutil present: ', str( ClientTime.DATEUTIL_OK ) ) )
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
-        library_versions.append( ( 'chardet present: ', str( HydrusText.CHARDET_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
+        library_versions.append( ( 'PyOpenSSL present:', str( HydrusEncryption.OPENSSL_OK ) ) )
+        library_versions.append( ( 'pyparsing present: ', str( ClientNetworkingJobs.PYPARSING_OK ) ) )
+        
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )
-        library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
         library_versions.append( ( 'db cache size per file', '{}MB'.format( HG.db_cache_size ) ) )
+        library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
+        library_versions.append( ( 'db synchronous mode', str( HG.db_synchronous ) ) )
         library_versions.append( ( 'db transaction commit period', '{}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) ) )
-        library_versions.append( ( 'db synchronous value', str( HG.db_synchronous ) ) )
         library_versions.append( ( 'db using memory for temp?', str( HG.no_db_temp_files ) ) )
         
         import locale
@@ -957,6 +947,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._controller.SaveGUISession( session )
             
             self._controller.Write( 'backup', path )
+            
+            HG.client_controller.new_options.SetNoneableInteger( 'last_backup_time', HydrusData.GetNow() )
+            
+            self._did_a_backup_this_session = True
+            
+            self._menu_updater_database.update()
             
         
     
@@ -2413,6 +2409,25 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._menubar_database_set_up_backup_path.setVisible( all_locations_are_default and backup_path is None )
             
             self._menubar_database_update_backup.setVisible( all_locations_are_default and backup_path is not None )
+            
+            last_backup_time = HG.client_controller.new_options.GetNoneableInteger( 'last_backup_time' )
+            
+            message = 'update database backup'
+            
+            if last_backup_time is not None:
+                
+                if not HydrusData.TimeHasPassed( last_backup_time + 1800 ):
+                    
+                    message += ' (did one recently)'
+                    
+                else:
+                    
+                    message += ' (last {})'.format( HydrusData.TimestampToPrettyTimeDelta( last_backup_time ) )
+                    
+                
+            
+            self._menubar_database_update_backup.setText( message )
+            
             self._menubar_database_change_backup_path.setVisible( all_locations_are_default and backup_path is not None )
             
             self._menubar_database_restore_backup.setVisible( all_locations_are_default )
@@ -6387,6 +6402,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if result == QW.QDialog.Accepted:
                     
                     self._new_options.SetNoneableString( 'backup_path', path )
+                    self._new_options.SetNoneableInteger( 'last_backup_time', None )
                     
                     text = 'Would you like to create your backup now?'
                     
@@ -6396,6 +6412,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         self._BackupDatabase()
                         
+                    
+                    self._menu_updater_database.update()
                     
                 
             
@@ -7017,22 +7035,36 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._MigrateDatabase()
         
     
-    def EventIconize( self, event: QG.QWindowStateChangeEvent ):
+    def eventFilter( self, watched, event ):
         
-        if self._have_system_tray_icon:
+        if watched == self:
             
-            self._system_tray_icon.SetUIIsCurrentlyMinimised( self.isMinimized() )
+            if event.type() == QC.QEvent.WindowStateChange:
+                
+                was_minimised = event.oldState() == QC.Qt.WindowMinimized
+                is_minimised = self.isMinimized()
+                
+                if was_minimised != is_minimised:
+                    
+                    if self._have_system_tray_icon:
+                        
+                        self._system_tray_icon.SetUIIsCurrentlyMinimised( is_minimised )
+                        
+                    
+                    if is_minimised:
+                        
+                        self._was_maximised = event.oldState() == QC.Qt.WindowMaximized
+                        
+                        if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+                            
+                            self._FlipShowHideWholeUI()
+                            
+                        
+                    
+                
             
         
-        if self.isMinimized():
-            
-            self._was_maximised = event.oldState() & QC.Qt.WindowMaximized
-            
-            if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
-                
-                self._FlipShowHideWholeUI()
-                
-            
+        return False
         
     
     def TIMEREventAnimationUpdate( self ):
@@ -7336,6 +7368,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def MaintainCanvasFrameReferences( self ):
         
         self._canvas_frames = [ frame for frame in self._canvas_frames if QP.isValid( frame ) ]
+        
+    
+    def MaintainMemory( self ):
+        
+        self._menu_updater_database.update()
         
     
     def NewPageImportHDD( self, paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success ):

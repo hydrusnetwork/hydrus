@@ -33,6 +33,39 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_503"><a href="#version_503">version 503</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed show/hiding the main gui splitters after a regression in v502. also, keyboard focus after these events should now be less jank</li>
+					<li>thanks to a user, the Deviant Art parser we rolled back to recently now gets video support. I also added artist tag parsing like the api parser used to do</li>
+					<li>if you use the internal client database backup system, it now says in the menu when it was last run. this menu doesn't update often, so I put a bit of buffer in where it says 'did one recently'. let me know if the numbers here are ever confusing</li>
+					<li>fixed a bug where the database menu was not immediately updating the first time you set a backup location</li>
+					<li>if an apng has sub-millisecond frame durations (seems to be jitter-apngs that were created oddly), these are now each rounded up to 1ms. any apngs that previously appeared to have 0 duration now have borked-tiny but valid duration and will now import ok</li>
+					<li>the client now catches 529 error responses from servers (service is overloaded) and treats them like a 429/509 bandwidth problem, waiting for a bit before retrying. more work may be needed here</li>
+					<li>the new popup toaster should restore from minimised better</li>
+					<li>fixed a subtle bug where trashing and untrashing a file when searching the special 'all my files' domain would temporarily sort that file at the front/end of sorting by 'import time'</li>
+					<li>added 'dateutil present' to _help->about_ and reordered all the entries for readability</li>
+					<li>brushed up the network job response-bytes-size counting logic a little more</li>
+					<li>cleaned up the EVT_ICONIZE event processing wx/Qt patch</li>
+					<li>.</li>
+					<li>running from source is now easy on Windows:</li>
+					<li>as I expect to drop Qt5 support in the builds next week, we need an easy way for Windows 7 and other older-OS users to run from source. I am by no means an expert at this, but I have written some easy-setup scripts that can get you running the client in Windows from nothing in a few minutes with no python experience</li>
+					<li>the help is updated to reflect this, with more pointers to 'running from source', and that page now has a new guide that takes you through it all in simple steps</li>
+					<li>there's a client-user.bat you can edit to add your own launch parameters, and a setup_help.bat to build the help too</li>
+					<li>all the requirements.txts across the program have had a full pass. all are now similarly formatted for easy future editing. it is now simple to select whether you want Qt5 or Qt6, and seeing the various differences between the documents is now obvious</li>
+					<li>the .gitignore has been updated to not stomp over your venv, mpv/ffmpeg/sqlite, or client-user.bat</li>
+					<li>feedback on how this works and how to make it better would be appreciated, and once we are happy with the workflow, I will invite Linux and macOS users to generate equivalent .sh and .command scripts so we are multiplatform-easy</li>
+					<li>.</li>
+					<li>build stuff:</li>
+					<li>_this is all wizard nonsense, so you can ignore it. I am mostly just noting it here for my records. tl;dr: I fixed more boot problems, now and in the future_</li>
+					<li>just when I was getting on top of the latest boot problems, we had another one last week, caused by yet another external library that updated unusually, this time just a day after the normal release. it struck some users who run from source (such as AUR), and the macOS hotfix I put out on saturday. it turns out PySide6 6.4.0 is not yet supported by qtpy. since these big libraries' bleeding edge versions are common problems, I have updated all the requirements.txts across the program to set specific versions for qtpy, PySide2/PySide6, opencv-python-headless, requests, python-mpv, and setuptools (issue #1254)</li>
+					<li>updated all the requirements.txts with 'python-dateutil', which has spotty default support and whose absence broke some/all of the macOS and Docker deployments last week</li>
+					<li>added failsafe code in case python-dateutil is not available</li>
+					<li>pylzma is no longer in the main requirements.txt. it doesn't have a wheel (and hence needs compiler tech to pip install), and it is only useful for some weird flash files. UPDATE: with the blessed assistance of stackexchange, I rewrote the 'decompress lzma-compressed flash file' routine to re-munge the flash header into a proper lzma header and use the python default 'lzma' library, so 'pylzma' is no longer needed and removed from all requirements.txts</li>
+					<li>updated most of the actions in the build script to use updated node16 versions. node12 just started getting deprecation warnings. there is more work to do</li>
+					<li>replaced the node12 pip installer action with a manual command on the reworked requirements.txts</li>
+					<li>replaced most of the build script's uses of 'set-output', which just started getting deprecation warnings. there is more work to do</li>
+				</ul>
 				<li><h3 id="version_502"><a href="#version_502">version 502</a></h3></li>
 				<ul>
 					<li>autocomplete dropdown:</li>

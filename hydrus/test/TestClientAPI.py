@@ -101,8 +101,6 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( data, favicon )
         
-        time.sleep( 3 )
-        
     
     def _test_cbor( self, connection, set_up_permissions ):
         

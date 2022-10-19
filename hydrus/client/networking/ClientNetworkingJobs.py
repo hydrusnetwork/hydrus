@@ -100,7 +100,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.BandwidthException
         
-    elif status_code == 509:
+    elif status_code in ( 509, 529 ):
         
         eclass = HydrusExceptions.BandwidthException
         
@@ -236,8 +236,8 @@ class NetworkJob( object ):
         self._num_bytes_read = 0
         self._num_bytes_to_read = None
         self._num_bytes_read_is_accurate = True
-        self._num_bytes_read_in_this_range_chunk = 0
-        self._num_bytes_to_read_in_this_range_chunk = None
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
         self._number_of_concurrent_empty_chunks = 0
         
         self._file_import_options = None
@@ -472,8 +472,8 @@ class NetworkJob( object ):
     
     def _ReadResponse( self, response: requests.Response, stream_dest ):
         
-        self._num_bytes_read_in_this_range_chunk = 0
-        self._num_bytes_to_read_in_this_range_chunk = None
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
         
         if 'Content-Range' in response.headers:
             
@@ -509,7 +509,7 @@ class NetworkJob( object ):
                                 
                                 byte_end = int( byte_end )
                                 
-                                self._num_bytes_to_read_in_this_range_chunk = ( byte_end - byte_start ) + 1
+                                self._num_bytes_expected_in_this_range_chunk = ( byte_end - byte_start ) + 1
                                 
                             except:
                                 
@@ -542,7 +542,7 @@ class NetworkJob( object ):
                 
             
         
-        starting_num_bytes_read = self._num_bytes_read
+        num_bytes_read_before_this_response = self._num_bytes_read
         
         for chunk in response.iter_content( chunk_size = 65536 ):
             
@@ -566,18 +566,24 @@ class NetworkJob( object ):
                 
                 chunk_num_bytes = len( chunk )
                 
-                self._num_bytes_read += chunk_num_bytes
-                self._num_bytes_read_in_this_range_chunk += chunk_num_bytes
-                
             else:
                 
-                num_bytes_read_at_last_round = self._num_bytes_read
+                num_bytes_read_at_last_chunk = self._num_bytes_read
                 
-                chunk_num_bytes = total_bytes_read_in_this_response - num_bytes_read_at_last_round
+                if total_bytes_read_in_this_response >= num_bytes_read_at_last_chunk:
+                    
+                    chunk_num_bytes = total_bytes_read_in_this_response - num_bytes_read_at_last_chunk
+                    
+                else:
+                    
+                    self._num_bytes_read_is_accurate = False
+                    
+                    chunk_num_bytes = 1
+                    
                 
-                self._num_bytes_read = starting_num_bytes_read + total_bytes_read_in_this_response
-                self._num_bytes_read_in_this_range_chunk = total_bytes_read_in_this_response
-                
+            
+            self._num_bytes_read += chunk_num_bytes
+            self._num_bytes_read_in_this_response += chunk_num_bytes
             
             with self._lock:
                 
@@ -588,11 +594,11 @@ class NetworkJob( object ):
                         raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {}, but the server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ) ) )
                         
                     
-                    if self._num_bytes_to_read_in_this_range_chunk is not None:
+                    if self._num_bytes_expected_in_this_range_chunk is not None:
                         
-                        if self._num_bytes_read_in_this_range_chunk > self._num_bytes_to_read_in_this_range_chunk:
+                        if self._num_bytes_read_in_this_response > self._num_bytes_expected_in_this_range_chunk:
                             
-                            raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {} in this range chunk, but the server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read_in_this_range_chunk ) ) )
+                            raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {} in this range chunk, but the server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_expected_in_this_range_chunk ) ) )
                             
                         
                     
@@ -623,7 +629,7 @@ class NetworkJob( object ):
             
             # stick with GET for now. if there is a complex way to range-chunk a POST, we'll deal with it then, but I don't want to spam file uploads to IQDB by accident etc...
             we_know_there_is_more_to_download = self._method == 'GET' and self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read
-            we_read_some_data = self._num_bytes_read > starting_num_bytes_read
+            we_read_some_data = self._num_bytes_read > num_bytes_read_before_this_response
             
             if we_know_there_is_more_to_download:
                 
@@ -634,14 +640,14 @@ class NetworkJob( object ):
                     # this range chunk is complete, so this should add up correct
                     if self._num_bytes_read_is_accurate:
                         
-                        if self._num_bytes_to_read_in_this_range_chunk is not None:
+                        if self._num_bytes_expected_in_this_range_chunk is not None:
                             
-                            if self._num_bytes_read_in_this_range_chunk < self._num_bytes_to_read_in_this_range_chunk:
+                            if self._num_bytes_read_in_this_response < self._num_bytes_expected_in_this_range_chunk:
                                 
                                 # ok this situation is actually ok(?)
                                 # turns out at least one decent server does this regularly, says 'here's 0-22MB' and gives you 128KB instead
                                 
-                                HydrusData.Print( 'Not enough data for URL {}: Was expecting {} in this range chunk, but the server only delivered {}!'.format( self._url, HydrusData.ToHumanBytes( self._num_bytes_to_read_in_this_range_chunk ), HydrusData.ToHumanBytes( self._num_bytes_read_in_this_range_chunk ) ) )
+                                HydrusData.Print( 'Not enough data for URL {}: Was expecting {} in this range chunk, but the server only delivered {}!'.format( self._url, HydrusData.ToHumanBytes( self._num_bytes_expected_in_this_range_chunk ), HydrusData.ToHumanBytes( self._num_bytes_read_in_this_response ) ) )
                                 
                             
                         
@@ -652,7 +658,7 @@ class NetworkJob( object ):
                     
                     if self._number_of_concurrent_empty_chunks > 2:
                         
-                        raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but this chunk was empty!' )
+                        raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but we got several empty chunks in a row!' )
                         
                     
                 
@@ -692,8 +698,8 @@ class NetworkJob( object ):
         
         self._num_bytes_read = 0
         self._num_bytes_to_read = None
-        self._num_bytes_read_in_this_range_chunk = 0
-        self._num_bytes_to_read_in_this_range_chunk = None
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
         self._num_bytes_read_is_accurate = True
         self._number_of_concurrent_empty_chunks = 0
         
@@ -1048,7 +1054,7 @@ class NetworkJob( object ):
     
     def _WaitOnServersideBandwidth( self, status_text: str ):
         
-        # 429 or 509 response from server. basically means 'I'm under big load mate'
+        # 429/509/529 response from server. basically means 'I'm under big load mate'
         # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
         
         serverside_bandwidth_wait_time = HG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )

@@ -141,20 +141,18 @@ class TestServer( unittest.TestCase ):
         
         #
         
+        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f:
+            
+            favicon = f.read()
+            
+        
         connection.request( 'GET', '/favicon.ico' )
         
         response = connection.getresponse()
         
         data = response.read()
         
-        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f:
-            
-            favicon = f.read()
-            
-        
         self.assertEqual( data, favicon )
-        
-        connection.close()
         
     
     def _test_file_repo( self, service ):

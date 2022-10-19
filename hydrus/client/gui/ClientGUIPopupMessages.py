@@ -1050,7 +1050,7 @@ class PopupMessageManager( QW.QFrame ):
         
         if watched == self.parentWidget():
             
-            if event.type() in ( QC.QEvent.Resize, QC.QEvent.Move ):
+            if event.type() in ( QC.QEvent.Resize, QC.QEvent.Move, QC.QEvent.WindowStateChange ):
                 
                 if self._OKToAlterUI():
                     
