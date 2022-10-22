@@ -3043,7 +3043,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if info_type is not None:
                 
-                self._Execute( 'DELETE info FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
+                self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
                 
             
             raise
