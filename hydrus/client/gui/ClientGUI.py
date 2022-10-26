@@ -53,7 +53,6 @@ from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIDragDrop
-from hydrus.client.gui import ClientGUIExport
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUILogin
@@ -79,6 +78,7 @@ from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.importing import ClientGUIImportOptions
@@ -5324,8 +5324,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             job_key.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
             
-            self._controller.pub( 'modal_message', job_key )
-            
             try:
                 
                 tag_service_key = GetTagServiceKeyForMaintenance( self )
@@ -5334,6 +5332,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 return
                 
+            
+            self._controller.pub( 'modal_message', job_key )
             
             self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_key = job_key )
             
@@ -7375,9 +7375,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_database.update()
         
     
-    def NewPageImportHDD( self, paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success ):
+    def NewPageImportHDD( self, paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
         
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         

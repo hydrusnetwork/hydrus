@@ -61,7 +61,7 @@ There are three external libraries. You just have to get them and put them in th
 
 Just double-click the batch file, and it will take you through the setup. It should take a minute to download and a couple minutes to install. If it seems like it hung, just give it time to finish. It'll say 'Done!' when it is done.
 
-If something messes up, or you want to switch between Qt5/Qt6, just run the batch again and you will have an option to reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall'. It should just 'work' on most normal computers, but let me know if you have any trouble.
+If something messes up, or you want to switch between Qt5/Qt6, just run the batch again and you will have an option to reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall'. It should 'just work' on most normal computers, but let me know if you have any trouble.
 
 Then run 'setup_help.bat' to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.
 
@@ -70,6 +70,8 @@ Then run 'setup_help.bat' to build the help. This isn't necessary, but it is nic
 Then run 'client.bat' to start the client. The first start will take a little longer. It will operate just like a normal build, putting your database in the 'db' directory.
 
 If you want to redirect your database or use any other launch arguments, then copy 'client.bat' to 'client-user.bat' and edit it, inserting your desired db path. Run this instead of 'client.bat'. New `git pull` commands will not affect 'client-user.bat'.
+
+You probably can't pin your .bat file to your Taskbar or Start (and if you try and pin the running program to your taskbar, its icon may revert to Python), but you can make a shortcut to the .bat file, pin that to Start, and in its properties set a custom icon. There's a nice hydrus one in `install_dir/static`.
 
 ## Simple Windows Updating Guide
 

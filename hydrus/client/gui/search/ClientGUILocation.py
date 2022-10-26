@@ -119,6 +119,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
         self._location_list.checkBoxListChanged.emit()
         
     
+
 class LocationSearchContextButton( ClientGUICommon.BetterButton ):
     
     locationChanged = QC.Signal( ClientLocation.LocationContext )

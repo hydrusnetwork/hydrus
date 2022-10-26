@@ -52,6 +52,7 @@ from hydrus.test import TestClientImageHandling
 from hydrus.test import TestClientImportOptions
 from hydrus.test import TestClientImportSubscriptions
 from hydrus.test import TestClientListBoxes
+from hydrus.test import TestClientMetadataMigration
 from hydrus.test import TestClientMigration
 from hydrus.test import TestClientNetworking
 from hydrus.test import TestClientParsing
@@ -780,6 +781,7 @@ class Controller( object ):
             TestHydrusNetworking,
             TestClientImportSubscriptions,
             TestClientImageHandling,
+            TestClientMetadataMigration,
             TestClientMigration,
             TestHydrusServer
         ]
@@ -788,7 +790,7 @@ class Controller( object ):
             TestDialogs,
             TestClientListBoxes
         ]
-         
+        
         module_lookup[ 'client_api' ] = [
             TestClientAPI
         ]
@@ -855,6 +857,10 @@ class Controller( object ):
         
         module_lookup[ 'image' ] = [
             TestClientImageHandling
+        ]
+        
+        module_lookup[ 'metadata_migration' ] = [
+            TestClientMetadataMigration
         ]
         
         module_lookup[ 'migration' ] = [

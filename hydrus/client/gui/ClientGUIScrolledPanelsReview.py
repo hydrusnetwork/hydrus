@@ -3136,7 +3136,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._add_button = ClientGUICommon.BetterButton( self, 'import now', self._DoImport )
         self._add_button.setObjectName( 'HydrusAccept' )
         
-        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags before the import >>', self._AddTags )
+        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags/urls with the import >>', self._AddTags )
         self._tag_button.setObjectName( 'HydrusAccept' )
         
         self._tag_button.setToolTip( 'You can add specific tags to these files, import from sidecar files, or generate them based on filename. Don\'t be afraid to experiment!' )
@@ -3213,6 +3213,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddTags( self ):
         
+        # TODO: convert this class to have a filenametaggingoptions and the structure for 'tags for these files', which is separate
+        # then make this button not start the import. just edit the options and routers and return
+        # if needed, we convert to paths_to_additional_tags on ultimate ok, or we convert the hdd import to just hold service_keys_to_filenametaggingoptions, like an import folder does
+        
         paths = self._paths_list.GetData()
         
         if len( paths ) > 0:
@@ -3227,11 +3231,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    paths_to_additional_service_keys_to_tags = panel.GetValue()
+                    ( metadata_routers, paths_to_additional_service_keys_to_tags ) = panel.GetValue()
                     
                     delete_after_success = self._delete_after_success.isChecked()
                     
-                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
                     
                     self._OKParent()
                     
@@ -3261,11 +3265,12 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             file_import_options = self._import_options_button.GetFileImportOptions()
             
+            metadata_routers = []
             paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
             
             delete_after_success = self._delete_after_success.isChecked()
             
-            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
             
         
         self._OKParent()

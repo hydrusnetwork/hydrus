@@ -282,7 +282,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
     def RegisterShutdownWork( self ):
         
-        self._Execute( 'DELETE from last_shutdown_work_time;' )
+        self._Execute( 'DELETE FROM last_shutdown_work_time;' )
         
         self._Execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( HydrusData.GetNow(), ) )
         

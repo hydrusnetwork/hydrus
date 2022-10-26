@@ -2,7 +2,6 @@ import collections
 import json
 import os
 import traceback
-import typing
 import urllib
 
 CBOR_AVAILABLE = False
@@ -14,7 +13,6 @@ except:
     pass
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusImageHandling

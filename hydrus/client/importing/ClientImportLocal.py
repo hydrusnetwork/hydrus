@@ -1,6 +1,8 @@
+import collections
 import os
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -22,17 +24,35 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.metadata import ClientMetadataMigration
+from hydrus.client.metadata import ClientMetadataMigrationExporters
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT
     SERIALISABLE_NAME = 'Local File Import'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, paths = None, file_import_options = None, paths_to_additional_service_keys_to_tags = None, delete_after_success = None ):
+    def __init__( self, paths = None, file_import_options = None, metadata_routers = None, paths_to_additional_service_keys_to_tags = None, delete_after_success = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if metadata_routers is None:
+            
+            metadata_routers = []
+            
+        
+        if paths_to_additional_service_keys_to_tags is None:
+            
+            paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
+            
+        
+        if delete_after_success is None:
+            
+            delete_after_success = False
+            
         
         if paths is None:
             
@@ -70,6 +90,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             self._file_seed_cache.AddFileSeeds( file_seeds )
             
         
+        self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
+        
         self._file_import_options = file_import_options
         self._delete_after_success = delete_after_success
         
@@ -91,16 +113,18 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
         serialisable_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_metadata_routers = self._metadata_routers.GetSerialisableTuple()
         
-        return ( serialisable_file_seed_cache, serialisable_options, self._delete_after_success, self._paused )
+        return ( serialisable_file_seed_cache, serialisable_options, serialisable_metadata_routers, self._delete_after_success, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_file_seed_cache, serialisable_options, self._delete_after_success, self._paused ) = serialisable_info
+        ( serialisable_file_seed_cache, serialisable_options, serialisable_metadata_routers, self._delete_after_success, self._paused ) = serialisable_info
         
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options )
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers )
         
     
     def _SerialisableChangeMade( self ):
@@ -135,6 +159,19 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( serialisable_file_seed_cache, serialisable_options, delete_after_success, paused ) = old_serialisable_info
+            
+            metadata_routers = HydrusSerialisable.SerialisableList()
+            
+            serialisable_metadata_routers = metadata_routers.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_file_seed_cache, serialisable_options, serialisable_metadata_routers, delete_after_success, paused )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def _WorkOnFiles( self ):
         
@@ -164,6 +201,26 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
+            if len( self._metadata_routers ) > 0:
+                
+                hash = file_seed.GetHash()
+                
+                media_result = HG.client_controller.Read( 'media_result', hash )
+                
+                for router in self._metadata_routers:
+                    
+                    try:
+                        
+                        router.Work( media_result, file_seed.file_seed_data )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Trying to run metadata routing on the file "{}" threw an error!'.format( file_seed.file_seed_data ) )
+                        HydrusData.ShowException( e )
+                        
+                    
+                
+            
             real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
             
             if file_seed.ShouldPresent( real_presentation_import_options ):
@@ -179,25 +236,32 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     
                 except Exception as e:
                     
-                    HydrusData.ShowText( 'While attempting to delete ' + path + ', the following error occurred:' )
+                    HydrusData.ShowText( 'While attempting to delete {}, the following error occurred:'.format( path ) )
                     HydrusData.ShowException( e )
                     
                 
-                txt_path = path + '.txt'
+                possible_sidecar_paths = set()
                 
-                if os.path.exists( txt_path ):
+                for router in self._metadata_routers:
                     
-                    try:
-                        
-                        ClientPaths.DeletePath( txt_path )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowText( 'While attempting to delete ' + txt_path + ', the following error occurred:' )
-                        HydrusData.ShowException( e )
-                        
+                    possible_sidecar_paths.update( router.GetPossibleImporterSidecarPaths( path ) )
                     
                 
+                for possible_sidecar_path in possible_sidecar_paths:
+                    
+                    if os.path.exists( possible_sidecar_path ):
+                        
+                        try:
+                            
+                            ClientPaths.DeletePath( possible_sidecar_path )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.ShowText( 'While attempting to delete {}, the following error occurred:'.format( possible_sidecar_path ) )
+                            HydrusData.ShowException( e )
+                            
+                        
+                    
             
         
         with self._lock:
@@ -390,9 +454,24 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
     SERIALISABLE_NAME = 'Import Folder'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
-    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, actions = None, action_locations = None, period = 3600, check_regularly = True, show_working_popup = True, publish_files_to_popup_button = True, publish_files_to_page = False ):
+    def __init__(
+        self,
+        name,
+        path = '',
+        file_import_options = None,
+        tag_import_options = None,
+        metadata_routers: typing.Optional[ typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ] = None,
+        tag_service_keys_to_filename_tagging_options = None,
+        actions = None,
+        action_locations = None,
+        period = 3600,
+        check_regularly = True,
+        show_working_popup = True,
+        publish_files_to_popup_button = True,
+        publish_files_to_page = False
+    ):
         
         if file_import_options is None:
             
@@ -404,6 +483,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             tag_import_options = TagImportOptions.TagImportOptions()
             
+        
+        if metadata_routers is None:
+            
+            metadata_routers = []
+            
+        
+        metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         
         if tag_service_keys_to_filename_tagging_options is None:
             
@@ -430,6 +516,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path = path
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
+        self._metadata_routers = metadata_routers
         self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options
         self._actions = actions
         self._action_locations = action_locations
@@ -472,11 +559,19 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             ClientPaths.DeletePath( path )
                             
                         
-                        txt_path = path + '.txt'
+                        possible_sidecar_paths = set()
                         
-                        if os.path.exists( txt_path ):
+                        for router in self._metadata_routers:
                             
-                            ClientPaths.DeletePath( txt_path )
+                            possible_sidecar_paths.update( router.GetPossibleImporterSidecarPaths( path ) )
+                            
+                        
+                        for possible_sidecar_path in possible_sidecar_paths:
+                            
+                            if os.path.exists( possible_sidecar_path ):
+                                
+                                ClientPaths.DeletePath( possible_sidecar_path )
+                                
                             
                         
                         self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
@@ -613,6 +708,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
+        serialisable_metadata_routers = self._metadata_routers.GetSerialisableTuple()
         serialisable_tag_service_keys_to_filename_tagging_options = [ ( service_key.hex(), filename_tagging_options.GetSerialisableTuple() ) for ( service_key, filename_tagging_options ) in list(self._tag_service_keys_to_filename_tagging_options.items()) ]
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
         
@@ -620,7 +716,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = list(self._actions.items())
         action_location_pairs = list(self._action_locations.items())
         
-        return ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
+        return ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_metadata_routers, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
     def _ImportFiles( self, job_key ):
@@ -678,23 +774,40 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     hash = file_seed.GetHash()
                     
-                    if self._tag_import_options.HasAdditionalTags():
+                    if self._tag_import_options.HasAdditionalTags() or len( self._metadata_routers ) > 0:
                         
                         media_result = HG.client_controller.Read( 'media_result', hash )
                         
-                        downloaded_tags = []
-                        
-                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
-                        
-                        if len( service_keys_to_content_updates ) > 0:
+                        if self._tag_import_options.HasAdditionalTags():
                             
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            downloaded_tags = []
+                            
+                            service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
+                            
+                            if len( service_keys_to_content_updates ) > 0:
+                                
+                                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                
+                            
+                        
+                        for metadata_router in self._metadata_routers:
+                            
+                            try:
+                                
+                                metadata_router.Work( media_result, path )
+                                
+                            except Exception as e:
+                                
+                                HydrusData.ShowText( 'Trying to run metadata routing in the import folder "' + self._name + '" threw an error!' )
+                                
+                                HydrusData.ShowException( e )
+                                
                             
                         
                     
                     service_keys_to_tags = ClientTags.ServiceKeysToTags()
                     
-                    for ( tag_service_key, filename_tagging_options ) in list(self._tag_service_keys_to_filename_tagging_options.items()):
+                    for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
                         
                         if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
                             
@@ -770,13 +883,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
+        ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_metadata_routers, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers )
         self._tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         
@@ -871,6 +985,44 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
             
             return ( 7, new_serialisable_info )
+            
+        
+        if version == 7:
+            
+            ( path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = old_serialisable_info
+            
+            tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
+            
+            metadata_routers = HydrusSerialisable.SerialisableList()
+            
+            try:
+                
+                for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items():
+                    
+                    # beardy access here, but this is once off
+                    if hasattr( filename_tagging_options, '_load_from_neighbouring_txt_files' ) and filename_tagging_options._load_from_neighbouring_txt_files:
+                        
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT() ]
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key = service_key )
+                        
+                        metadata_router = ClientMetadataMigration.SingleFileMetadataRouter( importers = importers, exporter = exporter )
+                        
+                        metadata_routers.append( metadata_router )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Failed to update import folder with new metadata routers.' )
+                
+                HydrusData.PrintException( e )
+                
+            
+            serialisable_metadata_routers = metadata_routers.GetSerialisableTuple()
+            
+            new_serialisable_info = ( path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_metadata_routers, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+            
+            return ( 8, new_serialisable_info )
             
         
     
@@ -970,6 +1122,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return self._file_seed_cache
         
     
+    def GetMetadataRouters( self ):
+        
+        return list( self._metadata_routers )
+        
+    
     def Paused( self ):
         
         return self._paused
@@ -993,6 +1150,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     def SetFileSeedCache( self, file_seed_cache ):
         
         self._file_seed_cache = file_seed_cache
+        
+    
+    def SetMetadataRouters( self, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
+        
+        self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         
     
     def SetTuple( self, name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ):

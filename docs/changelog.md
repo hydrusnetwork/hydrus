@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 504](https://github.com/hydrusnetwork/hydrus/releases/tag/v504)
+
+### Qt5
+* as a reminder, I am no longer supporting Qt5 with the official builds. if you are on Windows 7 (and I have heard at least one version of Win 8.1), or a similarly old OS, you likely cannot run the official builds now. if this is you, please check the 'running from source' guide in the help, which will allow you to keep updating the program. this process is now easy in Windows and should be similarly easy on other platforms soon
+
+### misc
+* if you run from source in windows, the program _should_ now have its own taskbar group  and use the correct hydrus icon. if you try and pin it to taskbar, it will revert to the 'python' icon, but you can give a shortcut to a batch file an icon and pin that to start
+* unfortunately, I have to remove the 'deviant art tag search' downloader this week. they killed the old API we were using, and what remaining open date-paginated search results the site offers is obfuscated and tokenised (no permanent links), more than I could quickly unravel. other downloader creators are welcome to give it a go. if you have a subscription for a da tag search, it will likely complain on its next run. please pause it and try to capture the best artists from that search (until DA kill their free artist api, then who knows what will happen). the oauth/phone app menace marches on
+* focus on the thumbnail panel is now preserved whenever it swaps out for another (like when you refresh the search)
+* fixed an issue where cancelling service selection on database->c&r->repopulate truncated would create an empty modal message
+* fixed a stupid typo in the recently changed server petition counting auto-fixing code
+
+### importer/exporter sidecar expansion
+* when you import or export files from/to disk, either manually or automatically, the option to pull or send tags to .txt files is now expanded:
+* - you can now import or export URLs
+* - you can now read or write .json files
+* - you can now import from or export to multiple sidecars, and have multiple separate  pipelines
+* - you can now give sidecar files suffixes, for ".tags.txt" and similar
+* - you can now filter and transform all the strings in this pipeline using the powerful String Processor just like in the parsing system
+* this affects manual imports, manual exports, import folders, and export folders. instead of smart .txt checkboxes, there's now a button leading to some nested dialogs to customise your 'routers' and, in manual imports, a new page tab in the 'add tags before import' window
+* this bones of this system was already working in the background when I introduced it earlier this year, but now all components are exposed
+* new export folders now start with the same default metadata migration as set in the last manual file export dialog
+* this system will expand in future. most important is to add a 'favourites' system so you can easily save/load your different setups. then adding more content types (e.g. ratings) and .xml. I'd also like to add purely internal file-to-itself datatype transformation (e.g. pulling url:(url) tags and converting them to actual known urls, and vice versa)
+
+### importer/exporter sidecar expansion (boring stuff)
+* split the importer/exporter objects into separate importers and exporters. existing router objects will update and split their internal objects safely
+* all objects in this system can now describe themselves
+* all import/export nodes now produce appropriate example texts for string processing and parsing UI test panels
+* Filename Tagging Options objects no longer track neighbouring .txt file importing, and their UI removes it too. Import Folders will suck their old data on update and convert to metadata routers
+* wrote a json sidecar importer that takes a parsing formula
+* wrote a json sidecar exporter that takes a list of dictionary names to export to. it will edit an existing file
+* wrote some ui panels to edit single file metadata migration routers
+* wrote some ui panels to edit single file metadata migration importers
+* wrote some ui panels to edit single file metadata migration exporters
+* updated edit export folder panel to use the new UI. it was already using a full static version of the system behind the scenes; now this is exposed and editable
+* updated the manual file export panel to use the new UI. it was using a half version of the system before--now the default options are updated to the new router object and you can create multiple exports
+* updated import folders to use the new UI. the filename tagging options no longer handles .txt, it is now on a separate button on the import folder
+* updated manual file imports to use the new UI. the 'add tags before import' window now has a 'sidecars' page tab, which lets you edit metadata routers. it updates a path preview list live with what it expects to parse
+* a full suite of new unit tests now checks the router, the four import nodes, and the four export nodes thoroughly
+* renamed ClientExportingMetadata to ClientMetadataMigration and moved to the metadata module. refactored the importers, exporters, and shared methods to their own files in the same module
+* created a gui.metadata module for the new router and metadata import/export widgets and panels
+* created a gui.exporting module for the existing export folder and manual export gui code
+* reworked some of the core importer/exporter objects and inheritance in clientmetadatamigration
+* updated the HDDImport object and creation pipeline to handle metadata routers (as piped from the new sidecars tab)
+* when the hdd import or import folder is set to delete original files, now all defined sidecars are deleted along with the media file
+* cleaned up a bunch of related metadata importer/exporter code
+* cleaned import folder code
+* cleaned hdd importer code
+
 ## [Version 503](https://github.com/hydrusnetwork/hydrus/releases/tag/v503)
 
 ### misc
@@ -391,25 +440,3 @@ _almost all the changes this week are only important to server admins and janito
 * fiddled with QPoint and QPointF conversions a little so I _think_ Qt5 and Qt6 is always talking about the same type
 * updated build scripts and requirements.txts for the new situation
 * updated the help a bit for the new situation
-
-## [Version 493](https://github.com/hydrusnetwork/hydrus/releases/tag/v493)
-
-### EXIF
-* in the first step of 'official' EXIF support, the media viewer now has a 'cog' button on the top hover, enabled when looking at a jpeg, that will check the file for EXIF data. if found, it will throw it up on a simple new window that shows EXIF id, label, and value. this is a hacked-together prototype, not super user-friendly, but it works. let me know what you think, and please send me any files that have weird EXIF that doesn't parse right but you think should. I already discovered a file with a null character that wouldn't display in UI, that sort of thing
-* GPS EXIF values are also parsed and extracted
-* made it so you can double-click a row in this new window to copy an EXIF value to clipboard
-* in the duplicate filter, if one or both files have exif data, this is now noted in the comparison statements, just like ICC profile! (issue #469)
-* obvious future extensions here will be storing 'has exif' in the database and allowing its presence to be searchable and enabling the cog button (or a nicer 'exif' button) only when there is known data to see. a subsequent step would be actually caching the data in the database for full EXIF search
-* as a side thing, we're now set up on the hydrus end to pull TIFF EXIF, but PIL doesn't seem to offer it, so we'll have to wait for a different solution there
-
-### fixes and misc
-* fixed a problem that made saved page file sorts reset their sort order one time on update to v492. thank you to a user for noticing this and discovering the fix, and I'm very sorry for the inconvenience of changing your session and favourite search sorts. unfortunately there is no easy fix other than rolling back to a backup and jumping forward to this version
-* fixed a v492 message display error when setting various duplicate relationships to three or more thumbnails at once. it was a stupid typo, sorry for the trouble! (issue #1199)
-* if a page tab name elides to a 'shorter...' length, it now has its full name as the tooltip
-* fixed a typo in update code error handling (issue #1192)
-* the duplicate filter page now remembers if you are 'searching immediately'/'search paused' (issue #1193)
-* if you are on non-Windows and export files manually or with an export folder to an NTFS or exFAT partition, this is now detected, and NTFS-invalid characters in the pattern-generated folders or filename are now replaced with underscores (issue #1194)
-* 'fixed' a system predicate bug in the 'OR*' advanced predicate parser--entering a logical expression that results in a negated system tag now causes an error. previously, it would strip the 'system:' and just enter the given text as an unnamespaced tag. furthermore, that dialog now reports specific error reasons when it fails to parse. I hope to improve support for negated system tags in future--some stuff, like archive/inbox, should be easy.
-* I think I fixed an instance where the archive/delete filter's confirmation dialog could present 'delete from hard disk' as an option when it wasn't appropriate
-* in an attempt to reduce the media-change flickering we've recently seen in the media viewer, I untangled a bunch of the canvas size/position code this week. I'm preparing a complete overhaul and neat Qt layout integration, which this starts. I _think_ I've made some things less flickery on occasion, but we'll see IRL. much more to do
-* added a '--profile_mode' launch argument, which allows you to capture the performance of boot and also try out profile mode on the server (although support there is very limited atm)

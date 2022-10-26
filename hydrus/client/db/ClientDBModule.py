@@ -68,3 +68,8 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         HG.client_controller.frame_splash_status.SetText( 'recreating tables' )
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        raise NotImplementedError()
+        
+    

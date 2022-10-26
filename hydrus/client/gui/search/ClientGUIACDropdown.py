@@ -1425,6 +1425,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         HG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
         
     
+    def _BroadcastChoices( self, predicates, shift_down ):
+        
+        raise NotImplementedError()
+        
+    
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
         
         raise NotImplementedError()
@@ -1442,6 +1447,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _InitFavouritesList( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitSearchResultsList( self ):
         
         raise NotImplementedError()
         
@@ -1516,6 +1526,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         return True
         
     
+    def _ShouldTakeResponsibilityForEnter( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _StartSearchResultsFetchJob( self, job_key ):
+        
+        raise NotImplementedError()
+        
+    
     def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
         
         self._RestoreTextCtrlFocus()
@@ -1549,6 +1569,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetListDirty()
         
         return True
+        
+    
+    def _TakeResponsibilityForEnter( self, shift_down ):
+        
+        raise NotImplementedError()
         
     
     def NotifyNewServices( self ):

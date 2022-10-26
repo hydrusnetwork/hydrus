@@ -558,6 +558,9 @@ class Page( QW.QWidget ):
         old_panel = self._media_panel
         self._media_panel = new_panel
         
+        # note focus isn't on the thumb panel but some innerwidget scroll gubbins
+        had_focus_before = ClientGUIFunctions.IsQtAncestor( QW.QApplication.focusWidget(), old_panel )
+        
         # this sets parent of new panel to self and sets parent of old panel to None
         # rumao, it doesn't work if new_panel is already our child
         self._management_media_split.replaceWidget( 1, new_panel )
@@ -571,6 +574,11 @@ class Page( QW.QWidget ):
         self._controller.pub( 'refresh_page_name', self._page_key )
         
         self._controller.pub( 'notify_new_pages_count' )
+        
+        if had_focus_before:
+            
+            ClientGUIFunctions.SetFocusLater( new_panel )
+            
         
         # if we try to kill a media page while a menu is open on it, we can enter program instability.
         # so let's just put it off.
