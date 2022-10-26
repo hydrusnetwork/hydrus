@@ -58,6 +58,7 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientMetadataMigration
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
@@ -199,13 +200,13 @@ def CreateManagementControllerImportSimpleDownloader():
     
     return management_controller
     
-def CreateManagementControllerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, paths_to_additional_service_keys_to_tags, delete_after_success ):
+def CreateManagementControllerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
     
     location_context = file_import_options.GetDestinationLocationContext()
     
     management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD, location_context = location_context )
     
-    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_additional_service_keys_to_tags = paths_to_additional_service_keys_to_tags, delete_after_success = delete_after_success )
+    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, metadata_routers = metadata_routers, paths_to_additional_service_keys_to_tags = paths_to_additional_service_keys_to_tags, delete_after_success = delete_after_success )
     
     management_controller.SetVariable( 'hdd_import', hdd_import )
     

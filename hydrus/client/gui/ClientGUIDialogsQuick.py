@@ -214,6 +214,8 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         service_keys = [ service.GetServiceKey() for service in services ]
         
     
+    service_keys = set( service_keys )
+    
     if unallowed is not None:
         
         service_keys.difference_update( unallowed )

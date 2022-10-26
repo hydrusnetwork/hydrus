@@ -9,7 +9,6 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
@@ -1240,6 +1239,11 @@ class StringProcessor( StringProcessingStep ):
             
         
         return proc_strings
+        
+    
+    def MakesChanges( self ) -> bool:
+        
+        return True in ( step.MakesChanges() for step in self._processing_steps )
         
     
     def ProcessStrings( self, starting_strings: typing.Iterable[ str ], max_steps_allowed = None, no_slicing = False ) -> typing.List[ str ]:

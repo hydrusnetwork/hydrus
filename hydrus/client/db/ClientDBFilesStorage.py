@@ -218,6 +218,11 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
         return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.SINGLE_TABLE_NAME )
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        return []
+        
+    
     def SingleTableIsFast( self ) -> bool:
         
         return False

@@ -18,7 +18,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_NAME = 'Client Options'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self ):
         
@@ -454,8 +454,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'key_list' ] = {}
         
-        self._dictionary[ 'key_list' ][ 'default_neighbouring_txt_tag_service_keys' ] = []
-        
         #
         
         self._dictionary[ 'noneable_integers' ] = {}
@@ -716,6 +714,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_tag_sort' ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
         
+        #
+        
+        self._dictionary[ 'default_export_files_metadata_routers' ] = HydrusSerialisable.SerialisableList()
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
@@ -883,6 +885,39 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            serialisable_dictionary = old_serialisable_info
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary )
+            
+            if 'key_list' in loaded_dictionary and 'default_neighbouring_txt_tag_service_keys' in loaded_dictionary[ 'key_list' ]:
+                
+                encoded_default_neighbouring_txt_tag_service_keys = loaded_dictionary[ 'key_list' ][ 'default_neighbouring_txt_tag_service_keys' ]
+                
+                default_neighbouring_txt_tag_service_keys = [ bytes.fromhex( hex_key ) for hex_key in encoded_default_neighbouring_txt_tag_service_keys ]
+                
+                from hydrus.client.metadata import ClientMetadataMigration
+                from hydrus.client.metadata import ClientMetadataMigrationExporters
+                from hydrus.client.metadata import ClientMetadataMigrationImporters
+                
+                importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = service_key ) for service_key in default_neighbouring_txt_tag_service_keys ]
+                exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT()
+                
+                metadata_router = ClientMetadataMigration.SingleFileMetadataRouter( importers = importers, exporter = exporter )
+                
+                metadata_routers = [ metadata_router ]
+                
+                loaded_dictionary[ 'default_export_files_metadata_routers' ] = HydrusSerialisable.SerialisableList( metadata_routers )
+                
+                del loaded_dictionary[ 'key_list' ][ 'default_neighbouring_txt_tag_service_keys' ]
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def ClearCustomDefaultSystemPredicates( self, predicate_type = None, comparable_predicate = None ):
         
@@ -966,6 +1001,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             return []
+            
+        
+    
+    def GetDefaultExportFilesMetadataRouters( self ):
+        
+        with self._lock:
+            
+            return list( self._dictionary[ 'default_export_files_metadata_routers' ] )
             
         
     
@@ -1439,6 +1482,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 return
                 
+            
+        
+    
+    def SetDefaultExportFilesMetadataRouters( self, metadata_routers ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_export_files_metadata_routers' ] = HydrusSerialisable.SerialisableList( metadata_routers )
             
         
     

@@ -920,6 +920,11 @@ class QueueListBox( QW.QWidget ):
         self.listBoxChanged.emit()
         
     
+    def Clear( self ):
+        
+        self._listbox.clear()
+        
+    
     def GetCount( self ):
         
         return self._listbox.count()

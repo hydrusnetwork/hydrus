@@ -17,7 +17,6 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
-from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -27,9 +26,12 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUIMetadataMigration
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientMetadataMigrationExporters
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -79,9 +81,20 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
+        metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
+        
         period = 15 * 60
         
-        export_folder = ClientExportingFiles.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
+        export_folder = ClientExportingFiles.ExportFolder(
+            name,
+            path,
+            export_type = export_type,
+            delete_from_client_after_export = delete_from_client_after_export,
+            file_search_context = file_search_context,
+            metadata_routers = metadata_routers,
+            period = period,
+            phrase = phrase
+        )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
             
@@ -258,13 +271,13 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._metadata_routers_box = ClientGUICommon.StaticBox( self, 'metadata export' )
+        self._metadata_routers_box = ClientGUICommon.StaticBox( self, 'sidecar exporting' )
         
-        self._current_metadata_routers = list( export_folder.GetMetadataRouters() )
+        metadata_routers = export_folder.GetMetadataRouters()
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
-        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
-        
-        self._export_tag_txts_services_button = ClientGUICommon.BetterButton( self._metadata_routers_box, 'set tag .txt services', self._SetTxtServices )
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self._metadata_routers_box, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
         
         #
         
@@ -340,7 +353,7 @@ If you select synchronise, be careful!'''
         
         self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._metadata_routers_box.Add( self._export_tag_txts_services_button, CC.FLAGS_ON_RIGHT )
+        self._metadata_routers_box.Add( self._metadata_routers_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -355,82 +368,8 @@ If you select synchronise, be careful!'''
         
         self._UpdateTypeDeleteUI()
         
-        self._UpdateTxtButton()
-        
         self._type.currentIndexChanged.connect( self._UpdateTypeDeleteUI )
         self._delete_from_client_after_export.clicked.connect( self.EventDeleteFilesAfterExport )
-        
-    
-    def _GetCurrentTxtTagServiceKeys( self ):
-        
-        current_txt_tag_service_keys = set()
-        
-        if len( self._current_metadata_routers ) > 0:
-            
-            metadata_router = self._current_metadata_routers[0]
-            
-            for importer in metadata_router.GetImporters():
-                
-                if isinstance( importer, ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags ):
-                    
-                    service_key = importer.GetServiceKey()
-                    
-                    current_txt_tag_service_keys.add( service_key )
-                    
-                
-            
-        
-        return current_txt_tag_service_keys
-        
-    
-    def _SetTxtServices( self ):
-        
-        # TODO: obviously replace all this, and elsewhere, with a unified metadata router edit UI panel/button
-        
-        current_txt_tag_service_keys = self._GetCurrentTxtTagServiceKeys()
-        
-        services_manager = HG.client_controller.services_manager
-        
-        tag_services = services_manager.GetServices( HC.REAL_TAG_SERVICES )
-        
-        choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in current_txt_tag_service_keys ) for service in tag_services ]
-        
-        try:
-            
-            neighbouring_txt_tag_service_keys = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select tag services', choice_tuples )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        importers = [ ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags( service_key ) for service_key in neighbouring_txt_tag_service_keys ]
-        
-        exporter = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
-        
-        metadata_router = ClientExportingMetadata.SingleFileMetadataRouter( importers = importers, exporter = exporter )
-        
-        self._current_metadata_routers = [ metadata_router ]
-        
-        self._UpdateTxtButton()
-        
-    
-    def _UpdateTxtButton( self ):
-        
-        current_txt_tag_service_keys = self._GetCurrentTxtTagServiceKeys()
-        
-        if len( current_txt_tag_service_keys ) == 0:
-            
-            tt = 'No services set.'
-            
-        else:
-            
-            names = sorted( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in current_txt_tag_service_keys ] )
-            
-            tt = ', '.join( names )
-            
-        
-        self._export_tag_txts_services_button.setToolTip( tt )
         
     
     def _UpdateTypeDeleteUI( self ):
@@ -487,6 +426,8 @@ If you select synchronise, be careful!'''
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
+        metadata_routers = self._metadata_routers_button.GetValue()
+        
         run_regularly = self._run_regularly.isChecked()
         
         period = self._period.GetValue()
@@ -519,7 +460,7 @@ If you select synchronise, be careful!'''
             export_type = export_type,
             delete_from_client_after_export = delete_from_client_after_export,
             file_search_context = file_search_context,
-            metadata_routers = self._current_metadata_routers,
+            metadata_routers = metadata_routers,
             run_regularly = run_regularly,
             period = period,
             phrase = phrase,
@@ -549,8 +490,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
         services_manager = HG.client_controller.services_manager
-        
-        self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
         
         t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_ACTUAL, include_counts = True )
         
@@ -585,13 +524,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._export_symlinks = QW.QCheckBox( 'EXPERIMENTAL: export symlinks', self )
         self._export_symlinks.setObjectName( 'HydrusWarning' )
         
-        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
+        metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
-        self._export_tag_txts_services_button = ClientGUICommon.BetterButton( self, 'set .txt services', self._SetTxtServices )
-        
-        self._export_tag_txts = QW.QCheckBox( 'export tags to .txt files?', self )
-        self._export_tag_txts.setToolTip( text )
-        self._export_tag_txts.clicked.connect( self.EventExportTagTxtsChanged )
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
         
         self._export = QW.QPushButton( 'export', self )
         self._export.clicked.connect( self._DoExport )
@@ -608,11 +545,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         phrase = new_options.GetString( 'export_phrase' )
         
         self._pattern.setText( phrase )
-        
-        if len( self._neighbouring_txt_tag_service_keys ) > 0:
-            
-            self._export_tag_txts.setChecked( True )
-            
         
         self._paths.SetData( flat_media )
         
@@ -646,11 +578,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        txt_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( txt_hbox, self._export_tag_txts_services_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( txt_hbox, self._export_tag_txts, CC.FLAGS_CENTER_PERPENDICULAR )
-        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -658,18 +585,17 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._delete_files_after_export, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._export_symlinks, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, txt_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._metadata_routers_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._export, CC.FLAGS_ON_RIGHT )
         
         self.widget().setLayout( vbox )
         
         self._RefreshTags()
         
-        self._UpdateTxtButton()
-        
         ClientGUIFunctions.SetFocusLater( self._export )
         
         self._paths.itemSelectionChanged.connect( self._RefreshTags )
+        self._metadata_routers_button.valueChanged.connect( self._MetadataRoutersUpdated )
         
         if do_export_and_then_quit:
             
@@ -781,17 +707,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._RefreshPaths()
         
-        export_tag_txts = self._export_tag_txts.isChecked()
-        
-        if self._export_tag_txts.isChecked():
-            
-            neighbouring_txt_tag_service_keys = self._neighbouring_txt_tag_service_keys
-            
-        else:
-            
-            neighbouring_txt_tag_service_keys = []
-            
-        
         directory = self._directory_picker.GetPath()
         
         HydrusPaths.MakeSureDirectoryExists( directory )
@@ -810,6 +725,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             return
             
+        
+        metadata_routers = self._metadata_routers_button.GetValue()
         
         client_files_manager = HG.client_controller.client_files_manager
         
@@ -846,7 +763,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def do_it( directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards ):
+        def do_it( directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards ):
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -855,11 +772,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             HG.client_controller.pub( 'message', job_key )
             
             pauser = HydrusData.BigJobPauser()
-            
-            importers = [ ClientExportingMetadata.SingleFileMetadataImporterExporterMediaTags( service_key ) for service_key in neighbouring_txt_tag_service_keys ]
-            exporter = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
-            
-            metadata_router = ClientExportingMetadata.SingleFileMetadataRouter( importers = importers, exporter = exporter )
             
             for ( index, ( media, path ) ) in enumerate( to_do ):
                 
@@ -893,7 +805,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     HydrusPaths.MakeSureDirectoryExists( path_dir )
                     
-                    if export_tag_txts:
+                    for metadata_router in metadata_routers:
                         
                         metadata_router.Work( media.GetMediaResult(), path )
                         
@@ -972,7 +884,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             QP.CallAfter( qt_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
+        HG.client_controller.CallToThread( do_it, directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards )
         
     
     def _GetPath( self, media ):
@@ -1000,6 +912,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._media_to_paths[ media ] = path
         
         return path
+        
+    
+    def _MetadataRoutersUpdated( self ):
+        
+        metadata_routers = self._metadata_routers_button.GetValue()
+        
+        HG.client_controller.new_options.SetDefaultExportFilesMetadataRouters( metadata_routers )
         
     
     def _RefreshPaths( self ):
@@ -1035,60 +954,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._tags_box.SetTagsByMedia( flat_media )
         
     
-    def _SetTxtServices( self ):
-        
-        services_manager = HG.client_controller.services_manager
-        
-        tag_services = services_manager.GetServices( HC.REAL_TAG_SERVICES )
-        
-        choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
-        
-        try:
-            
-            neighbouring_txt_tag_service_keys = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'select tag services', choice_tuples )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        self._neighbouring_txt_tag_service_keys = neighbouring_txt_tag_service_keys
-        
-        HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
-        
-        if len( self._neighbouring_txt_tag_service_keys ) == 0:
-            
-            self._export_tag_txts.setChecked( False )
-            
-        
-        self._UpdateTxtButton()
-        
-    
-    def _UpdateTxtButton( self ):
-        
-        if self._export_tag_txts.isChecked():
-            
-            self._export_tag_txts_services_button.setEnabled( True )
-            
-        else:
-            
-            self._export_tag_txts_services_button.setEnabled( False )
-            
-        
-        if len( self._neighbouring_txt_tag_service_keys ) == 0:
-            
-            tt = 'No services set.'
-            
-        else:
-            
-            names = sorted( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self._neighbouring_txt_tag_service_keys ] )
-            
-            tt = ', '.join( names )
-            
-        
-        self._export_tag_txts_services_button.setToolTip( tt )
-        
-    
     def EventExport( self, event ):
         
         self._DoExport()
@@ -1103,22 +968,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         if value:
             
             self._export_symlinks.setChecked( False )
-            
-        
-    
-    def EventExportTagTxtsChanged( self ):
-        
-        turning_on = self._export_tag_txts.isChecked()
-        
-        self._UpdateTxtButton()
-        
-        if turning_on:
-            
-            self._SetTxtServices()
-            
-        else:
-            
-            HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', [] )
             
         
     

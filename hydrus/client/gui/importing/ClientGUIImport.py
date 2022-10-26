@@ -27,6 +27,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUIMetadataMigration
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -36,6 +37,9 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientMetadataMigration
+from hydrus.client.metadata import ClientMetadataMigrationExporters
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
@@ -477,11 +481,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
-            self._load_from_txt_files_checkbox = QW.QCheckBox( 'try to load tags from neighbouring .txt files', self._checkboxes_panel )
-            
-            txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.global_pixmaps().help, self._ShowTXTHelp )
-            txt_files_help_button.setToolTip( 'Show help regarding importing tags from .txt files.' )
-            
             self._filename_namespace = QW.QLineEdit( self._checkboxes_panel )
             self._filename_namespace.setMinimumWidth( 100 )
             
@@ -510,10 +509,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             #
             
-            ( tags_for_all, load_from_neighbouring_txt_files, add_filename, directory_dict ) = filename_tagging_options.SimpleToTuple()
+            ( tags_for_all, add_filename, directory_dict ) = filename_tagging_options.SimpleToTuple()
             
             self._tags.AddTags( tags_for_all )
-            self._load_from_txt_files_checkbox.setChecked( load_from_neighbouring_txt_files )
             
             ( add_filename_boolean, add_filename_namespace ) = add_filename
             
@@ -541,17 +539,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._single_tags_panel.Add( self._tag_autocomplete_selection, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            txt_hbox = QP.HBoxLayout()
-            
-            QP.AddToLayout( txt_hbox, self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( txt_hbox, txt_files_help_button, CC.FLAGS_CENTER_PERPENDICULAR )
-            
             filename_hbox = QP.HBoxLayout()
             
             QP.AddToLayout( filename_hbox, self._filename_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( filename_hbox, self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._checkboxes_panel.Add( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._checkboxes_panel.Add( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             for index in ( 0, 1, 2, -3, -2, -1 ):
@@ -581,7 +573,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._tags.tagsRemoved.connect( self.tagsChanged )
             self._single_tags.tagsRemoved.connect( self.SingleTagsRemoved )
             
-            self._load_from_txt_files_checkbox.clicked.connect( self.tagsChanged )
             self._filename_namespace.textChanged.connect( self.tagsChanged )
             self._filename_checkbox.clicked.connect( self.tagsChanged )
             
@@ -643,21 +634,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
             
             self.EnterTagsSingle( tags )
-            
-        
-        def _ShowTXTHelp( self ):
-            
-            message = 'If you would like to add custom tags with your files, add a .txt file beside the file like so:'
-            message += os.linesep * 2
-            message += 'my_file.jpg'
-            message += os.linesep
-            message += 'my_file.jpg.txt'
-            message += os.linesep * 2
-            message += 'And include your tags inside the .txt file in a newline-separated list (if you know how to script, generating these files automatically from another source of tags can save a lot of time!).'
-            message += os.linesep * 2
-            message += 'Make sure you preview the results in the table above to be certain everything is parsing correctly. Until you are comfortable with this, you should test it on just one or two files.'
-            
-            QW.QMessageBox.information( self, 'Information', message )
             
         
         def EnterTags( self, tags ):
@@ -756,7 +732,6 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         def UpdateFilenameTaggingOptions( self, filename_tagging_options ):
             
             tags_for_all = self._tags.GetTags()
-            load_from_neighbouring_txt_files = self._load_from_txt_files_checkbox.isChecked()
             
             add_filename = ( self._filename_checkbox.isChecked(), self._filename_namespace.text() )
             
@@ -767,7 +742,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 directories_dict[ index ] = ( dir_checkbox.isChecked(), dir_namespace_textctrl.text() )
                 
             
-            filename_tagging_options.SimpleSetTuple( tags_for_all, load_from_neighbouring_txt_files, add_filename, directories_dict )
+            filename_tagging_options.SimpleSetTuple( tags_for_all, add_filename, directories_dict )
             
         
     
@@ -776,16 +751,26 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     def __init__( self, parent, paths ):
         
         # TODO: a really nice rewrite for all this, perhaps when I go for string conversions here, would be to eliminate the multi-page format and instead update the controls.
-        # changing service while maintaining focus and list selection would be great
+        # an option here is to mutate the sidecars a little and just have a 'filename' source. this could wangle everything neatly and send to whatever service
+        # but only if the UI can stay helpful. maybe we shouldn't replace the easy UI, but we can replace the guts behind the scenes with metadata routers
+        # however, changing service while maintaining focus and list selection would be great
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._paths = paths
         
+        self._filename_tagging_option_pages = []
         
-        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        self._notebook = ClientGUICommon.BetterNotebook( self )
         
         #
+        
+        # TODO: could have default import here and favourites system
+        metadata_routers = []
+        
+        self._metadata_router_page = self._MetadataRoutersPanel( self._notebook, metadata_routers, paths )
+        
+        self._notebook.addTab( self._metadata_router_page, 'sidecars' )
         
         services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
@@ -796,18 +781,20 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_repositories, service_key, paths )
+            page = self._FilenameTaggingOptionsPanel( self._notebook, service_key, paths )
+            
+            self._filename_tagging_option_pages.append( page )
             
             page.movePageLeft.connect( self.MovePageLeft )
             page.movePageRight.connect( self.MovePageRight )
             
             select = service_key == default_tag_service_key
             
-            tab_index = self._tag_repositories.addTab( page, name )
+            tab_index = self._notebook.addTab( page, name )
             
             if select:
                 
-                self._tag_repositories.setCurrentIndex( tab_index )
+                self._notebook.setCurrentIndex( tab_index )
                 
             
         
@@ -815,39 +802,44 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
-        self._tag_repositories.currentChanged.connect( self._SaveDefaultTagServiceKey )
+        self._notebook.currentChanged.connect( self._SaveDefaultTagServiceKey )
         
-        self._tag_repositories.currentWidget().SetSearchFocus()
+        self._notebook.currentWidget().SetSearchFocus()
         
     
     def _SaveDefaultTagServiceKey( self ):
         
-        if self.sender() != self._tag_repositories:
+        if self.sender() != self._notebook:
             
             return
             
         
         if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_repositories.currentWidget()
+            current_page = self._notebook.currentWidget()
             
-            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            if current_page in self._filename_tagging_option_pages:
+                
+                HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+                
             
         
     
     def GetValue( self ):
         
+        metadata_routers = self._metadata_router_page.GetValue()
+        
         paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
         
-        for page in self._tag_repositories.GetPages():
+        for page in self._filename_tagging_option_pages:
             
-            ( service_key, page_of_paths_to_tags ) = page.GetInfo()
+            ( service_key, paths_to_tags ) = page.GetInfo()
             
-            for ( path, tags ) in page_of_paths_to_tags.items():
+            for ( path, tags ) in paths_to_tags.items():
                 
                 if len( tags ) == 0:
                     
@@ -858,24 +850,24 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        return paths_to_additional_service_keys_to_tags
+        return ( metadata_routers, paths_to_additional_service_keys_to_tags )
         
     
     def MovePageLeft( self ):
         
-        self._tag_repositories.SelectLeft()
+        self._notebook.SelectLeft()
         
-        self._tag_repositories.currentWidget().SetSearchFocus()
+        self._notebook.currentWidget().SetSearchFocus()
         
     
     def MovePageRight( self ):
         
-        self._tag_repositories.SelectRight()
+        self._notebook.SelectRight()
         
-        self._tag_repositories.currentWidget().SetSearchFocus()
+        self._notebook.currentWidget().SetSearchFocus()
         
     
-    class _Panel( QW.QWidget ):
+    class _FilenameTaggingOptionsPanel( QW.QWidget ):
         
         movePageLeft = QC.Signal()
         movePageRight = QC.Signal()
@@ -986,6 +978,122 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         def SetSearchFocus( self ):
             
             self._filename_tagging_panel.SetSearchFocus()
+            
+        
+    
+    class _MetadataRoutersPanel( QW.QWidget ):
+        
+        def __init__( self, parent, metadata_routers, paths ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._paths = paths
+            
+            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
+            
+            allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
+            allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
+            
+            self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
+            
+            #
+            
+            self._schedule_refresh_file_list_job = None
+            
+            #
+            
+            # i.e. ( index, path )
+            self._paths_list.AddDatas( list( enumerate( self._paths ) ) )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._metadata_routers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.setLayout( vbox )
+            
+            self._metadata_routers_panel.listBoxChanged.connect( self.ScheduleRefreshFileList )
+            
+        
+        def _ConvertDataToListCtrlTuples( self, data ):
+            
+            ( index, path ) = data
+            
+            strings = self._GetStrings( path )
+            
+            pretty_index = HydrusData.ToHumanInt( index + 1 )
+            
+            pretty_path = path
+            pretty_strings = ', '.join( strings )
+            
+            display_tuple = ( pretty_index, pretty_path, pretty_strings )
+            sort_tuple = ( index, path, strings )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _GetStrings( self, path ):
+            
+            strings = []
+            
+            metadata_routers = self._metadata_routers_panel.GetValue()
+            
+            for router in metadata_routers:
+                
+                pre_processed_strings = set()
+                
+                for importer in router.GetImporters():
+                    
+                    if isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar ):
+                        
+                        pre_processed_strings.update( importer.Import( path ) )
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                
+                if len( pre_processed_strings ) == 0:
+                    
+                    continue
+                    
+                
+                processed_strings = router.GetStringProcessor().ProcessStrings( pre_processed_strings )
+                
+                strings.extend( sorted( processed_strings ) )
+                
+            
+            return strings
+            
+        
+        def GetValue( self ):
+            
+            return self._metadata_routers_panel.GetValue()
+            
+        
+        def RefreshFileList( self ):
+            
+            self._paths_list.UpdateDatas()
+            
+        
+        def ScheduleRefreshFileList( self ):
+            
+            if self._schedule_refresh_file_list_job is not None:
+                
+                self._schedule_refresh_file_list_job.Cancel()
+                
+                self._schedule_refresh_file_list_job = None
+                
+            
+            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
+            
+        
+        def SetSearchFocus( self ):
+            
+            pass
             
         
     

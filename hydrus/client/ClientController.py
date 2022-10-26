@@ -1595,6 +1595,23 @@ class Controller( HydrusController.HydrusController ):
         
         ClientGUICore.GUICore()
         
+        if HC.PLATFORM_WINDOWS:
+            
+            try:
+                
+                # this makes the 'application user model' of the program unique, allowing instantiations to group on their own taskbar icon
+                # also allows the window icon to go to the taskbar icon, instead of python if you are running from source
+                
+                import ctypes
+                
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID( 'hydrus network client' )
+                
+            except:
+                
+                pass
+                
+            
+        
         self.app = App( self._pubsub, sys.argv )
         
         self.main_qt_thread = self.app.thread()

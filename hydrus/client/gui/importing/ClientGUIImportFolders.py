@@ -18,9 +18,13 @@ from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUIMetadataMigration
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.metadata import ClientMetadataMigration
+from hydrus.client.metadata import ClientMetadataMigrationExporters
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 
 class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -170,7 +174,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, import_folder ):
+    def __init__( self, parent, import_folder: ClientImportLocal.ImportFolder ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -240,7 +244,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._filename_tagging_options_box = ClientGUICommon.StaticBox( self, 'filename tagging' )
+        self._filename_tagging_options_box = ClientGUICommon.StaticBox( self, 'metadata import' )
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
         
@@ -251,6 +255,12 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         filename_tagging_options_panel.AddButton( 'add', self._AddFilenameTaggingOptions )
         filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_selection = True )
         filename_tagging_options_panel.AddDeleteButton()
+        
+        metadata_routers = self._import_folder.GetMetadataRouters()
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
+        allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
+        
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
         
         services_manager = HG.client_controller.services_manager
         
@@ -343,7 +353,10 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._filename_tagging_options_box.Add( ClientGUICommon.BetterStaticText( self._filename_tagging_options_box, 'filename tagging:' ), CC.FLAGS_CENTER_PERPENDICULAR )
         self._filename_tagging_options_box.Add( filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._filename_tagging_options_box.Add( ClientGUICommon.BetterStaticText( self._filename_tagging_options_box, 'sidecar importing:' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        self._filename_tagging_options_box.Add( self._metadata_routers_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -631,6 +644,10 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
         
         self._import_folder.SetTuple( name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+        
+        metadata_routers = self._metadata_routers_button.GetValue()
+        
+        self._import_folder.SetMetadataRouters( metadata_routers )
         
         return self._import_folder
         

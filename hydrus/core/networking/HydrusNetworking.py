@@ -1,12 +1,9 @@
 import calendar
 import collections
 import datetime
-import http.client
-import json
 import psutil
 import socket
 import threading
-import urllib
 import urllib3
 
 from urllib3.exceptions import InsecureRequestWarning
@@ -15,7 +12,6 @@ urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when r
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 # The calendar portion of this works in GMT. A new 'day' or 'month' is calculated based on GMT time, so it won't tick over at midnight for most people.

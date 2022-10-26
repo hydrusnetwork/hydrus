@@ -1,0 +1,404 @@
+import json
+import os
+import typing
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client.metadata import ClientMetadataMigrationCore
+
+class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNode ):
+    
+    def Export( self, *args, **kwargs ):
+        
+        raise NotImplementedError()
+        
+    
+    def ToString( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+
+class SingleFileMetadataExporterMedia( SingleFileMetadataExporter ):
+    
+    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+        
+        raise NotImplementedError()
+        
+    
+    def ToString( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+
+class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetadataMigrationCore.SidecarNode ):
+    
+    def __init__( self, suffix: str ):
+        
+        ClientMetadataMigrationCore.SidecarNode.__init__( self, suffix )
+        SingleFileMetadataExporter.__init__( self )
+        
+    
+    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+        
+        raise NotImplementedError()
+        
+    
+    def ToString( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+
+class SingleFileMetadataExporterMediaTags( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterMedia ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TAGS
+    SERIALISABLE_NAME = 'Metadata Single File Exporter Media Tags'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, service_key = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterMedia.__init__( self )
+        
+        if service_key is None:
+            
+            service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+            
+        
+        self._service_key = service_key
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._service_key.hex()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_service_key = serialisable_info
+        
+        self._service_key = bytes.fromhex( serialisable_service_key )
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            'blue eyes',
+            'blonde hair',
+            'skirt',
+            'character:jane smith',
+            'series:jane smith adventures',
+            'creator:some guy'
+        ]
+        
+        return examples
+        
+    
+    def GetServiceKey( self ) -> bytes:
+        
+        return self._service_key
+        
+    
+    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        if HG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
+            
+            add_content_action = HC.CONTENT_UPDATE_ADD
+            
+        else:
+            
+            add_content_action = HC.CONTENT_UPDATE_PEND
+            
+        
+        hashes = { hash }
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in rows ]
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        
+    
+    def SetServiceKey( self, service_key: bytes ):
+        
+        self._service_key = service_key
+        
+    
+    def ToString( self ) -> str:
+        
+        try:
+            
+            name = HG.client_controller.services_manager.GetName( self._service_key )
+            
+        except:
+            
+            name = 'unknown service'
+            
+        
+        return 'tags to media, on "{}"'.format( name )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TAGS ] = SingleFileMetadataExporterMediaTags
+
+class SingleFileMetadataExporterMediaURLs( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterMedia ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_URLS
+    SERIALISABLE_NAME = 'Metadata Single File Exporter Media URLs'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterMedia.__init__( self )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return list()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        gumpf = serialisable_info
+        
+    
+    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        urls = []
+        
+        for row in rows:
+            
+            try:
+                
+                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( row )
+                
+                urls.append( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                continue
+                
+            except:
+                
+                continue
+                
+            
+        
+        hashes = { hash }
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, hashes ) ) ]
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates } )
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            'https://example.com/gallery/index.php?post=123456&page=show',
+            'https://cdn3.expl.com/files/file_id?id=123456&token=0123456789abcdef'
+        ]
+        
+        return examples
+        
+    
+    def ToString( self ) -> str:
+        
+        return 'urls to media'
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_URLS ] = SingleFileMetadataExporterMediaURLs
+
+class SingleFileMetadataExporterJSON( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterSidecar ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_JSON
+    SERIALISABLE_NAME = 'Metadata Single File Exporter JSON'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, suffix = None, nested_object_names = None ):
+        
+        if suffix is None:
+            
+            suffix = ''
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterSidecar.__init__( self, suffix )
+        
+        if nested_object_names is None:
+            
+            nested_object_names = []
+            
+        
+        self._nested_object_names = nested_object_names
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._suffix, self._nested_object_names )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._suffix, self._nested_object_names ) = serialisable_info
+        
+    
+    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._suffix, 'json' )
+        
+        if len( self._nested_object_names ) > 0:
+            
+            if os.path.exists( path ):
+                
+                with open( path, 'r', encoding = 'utf-8') as f:
+                    
+                    existing_raw_json = f.read()
+                    
+                
+                try:
+                    
+                    json_dict = json.loads( existing_raw_json )
+                    
+                    if len( self._nested_object_names ) > 0 and not isinstance( json_dict, dict ):
+                        
+                        raise Exception( 'The existing JSON file was not a JSON Object!' )
+                        
+                    
+                except Exception as e:
+                    
+                    # TODO: we probably want custom importer/exporter exceptions here
+                    raise Exception( 'Could not read the existing JSON at {}!{}{}'.format( path, os.linesep, e ) )
+                    
+                
+            else:
+                
+                json_dict = dict()
+                
+            
+            node = json_dict
+            
+            for ( i, name ) in enumerate( self._nested_object_names ):
+                
+                if i == len( self._nested_object_names ) - 1:
+                    
+                    node[ name ] = list( rows )
+                    
+                else:
+                    
+                    if name not in node:
+                        
+                        node[ name ] = dict()
+                        
+                    
+                    node = node[ name ]
+                    
+                
+            
+            json_to_write = json_dict
+            
+        else:
+            
+            json_to_write = list( rows )
+            
+        
+        raw_json_to_write = json.dumps( json_to_write )
+        
+        with open( path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( raw_json_to_write )
+            
+        
+    
+    def GetNestedObjectNames( self ) -> typing.List[ str ]:
+        
+        return list( self._nested_object_names )
+        
+    
+    def SetNestedObjectNames( self, nested_object_names: typing.List[ str ] ):
+        
+        self._nested_object_names = list( nested_object_names )
+        
+    
+    def ToString( self ) -> str:
+        
+        suffix_s = '' if self._suffix == '' else '.{}'.format( self._suffix )
+        
+        return 'to {}.json sidecar ({})'.format( suffix_s, '>'.join( self._nested_object_names ) )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_JSON ] = SingleFileMetadataExporterJSON
+
+class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterSidecar ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_TXT
+    SERIALISABLE_NAME = 'Metadata Single File Exporter TXT'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, suffix = None ):
+        
+        if suffix is None:
+            
+            suffix = ''
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterSidecar.__init__( self, suffix )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._suffix
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._suffix = serialisable_info
+        
+    
+    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._suffix, 'txt' )
+        
+        with open( path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( '\n'.join( rows ) )
+            
+        
+    
+    def ToString( self ) -> str:
+        
+        suffix_s = '' if self._suffix == '' else '.{}'.format( self._suffix )
+        
+        return 'to {}.txt sidecar'.format( suffix_s )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_TXT ] = SingleFileMetadataExporterTXT

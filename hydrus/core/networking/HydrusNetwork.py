@@ -1,5 +1,4 @@
 import collections
-import itertools
 import threading
 import time
 import typing

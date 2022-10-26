@@ -15,10 +15,8 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
-from hydrus.client.exporting import ClientExportingMetadata
-from hydrus.client.media import ClientMediaManagers
+from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientTags
-from hydrus.client.metadata import ClientTagSorting
 
 MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
@@ -663,7 +661,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return self._last_error
         
     
-    def GetMetadataRouters( self ) -> typing.Collection[ ClientExportingMetadata.SingleFileMetadataRouter ]:
+    def GetMetadataRouters( self ) -> typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ]:
         
         return self._metadata_routers
         

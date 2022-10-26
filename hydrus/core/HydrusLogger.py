@@ -4,7 +4,6 @@ import threading
 import time
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 
 class HydrusLogger( object ):
     

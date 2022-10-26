@@ -11,9 +11,9 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client.exporting import ClientExportingMetadata
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
@@ -28,6 +28,8 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         self._tags_for_all = set()
         
+        # Note we are leaving this here for a bit, even though it is no longer used, to leave a window so ImportFolder can rip existing values
+        # it can be nuked in due time
         self._load_from_neighbouring_txt_files = False
         
         self._add_filename = ( False, 'filename' )
@@ -102,32 +104,6 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         tags = set()
         
         tags.update( self._tags_for_all )
-        
-        if self._load_from_neighbouring_txt_files:
-            
-            # TODO: this needs more work, making an actual Router object with an Exporter, grinding things towards flexible conversion with different types and actually firing off content updates vs 'get example tags for UI'
-            # I'm pretty sure we could also make a 'FilenameImporter' and pipe all the following gubbins into the same system lad
-            
-            importer = ClientExportingMetadata.SingleFileMetadataImporterExporterTXT()
-            
-            try:
-                
-                txt_tags = importer.Import( path )
-                
-                if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
-                    
-                    raise Exception( 'Tags were too long--I think this was not a regular text file!' )
-                    
-                
-                tags.update( txt_tags )
-                
-            except Exception as e:
-                
-                HydrusData.ShowText( 'Problem getting tags from a txt sidecar! {}'.format( e ) )
-                
-                tags.add( '___had problem parsing .txt file' )
-                
-            
         
         ( base, filename ) = os.path.split( path )
         
@@ -253,17 +229,16 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         return tags
         
     
-    def SimpleSetTuple( self, tags_for_all, load_from_neighbouring_txt_files, add_filename, directories_dict ):
+    def SimpleSetTuple( self, tags_for_all, add_filename, directories_dict ):
         
         self._tags_for_all = tags_for_all
-        self._load_from_neighbouring_txt_files = load_from_neighbouring_txt_files
         self._add_filename = add_filename
         self._directories_dict = directories_dict
         
     
     def SimpleToTuple( self ):
         
-        return ( self._tags_for_all, self._load_from_neighbouring_txt_files, self._add_filename, self._directories_dict )
+        return ( self._tags_for_all, self._add_filename, self._directories_dict )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS ] = FilenameTaggingOptions    
