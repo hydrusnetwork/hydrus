@@ -17,7 +17,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            ghcr.io/hydrusnetwork/hydrus
+            ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=tag
           labels: |
