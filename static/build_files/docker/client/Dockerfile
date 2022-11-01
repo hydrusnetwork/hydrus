@@ -25,6 +25,7 @@ RUN mkdir -p /opt/noVNC/utils/websockify \
  && chown hydrus:hydrus -R /opt/noVNC
 
 COPY --chown=hydrus . /opt/hydrus
+COPY --chown=hydrus --from=suika/swftools:2013-04-09-1007 /swftools/swfrender /opt/hydrus/bin/swfrender_linux
 
 RUN mv /opt/hydrus/static/build_files/docker/client/supervisord.conf /etc/supervisord.conf && \
     mv /opt/hydrus/static/build_files/docker/client/novnc/index.html /opt/noVNC/index.html && \
