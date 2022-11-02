@@ -1,9 +1,9 @@
-FROM suika/opencv-video-minimal:4.2-py3.7.5
+FROM alpine:3.16
 
 ARG UID
 ARG GID
 
-RUN apk --no-cache add py3-beautifulsoup4 py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 ffmpeg py3-pillow py3-numpy py3-openssl py3-service_identity openssl su-exec py3-dateutil
+RUN apk --no-cache add py3-beautifulsoup4 py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 ffmpeg py3-pillow py3-numpy py3-openssl py3-service_identity py3-opencv py3-lxml py3-chardet py3-dateutil py3-pip openssl su-exec 
 RUN pip install Send2Trash twisted
 
 RUN set -xe \
