@@ -8,7 +8,7 @@ If any of this is confusing, a simpler guide is [here](https://github.com/Zweiba
 
 ## downloading
 
-You can get the latest release at [my github releases page](https://github.com/hydrusnetwork/hydrus/releases).
+You can get the latest release at [the github releases page](https://github.com/hydrusnetwork/hydrus/releases).
 
 I try to release a new version every Wednesday by 8pm EST and write an accompanying post on [my tumblr](http://hydrus.tumblr.com/) and a Hydrus Network General thread on [8chan.moe /t/](https://8chan.moe/t/catalog.html).
 
@@ -60,6 +60,10 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         * [AUR package](https://aur.archlinux.org/packages/hydrus/)
         * [flatpak](https://flathub.org/apps/details/io.github.hydrusnetwork.hydrus) 
     
+
+=== "Docker"
+
+    * A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](https://github.com/hydrusnetwork/hydrus/blob/master/static/build_files/docker/README.md).
 
 === "From Source"
 
@@ -177,6 +181,7 @@ Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cann
 * Accidental overwrite (usually during a borked update)
 * Encrypted partition auto-dismount/other borked settings
 * Cloud backup interfering with ongoing writes
+* An automatic OS backup routine misfiring and causing a rollback, wiping out more than a year of progress
 * A laptop that incorrectly and roughly disconnected an external USB drive on every sleep
 * Network drive location not guaranteeing accurate file locks
 * Windows NVMe driver bugs necessitating a different SQLite journalling method

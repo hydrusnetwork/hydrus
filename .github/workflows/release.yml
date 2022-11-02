@@ -5,7 +5,7 @@ on:
       - 'v*'
 
 jobs:
-  build-macos-Qt6:
+  build-macos:
     runs-on: macos-11
     steps:
       -
@@ -32,7 +32,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
-          cp static/build_files/macos/requirementsQt6.txt requirements.txt
+          cp static/build_files/macos/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
           pyoxidizer build --release
           cd build/$(head -n 1 triple.txt)/release
@@ -52,17 +52,17 @@ jobs:
           cd $GITHUB_WORKSPACE
           temp_dmg="$(mktemp).dmg"
           hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -format UDZO -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
-          mv "$temp_dmg" HydrusNetwork6.dmg
+          mv "$temp_dmg" HydrusNetwork.dmg
       -
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: MacOS-DMG6
-          path: HydrusNetwork6.dmg
+          name: MacOS-DMG
+          path: HydrusNetwork.dmg
           if-no-files-found: error
           retention-days: 2
 
-  build-ubuntu-Qt6:
+  build-ubuntu:
     runs-on: ubuntu-20.04
     steps:
       -
@@ -83,7 +83,7 @@ jobs:
           sudo apt-get install -y libmpv1
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirementsQt6.txt
+        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
       - 
         name: Build docs to /help
         run: mkdocs build -d help
@@ -128,17 +128,17 @@ jobs:
         name: Compress Client
         run: |
             mv dist/client "dist/Hydrus Network"
-            tar -czvf Ubuntu-Extract6.tar.gz -C dist "Hydrus Network"
+            tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
       -
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: Ubuntu-Extract6
-          path: Ubuntu-Extract6.tar.gz
+          name: Ubuntu-Extract
+          path: Ubuntu-Extract.tar.gz
           if-no-files-found: error
           retention-days: 2
 
-  build-windows-Qt6:
+  build-windows:
     runs-on: windows-2019
     steps:
       -
@@ -160,7 +160,7 @@ jobs:
           architecture: x64
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirementsQt6.txt
+        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
       - 
         name: Build docs to /help
         run: mkdocs build -d help
@@ -199,7 +199,7 @@ jobs:
           move ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} hydrus\bin\
           move hydrus\static\build_files\windows\sqlite3.dll hydrus\
           move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
-          move hydrus\static\build_files\windows\client-winQt6.spec client-win.spec
+          move hydrus\static\build_files\windows\client-win.spec client-win.spec
           move hydrus\static\build_files\windows\server-win.spec server-win.spec
           pyinstaller server-win.spec
           pyinstaller client-win.spec
@@ -215,7 +215,7 @@ jobs:
         name: Compress Client
         run: |
           cd .\dist
-          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract6.zip 'Hydrus Network'
+          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
           cd ..
       -
         name: Upload a Build Artifact
@@ -229,15 +229,15 @@ jobs:
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: Windows-Extract6
-          path: Windows-Extract6.zip
+          name: Windows-Extract
+          path: Windows-Extract.zip
           if-no-files-found: error
           retention-days: 2
 
   create-release:
     name: Create Release Entry
     runs-on: ubuntu-20.04
-    needs: [build-windows-Qt6, build-ubuntu-Qt6, build-macos-Qt6]
+    needs: [build-windows, build-ubuntu, build-macos]
     steps:
       - 
         name: Checkout code
@@ -256,9 +256,9 @@ jobs:
         run: |
           mkdir ubuntu windows
           mv Windows-Install/HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract6/Windows-Extract6.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-          mv Ubuntu-Extract6/Ubuntu-Extract6.tar.gz Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
-          mv MacOS-DMG6/HydrusNetwork6.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
+          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
+          mv Ubuntu-Extract/Ubuntu-Extract.tar.gz Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
+          mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
       - 
         name: Release new
         uses: softprops/action-gh-release@v1
