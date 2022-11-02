@@ -31,7 +31,9 @@ And can be extended to download from more locations using easily shareable user-
 
 The program's emphasis is on your freedom. There is no DRM, no spying, no censorship. The program never phones home.
 
-If you would like to try it, I _**strongly**_ recommend you check out the [help and getting started guide](introduction.md). A copy of all this help is included with the release as well.
+## Start Here
+
+If you would like to try hydrus, I _**strongly**_ recommend you check out the **[help and getting started guide](introduction.md)**. It will take you through all the main systems.
 
 ## links
 

@@ -69,6 +69,8 @@ venv.bak/
 
 # User-changeable files
 /client-user.bat
+/client-user.sh
+/client-user.command
 
 # docs builds
 /site/

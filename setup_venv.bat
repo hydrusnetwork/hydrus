@@ -8,13 +8,7 @@ goto :create
 
 :venv_exists
 
-SET /P install_type=venv folder already exists. Do you want to: (r)einstall, (u)pdate? 
-IF "%install_type%" == "r" goto :delete
-IF "%install_type%" == "u" goto :update
-
-goto :done
-
-:delete
+SET /P Virtual environment will be reinstalled. Hit Enter to start.
 
 echo Deleting old venv...
 
@@ -26,8 +20,6 @@ echo Creating new venv...
 
 python -m venv venv
 
-:update
-
 CALL venv\Scripts\activate.bat
 
 python -m pip install --upgrade pip
@@ -38,6 +30,9 @@ pip3 install -r requirements.txt
 
 CALL venv\Scripts\deactivate.bat
 
-SET /P done=Done!
+goto :done
 
 :done
+
+SET /P done=Done!
+
