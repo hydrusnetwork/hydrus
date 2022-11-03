@@ -1,16 +1,21 @@
 @ECHO off
 
-IF NOT EXIST "venv\" goto :missing_venv
+IF NOT EXIST "venv\" (
 
-IF EXIST "help\" goto :delete
-
-goto :create
+	SET /P gumpf=You need to set up a venv! Check the running from source help for more info!
+	EXIT /B 1
+	
+)
 
 :delete
 
-echo Deleting old help...
+IF EXIST "help\" (
 
-rmdir /s /q help
+	echo Deleting old help...
+	
+	rmdir /s /q help
+	
+)
 
 :create
 
@@ -25,11 +30,3 @@ mkdocs build -d help
 CALL venv\Scripts\deactivate.bat
 
 SET /P done=Done!
-
-goto :done
-
-:missing_venv
-
-SET /P ready=You need to set up a venv! Check the running from source help for more info!
-
-:done
