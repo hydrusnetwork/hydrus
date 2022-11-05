@@ -1,3 +1,7 @@
+---
+title: About These Docs
+---
+
 # About These Docs
 
 The Hydrus docs are built with [MkDocs](https://www.mkdocs.org/) using the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The .md files in the `docs` directory are converted into nice html in the `help` directory. This is done automatically in the built releases, but if you run from source, you will want to build your own.

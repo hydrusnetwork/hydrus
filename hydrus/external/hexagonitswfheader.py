@@ -1,16 +1,7 @@
 import struct
+import lzma
 import zlib
 
-try:
-    
-    import pylzma
-    
-    PYLZMA_OK = True
-    
-except:
-    
-    PYLZMA_OK = False
-    
 # hydrus_dev added ZWS support
 # hydrus_dev mangled this to work on py3
 
@@ -64,13 +55,22 @@ def parse(input):
         
         uncompressed_size = input.read( 4 )
         
-        if not PYLZMA_OK:
-            
-            raise Exception( 'Cannot parse ZWS swf files without pylzma!' )
-            
+        # hydev thanks based stackexchange search yet again
+        # https://stackoverflow.com/a/39777419
         
-        buffer = pylzma.decompress( input.read() )
-        
+        try:
+            
+            five = input.read( 5 )
+            unknown_uncompressed_size_8byte = 8 * b'\xff'
+            the_rest = input.read()
+            
+            buffer = lzma.decompress( five + unknown_uncompressed_size_8byte + the_rest )
+            
+        except:
+            
+            raise Exception( 'This flash file is too weird, could not parse it!' )
+            
+            
 
     # Containing rectangle (struct RECT)
 

@@ -66,7 +66,7 @@ def next_token(src):
         if src.startswith(")"):
             return (")", None), src[1:]
 
-        m = re.match(r"(not|and|or|implies|xor|nor|nand|xnor|iff)[\s\(]", src)
+        m = re.match(r"(not|and|or|implies|xor|nor|nand|xnor|iff)[\s(]", src)
         if m:
             kw = m.group(1)
             return (kw if kw != "xnor" else "iff", None), src[len(kw):]

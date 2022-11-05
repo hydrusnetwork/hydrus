@@ -2,25 +2,8 @@
 
 import os
 
-# If not explicitely set, prefer PySide2 instead of the qtpy default which is PyQt5
-# It is important that this runs on startup *before* anything is imported from qtpy.
-# Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
-
-if not 'QT_API' in os.environ:
-    
-    try:
-
-        import PySide2
-
-        os.environ[ 'QT_API' ] = 'pyside2'
-        
-    except ImportError as e:
-        
-        pass
-        
-
-# 
 import qtpy
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -28,61 +11,27 @@ from qtpy import QtGui as QG
 import math
 
 from collections import defaultdict
-    
-if qtpy.PYQT5:
-    
-    import sip # pylint: disable=E0401
-    
-    def isValid( obj ):
-        
-        if isinstance( obj, sip.simplewrapper ):
-        
-            return not sip.isdeleted( obj )
-            
-        
-        return True
-        
-    
-elif qtpy.PYSIDE2:
-    
-    import shiboken2
-    
-    isValid = shiboken2.isValid
-    
-else:
-    
-    raise RuntimeError( 'You need either PySide2 or PyQt5' )
-    
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import QtInit
 
-def MonkeyPatchMissingMethods():
+isValid = QtInit.isValid
+
+def registerEventType():
     
-    if qtpy.PYQT5:
+    if QtInit.WE_ARE_PYSIDE:
         
-        def MonkeyPatchGetSaveFileName( original_function ):
-            
-            def new_function( *args, **kwargs ):
-                
-                if 'selectedFilter' in kwargs:
-                    
-                    kwargs[ 'initialFilter' ] = kwargs[ 'selectedFilter' ]
-                    del kwargs[ 'selectedFilter' ]
-                    
-                    return original_function( *args, **kwargs )
-                    
-                
-            
-            return new_function
-            
+        return QC.QEvent.Type( QC.QEvent.registerEventType() )
         
-        QW.QFileDialog.getSaveFileName = MonkeyPatchGetSaveFileName( QW.QFileDialog.getSaveFileName )
+    else:
         
-
+        return QC.QEvent.registerEventType()
+        
+    
 
 class HBoxLayout( QW.QHBoxLayout ):
     
@@ -98,6 +47,7 @@ class HBoxLayout( QW.QHBoxLayout ):
         
         self.setContentsMargins( val, val, val, val )
         
+    
 
 class VBoxLayout( QW.QVBoxLayout ):
 
@@ -217,16 +167,15 @@ class DirPickerCtrl( QW.QWidget ):
         
         existing_path = self._path_edit.text()
         
+        kwargs = {}
+        
         if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
-            
-        else:
-            
-            options = QW.QFileDialog.Options()
+            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
+            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
             
         
-        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, options = options )
+        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, **kwargs )
         
         if path == '':
             
@@ -305,35 +254,34 @@ class FilePickerCtrl( QW.QWidget ):
             existing_path = self._starting_directory
             
         
+        kwargs = {}
+        
         if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            options = QW.QFileDialog.Options( QW.QFileDialog.DontUseNativeDialog )
-            
-        else:
-            
-            options = QW.QFileDialog.Options()
+            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
+            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
             
         
         if self._save_mode:
             
             if self._wildcard:
                 
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
                 
             else:
                 
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, options = options )[0]
+                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, **kwargs )[0]
                 
             
         else:
             
             if self._wildcard:
                 
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, options = options )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
                 
             else:
                 
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, options = options )[0]
+                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, **kwargs )[0]
                 
             
         
@@ -372,6 +320,11 @@ class TabBar( QW.QTabBar ):
         
         QW.QTabBar.__init__( self, parent )
         
+        if HC.PLATFORM_MACOS:
+            
+            self.setDocumentMode( True )
+            
+        
         self.setMouseTracking( True )
         self.setAcceptDrops( True )
         self._supplementary_drop_target = None
@@ -404,13 +357,13 @@ class TabBar( QW.QTabBar ):
     
     def mousePressEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.LeftButton:
             
             self._last_clicked_tab_index = index
             
-            self._last_clicked_global_pos = event.globalPos()
+            self._last_clicked_global_pos = event.globalPosition().toPoint()
             
         
         QW.QTabBar.mousePressEvent( self, event )
@@ -418,7 +371,7 @@ class TabBar( QW.QTabBar ):
     
     def mouseReleaseEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.MiddleButton:
             
@@ -435,7 +388,7 @@ class TabBar( QW.QTabBar ):
     
     def mouseDoubleClickEvent( self, event ):
         
-        index = self.tabAt( event.pos() )
+        index = self.tabAt( event.position().toPoint() )
         
         if event.button() == QC.Qt.LeftButton:
             
@@ -483,7 +436,7 @@ class TabBar( QW.QTabBar ):
         
         if 'application/hydrus-tab' not in event.mimeData().formats():
             
-            tab_index = self.tabAt( event.pos() )
+            tab_index = self.tabAt( event.position().toPoint() )
             
             if tab_index != -1:
                 
@@ -588,7 +541,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     
     def mouseMoveEvent( self, e ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             QW.QTabWidget.mouseMoveEvent( self, e )
             
@@ -598,7 +551,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        my_mouse_pos = e.pos()
+        my_mouse_pos = e.position().toPoint()
         global_mouse_pos = self.mapToGlobal( my_mouse_pos )
         tab_bar_mouse_pos = self._tab_bar.mapFromGlobal( global_mouse_pos )
         
@@ -619,7 +572,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        if e.globalPos() == clicked_global_pos:
+        if e.globalPosition().toPoint() == clicked_global_pos:
             
             # don't start a drag until movement
             
@@ -653,9 +606,9 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         drag.exec_( QC.Qt.MoveAction )
         
 
-    def dragEnterEvent( self, e ):
+    def dragEnterEvent( self, e: QG.QDragEnterEvent ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             return QW.QTabWidget.dragEnterEvent( self, e )
             
@@ -670,11 +623,11 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
         
     
-    def dragMoveEvent( self, event ):
+    def dragMoveEvent( self, event: QG.QDragMoveEvent ):
         
-        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.pos() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
+        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.position().toPoint() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
         
-        screen_pos = self.mapToGlobal( event.pos() )
+        screen_pos = self.mapToGlobal( event.position().toPoint() )
         
         tab_pos = self._tab_bar.mapFromGlobal( screen_pos )
         
@@ -682,7 +635,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         if tab_index != -1:
             
-            shift_down = event.keyboardModifiers() & QC.Qt.ShiftModifier
+            shift_down = event.modifiers() & QC.Qt.ShiftModifier
             
             self.setCurrentIndex( tab_index )
             
@@ -695,9 +648,9 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         #return QW.QTabWidget.dragMoveEvent( self, event )
         
 
-    def dragLeaveEvent( self, e ):
+    def dragLeaveEvent( self, e: QG.QDragLeaveEvent ):
         
-        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ): return QW.QTabWidget.dragLeaveEvent( self, e )
+        #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ): return QW.QTabWidget.dragLeaveEvent( self, e )
         
         e.accept()
         
@@ -722,13 +675,13 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         QW.QTabWidget.insertTab( self, index, widget, *args, **kwargs )
         
     
-    def dropEvent( self, e ):
+    def dropEvent( self, e: QG.QDropEvent ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.pos() ) ) ):
+        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
             
             return QW.QTabWidget.dropEvent( self, e )
             
-       
+        
         if 'application/hydrus-tab' not in e.mimeData().formats(): #Page dnd has no associated mime data
             
             e.ignore()
@@ -771,7 +724,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         counter = self.count()
         
-        screen_pos = self.mapToGlobal( e.pos() )
+        screen_pos = self.mapToGlobal( e.position().toPoint() )
         
         tab_pos = self.tabBar().mapFromGlobal( screen_pos )
         
@@ -796,8 +749,10 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             left_edge_rect = QC.QRect( tab_rect.topLeft(), edge_size )
             right_edge_rect = QC.QRect( tab_rect.topRight() - QC.QPoint( EDGE_PADDING, 0 ), edge_size )
             
-            dropped_on_left_edge = left_edge_rect.contains( e.pos() )
-            dropped_on_right_edge = right_edge_rect.contains( e.pos() )
+            drop_pos = e.position().toPoint()
+            
+            dropped_on_left_edge = left_edge_rect.contains( drop_pos )
+            dropped_on_right_edge = right_edge_rect.contains( drop_pos )
             
         
         if counter == 0:
@@ -841,8 +796,8 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             self.insertTab( insert_index, source_page, source_name )
 
-            shift_down = e.keyboardModifiers() & QC.Qt.ShiftModifier
-
+            shift_down = e.modifiers() & QC.Qt.ShiftModifier
+            
             follow_dropped_page = not shift_down
 
             new_options = HG.client_controller.new_options
@@ -989,28 +944,31 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             
         
     else:
-
+        
         if isinstance( item, QW.QLayout ):
-
+            
             layout.addLayout( item )
             
             if alignment is not None:
                 
                 layout.setAlignment( item, alignment )
-
+                
+            
         elif isinstance( item, QW.QWidget ):
-
+            
             layout.addWidget( item )
             
             if alignment is not None:
                 
                 layout.setAlignment( item, alignment )
-
+                
+            
         elif isinstance( item, tuple ):
-
+            
             layout.addStretch( 1 )
             
             return
+            
         
     
     zero_border = False
@@ -1125,6 +1083,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
         
         item.setContentsMargins( margin, margin, margin, margin )
         
+    
 
 def ScrollAreaVisibleRect( scroll_area ):
     
@@ -1145,9 +1104,12 @@ def ScrollAreaVisibleRect( scroll_area ):
     
     return rect
     
-def AdjustOpacity( image, opacity_factor ):
+
+def AdjustOpacity( image: QG.QImage, opacity_factor ):
     
     new_image = QG.QImage( image.width(), image.height(), QG.QImage.Format_RGBA8888 )
+    
+    new_image.setDevicePixelRatio( image.devicePixelRatio() )
     
     new_image.fill( QC.Qt.transparent )
     
@@ -1158,23 +1120,35 @@ def AdjustOpacity( image, opacity_factor ):
     painter.drawImage( 0, 0, image )
     
     return new_image
+    
 
 def ToKeySequence( modifiers, key ):
     
-    if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
+    if QtInit.WE_ARE_QT5:
         
-        seq_str = ''
+        if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
+            
+            seq_str = ''
+            
+            for modifier in [ QC.Qt.ShiftModifier, QC.Qt.ControlModifier, QC.Qt.AltModifier, QC.Qt.MetaModifier, QC.Qt.KeypadModifier, QC.Qt.GroupSwitchModifier ]:
+                
+                if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
+                
+            
+            seq_str += QG.QKeySequence( key ).toString()
+            
+            return QG.QKeySequence( seq_str )
+            
+        else:
+            
+            return QG.QKeySequence( key + modifiers )
+            
         
-        for modifier in [ QC.Qt.ShiftModifier, QC.Qt.ControlModifier, QC.Qt.AltModifier, QC.Qt.MetaModifier, QC.Qt.KeypadModifier, QC.Qt.GroupSwitchModifier ]:
-            
-            if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
-            
-        seq_str += QG.QKeySequence( key ).toString()
-            
-        return QG.QKeySequence( seq_str )
-            
-    else: return QG.QKeySequence( key + modifiers )
-
+    else:
+        
+        return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) ) # pylint: disable=E1101
+        
+    
 
 def AddShortcut( widget, modifier, key, callable, *args ):
     
@@ -1191,7 +1165,7 @@ def GetBackgroundColour( widget ):
     return widget.palette().color( QG.QPalette.Window )
 
 
-CallAfterEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+CallAfterEventType = registerEventType()
 
 class CallAfterEvent( QC.QEvent ):
     
@@ -1243,6 +1217,7 @@ class CallAfterEventCatcher( QC.QObject ):
         
         return False
         
+    
 
 def CallAfter( fn, *args, **kwargs ):
     
@@ -1442,6 +1417,21 @@ def SetMinClientSize( widget, size ):
     if size.width() >= 0: widget.setMinimumWidth( size.width() )
     if size.height() >= 0: widget.setMinimumHeight( size.height() )
 
+def WheelEventIsSynthesised( event: QG.QWheelEvent ):
+    
+    if QtInit.WE_ARE_QT5:
+    
+        return event.source() == QC.Qt.MouseEventSynthesizedBySystem
+        
+    elif QtInit.WE_ARE_QT6:
+        
+        return event.pointerType() != QG.QPointingDevice.PointerType.Generic
+        
+    else:
+        
+        return False
+        
+    
 
 class StatusBar( QW.QStatusBar ):
     
@@ -1651,15 +1641,17 @@ class RadioBox( QW.QFrame ):
             
             self.layout().addWidget( radiobutton )
             
+        
         if vertical and len( self._choices ):
             
             self._choices[0].setChecked( True )
-        
+            
         elif len( self._choices ):
             
             self._choices[-1].setChecked( True )
+            
         
-        
+    
     def _GetCurrentChoiceWidget( self ):
         
         for choice in self._choices:
@@ -1672,14 +1664,16 @@ class RadioBox( QW.QFrame ):
         
         return None
         
+    
     def GetCurrentIndex( self ):
         
         for i in range( len( self._choices ) ):
             
             if self._choices[ i ].isChecked(): return i
             
+        
         return -1
-    
+        
     
     def SetStringSelection( self, str ):
 
@@ -1725,6 +1719,101 @@ class RadioBox( QW.QFrame ):
     
         self._choices[ idx ].setChecked( True )
 
+
+class DataRadioBox( QW.QFrame ):
+    
+    radioBoxChanged = QC.Signal()
+    
+    def __init__( self, parent = None, choice_tuples = [], vertical = False ):
+    
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+        
+        if vertical:
+            
+            self.setLayout( VBoxLayout() )
+            
+        else:
+            
+            self.setLayout( HBoxLayout() )
+            
+        
+        self._choices = []
+        self._buttons_to_data = {}
+        
+        for ( text, data ) in choice_tuples:
+            
+            radiobutton = QW.QRadioButton( text, self )
+            
+            self._choices.append( radiobutton )
+            
+            self._buttons_to_data[ radiobutton ] = data
+            
+            radiobutton.clicked.connect( self.radioBoxChanged )
+            
+            self.layout().addWidget( radiobutton )
+            
+        
+        if vertical and len( self._choices ):
+            
+            self._choices[0].setChecked( True )
+            
+        elif len( self._choices ) > 0:
+            
+            self._choices[-1].setChecked( True )
+            
+        
+    
+    def _GetCurrentChoiceWidget( self ):
+        
+        for choice in self._choices:
+            
+            if choice.isChecked():
+                
+                return choice
+                
+            
+        
+        return None
+        
+    
+    def GetValue( self ):
+        
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            if button.isChecked():
+                
+                return data
+                
+            
+        
+        raise Exception( 'No button selected!' )
+        
+    
+    def setFocus( self, reason ):
+        
+        for button in self._choices:
+            
+            if button.isChecked():
+                
+                button.setFocus( reason )
+                
+                return
+                
+            
+        
+        QW.QFrame.setFocus( self, reason )
+        
+    
+    def SetValue( self, select_data ):
+        
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            button.setChecked( data == select_data )
+            
+        
+    
 
 # Adapted from https://doc.qt.io/qt-5/qtwidgets-widgets-elidedlabel-example.html
 class EllipsizedLabel( QW.QLabel ):
@@ -2242,8 +2331,6 @@ class WidgetEventFilter ( QC.QObject ):
             
             if isValid( self._parent_widget ):
                 
-                if self._parent_widget.isMinimized() or (event.oldState() & QC.Qt.WindowMinimized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_ICONIZE', event )
-            
                 if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
         
         elif type == QC.QEvent.MouseMove:
@@ -2336,10 +2423,6 @@ class WidgetEventFilter ( QC.QObject ):
             
         self._callback_map[ evt_name ].append( callback )
 
-    def EVT_ICONIZE( self, callback ):
-        
-        self._AddCallback( 'EVT_ICONIZE', callback )
-
     def EVT_KEY_DOWN( self, callback ):
         
         self._AddCallback( 'EVT_KEY_DOWN', callback )
@@ -2395,228 +2478,3 @@ class WidgetEventFilter ( QC.QObject ):
     def EVT_SIZE( self, callback ):
         
         self._AddCallback( 'EVT_SIZE', callback )
-
-# wew lad
-# https://stackoverflow.com/questions/46456238/checkbox-not-visible-inside-combobox
-class CheckBoxDelegate(QW.QStyledItemDelegate):
-    
-    def __init__(self, parent=None):
-        
-        super( CheckBoxDelegate, self ).__init__(parent)
-        
-
-    def createEditor( self, parent, op, idx ):
-        
-        self.editor = QW.QCheckBox( parent )
-        
-
-class CollectComboCtrl( QW.QComboBox ):
-    
-    itemChanged = QC.Signal()
-    
-    def __init__( self, parent, media_collect ):
-        
-        QW.QComboBox.__init__( self, parent )
-        
-        self.view().pressed.connect( self._HandleItemPressed )
-        
-        # this was previously 'if Fusion style only', but as it works for normal styles too, it is more helpful to have it always on
-        self.setItemDelegate( CheckBoxDelegate() )
-        
-        self.setModel( QG.QStandardItemModel( self ) )
-        
-        text_and_data_tuples = set()
-        
-        for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts():
-            
-            namespaces = media_sort.GetNamespaces()
-            
-            try:
-                
-                text_and_data_tuples.update( namespaces )
-                
-            except:
-                
-                HydrusData.DebugPrint( 'Bad namespaces: {}'.format( namespaces ) )
-                
-                HydrusData.ShowText( 'Hey, your namespace-based sorts are likely damaged. Details have been written to the log, please let hydev know!' )
-                
-            
-        
-        text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
-        
-        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-        
-        for ratings_service in ratings_services:
-            
-            text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
-            
-        
-        for ( text, data ) in text_and_data_tuples:
-
-            self.Append( text, data )
-            
-        # Trick to display custom text
-        
-        self._cached_text = ''
-        
-        if media_collect.DoesACollect():
-            
-            CallAfter( self.SetCollectByValue, media_collect )
-            
-        
-
-    def paintEvent( self, e ):
-        
-        painter = QW.QStylePainter( self )
-        painter.setPen( self.palette().color( QG.QPalette.Text ) )
-
-        opt = QW.QStyleOptionComboBox()
-        self.initStyleOption( opt )
-
-        opt.currentText = self._cached_text
-
-        painter.drawComplexControl( QW.QStyle.CC_ComboBox, opt )
-
-        painter.drawControl( QW.QStyle.CE_ComboBoxLabel, opt )
-        
-    
-    def GetValues( self ):
-
-        namespaces = []
-        rating_service_keys = []
-
-        for index in self.GetCheckedIndices():
-
-            (collect_type, collect_data) = self.itemData( index, QC.Qt.UserRole )
-
-            if collect_type == 'namespace':
-
-                namespaces.append( collect_data )
-
-            elif collect_type == 'rating':
-
-                rating_service_keys.append( collect_data )
-
-        collect_strings = self.GetCheckedStrings()
-
-        if len( collect_strings ) > 0:
-            
-            description = 'collect by ' + '-'.join( collect_strings )
-            
-        else:
-
-            description = 'no collections'
-            
-
-        return ( namespaces, rating_service_keys, description )
-
-
-    def hidePopup(self):
-
-        if not self.view().underMouse():
-            
-            QW.QComboBox.hidePopup( self )
-            
-            
-    def SetValue( self, text ):
-        
-        self._cached_text = text
-           
-        self.setCurrentText( text )
-        
-        
-    def SetCollectByValue( self, media_collect ):
-
-        try:
-
-            indices_to_check = []
-
-            for index in range( self.count() ):
-
-                ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
-
-                p1 = collect_type == 'namespace' and collect_data in media_collect.namespaces
-                p2 = collect_type == 'rating' and collect_data in media_collect.rating_service_keys
-
-                if p1 or p2:
-                    
-                    indices_to_check.append( index )
-
-            self.SetCheckedIndices( indices_to_check )
-            
-            self.itemChanged.emit()
-
-        except Exception as e:
-
-            HydrusData.ShowText( 'Failed to set a collect-by value!' )
-
-            HydrusData.ShowException( e )
-
-
-    def SetCheckedIndices( self, indices_to_check ):
-        
-        for idx in range( self.count() ):
-
-            item = self.model().item( idx )
-            
-            if idx in indices_to_check:
-                
-                item.setCheckState( QC.Qt.Checked )
-                
-            else:
-                
-                item.setCheckState( QC.Qt.Unchecked )
-                
-            
-        
-    
-    def GetCheckedIndices( self ):
-        
-        indices = []
-        
-        for idx in range( self.count() ):
-
-            item = self.model().item( idx )
-            
-            if item.checkState() == QC.Qt.Checked: indices.append( idx )
-            
-        return indices
-
-
-    def GetCheckedStrings( self ):
-
-        strings = [ ]
-
-        for idx in range( self.count() ):
-
-            item = self.model().item( idx )
-
-            if item.checkState() == QC.Qt.Checked: strings.append( item.text() )
-
-        return strings
-
-
-    def Append( self, str, data ):
-        
-        self.addItem( str, userData = data )
-        
-        item = self.model().item( self.count() - 1, 0 )
-        
-        item.setCheckState( QC.Qt.Unchecked )
-
-
-    def _HandleItemPressed( self, index ):
-        
-        item = self.model().itemFromIndex( index )
-        
-        if item.checkState() == QC.Qt.Checked:
-            
-            item.setCheckState( QC.Qt.Unchecked )
-            
-        else:
-            
-            item.setCheckState( QC.Qt.Checked )
-            
-        self.SetValue( self._cached_text )
-        self.itemChanged.emit()

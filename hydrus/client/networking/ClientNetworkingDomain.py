@@ -31,7 +31,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER
     SERIALISABLE_NAME = 'Domain Manager'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self ):
         
@@ -60,6 +60,13 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._url_class_keys_to_default_tag_import_options = {}
         
+        from hydrus.client.importing.options import NoteImportOptions
+        
+        self._file_post_default_note_import_options = NoteImportOptions.NoteImportOptions()
+        self._watchable_default_note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        self._url_class_keys_to_default_note_import_options = {}
+        
         self._gug_keys_to_gugs = {}
         self._gug_names_to_gugs = {}
         
@@ -84,6 +91,55 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             if unparseable_url_class_key in self._url_class_keys_to_parser_keys:
                 
                 del self._url_class_keys_to_parser_keys[ unparseable_url_class_key ]
+                
+            
+        
+    
+    def _GetDefaultNoteImportOptionsForURL( self, url ):
+        
+        url_class = self._GetURLClass( url )
+        
+        if url_class is None or url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+            
+            return self._file_post_default_note_import_options
+            
+        
+        try:
+            
+            ( url_class, url ) = self._GetNormalisedAPIURLClassAndURL( url )
+            
+        except HydrusExceptions.URLClassException:
+            
+            return self._file_post_default_note_import_options
+            
+        
+        # some lad decided to api convert one url type to another
+        if url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+            
+            return self._file_post_default_note_import_options
+            
+        
+        url_class_key = url_class.GetClassKey()
+        
+        if url_class_key in self._url_class_keys_to_default_note_import_options:
+            
+            return self._url_class_keys_to_default_note_import_options[ url_class_key ]
+            
+        else:
+            
+            url_type = url_class.GetURLType()
+            
+            if url_type == HC.URL_TYPE_POST:
+                
+                return self._file_post_default_note_import_options
+                
+            elif url_type == HC.URL_TYPE_WATCHABLE:
+                
+                return self._watchable_default_note_import_options
+                
+            else:
+                
+                raise HydrusExceptions.URLClassException( 'Could not find note import options for that kind of URL Class!' )
                 
             
         
@@ -221,14 +277,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_file_post_default_tag_import_options = self._file_post_default_tag_import_options.GetSerialisableTuple()
         serialisable_watchable_default_tag_import_options = self._watchable_default_tag_import_options.GetSerialisableTuple()
-        serialisable_url_class_keys_to_default_tag_import_options = [ ( url_class_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_class_key, tag_import_options ) in list(self._url_class_keys_to_default_tag_import_options.items()) ]
+        serialisable_url_class_keys_to_default_tag_import_options = [ ( url_class_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_class_key, tag_import_options ) in self._url_class_keys_to_default_tag_import_options.items() ]
         
         serialisable_default_tag_import_options_tuple = ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_class_keys_to_default_tag_import_options )
+        
+        serialisable_file_post_default_note_import_options = self._file_post_default_note_import_options.GetSerialisableTuple()
+        serialisable_watchable_default_note_import_options = self._watchable_default_note_import_options.GetSerialisableTuple()
+        serialisable_url_class_keys_to_default_note_import_options = [ ( url_class_key.hex(), note_import_options.GetSerialisableTuple() ) for ( url_class_key, note_import_options ) in self._url_class_keys_to_default_note_import_options.items() ]
+        
+        serialisable_default_note_import_options_tuple = ( serialisable_file_post_default_note_import_options, serialisable_watchable_default_note_import_options, serialisable_url_class_keys_to_default_note_import_options )
         
         serialisable_parsers = self._parsers.GetSerialisableTuple()
         serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), list(custom_header_dict.items()) ) for ( network_context, custom_header_dict ) in list(self._network_contexts_to_custom_header_dicts.items()) ]
         
-        return ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
+        return ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_default_note_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
         
     
     def _GetURLClass( self, url ):
@@ -285,7 +347,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
+        ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_default_note_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
         
         self._gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs )
         
@@ -302,6 +364,13 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._watchable_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_tag_import_options )
         
         self._url_class_keys_to_default_tag_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options ) for ( serialisable_url_class_key, serialisable_tag_import_options ) in serialisable_url_class_keys_to_default_tag_import_options }
+        
+        ( serialisable_file_post_default_note_import_options, serialisable_watchable_default_note_import_options, serialisable_url_class_keys_to_default_note_import_options ) = serialisable_default_note_import_options_tuple
+        
+        self._file_post_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_note_import_options )
+        self._watchable_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_note_import_options )
+        
+        self._url_class_keys_to_default_note_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options ) for ( serialisable_url_class_key, serialisable_note_import_options ) in serialisable_url_class_keys_to_default_note_import_options }
         
         self._parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parsers )
         
@@ -438,14 +507,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             from hydrus.client.importing.options import TagImportOptions
             
-            self._file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
-            self._watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
+            file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
+            watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
             
-            self._url_class_keys_to_default_tag_import_options = {}
+            url_class_keys_to_default_tag_import_options = {}
             
-            serialisable_file_post_default_tag_import_options = self._file_post_default_tag_import_options.GetSerialisableTuple()
-            serialisable_watchable_default_tag_import_options = self._watchable_default_tag_import_options.GetSerialisableTuple()
-            serialisable_url_class_keys_to_default_tag_import_options = [ ( url_class_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_class_key, tag_import_options ) in list(self._url_class_keys_to_default_tag_import_options.items()) ]
+            serialisable_file_post_default_tag_import_options = file_post_default_tag_import_options.GetSerialisableTuple()
+            serialisable_watchable_default_tag_import_options = watchable_default_tag_import_options.GetSerialisableTuple()
+            serialisable_url_class_keys_to_default_tag_import_options = [ ( url_class_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_class_key, tag_import_options ) in url_class_keys_to_default_tag_import_options.items() ]
             
             serialisable_default_tag_import_options_tuple = ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_class_keys_to_default_tag_import_options )
             
@@ -480,6 +549,28 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
+            
+            from hydrus.client.importing.options import NoteImportOptions
+            
+            file_post_default_note_import_options = NoteImportOptions.NoteImportOptions()
+            watchable_default_note_import_options = NoteImportOptions.NoteImportOptions()
+            
+            url_class_keys_to_default_note_import_options = {}
+            
+            serialisable_file_post_default_note_import_options = file_post_default_note_import_options.GetSerialisableTuple()
+            serialisable_watchable_default_note_import_options = watchable_default_note_import_options.GetSerialisableTuple()
+            serialisable_url_class_keys_to_default_note_import_options = [ ( url_class_key.hex(), note_import_options.GetSerialisableTuple() ) for ( url_class_key, note_import_options ) in url_class_keys_to_default_note_import_options.items() ]
+            
+            serialisable_default_note_import_options_tuple = ( serialisable_file_post_default_note_import_options, serialisable_watchable_default_note_import_options, serialisable_url_class_keys_to_default_note_import_options )
+            
+            new_serialisable_info = ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_default_note_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts )
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -991,19 +1082,27 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultNoteImportOptions( self ):
+        
+        with self._lock:
+            
+            return ( self._file_post_default_note_import_options, self._watchable_default_note_import_options, self._url_class_keys_to_default_note_import_options )
+            
+        
+    
+    def GetDefaultNoteImportOptionsForURL( self, url ):
+        
+        with self._lock:
+            
+            return self._GetDefaultNoteImportOptionsForURL( url )
+            
+        
+    
     def GetDefaultTagImportOptions( self ):
         
         with self._lock:
             
             return ( self._file_post_default_tag_import_options, self._watchable_default_tag_import_options, self._url_class_keys_to_default_tag_import_options )
-            
-        
-    
-    def GetDefaultTagImportOptionsForPosts( self ):
-        
-        with self._lock:
-            
-            return self._file_post_default_tag_import_options.Duplicate()
             
         
     
@@ -1520,6 +1619,31 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def RenameGUG( self, original_name, new_name ):
+        
+        with self._lock:
+            
+            existing_gug_names_to_gugs = { gug.GetName() : gug for gug in self._gugs }
+            
+        
+        if original_name in existing_gug_names_to_gugs:
+            
+            gug = existing_gug_names_to_gugs[ original_name ]
+            
+            del existing_gug_names_to_gugs[ original_name ]
+            
+            gug.SetName( new_name )
+            
+            gug.SetNonDupeName( set( existing_gug_names_to_gugs.keys() ) )
+            
+            existing_gug_names_to_gugs[ gug.GetName() ] = gug
+            
+            new_gugs = list( existing_gug_names_to_gugs.values() )
+            
+            self.SetGUGs( new_gugs )
+            
+        
+    
     def ReportNetworkInfrastructureError( self, url ):
         
         with self._lock:
@@ -1565,11 +1689,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDefaultFilePostNoteImportOptions( self, note_import_options ):
+        
+        with self._lock:
+            
+            self._file_post_default_note_import_options = note_import_options
+            
+            self._SetDirty()
+            
+        
+    
     def SetDefaultFilePostTagImportOptions( self, tag_import_options ):
         
         with self._lock:
             
             self._file_post_default_tag_import_options = tag_import_options
+            
+            self._SetDirty()
             
         
     
@@ -1581,6 +1717,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             HG.client_controller.new_options.SetKey( 'default_gug_key', gug_key )
             HG.client_controller.new_options.SetString( 'default_gug_name', gug_name )
+            
+        
+    
+    def SetDefaultNoteImportOptions( self, file_post_default_note_import_options, watchable_default_note_import_options, url_class_keys_to_note_import_options ):
+        
+        with self._lock:
+            
+            self._file_post_default_note_import_options = file_post_default_note_import_options
+            self._watchable_default_note_import_options = watchable_default_note_import_options
+            
+            self._url_class_keys_to_default_note_import_options = url_class_keys_to_note_import_options
+            
+            self._SetDirty()
             
         
     

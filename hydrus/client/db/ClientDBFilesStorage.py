@@ -218,6 +218,11 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
         return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.SINGLE_TABLE_NAME )
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        return []
+        
+    
     def SingleTableIsFast( self ) -> bool:
         
         return False
@@ -691,7 +696,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
             
-            self._Execute( create_query_without_name.format( table_name ) )
+            self._CreateTable( create_query_without_name, table_name )
             
         
         index_generation_dict = self._GetServiceIndexGenerationDict( service_id )

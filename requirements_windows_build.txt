@@ -1,7 +1,0 @@
-PyInstaller==4.2
-PyWin32
-pypiwin32
-pywin32-ctypes
-mock>=4.0.0
-httmock>=1.4.0
-mkdocs-material

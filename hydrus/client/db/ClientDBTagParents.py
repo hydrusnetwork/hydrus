@@ -222,7 +222,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
             
-            self._Execute( create_query_without_name.format( table_name ) )
+            self._CreateTable( create_query_without_name, table_name )
             
         
         index_generation_dict = self._GetServiceIndexGenerationDict( tag_service_id )
@@ -513,7 +513,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             
             tag_ids_seen_this_round = set()
             
-            ideal_tag_ids = self.modules_tag_siblings.GetIdeals( ClientTags.TAG_DISPLAY_IDEAL, service_id, next_tag_ids )
+            ideal_tag_ids = self.modules_tag_siblings.GetIdealTagIds( ClientTags.TAG_DISPLAY_IDEAL, service_id, next_tag_ids )
             
             tag_ids_seen_this_round.update( self.modules_tag_siblings.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, service_id, ideal_tag_ids ) )
             
@@ -625,7 +625,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         all_tag_ids = set( itertools.chain.from_iterable( ( itertools.chain.from_iterable( pair_ids ) for pair_ids in unideal_statuses_to_pair_ids.values() ) ) )
         
-        tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagsToIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, all_tag_ids )
+        tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, all_tag_ids )
         
         ideal_statuses_to_pair_ids = collections.defaultdict( list )
         
@@ -763,7 +763,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             
             tag_ids_to_clear_and_regen = set( tag_ids )
             
-            ideal_tag_ids = self.modules_tag_siblings.GetIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
+            ideal_tag_ids = self.modules_tag_siblings.GetIdealTagIds( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
             
             tag_ids_to_clear_and_regen.update( self.modules_tag_siblings.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
             

@@ -576,7 +576,7 @@ class ServiceLocalRating( Service ):
         self._colours = dict( dictionary[ 'colours' ] )
         
     
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         raise NotImplementedError()
         
@@ -599,7 +599,7 @@ class ServiceLocalRating( Service ):
     
 class ServiceLocalRatingLike( ServiceLocalRating ):
     
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         if rating is None:
             
@@ -618,6 +618,30 @@ class ServiceLocalRatingLike( ServiceLocalRating ):
             
         
         return 'unknown'
+        
+    
+    def ConvertRatingStateToString( self, rating_state: int ):
+        
+        if rating_state == ClientRatings.LIKE:
+            
+            return 'like'
+            
+        elif rating_state == ClientRatings.DISLIKE:
+            
+            return 'dislike'
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
         
     
 class ServiceLocalRatingNumerical( ServiceLocalRating ):
@@ -648,21 +672,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
             
         
     
-    def ConvertRatingToStars( self, rating: float ) -> int:
-        
-        if self._allow_zero:
-            
-            stars = int( round( rating * self._num_stars ) )
-            
-        else:
-            
-            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
-            
-        
-        return stars
-        
-    
-    def ConvertRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
         if rating is None:
             
@@ -677,6 +687,40 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
             
         
         return 'unknown'
+        
+    
+    def ConvertRatingStateAndRatingToString( self, rating_state: int, rating: float ):
+        
+        if rating_state == ClientRatings.SET:
+            
+            return self.ConvertNoneableRatingToString( rating )
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
+        
+    
+    def ConvertRatingToStars( self, rating: float ) -> int:
+        
+        if self._allow_zero:
+            
+            stars = int( round( rating * self._num_stars ) )
+            
+        else:
+            
+            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
+            
+        
+        return stars
         
     
     def ConvertStarsToRating( self, stars: int ) -> float:
@@ -1899,7 +1943,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:
@@ -1915,14 +1959,14 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     rows_in_this_update = definition_update.GetNumRows()
@@ -2026,7 +2070,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:
@@ -2042,14 +2086,14 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance under _database->file maintenance->review_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     rows_in_this_update = content_update.GetNumRows( content_types )
@@ -3013,9 +3057,9 @@ class ServiceIPFS( ServiceRemote ):
                 
                 mime = media_result.GetMime()
                 
-                result = HG.client_controller.Read( 'service_filenames', self._service_key, { hash } )
+                multihash = media_result.GetLocationsManager().GetServiceFilename( self._service_key )
                 
-                if len( result ) == 0:
+                if multihash is None:
                     
                     try:
                         
@@ -3027,10 +3071,6 @@ class ServiceIPFS( ServiceRemote ):
                         
                         continue
                         
-                    
-                else:
-                    
-                    ( multihash, ) = result
                     
                 
                 file_info.append( ( hash, mime, multihash ) )
@@ -3188,6 +3228,7 @@ class ServiceIPFS( ServiceRemote ):
             HG.client_controller.network_engine.AddJob( network_job )
             
             network_job.WaitUntilDone()
+            
             
         
         parsing_text = network_job.GetContentText()

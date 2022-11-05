@@ -16,6 +16,8 @@ def GetPDFNumWords( path ):
     
     return None
     
+    num_words = None
+    
     try:
         
         pass

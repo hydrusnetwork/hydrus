@@ -37,6 +37,21 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             
         
     
+def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, 'filtering done?' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionArchiveDeleteFinishFilteringPanel( dlg, kept_label, deletion_options )
+        
+        dlg.SetPanel( panel )
+        
+        result = dlg.exec()
+        location_context = panel.GetLocationContext()
+        was_cancelled = dlg.WasCancelled()
+        
+        return ( result, location_context, was_cancelled )
+        
+    
 def GetFinishFilteringAnswer( win, label ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
@@ -97,6 +112,25 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
             
         
     
+def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesYesNoPanel( dlg, message, yes_tuples = yes_tuples, no_label = no_label )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            return panel.GetValue()
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
+            
+        
+    
+
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
     
     if len( choice_tuples ) == 1:
@@ -179,6 +213,8 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
         service_keys = [ service.GetServiceKey() for service in services ]
         
+    
+    service_keys = set( service_keys )
     
     if unallowed is not None:
         

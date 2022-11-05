@@ -12,7 +12,6 @@ from hydrus.core import HydrusTags
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientManagers
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
@@ -173,7 +172,8 @@ class TestMigration( unittest.TestCase ):
         
         ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
         for i in range( 100 ):
             

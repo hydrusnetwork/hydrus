@@ -1,10 +1,8 @@
 import os
-import sqlite3
 import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBModule
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 def BlockingSafeShowMessage( message ):
@@ -15,7 +13,18 @@ def BlockingSafeShowMessage( message ):
     
 class ClientDBModule( HydrusDBModule.HydrusDBModule ):
     
-    def _PresentMissingIndicesWarningToUser( self, index_names ):
+    def _DisplayCatastrophicError( self, text: str ):
+        
+        message = 'The db encountered a serious error! This is going to be written to the log as well, but here it is for a screenshot:'
+        message += os.linesep * 2
+        message += text
+        
+        HydrusData.DebugPrint( message )
+        
+        HG.client_controller.SafeShowCriticalMessage( 'hydrus db failed', message )
+        
+    
+    def _PresentMissingIndicesWarningToUser( self, index_names: typing.Collection[ str ] ):
         
         index_names = sorted( index_names )
         
@@ -29,7 +38,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         HG.client_controller.frame_splash_status.SetText( 'recreating indices' )
         
     
-    def _PresentMissingTablesWarningToUser( self, table_names ):
+    def _PresentMissingTablesWarningToUser( self, table_names: typing.Collection[ str ] ):
         
         table_names = sorted( table_names )
         
@@ -57,5 +66,10 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         BlockingSafeShowMessage( message )
         
         HG.client_controller.frame_splash_status.SetText( 'recreating tables' )
+        
+    
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        raise NotImplementedError()
         
     

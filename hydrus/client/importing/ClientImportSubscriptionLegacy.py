@@ -1,11 +1,9 @@
 import os
 import random
-import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
@@ -13,7 +11,6 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDownloading
-from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
@@ -504,7 +501,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = 100
         self._paused = False
         
-        self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._no_work_until = 0
@@ -540,6 +539,11 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def _DelayWork( self, time_delta, reason ):
+        
+        if len( reason ) > 0:
+            
+            reason = reason.splitlines()[0]
+            
         
         self._no_work_until = HydrusData.GetNow() + time_delta
         self._no_work_until_reason = reason
@@ -668,7 +672,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         message += os.linesep * 2
                         message += login_fail_reason
                         message += os.linesep * 2
-                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )
                         
@@ -728,7 +732,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         message += os.linesep * 2
                         message += login_fail_reason
                         message += os.linesep * 2
-                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )
                         
@@ -879,282 +883,6 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             return ( 10, new_serialisable_info )
             
-        
-    
-    def _WorkOnFiles( self, job_key ):
-        
-        error_count = 0
-        
-        queries = self._GetQueriesForProcessing()
-        
-        queries = [ query for query in queries if query.HasFileWorkToDo() ]
-        
-        num_queries = len( queries )
-        
-        for ( i, query ) in enumerate( queries ):
-            
-            this_query_has_done_work = False
-            
-            query_name = query.GetHumanName()
-            file_seed_cache = query.GetFileSeedCache()
-            
-            text_1 = 'downloading files'
-            query_summary_name = self._name
-            
-            if query_name != self._name:
-                
-                text_1 += ' for "' + query_name + '"'
-                query_summary_name += ': ' + query_name
-                
-            
-            if num_queries > 1:
-                
-                text_1 += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
-                
-            
-            job_key.SetVariable( 'popup_text_1', text_1 )
-            
-            presentation_hashes = []
-            presentation_hashes_fast = set()
-            
-            starting_num_urls = file_seed_cache.GetFileSeedCount()
-            starting_num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
-            starting_num_done = starting_num_urls - starting_num_unknown
-            
-            try:
-                
-                while True:
-                    
-                    file_seed = file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
-                    
-                    if file_seed is None:
-                        
-                        if HG.subscription_report_mode:
-                            
-                            HydrusData.ShowText( 'Query "' + query_name + '" can do no more file work due to running out of unknown urls.' )
-                            
-                        
-                        break
-                        
-                    
-                    if job_key.IsCancelled():
-                        
-                        self._DelayWork( 300, 'recently cancelled' )
-                        
-                        break
-                        
-                    
-                    p1 = not self._CanDoWorkNow()
-                    p3 = not query.DomainOK()
-                    p4 = not query.BandwidthOK( self._name )
-                    p5 = not self._QueryFileLoginOK( query )
-                    
-                    if p1 or p4 or p5:
-                        
-                        if p3 and this_query_has_done_work:
-                            
-                            job_key.SetVariable( 'popup_text_2', 'domain had errors, will try again later' )
-                            
-                            self._DelayWork( 3600, 'domain errors, will try again later' )
-                            
-                            time.sleep( 5 )
-                            
-                        
-                        if p4 and this_query_has_done_work:
-                            
-                            job_key.SetVariable( 'popup_text_2', 'no more bandwidth to download files, will do some more later' )
-                            
-                            time.sleep( 5 )
-                            
-                        
-                        break
-                        
-                    
-                    try:
-                        
-                        num_urls = file_seed_cache.GetFileSeedCount()
-                        num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
-                        num_done = num_urls - num_unknown
-                        
-                        # 4001/4003 is not as useful as 1/3
-                        
-                        human_num_urls = num_urls - starting_num_done
-                        human_num_done = num_done - starting_num_done
-                        
-                        x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( human_num_done + 1, human_num_urls ) + ': '
-                        
-                        job_key.SetVariable( 'popup_gauge_2', ( human_num_done, human_num_urls ) )
-                        
-                        def status_hook( text ):
-                            
-                            if len( text ) > 0:
-                                
-                                text = text.splitlines()[0]
-                                
-                            
-                            job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
-                            
-                        
-                        file_seed.WorkOnURL( file_seed_cache, status_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
-                        
-                        query_tag_import_options = query.GetTagImportOptions()
-                        
-                        if query_tag_import_options.HasAdditionalTags() and file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
-                            
-                            if file_seed.HasHash():
-                                
-                                hash = file_seed.GetHash()
-                                
-                                media_result = HG.client_controller.Read( 'media_result', hash )
-                                
-                                downloaded_tags = []
-                                
-                                service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
-                                
-                                if len( service_keys_to_content_updates ) > 0:
-                                    
-                                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                                    
-                                
-                            
-                        
-                        if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
-                            
-                            hash = file_seed.GetHash()
-                            
-                            if hash not in presentation_hashes_fast:
-                                
-                                presentation_hashes.append( hash )
-                                
-                                presentation_hashes_fast.add( hash )
-                                
-                            
-                        
-                    except HydrusExceptions.CancelledException as e:
-                        
-                        self._DelayWork( 300, str( e ) )
-                        
-                        break
-                        
-                    except HydrusExceptions.VetoException as e:
-                        
-                        status = CC.STATUS_VETOED
-                        
-                        note = str( e )
-                        
-                        file_seed.SetStatus( status, note = note )
-                        
-                    except HydrusExceptions.NotFoundException:
-                        
-                        status = CC.STATUS_VETOED
-                        
-                        note = '404'
-                        
-                        file_seed.SetStatus( status, note = note )
-                        
-                    except Exception as e:
-                        
-                        status = CC.STATUS_ERROR
-                        
-                        job_key.SetVariable( 'popup_text_2', x_out_of_y + 'file failed' )
-                        
-                        file_seed.SetStatus( status, exception = e )
-                        
-                        if isinstance( e, HydrusExceptions.DataMissing ):
-                            
-                            # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files in e621 (or any other booru)
-                            # this should be richer in any case in the new system
-                            
-                            pass
-                            
-                        else:
-                            
-                            error_count += 1
-                            
-                            time.sleep( 5 )
-                            
-                        
-                        error_count_threshold = HG.client_controller.new_options.GetNoneableInteger( 'subscription_file_error_cancel_threshold' )
-                        
-                        if error_count_threshold is not None and error_count >= error_count_threshold:
-                            
-                            raise Exception( 'The subscription ' + self._name + ' encountered several errors when downloading files, so it abandoned its sync.' )
-                            
-                        
-                    
-                    this_query_has_done_work = True
-                    
-                    if len( presentation_hashes ) > 0:
-                        
-                        job_key.SetVariable( 'popup_files', ( list( presentation_hashes ), query_summary_name ) )
-                        
-                    
-                    time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
-                    
-                    HG.client_controller.WaitUntilViewFree()
-                    
-                
-            finally:
-                
-                if len( presentation_hashes ) > 0:
-                    
-                    publishing_label = self._GetPublishingLabel( query )
-                    
-                    ClientImporting.PublishPresentationHashes( publishing_label, presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
-                    
-                
-            
-        
-        job_key.DeleteVariable( 'popup_files' )
-        job_key.DeleteVariable( 'popup_text_1' )
-        job_key.DeleteVariable( 'popup_text_2' )
-        job_key.DeleteVariable( 'popup_gauge_2' )
-        
-    
-    def _WorkOnFilesCanDoWork( self ):
-        
-        for query in self._queries:
-            
-            if query.HasFileWorkToDo():
-                
-                bandwidth_ok = query.BandwidthOK( self._name )
-                domain_ok = query.DomainOK()
-                
-                if HG.subscription_report_mode:
-                    
-                    HydrusData.ShowText( 'Subscription "{}" checking if any file work due: True, bandwidth ok: {}, domain ok: {}'.format( self._name, bandwidth_ok, domain_ok ) )
-                    
-                
-                if bandwidth_ok and domain_ok:
-                    
-                    return True
-                    
-                
-                if not domain_ok:
-                    
-                    self._DelayWork( 3600, 'domain errors, will try again later' )
-                    
-                
-            
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Subscription "{}" checking if any file work due: False'.format( self._name ) )
-            
-        
-        return False
-        
-    
-    def _SyncQueryCanDoWork( self ):
-        
-        result = True in ( query.IsSyncDue() for query in self._queries )
-        
-        if HG.subscription_report_mode:
-            
-            HydrusData.ShowText( 'Subscription "{}" checking if any sync work due: {}'.format( self._name, result ) )
-            
-        
-        return result
         
     
     def AllPaused( self ):

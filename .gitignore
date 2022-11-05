@@ -1,6 +1,9 @@
-### Compiled Python detritus
+# useful template here https://github.com/github/gitignore/blob/main/Python.gitignore
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 
 ### IDE's
 
@@ -9,7 +12,6 @@ __pycache__/
 
 # Directory-based project format:
 .idea/
-
 
 ## Eclipse
 *.pydevproject
@@ -37,19 +39,39 @@ local.properties
 logs/
 crash.log
 
-# hydev note: updating this to ignore user's db files
+# user's db files
 # I nonetheless recommend you use the -d switch to put your db somewhere else if you run and update from git source
-db/*.db
-db/*.db-shm
-db/*.db-wal
-db/*.crt
-db/*.key
-db/*.log
-db/*.conf
-db/client_files/
-db/server_files/
-db/missing_and_invalid_files/
+/db/*.db
+/db/*.db-shm
+/db/*.db-wal
+/db/*.crt
+/db/*.key
+/db/*.log
+/db/*.conf
+/db/client_files/
+/db/server_files/
+/db/missing_and_invalid_files/
+
+# in case user adds their own
+/bin/ffmpeg.exe
+/mpv-1.dll
+/mpv-2.dll
+/sqlite3.dll
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# User-changeable files
+/client-user.bat
+/client-user.sh
+/client-user.command
 
 # docs builds
-site/
-help/
+/site/
+/help/

@@ -1,5 +1,5 @@
 ---
-title: launch arguments
+title: Launch Arguments
 ---
 
 # launch arguments
@@ -23,7 +23,7 @@ Which gives you a full listing of all below arguments, however this will not wor
 Lets you customise where hydrus should use for its base database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described [here](database_migration.md). When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:
 
 ```
--d="E:\\my hydrus\\hydrus db"
+-d="E:\my hydrus\hydrus db"
 ```
 
 ##**`--temp_dir TEMP_DIR`**
@@ -31,21 +31,21 @@ Lets you customise where hydrus should use for its base database directory. This
 This tells all aspects of the client, including the SQLite database, to use a different path for temp operations. This would be by default your system temp path, such as:
 
 ```
-C:\\Users\\You\\AppData\\Local\\Temp
+C:\Users\You\AppData\Local\Temp
 ```
 
 But you can also check it in _help->about_. A handful of database operations (PTR tag processing, vacuums) require a lot of free space, so if your system drive is very full, or you have unusual ramdisk-based temp storage limits, you may want to relocate to another location or drive.
     
 ##**`--db_journal_mode {WAL,TRUNCATE,PERSIST,MEMORY}`**
 
-Change the _journal_ mode of the SQLite database. The default is WAL, which works great for SSD drives, but if you have a very old or slow drive, a different mode _may_ work better. Full docs are [here](https://sqlite.org/pragma.html#pragma_journal_mode).
+Change the _journal_ mode of the SQLite database. The default is WAL, which works great for almost all SSD drives, but if you have a very old or slow drive, or if you encounter 'disk I/O error' errors on Windows with an NVMe drive, try TRUNCATE. Full docs are [here](https://sqlite.org/pragma.html#pragma_journal_mode).
 
 Briefly:
 
 *   WAL - Clever write flushing that takes advantage of new drive synchronisation tools to maintain integrity and reduce total writes.
 *   TRUNCATE - Compatibility mode. Use this if your drive cannot launch WAL.
 *   PERSIST - This is newly added to hydrus. The ideal is that if you have a high latency HDD drive and want sync with the PTR, this will work more efficiently than WAL journals, which will be regularly wiped and recreated and be fraggy. Unfortunately, with hydrus's multiple database file system, SQLite ultimately treats this as DELETE, which in our situation is basically the same as TRUNCATE, so does not increase performance. Hopefully this will change in future.
-*   MEMORY - Danger mode. Extremely fast, but you had better guarantee a lot of free ram.
+*   MEMORY - Danger mode. Extremely fast, but you had better guarantee a lot of free ram and no unclean exits.
 
 ##**`--db_transaction_commit_period DB_TRANSACTION_COMMIT_PERIOD`**
     
@@ -68,6 +68,10 @@ When SQLite performs very large queries, it may spool temporary table results to
 ##**`--boot_debug`**
 
 Prints additional debug information to the log during the bootup phase of the application.
+
+##**`--profile_mode`**
+
+This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.
 
 
 The server supports the same arguments. It also takes a _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.

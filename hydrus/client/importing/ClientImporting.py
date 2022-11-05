@@ -8,6 +8,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
 
 CHECKER_STATUS_OK = 0
@@ -19,14 +20,16 @@ DOWNLOADER_SIMPLE_STATUS_WORKING = 1
 DOWNLOADER_SIMPLE_STATUS_PENDING = 2
 DOWNLOADER_SIMPLE_STATUS_PAUSED = 3
 DOWNLOADER_SIMPLE_STATUS_DEFERRED = 4
+DOWNLOADER_SIMPLE_STATUS_PAUSING = 5
 
-downloader_enum_sort_lookup = {}
-
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_DONE ] = 0
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_WORKING ] = 1
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_PENDING ] = 2
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_DEFERRED ] = 3
-downloader_enum_sort_lookup[ DOWNLOADER_SIMPLE_STATUS_PAUSED ] = 4
+downloader_enum_sort_lookup = {
+    DOWNLOADER_SIMPLE_STATUS_DONE : 0,
+    DOWNLOADER_SIMPLE_STATUS_WORKING : 1,
+    DOWNLOADER_SIMPLE_STATUS_PENDING : 2,
+    DOWNLOADER_SIMPLE_STATUS_DEFERRED : 3,
+    DOWNLOADER_SIMPLE_STATUS_PAUSING : 5,
+    DOWNLOADER_SIMPLE_STATUS_PAUSED : 6
+}
 
 DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
@@ -106,10 +109,6 @@ def GetRepeatingJobInitialDelay():
     
     return 0.5 + ( random.random() * 0.5 )
     
-def PageImporterShouldStopWorking( page_key ):
-    
-    return HG.started_shutdown or not HG.client_controller.PageAlive( page_key )
-    
 def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button, publish_files_to_page ):
     
     if publish_to_popup_button:
@@ -134,7 +133,8 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     #
     
-    file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+    file_import_options = FileImportOptions.FileImportOptions()
+    file_import_options.SetIsDefault( True )
     
     def network_job_factory( *args, **kwargs ):
         
@@ -163,7 +163,7 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        file_seed.DownloadAndImportRawFile( url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook )
+        file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
         
         status = file_seed.status
         
@@ -208,7 +208,8 @@ def THREADDownloadURLs( job_key: ClientThreading.JobKey, urls, title ):
     presentation_hashes = []
     presentation_hashes_fast = set()
     
-    file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+    file_import_options = FileImportOptions.FileImportOptions()
+    file_import_options.SetIsDefault( True )
     
     def network_job_factory( *args, **kwargs ):
         
@@ -247,7 +248,7 @@ def THREADDownloadURLs( job_key: ClientThreading.JobKey, urls, title ):
         
         try:
             
-            file_seed.DownloadAndImportRawFile( url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook )
+            file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
             
             status = file_seed.status
             

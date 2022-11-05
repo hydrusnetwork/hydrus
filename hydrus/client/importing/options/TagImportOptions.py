@@ -8,12 +8,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
@@ -28,6 +28,8 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         self._tags_for_all = set()
         
+        # Note we are leaving this here for a bit, even though it is no longer used, to leave a window so ImportFolder can rip existing values
+        # it can be nuked in due time
         self._load_from_neighbouring_txt_files = False
         
         self._add_filename = ( False, 'filename' )
@@ -102,48 +104,6 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         tags = set()
         
         tags.update( self._tags_for_all )
-        
-        if self._load_from_neighbouring_txt_files:
-            
-            txt_path = path + '.txt'
-            
-            if os.path.exists( txt_path ):
-                
-                try:
-                    
-                    with open( txt_path, 'r', encoding = 'utf-8' ) as f:
-                        
-                        txt_tags_string = f.read()
-                        
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
-                    
-                    tags.add( '___had problem reading .txt file--is it not in utf-8?' )
-                    
-                
-                try:
-                    
-                    txt_tags = [ tag for tag in HydrusText.DeserialiseNewlinedTexts( txt_tags_string ) ]
-                    
-                    if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
-                        
-                        HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
-                        
-                        raise Exception()
-                        
-                    
-                    tags.update( txt_tags )
-                    
-                except:
-                    
-                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
-                    
-                    tags.add( '___had problem parsing .txt file' )
-                    
-                
-            
         
         ( base, filename ) = os.path.split( path )
         
@@ -269,17 +229,16 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         return tags
         
     
-    def SimpleSetTuple( self, tags_for_all, load_from_neighbouring_txt_files, add_filename, directories_dict ):
+    def SimpleSetTuple( self, tags_for_all, add_filename, directories_dict ):
         
         self._tags_for_all = tags_for_all
-        self._load_from_neighbouring_txt_files = load_from_neighbouring_txt_files
         self._add_filename = add_filename
         self._directories_dict = directories_dict
         
     
     def SimpleToTuple( self ):
         
-        return ( self._tags_for_all, self._load_from_neighbouring_txt_files, self._add_filename, self._directories_dict )
+        return ( self._tags_for_all, self._add_filename, self._directories_dict )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS ] = FilenameTaggingOptions    
@@ -676,9 +635,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._is_default
         
     
-    def SetDefault( self ):
+    def SetIsDefault( self, value: bool ):
         
-        self._is_default = True
+        self._is_default = value
         
     
     def ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB( self ):

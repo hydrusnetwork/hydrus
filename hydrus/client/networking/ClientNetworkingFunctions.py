@@ -161,7 +161,7 @@ def ConvertQueryTextToDict( query_text ):
     # so if there are a mix of encoded and non-encoded, we won't touch it here m8
     
     # except these chars, which screw with GET arg syntax when unquoted
-    bad_chars = [ '&', '=', '/', '?', '#', ';', '+' ]
+    bad_chars = [ '&', '=', '/', '?', '#', ';', '+', ',' ]
     
     param_order = []
     

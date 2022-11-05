@@ -15,23 +15,30 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
 
-class DuplicatesManager( object ):
+class FileDuplicatesManager( object ):
     
-    def __init__( self, service_keys_to_dupe_statuses_to_counts ):
+    def __init__( self, media_group_king_hash, alternates_group_id, dupe_statuses_to_counts ):
         
-        self._service_keys_to_dupe_statuses_to_counts = service_keys_to_dupe_statuses_to_counts
+        self.media_group_king_hash = media_group_king_hash
+        self.alternates_group_id = alternates_group_id
+        self.dupe_statuses_to_count = dupe_statuses_to_counts
         
     
     def Duplicate( self ):
         
-        service_keys_to_dupe_statuses_to_counts = collections.defaultdict( collections.Counter )
+        dupe_statuses_to_count = dict( self.dupe_statuses_to_count )
         
-        return DuplicatesManager( service_keys_to_dupe_statuses_to_counts )
+        return FileDuplicatesManager( self.media_group_king_hash, self.alternates_group_id, dupe_statuses_to_count )
         
     
-    def GetDupeStatusesToCounts( self, service_key ):
+    def GetDupeCount( self, dupe_type: int ):
         
-        return self._service_keys_to_dupe_statuses_to_counts[ service_key ]
+        if dupe_type not in self.dupe_statuses_to_count:
+            
+            return 0
+            
+        
+        return self.dupe_statuses_to_count[ dupe_type ]
         
     
 class FileInfoManager( object ):
@@ -77,6 +84,8 @@ class FileInfoManager( object ):
         self.num_frames = num_frames
         self.has_audio = has_audio
         self.num_words = num_words
+        
+        self.has_icc_profile = False
         
     
     def Duplicate( self ):
@@ -592,6 +601,23 @@ class LocationsManager( object ):
             
         
     
+    def GetServiceFilename( self, service_key ) -> typing.Optional[ str ]:
+        
+        if service_key in self._service_keys_to_filenames:
+            
+            return self._service_keys_to_filenames[ service_key ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def GetServiceFilenames( self ) -> typing.Dict[ bytes, str ]:
+        
+        return dict( self._service_keys_to_filenames )
+        
+    
     def GetTimestampManager( self ) -> TimestampManager:
         
         return self._timestamp_manager
@@ -627,9 +653,16 @@ class LocationsManager( object ):
         return CC.TRASH_SERVICE_KEY in self._current
         
     
-    def _AddToService( self, service_key, do_undelete = False ):
+    def _AddToService( self, service_key, do_undelete = False, forced_import_time = None ):
         
-        import_time = HydrusData.GetNow()
+        if forced_import_time is None:
+            
+            import_time = HydrusData.GetNow()
+            
+        else:
+            
+            import_time = forced_import_time
+            
         
         if service_key in self._deleted_to_timestamps:
             
@@ -662,8 +695,10 @@ class LocationsManager( object ):
                 self._current.discard( CC.TRASH_SERVICE_KEY )
                 
             
-            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            # forced import time here to handle do_undelete, ensuring old timestamp is propagated
+            
+            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time = import_time )
+            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, forced_import_time = import_time )
             
         
         if service_key not in self._current_to_timestamps:
@@ -1358,31 +1393,28 @@ class TagsManager( object ):
             
         
     
-    def GetComparableNamespaceSlice( self, namespaces, tag_display_type ):
+    def GetComparableNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            combined_tags = statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
-            combined = combined_current.union( combined_pending )
+            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined_tags ]
             
-            pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
-            
-            slice = []
+            slice_tags = []
             
             for desired_namespace in namespaces:
                 
                 subtags = sorted( ( HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ) )
                 
-                slice.append( tuple( subtags ) )
+                slice_tags.append( tuple( subtags ) )
                 
             
-            return tuple( slice )
+            return tuple( slice_tags )
             
         
     
@@ -1422,28 +1454,25 @@ class TagsManager( object ):
             
         
     
-    def GetNamespaceSlice( self, namespaces, tag_display_type ):
+    def GetNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            combined_statuses_to_tags = service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            combined_tags = statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
-            combined = combined_current.union( combined_pending )
+            namespaces_with_colons = [ '{}:'.format( namespace ) for namespace in namespaces ]
             
-            slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+            tag_slice = frozenset( ( tag for tag in combined_tags if True in ( tag.startswith( namespace_with_colon ) for namespace_with_colon in namespaces_with_colons ) ) )
             
-            slice = frozenset( slice )
-            
-            return slice
+            return tag_slice
             
         
     
-    def GetNumTags( self, tag_search_context: ClientSearch.TagSearchContext, tag_display_type ):
+    def GetNumTags( self, tag_context: ClientSearch.TagContext, tag_display_type ):
         
         with self._lock:
             
@@ -1451,10 +1480,10 @@ class TagsManager( object ):
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_search_context.service_key ]
+            statuses_to_tags = service_keys_to_statuses_to_tags[ tag_context.service_key ]
             
-            if tag_search_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-            if tag_search_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+            if tag_context.include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+            if tag_context.include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
             return num_tags
             

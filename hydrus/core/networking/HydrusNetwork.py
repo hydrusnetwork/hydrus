@@ -1,5 +1,4 @@
 import collections
-import itertools
 import threading
 import time
 import typing
@@ -2286,67 +2285,106 @@ class Petition( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PETITION
     SERIALISABLE_NAME = 'Petition'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, action = None, petitioner_account = None, reason = None, contents = None ):
+    def __init__( self, petitioner_account = None, reason = None, actions_and_contents = None ):
+        
+        if actions_and_contents is None:
+            
+            actions_and_contents = []
+            
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._action = action
         self._petitioner_account = petitioner_account
         self._reason = reason
-        self._contents = contents
+        self._actions_and_contents = [ ( action, HydrusSerialisable.SerialisableList( contents ) ) for ( action, contents ) in actions_and_contents ]
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_petitioner_account = Account.GenerateSerialisableTupleFromAccount( self._petitioner_account )
-        serialisable_contents = [ content.GetSerialisableTuple() for content in self._contents ]
+        serialisable_actions_and_contents = [ ( action, contents.GetSerialisableTuple() ) for ( action, contents ) in self._actions_and_contents ]
         
-        return ( self._action, serialisable_petitioner_account, self._reason, serialisable_contents )
+        return ( serialisable_petitioner_account, self._reason, serialisable_actions_and_contents )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._action, serialisable_petitioner_account, self._reason, serialisable_contents ) = serialisable_info
+        ( serialisable_petitioner_account, self._reason, serialisable_actions_and_contents ) = serialisable_info
         
         self._petitioner_account = Account.GenerateAccountFromSerialisableTuple( serialisable_petitioner_account )
-        self._contents = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ) for serialisable_content in serialisable_contents ]
+        self._actions_and_contents = [ ( action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_contents ) ) for ( action, serialisable_contents ) in serialisable_actions_and_contents ]
         
     
-    def GetActionTextAndAction( self ):
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
-        action_text = ''
+        if version == 1:
+            
+            ( action, serialisable_petitioner_account, reason, serialisable_contents ) = old_serialisable_info
+            
+            contents = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ) for serialisable_content in serialisable_contents ]
+            
+            actions_and_contents = [ ( action, HydrusSerialisable.SerialisableList( contents ) ) ]
+            
+            serialisable_actions_and_contents = [ ( action, contents.GetSerialisableTuple() ) for ( action, contents ) in actions_and_contents ]
+            
+            new_serialisable_info = ( serialisable_petitioner_account, reason, serialisable_actions_and_contents )
+            
+            return ( 2, new_serialisable_info )
+            
         
-        if self._action == HC.CONTENT_UPDATE_PEND:
-            
-            action_text += 'ADD'
-            
-        elif self._action == HC.CONTENT_UPDATE_PETITION:
-            
-            action_text += 'DELETE'
-            
+    def GetContents( self, action ):
         
-        return ( action_text, self._action )
+        actions_to_contents = dict( self._actions_and_contents )
+        
+        if action in actions_to_contents:
+            
+            return actions_to_contents[ action ]
+            
+        else:
+            
+            return []
+            
         
     
-    def GetApproval( self, contents ):
+    def GetActionsAndContents( self ):
         
-        if self._action == HC.CONTENT_UPDATE_PEND:
-            
-            content_update_action = HC.CONTENT_UPDATE_ADD
-            
-        elif self._action == HC.CONTENT_UPDATE_PETITION:
-            
-            content_update_action = HC.CONTENT_UPDATE_DELETE
-            
+        return self._actions_and_contents
+        
+    
+    def GetPetitionerAccount( self ):
+        
+        return self._petitioner_account
+        
+    
+    def GetReason( self ):
+        
+        return self._reason
+        
+    
+    @staticmethod
+    def GetApproval( action, contents, reason ):
         
         update = ClientToServerUpdate()
         content_updates = []
         
+        if action == HC.CONTENT_UPDATE_PEND:
+            
+            content_update_action = HC.CONTENT_UPDATE_ADD
+            
+        elif action == HC.CONTENT_UPDATE_PETITION:
+            
+            content_update_action = HC.CONTENT_UPDATE_DELETE
+            
+        else:
+            
+            raise Exception( 'Petition came with unexpected action: {}'.format( action ) )
+            
+        
         for content in contents:
             
-            update.AddContent( self._action, content, self._reason )
+            update.AddContent( action, content, reason )
             
             content_type = content.GetContentType()
             
@@ -2360,40 +2398,30 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         return ( update, content_updates )
         
     
-    def GetContents( self ):
-        
-        return self._contents
-        
-    
-    def GetDenial( self, contents ):
-        
-        if self._action == HC.CONTENT_UPDATE_PEND:
-            
-            denial_action = HC.CONTENT_UPDATE_DENY_PEND
-            
-        elif self._action == HC.CONTENT_UPDATE_PETITION:
-            
-            denial_action = HC.CONTENT_UPDATE_DENY_PETITION
-            
+    @staticmethod
+    def GetDenial( action, contents, reason ):
         
         update = ClientToServerUpdate()
         
+        if action == HC.CONTENT_UPDATE_PEND:
+            
+            denial_action = HC.CONTENT_UPDATE_DENY_PEND
+            
+        elif action == HC.CONTENT_UPDATE_PETITION:
+            
+            denial_action = HC.CONTENT_UPDATE_DENY_PETITION
+            
+        else:
+            
+            raise Exception( 'Petition came with unexpected action: {}'.format( action ) )
+            
+        
         for content in contents:
             
-            update.AddContent( denial_action, content, self._reason )
+            update.AddContent( denial_action, content, reason )
             
         
         return update
-        
-    
-    def GetPetitionerAccount( self ):
-        
-        return self._petitioner_account
-        
-    
-    def GetReason( self ):
-        
-        return self._reason
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PETITION ] = Petition

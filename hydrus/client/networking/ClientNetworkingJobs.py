@@ -19,6 +19,7 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientTime
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -99,7 +100,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.BandwidthException
         
-    elif status_code == 509:
+    elif status_code in ( 509, 529 ):
         
         eclass = HydrusExceptions.BandwidthException
         
@@ -165,7 +166,8 @@ class NetworkJob( object ):
         self._url = url
         
         self._current_connection_attempt_number = 1
-        self._max_connection_attempts_allowed = 5
+        self._current_request_attempt_number = 1
+        self._this_is_a_one_shot_request = False
         self._we_tried_cloudflare_once = False
         
         self._domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self._url )
@@ -232,8 +234,10 @@ class NetworkJob( object ):
         
         self._status_text = 'initialising\u2026'
         self._num_bytes_read = 0
-        self._num_bytes_to_read = 1
+        self._num_bytes_to_read = None
         self._num_bytes_read_is_accurate = True
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
         self._number_of_concurrent_empty_chunks = 0
         
         self._file_import_options = None
@@ -245,21 +249,33 @@ class NetworkJob( object ):
     
     def _CanReattemptConnection( self ):
         
-        return self._current_connection_attempt_number <= self._max_connection_attempts_allowed
+        if self._this_is_a_one_shot_request:
+            
+            return False
+            
+        
+        max_connection_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_connection_attempts_allowed' )
+        
+        return self._current_connection_attempt_number <= max_connection_attempts_allowed
         
     
     def _CanReattemptRequest( self ):
         
+        if self._this_is_a_one_shot_request:
+            
+            return False
+            
+        
         if self._method == 'GET':
             
-            max_attempts_allowed = 5
+            max_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_request_attempts_allowed_get' )
             
-        elif self._method == 'POST':
+        else:
             
             max_attempts_allowed = 1
             
         
-        return self._current_connection_attempt_number <= max_attempts_allowed
+        return self._current_request_attempt_number <= max_attempts_allowed
         
     
     def _GenerateModifiedDate( self, response: requests.Response ):
@@ -281,7 +297,12 @@ class NetworkJob( object ):
             
                 # the given struct is in GMT, so calendar.timegm is appropriate here
                 
-                self._response_last_modified = int( calendar.timegm( struct_time ) )
+                last_modified_time = int( calendar.timegm( struct_time ) )
+                
+                if ClientTime.TimestampIsSensible( last_modified_time ):
+                    
+                    self._response_last_modified = last_modified_time
+                    
                 
             except:
                 
@@ -415,9 +436,9 @@ class NetworkJob( object ):
                 self._response_mime = None
                 
             
-            if 'content-length' in response.headers:
+            if 'Content-Length' in response.headers:
                 
-                self._num_bytes_to_read = int( response.headers[ 'content-length' ] )
+                self._num_bytes_to_read = int( response.headers[ 'Content-Length' ] )
                 
             else:
                 
@@ -431,7 +452,7 @@ class NetworkJob( object ):
             
             if response.ok: # i.e. we got what we expected, not some error
                 
-                if 'content-length' in response.headers:
+                if self._num_bytes_to_read is not None:
                     
                     if self._max_allowed_bytes is not None and self._num_bytes_to_read > self._max_allowed_bytes:
                         
@@ -451,9 +472,12 @@ class NetworkJob( object ):
     
     def _ReadResponse( self, response: requests.Response, stream_dest ):
         
-        if 'content-range' in response.headers:
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
+        
+        if 'Content-Range' in response.headers:
             
-            content_range = response.headers[ 'content-range' ]
+            content_range = response.headers[ 'Content-Range' ]
             
             # Content-Range: <unit> <range-start>-<range-end>/<size>
             # range and size can be *
@@ -478,7 +502,18 @@ class NetworkJob( object ):
                                 # this server be crazy
                                 # I guess in some cases we might be able to fast forward a < byte_start, but we don't have that raw byte access tech yet
                                 # and if byte_start > num_bytes_read, then lmao
-                                raise HydrusExceptions.NetworkException( 'This server delivered an undesired Range response! We asked for Range "{}" and got Content-Range "{}" back!'.format( response.request.headers[ 'range' ], response.headers[ 'content-range' ] ) )
+                                raise HydrusExceptions.NetworkException( 'This server delivered an undesired Range response! We asked for Range "{}" and got Content-Range "{}" back!'.format( response.request.headers[ 'range' ], response.headers[ 'Content-Range' ] ) )
+                                
+                            
+                            try:
+                                
+                                byte_end = int( byte_end )
+                                
+                                self._num_bytes_expected_in_this_range_chunk = ( byte_end - byte_start ) + 1
+                                
+                            except:
+                                
+                                pass
                                 
                             
                         except:
@@ -507,7 +542,7 @@ class NetworkJob( object ):
                 
             
         
-        starting_num_bytes_read = self._num_bytes_read
+        num_bytes_read_before_this_response = self._num_bytes_read
         
         for chunk in response.iter_content( chunk_size = 65536 ):
             
@@ -531,22 +566,41 @@ class NetworkJob( object ):
                 
                 chunk_num_bytes = len( chunk )
                 
-                self._num_bytes_read += chunk_num_bytes
-                
             else:
                 
-                previous_num_bytes_read = self._num_bytes_read
+                num_bytes_read_at_last_chunk = self._num_bytes_read
                 
-                self._num_bytes_read = starting_num_bytes_read + total_bytes_read_in_this_response
+                if total_bytes_read_in_this_response >= num_bytes_read_at_last_chunk:
+                    
+                    chunk_num_bytes = total_bytes_read_in_this_response - num_bytes_read_at_last_chunk
+                    
+                else:
+                    
+                    self._num_bytes_read_is_accurate = False
+                    
+                    chunk_num_bytes = 1
+                    
                 
-                chunk_num_bytes = self._num_bytes_read - previous_num_bytes_read
-                
+            
+            self._num_bytes_read += chunk_num_bytes
+            self._num_bytes_read_in_this_response += chunk_num_bytes
             
             with self._lock:
                 
-                if self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read > self._num_bytes_to_read:
+                if self._num_bytes_read_is_accurate:
                     
-                    raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {} but server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ) ) )
+                    if self._num_bytes_to_read is not None and self._num_bytes_read > self._num_bytes_to_read:
+                        
+                        raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {}, but the server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ) ) )
+                        
+                    
+                    if self._num_bytes_expected_in_this_range_chunk is not None:
+                        
+                        if self._num_bytes_read_in_this_response > self._num_bytes_expected_in_this_range_chunk:
+                            
+                            raise HydrusExceptions.NetworkException( 'Too much data: Was expecting {} in this range chunk, but the server continued responding!'.format( HydrusData.ToHumanBytes( self._num_bytes_expected_in_this_range_chunk ) ) )
+                            
+                        
                     
                 
                 if self._max_allowed_bytes is not None and self._num_bytes_read > self._max_allowed_bytes:
@@ -571,29 +625,46 @@ class NetworkJob( object ):
                 
             
         
-        # stick with GET for now. if there is a complex way to range-chunk a POST, we'll deal with it then, but I don't want to spam file uploads to IQDB by accident etc...
-        download_is_definitely_incomplete = self._method == 'GET' and self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read
-        we_read_some_data = self._num_bytes_read > starting_num_bytes_read
-        
-        if download_is_definitely_incomplete and not we_read_some_data:
+        with self._lock:
             
-            self._number_of_concurrent_empty_chunks += 1
+            # stick with GET for now. if there is a complex way to range-chunk a POST, we'll deal with it then, but I don't want to spam file uploads to IQDB by accident etc...
+            we_know_there_is_more_to_download = self._method == 'GET' and self._num_bytes_to_read is not None and self._num_bytes_read_is_accurate and self._num_bytes_read < self._num_bytes_to_read
+            we_read_some_data = self._num_bytes_read > num_bytes_read_before_this_response
             
-            if self._number_of_concurrent_empty_chunks > 2:
+            if we_know_there_is_more_to_download:
                 
-                raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but this chunk was empty!' )
+                if we_read_some_data:
+                    
+                    self._number_of_concurrent_empty_chunks = 0
+                    
+                    # this range chunk is complete, so this should add up correct
+                    if self._num_bytes_read_is_accurate:
+                        
+                        if self._num_bytes_expected_in_this_range_chunk is not None:
+                            
+                            if self._num_bytes_read_in_this_response < self._num_bytes_expected_in_this_range_chunk:
+                                
+                                # ok this situation is actually ok(?)
+                                # turns out at least one decent server does this regularly, says 'here's 0-22MB' and gives you 128KB instead
+                                
+                                HydrusData.Print( 'Not enough data for URL {}: Was expecting {} in this range chunk, but the server only delivered {}!'.format( self._url, HydrusData.ToHumanBytes( self._num_bytes_expected_in_this_range_chunk ), HydrusData.ToHumanBytes( self._num_bytes_read_in_this_response ) ) )
+                                
+                            
+                        
+                    
+                else:
+                    
+                    self._number_of_concurrent_empty_chunks += 1
+                    
+                    if self._number_of_concurrent_empty_chunks > 2:
+                        
+                        raise HydrusExceptions.NetworkException( 'The server appeared to want to send this URL in ranged chunks, but we got several empty chunks in a row!' )
+                        
+                    
                 
             
-            more_to_download = True
-            
-        else:
-            
-            self._number_of_concurrent_empty_chunks = 0
-            
-            more_to_download = we_read_some_data and download_is_definitely_incomplete
-            
         
-        if not more_to_download:
+        if not we_know_there_is_more_to_download:
             
             if self._file_import_options is not None:
                 
@@ -603,7 +674,7 @@ class NetworkJob( object ):
                 
             
         
-        return more_to_download
+        return we_know_there_is_more_to_download
         
     
     def _ReportDataUsed( self, num_bytes ):
@@ -613,9 +684,9 @@ class NetworkJob( object ):
         self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
         
     
-    def _ResetForAnotherConnectionAttempt( self ):
+    def _ResetForAnotherAttempt( self ):
         
-        self._current_connection_attempt_number += 1
+        self._current_request_attempt_number += 1
         
         self._content_type = None
         self._response_mime = None
@@ -626,9 +697,19 @@ class NetworkJob( object ):
         self._stream_io = io.BytesIO()
         
         self._num_bytes_read = 0
-        self._num_bytes_to_read = 1
+        self._num_bytes_to_read = None
+        self._num_bytes_read_in_this_response = 0
+        self._num_bytes_expected_in_this_range_chunk = None
         self._num_bytes_read_is_accurate = True
         self._number_of_concurrent_empty_chunks = 0
+        
+    
+    def _ResetForAnotherConnectionAttempt( self ):
+        
+        self._ResetForAnotherAttempt()
+        
+        self._current_connection_attempt_number += 1
+        self._current_request_attempt_number = 1
         
     
     def _SendRequestAndGetResponse( self ) -> requests.Response:
@@ -763,12 +844,12 @@ class NetworkJob( object ):
                 
                 # cloudscraper refactored a bit around 1.2.60, so we now have some different paths to what we want
                 
-                old_module = None
-                new_module = None
+                old_class_object = None
+                new_class_instance = None
                 
                 if hasattr( cloudscraper, 'CloudScraper' ):
                     
-                    old_module = getattr( cloudscraper, 'CloudScraper' )
+                    old_class_object = getattr( cloudscraper, 'CloudScraper' )
                     
                 
                 if hasattr( cloudscraper, 'cloudflare' ):
@@ -777,13 +858,17 @@ class NetworkJob( object ):
                     
                     if hasattr( m, 'Cloudflare' ):
                         
-                        new_module = getattr( m, 'Cloudflare' )
+                        new_class_object = getattr( m, 'Cloudflare' )
+                        
+                        cs = cloudscraper.CloudScraper()
+                        
+                        new_class_instance = new_class_object( cs )
                         
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_Firewall_Blocked' ),
-                    ( new_module, 'is_Firewall_Blocked' )
+                    ( old_class_object, 'is_Firewall_Blocked' ),
+                    ( new_class_instance, 'is_Firewall_Blocked' )
                 ]
                 
                 is_firewall = False
@@ -807,9 +892,9 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_reCaptcha_Challenge' ),
-                    ( old_module, 'is_Captcha_Challenge' ),
-                    ( new_module, 'is_Captcha_Challenge' )
+                    ( old_class_object, 'is_reCaptcha_Challenge' ),
+                    ( old_class_object, 'is_Captcha_Challenge' ),
+                    ( new_class_instance, 'is_Captcha_Challenge' )
                 ]
                 
                 is_captcha = False
@@ -833,9 +918,9 @@ class NetworkJob( object ):
                     
                 
                 possible_paths = [
-                    ( old_module, 'is_IUAM_Challenge' ),
-                    ( new_module, 'is_IUAM_Challenge' ),
-                    ( new_module, 'is_New_IUAM_Challenge' )
+                    ( old_class_object, 'is_IUAM_Challenge' ),
+                    ( new_class_instance, 'is_IUAM_Challenge' ),
+                    ( new_class_instance, 'is_New_IUAM_Challenge' )
                 ]
                 
                 is_iuam = False
@@ -969,12 +1054,14 @@ class NetworkJob( object ):
     
     def _WaitOnServersideBandwidth( self, status_text: str ):
         
-        # 429 or 509 response from server. basically means 'I'm under big load mate'
+        # 429/509/529 response from server. basically means 'I'm under big load mate'
         # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
         
         serverside_bandwidth_wait_time = HG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
         
-        self._serverside_bandwidth_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * serverside_bandwidth_wait_time )
+        problem_rating = ( self._current_connection_attempt_number + self._current_request_attempt_number ) - 1
+        
+        self._serverside_bandwidth_wake_time = HydrusData.GetNow() + ( problem_rating * serverside_bandwidth_wait_time )
         
         while not HydrusData.TimeHasPassed( self._serverside_bandwidth_wake_time ) and not self._IsCancelled():
             
@@ -1070,7 +1157,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if self._max_connection_attempts_allowed == 1:
+            if self._this_is_a_one_shot_request:
                 
                 return True
                 
@@ -1328,7 +1415,7 @@ class NetworkJob( object ):
     
     def OnlyTryConnectionOnce( self ):
         
-        self._max_connection_attempts_allowed = 1
+        self._this_is_a_one_shot_request = True
         
     
     def OverrideBandwidth( self, delay = None ):
@@ -1589,7 +1676,7 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.BandwidthException as e:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if self._CanReattemptRequest():
                         
@@ -1604,7 +1691,7 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1615,7 +1702,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ChunkedEncodingError:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1649,7 +1736,7 @@ class NetworkJob( object ):
                     
                 except requests.exceptions.ReadTimeout:
                     
-                    self._ResetForAnotherConnectionAttempt()
+                    self._ResetForAnotherAttempt()
                     
                     if not self._CanReattemptRequest():
                         
@@ -1967,7 +2054,14 @@ def CheckHydrusVersion( service_type, response ):
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
     
-    ( service_string_gumpf, network_version ) = server_header.split( '/' )
+    # might be "hydrus tag repository/17" or "hydrus tag repository/17 (498)" kind of thing
+    
+    ( service_string_gumpf, network_version ) = server_header.split( '/', 1 )
+    
+    if ' ' in network_version:
+    
+        ( network_version, software_version_gumpf ) = network_version.split( ' ', 1 )
+        
     
     network_version = int( network_version )
     

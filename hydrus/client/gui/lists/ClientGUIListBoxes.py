@@ -119,7 +119,7 @@ class BetterQListWidget( QW.QListWidget ):
         list_widget_item.setSelected( was_selected )
         
     
-    def Append( self, text: str, data: object ):
+    def Append( self, text: str, data: object, select = False ):
         
         item = QW.QListWidgetItem()
         
@@ -127,6 +127,11 @@ class BetterQListWidget( QW.QListWidget ):
         item.setData( QC.Qt.UserRole, data )
         
         self.addItem( item )
+        
+        if select:
+            
+            item.setSelected( True )
+            
         
     
     def DeleteData( self, datas: typing.Collection[ object ] ):
@@ -301,13 +306,13 @@ class AddEditDeleteListBox( QW.QWidget ):
         self.listBoxChanged.emit()
         
     
-    def _AddData( self, data ):
+    def _AddData( self, data, select = False ):
         
         self._SetNonDupeName( data )
         
         pretty_data = self._data_to_pretty_callable( data )
         
-        self._listbox.Append( pretty_data, data )
+        self._listbox.Append( pretty_data, data, select = select )
         
     
     def _AddSomeDefaults( self, defaults_callable ):
@@ -544,22 +549,28 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
     
-    def _ImportObject( self, obj ):
+    def _ImportObject( self, obj, can_present_messages = True ):
         
+        num_added = 0
         bad_object_type_names = set()
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
             
             for sub_obj in obj:
                 
-                self._ImportObject( sub_obj )
+                ( sub_num_added, sub_bad_object_type_names ) = self._ImportObject( sub_obj, can_present_messages = False )
+                
+                num_added += sub_num_added
+                bad_object_type_names.update( sub_bad_object_type_names )
                 
             
         else:
             
             if isinstance( obj, self._permitted_object_types ):
                 
-                self._AddData( obj )
+                self._AddData( obj, select = True )
+                
+                num_added += 1
                 
             else:
                 
@@ -567,7 +578,7 @@ class AddEditDeleteListBox( QW.QWidget ):
                 
             
         
-        if len( bad_object_type_names ) > 0:
+        if can_present_messages and len( bad_object_type_names ) > 0:
             
             message = 'The imported objects included these types:'
             message += os.linesep * 2
@@ -580,7 +591,16 @@ class AddEditDeleteListBox( QW.QWidget ):
             QW.QMessageBox.critical( self, 'Error', message )
             
         
+        if can_present_messages and num_added > 0:
+            
+            message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
+            
+            QW.QMessageBox.information( self, 'Success', message )
+            
+        
         self.listBoxChanged.emit()
+        
+        return ( num_added, bad_object_type_names )
         
     
     def _SetNonDupeName( self, obj ):
@@ -675,6 +695,11 @@ class AddEditDeleteListBox( QW.QWidget ):
     def AddSeparator( self ):
         
         QP.AddToLayout( self._buttons_hbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def Clear( self ):
+        
+        self._listbox.clear()
         
     
     def GetCount( self ):
@@ -895,6 +920,11 @@ class QueueListBox( QW.QWidget ):
         self.listBoxChanged.emit()
         
     
+    def Clear( self ):
+        
+        self._listbox.clear()
+        
+    
     def GetCount( self ):
         
         return self._listbox.count()
@@ -922,7 +952,7 @@ class ListBox( QW.QScrollArea ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent: QW.QWidget, child_rows_allowed: bool, terms_may_have_child_rows: bool, height_num_chars = 10, has_async_text_info = False ):
+    def __init__( self, parent: QW.QWidget, terms_may_have_sibling_or_parent_info: bool, height_num_chars = 10, has_async_text_info = False ):
         
         QW.QScrollArea.__init__( self, parent )
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -951,8 +981,11 @@ class ListBox( QW.QScrollArea ):
         
         self._num_rows_per_page = 0
         
-        self._child_rows_allowed = child_rows_allowed
-        self._terms_may_have_child_rows = terms_may_have_child_rows
+        self._show_sibling_decorators = True
+        self._show_parent_decorators = True
+        self._extra_parent_rows_allowed = True
+        
+        self._terms_may_have_sibling_or_parent_info = terms_may_have_sibling_or_parent_info
         
         #
         
@@ -963,10 +996,6 @@ class ListBox( QW.QScrollArea ):
         self._async_text_info_lock = threading.Lock()
         self._async_text_info_shared_data = dict()
         self._async_text_info_updater = self._InitialiseAsyncTextInfoUpdater()
-        
-        #
-        
-        self.setFont( QW.QApplication.font() )
         
     
     def __len__( self ):
@@ -1067,7 +1096,9 @@ class ListBox( QW.QScrollArea ):
                 self._StartAsyncTextInfoLookup( term )
                 
             
-            self._total_positional_rows += term.GetRowCount( self._child_rows_allowed )
+            show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+            
+            self._total_positional_rows += term.GetRowCount( show_parent_rows )
             
         
         if len( previously_selected_terms ) > 0:
@@ -1123,7 +1154,7 @@ class ListBox( QW.QScrollArea ):
     
     def _GetLogicalIndexUnderMouse( self, mouse_event ):
         
-        y = mouse_event.pos().y()
+        y = mouse_event.position().toPoint().y()
         
         if mouse_event.type() == QC.QEvent.MouseMove:
             
@@ -1605,10 +1636,6 @@ class ListBox( QW.QScrollArea ):
                     
                     if term in self._selected_terms:
                         
-                        painter.setBrush( QG.QBrush( text_colour ) )
-                        
-                        painter.setPen( QC.Qt.NoPen )
-                        
                         if x_start == self.TEXT_X_PADDING:
                             
                             background_colour_x = 0
@@ -1618,7 +1645,7 @@ class ListBox( QW.QScrollArea ):
                             background_colour_x = x_start
                             
                         
-                        painter.drawRect( background_colour_x, y_top, visible_rect_width, text_height )
+                        painter.fillRect( background_colour_x, y_top, visible_rect_width, text_height, text_colour )
                         
                         text_colour = self._background_colour
                         
@@ -1653,7 +1680,9 @@ class ListBox( QW.QScrollArea ):
             self._terms_to_positional_indices[ term ] = self._total_positional_rows
             self._positional_indices_to_terms[ self._total_positional_rows ] = term
             
-            self._total_positional_rows += term.GetRowCount( self._child_rows_allowed )
+            show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+            
+            self._total_positional_rows += term.GetRowCount( show_parent_rows )
             
         
     
@@ -1878,7 +1907,7 @@ class ListBox( QW.QScrollArea ):
                 
             
         
-        return QW.QScrollArea.eventFilter( self, watched, event )
+        return False
         
     
     def mouseMoveEvent( self, event ):
@@ -2009,11 +2038,11 @@ class ListBox( QW.QScrollArea ):
             
         
     
-    def SetChildRowsAllowed( self, value: bool ):
+    def SetExtraParentRowsAllowed( self, value: bool ):
         
-        if self._terms_may_have_child_rows and self._child_rows_allowed != value:
+        if self._terms_may_have_sibling_or_parent_info and self._extra_parent_rows_allowed != value:
             
-            self._child_rows_allowed = value
+            self._extra_parent_rows_allowed = value
             
             self._RegenTermsToIndices()
             
@@ -2026,6 +2055,34 @@ class ListBox( QW.QScrollArea ):
     def SetMinimumHeightNumChars( self, minimum_height_num_chars ):
         
         self._minimum_height_num_chars = minimum_height_num_chars
+        
+    
+    def SetParentDecoratorsAllowed( self, value: bool ):
+        
+        if self._terms_may_have_sibling_or_parent_info and self._show_parent_decorators != value:
+            
+            self._show_parent_decorators = value
+            
+            # i.e. if we just hid/showed parent sub-rows
+            if self._extra_parent_rows_allowed:
+                
+                self._RegenTermsToIndices()
+                
+                self._SetVirtualSize()
+                
+            
+            self.widget().update()
+            
+        
+    
+    def SetSiblingDecoratorsAllowed( self, value: bool ):
+        
+        if self._terms_may_have_sibling_or_parent_info and self._show_sibling_decorators != value:
+            
+            self._show_sibling_decorators = value
+            
+            self.widget().update()
+            
         
     
     def sizeHint( self ):
@@ -2058,14 +2115,19 @@ class ListBoxTags( ListBox ):
         
         self._tag_display_type = tag_display_type
         
-        child_rows_allowed = HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
-        terms_may_have_child_rows = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
+        terms_may_have_sibling_or_parent_info = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
-        ListBox.__init__( self, parent, child_rows_allowed, terms_may_have_child_rows, *args, **kwargs )
+        ListBox.__init__( self, parent, terms_may_have_sibling_or_parent_info, *args, **kwargs )
+        
+        if terms_may_have_sibling_or_parent_info:
+            
+            self._show_parent_decorators = HG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' )
+            self._show_sibling_decorators = HG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' )
+            
+            self._extra_parent_rows_allowed = HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
+            
         
         self._render_for_user = not self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
-        
-        self._sibling_decoration_allowed = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
@@ -2138,7 +2200,9 @@ class ListBoxTags( ListBox ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._sibling_decoration_allowed, self._child_rows_allowed )
+        show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
+        
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._show_parent_decorators, show_parent_rows )
         
         rows_of_texts_and_colours = []
         
@@ -2386,373 +2450,382 @@ class ListBoxTags( ListBox ):
     
     def ShowMenu( self ):
         
+        if len( self._ordered_terms ) == 0:
+            
+            return
+            
+        
         sub_selection_string = None
         
-        if len( self._ordered_terms ) > 0:
+        selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
+        
+        menu = QW.QMenu()
+        
+        if self._terms_may_have_sibling_or_parent_info:
             
-            selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
-            
-            menu = QW.QMenu()
-            
-            if self._terms_may_have_child_rows:
+            if self._show_parent_decorators:
                 
-                add_it = True
-                
-                if self._child_rows_allowed:
+                if self._extra_parent_rows_allowed:
                     
-                    if len( self._ordered_terms ) == self._total_positional_rows:
+                    if len( self._ordered_terms ) != self._total_positional_rows:
                         
-                        # no parents to hide!
+                        ClientGUIMenus.AppendMenuItem( menu, 'collapse parent rows', 'Show/hide parents.', self.SetExtraParentRowsAllowed, not self._extra_parent_rows_allowed )
                         
-                        add_it = False
-                        
-                    
-                    message = 'hide parent rows'
                     
                 else:
                     
-                    message = 'show parent rows'
+                    ClientGUIMenus.AppendMenuItem( menu, 'expand parent rows', 'Show/hide parents.', self.SetExtraParentRowsAllowed, not self._extra_parent_rows_allowed )
                     
                 
-                if add_it:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, message, 'Show/hide parents.', self.SetChildRowsAllowed, not self._child_rows_allowed )
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                
-            
-            copy_menu = QW.QMenu( menu )
-            
-            selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
-            selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
-            
-            if len( selected_copyable_tag_strings ) == 1:
-                
-                ( selection_string, ) = selected_copyable_tag_strings 
+                ClientGUIMenus.AppendMenuItem( menu, 'hide parent decorators', 'Show/hide parent info.', self.SetParentDecoratorsAllowed, not self._show_parent_decorators )
                 
             else:
                 
-                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
+                ClientGUIMenus.AppendMenuItem( menu, 'show parent decorators', 'Show/hide parent info.', self.SetParentDecoratorsAllowed, not self._show_parent_decorators )
                 
             
-            if len( selected_copyable_tag_strings ) > 0:
+            if self._show_sibling_decorators:
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
+                ClientGUIMenus.AppendMenuItem( menu, 'hide sibling decorators', 'Show/hide sibling info.', self.SetSiblingDecoratorsAllowed, not self._show_sibling_decorators )
                 
-                if len( selected_copyable_subtag_strings ) == 1:
-                    
-                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
-                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
-                        
-                        ( sub_selection_string, ) = selected_copyable_subtag_strings
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                        
-                    
-                else:
-                    
-                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                    
+            else:
                 
-                if self._HasCounts():
-                    
-                    ClientGUIMenus.AppendSeparator( copy_menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( selection_string ), 'Copy the selected tags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS_WITH_COUNTS )
-                    
-                    if sub_selection_string is not None:
-                        
-                        ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-                        
-                    
+                ClientGUIMenus.AppendMenuItem( menu, 'show sibling decorators', 'Show/hide sibling info.', self.SetSiblingDecoratorsAllowed, not self._show_sibling_decorators )
                 
             
-            copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
+            ClientGUIMenus.AppendSeparator( menu )
             
-            if copy_all_is_appropriate:
+        
+        copy_menu = QW.QMenu( menu )
+        
+        selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
+        selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
+        
+        if len( selected_copyable_tag_strings ) == 1:
+            
+            ( selection_string, ) = selected_copyable_tag_strings
+            
+        else:
+            
+            selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
+            
+        
+        if len( selected_copyable_tag_strings ) > 0:
+            
+            ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
+            
+            if len( selected_copyable_subtag_strings ) == 1:
+                
+                # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
+                if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
+                    
+                    ( sub_selection_string, ) = selected_copyable_subtag_strings
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                    
+                
+            else:
+                
+                sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                
+            
+            if self._HasCounts():
                 
                 ClientGUIMenus.AppendSeparator( copy_menu )
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the tags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS )
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags', 'Copy all the subtags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS )
+                ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( selection_string ), 'Copy the selected tags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS_WITH_COUNTS )
                 
-                if self._HasCounts():
+                if sub_selection_string is not None:
                     
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the tags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS_WITH_COUNTS )
-                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags with counts', 'Copy all the subtags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS_WITH_COUNTS )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
                     
                 
             
-            ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
+        
+        copy_all_is_appropriate = len( self._ordered_terms ) > len( self._selected_terms )
+        
+        if copy_all_is_appropriate:
             
-            #
+            ClientGUIMenus.AppendSeparator( copy_menu )
             
-            can_launch_sibling_and_parent_dialogs = len( selected_actual_tags ) > 0 and self.can_spawn_new_windows
-            can_show_siblings_and_parents = len( selected_actual_tags ) == 1
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the tags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS )
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags', 'Copy all the subtags in this list to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS )
             
-            if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
+            if self._HasCounts():
                 
-                siblings_menu = QW.QMenu( menu )
-                parents_menu = QW.QMenu( menu )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the tags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_TAGS_WITH_COUNTS )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all subtags with counts', 'Copy all the subtags in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_ALL_SUBTAGS_WITH_COUNTS )
                 
-                ClientGUIMenus.AppendMenu( menu, siblings_menu, 'siblings' )
-                ClientGUIMenus.AppendMenu( menu, parents_menu, 'parents' )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
+        
+        #
+        
+        can_launch_sibling_and_parent_dialogs = len( selected_actual_tags ) > 0 and self.can_spawn_new_windows
+        can_show_siblings_and_parents = len( selected_actual_tags ) == 1
+        
+        if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
+            
+            siblings_menu = QW.QMenu( menu )
+            parents_menu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenu( menu, siblings_menu, 'siblings' )
+            ClientGUIMenus.AppendMenu( menu, parents_menu, 'parents' )
+            
+            if can_launch_sibling_and_parent_dialogs:
                 
-                if can_launch_sibling_and_parent_dialogs:
+                if len( selected_actual_tags ) == 1:
                     
-                    if len( selected_actual_tags ) == 1:
+                    ( tag, ) = selected_actual_tags
+                    
+                    text = tag
+                    
+                else:
+                    
+                    text = 'selection'
+                    
+                
+                ClientGUIMenus.AppendMenuItem( siblings_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                ClientGUIMenus.AppendMenuItem( parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                
+            
+            if can_show_siblings_and_parents:
+                
+                ( selected_tag, ) = selected_actual_tags
+                
+                def sp_work_callable():
+                    
+                    selected_tag_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
+                    
+                    service_keys_to_siblings_and_parents = selected_tag_to_service_keys_to_siblings_and_parents[ selected_tag ]
+                    
+                    return service_keys_to_siblings_and_parents
+                    
+                
+                def sp_publish_callable( service_keys_to_siblings_and_parents ):
+                    
+                    service_keys_in_order = HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+                    
+                    all_siblings = set()
+                    
+                    siblings_to_service_keys = collections.defaultdict( set )
+                    parents_to_service_keys = collections.defaultdict( set )
+                    children_to_service_keys = collections.defaultdict( set )
+                    
+                    ideals_to_service_keys = collections.defaultdict( set )
+                    
+                    for ( service_key, ( sibling_chain_members, ideal_tag, descendants, ancestors ) ) in service_keys_to_siblings_and_parents.items():
                         
-                        ( tag, ) = selected_actual_tags
+                        all_siblings.update( sibling_chain_members )
                         
-                        text = tag
+                        for sibling in sibling_chain_members:
+                            
+                            if sibling == ideal_tag:
+                                
+                                ideals_to_service_keys[ ideal_tag ].add( service_key )
+                                
+                                continue
+                                
+                            
+                            if sibling == selected_tag: # don't care about the selected tag unless it is ideal
+                                
+                                continue
+                                
+                            
+                            siblings_to_service_keys[ sibling ].add( service_key )
+                            
+                        
+                        for ancestor in ancestors:
+                            
+                            parents_to_service_keys[ ancestor ].add( service_key )
+                            
+                        
+                        for descendant in descendants:
+                            
+                            children_to_service_keys[ descendant ].add( service_key )
+                            
+                        
+                    
+                    all_siblings.discard( selected_tag )
+                    
+                    num_siblings = len( all_siblings )
+                    num_parents = len( parents_to_service_keys )
+                    num_children = len( children_to_service_keys )
+                    
+                    service_keys_to_service_names = { service_key : HG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
+                    
+                    ALL_SERVICES_LABEL = 'all services'
+                    
+                    def convert_service_keys_to_name_string( s_ks ):
+                        
+                        if len( s_ks ) == len( service_keys_in_order ):
+                            
+                            return ALL_SERVICES_LABEL
+                            
+                        
+                        return ', '.join( ( service_keys_to_service_names[ service_key ] for service_key in service_keys_in_order if service_key in s_ks ) )
+                        
+                    
+                    def group_and_sort_siblings_to_service_keys( t_to_s_ks ):
+                        
+                        # convert "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
+                        
+                        service_key_groups_to_tags = collections.defaultdict( list )
+                        
+                        for ( t, s_ks ) in t_to_s_ks.items():
+                            
+                            service_key_groups_to_tags[ tuple( s_ks ) ].append( t )
+                            
+                        
+                        tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                        
+                        for t_list in service_key_groups_to_tags.values():
+                            
+                            ClientTagSorting.SortTags( tag_sort, t_list )
+                            
+                        
+                        service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
+                        
+                        service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
+                        
+                        return service_key_group_names_and_tags
+                        
+                    
+                    def group_and_sort_parents_to_service_keys( p_to_s_ks, c_to_s_ks ):
+                        
+                        # convert two lots of "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
+                        
+                        service_key_groups_to_tags = collections.defaultdict( lambda: ( [], [] ) )
+                        
+                        for ( p, s_ks ) in p_to_s_ks.items():
+                            
+                            service_key_groups_to_tags[ tuple( s_ks ) ][0].append( p )
+                            
+                        
+                        for ( c, s_ks ) in c_to_s_ks.items():
+                            
+                            service_key_groups_to_tags[ tuple( s_ks ) ][1].append( c )
+                            
+                        
+                        tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                        
+                        for ( t_list_1, t_list_2 ) in service_key_groups_to_tags.values():
+                            
+                            ClientTagSorting.SortTags( tag_sort, t_list_1 )
+                            ClientTagSorting.SortTags( tag_sort, t_list_2 )
+                            
+                        
+                        service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
+                        
+                        service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
+                        
+                        return service_key_group_names_and_tags
+                        
+                    
+                    if num_siblings == 0:
+                        
+                        siblings_menu.setTitle( 'no siblings' )
                         
                     else:
                         
-                        text = 'selection'
+                        siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( num_siblings ) ) )
                         
-                    
-                    ClientGUIMenus.AppendMenuItem( siblings_menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
-                    ClientGUIMenus.AppendMenuItem( parents_menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
-                    
-                
-                if can_show_siblings_and_parents:
-                    
-                    ( selected_tag, ) = selected_actual_tags
-                    
-                    def sp_work_callable():
+                        #
                         
-                        selected_tag_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
+                        ClientGUIMenus.AppendSeparator( siblings_menu )
                         
-                        service_keys_to_siblings_and_parents = selected_tag_to_service_keys_to_siblings_and_parents[ selected_tag ]
+                        ideals = sorted( ideals_to_service_keys.keys(), key = HydrusTags.ConvertTagToSortable )
                         
-                        return service_keys_to_siblings_and_parents
-                        
-                    
-                    def sp_publish_callable( service_keys_to_siblings_and_parents ):
-                        
-                        service_keys_in_order = HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
-                        
-                        all_siblings = set()
-                        
-                        siblings_to_service_keys = collections.defaultdict( set )
-                        parents_to_service_keys = collections.defaultdict( set )
-                        children_to_service_keys = collections.defaultdict( set )
-                        
-                        ideals_to_service_keys = collections.defaultdict( set )
-                        
-                        for ( service_key, ( sibling_chain_members, ideal_tag, descendants, ancestors ) ) in service_keys_to_siblings_and_parents.items():
+                        for ideal in ideals:
                             
-                            all_siblings.update( sibling_chain_members )
-                            
-                            for sibling in sibling_chain_members:
+                            if ideal == selected_tag:
                                 
-                                if sibling == ideal_tag:
-                                    
-                                    ideals_to_service_keys[ ideal_tag ].add( service_key )
-                                    
-                                    continue
-                                    
-                                
-                                if sibling == selected_tag: # don't care about the selected tag unless it is ideal
-                                    
-                                    continue
-                                    
-                                
-                                siblings_to_service_keys[ sibling ].add( service_key )
+                                continue
                                 
                             
-                            for ancestor in ancestors:
-                                
-                                parents_to_service_keys[ ancestor ].add( service_key )
-                                
+                            ideal_label = 'ideal is "{}" on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
                             
-                            for descendant in descendants:
-                                
-                                children_to_service_keys[ descendant ].add( service_key )
-                                
-                            
-                        
-                        all_siblings.discard( selected_tag )
-                        
-                        num_siblings = len( all_siblings )
-                        num_parents = len( parents_to_service_keys )
-                        num_children = len( children_to_service_keys )
-                        
-                        service_keys_to_service_names = { service_key : HG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
-                        
-                        ALL_SERVICES_LABEL = 'all services'
-                        
-                        def convert_service_keys_to_name_string( s_ks ):
-                            
-                            if len( s_ks ) == len( service_keys_in_order ):
-                                
-                                return ALL_SERVICES_LABEL
-                                
-                            
-                            return ', '.join( ( service_keys_to_service_names[ service_key ] for service_key in service_keys_in_order if service_key in s_ks ) )
-                            
-                        
-                        def group_and_sort_siblings_to_service_keys( t_to_s_ks ):
-                            
-                            # convert "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
-                            
-                            service_key_groups_to_tags = collections.defaultdict( list )
-                            
-                            for ( t, s_ks ) in t_to_s_ks.items():
-                                
-                                service_key_groups_to_tags[ tuple( s_ks ) ].append( t )
-                                
-                            
-                            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-                            
-                            for t_list in service_key_groups_to_tags.values():
-                                
-                                ClientTagSorting.SortTags( tag_sort, t_list )
-                                
-                            
-                            service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
-                            
-                            service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
-                            
-                            return service_key_group_names_and_tags
-                            
-                        
-                        def group_and_sort_parents_to_service_keys( p_to_s_ks, c_to_s_ks ):
-                            
-                            # convert two lots of "tag -> everywhere I am" to "sorted groups of locations -> what we have in common, also sorted"
-                            
-                            service_key_groups_to_tags = collections.defaultdict( lambda: ( [], [] ) )
-                            
-                            for ( p, s_ks ) in p_to_s_ks.items():
-                                
-                                service_key_groups_to_tags[ tuple( s_ks ) ][0].append( p )
-                                
-                            
-                            for ( c, s_ks ) in c_to_s_ks.items():
-                                
-                                service_key_groups_to_tags[ tuple( s_ks ) ][1].append( c )
-                                
-                            
-                            tag_sort = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-                            
-                            for ( t_list_1, t_list_2 ) in service_key_groups_to_tags.values():
-                                
-                                ClientTagSorting.SortTags( tag_sort, t_list_1 )
-                                ClientTagSorting.SortTags( tag_sort, t_list_2 )
-                                
-                            
-                            service_key_groups = sorted( service_key_groups_to_tags.keys(), key = lambda s_k_g: ( -len( s_k_g ), convert_service_keys_to_name_string( s_k_g ) ) )
-                            
-                            service_key_group_names_and_tags = [ ( convert_service_keys_to_name_string( s_k_g ), service_key_groups_to_tags[ s_k_g ] ) for s_k_g in service_key_groups ]
-                            
-                            return service_key_group_names_and_tags
-                            
-                        
-                        if num_siblings == 0:
-                            
-                            siblings_menu.setTitle( 'no siblings' )
-                            
-                        else:
-                            
-                            siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( num_siblings ) ) )
-                            
-                            #
-                            
-                            ClientGUIMenus.AppendSeparator( siblings_menu )
-                            
-                            ideals = sorted( ideals_to_service_keys.keys(), key = HydrusTags.ConvertTagToSortable )
-                            
-                            for ideal in ideals:
-                                
-                                if ideal == selected_tag:
-                                    
-                                    continue
-                                    
-                                
-                                ideal_label = 'ideal is "{}" on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
-                                
-                                ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal )
-                                
-                            
-                            #
-                            
-                            for ( s_k_name, tags ) in group_and_sort_siblings_to_service_keys( siblings_to_service_keys ):
-                                
-                                ClientGUIMenus.AppendSeparator( siblings_menu )
-                                
-                                if s_k_name != ALL_SERVICES_LABEL:
-                                    
-                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, '--{}--'.format( s_k_name ) )
-                                    
-                                
-                                for tag in tags:
-                                    
-                                    ClientGUIMenus.AppendMenuLabel( siblings_menu, tag )
-                                    
-                                
+                            ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal )
                             
                         
                         #
                         
-                        if num_parents + num_children == 0:
+                        for ( s_k_name, tags ) in group_and_sort_siblings_to_service_keys( siblings_to_service_keys ):
                             
-                            parents_menu.setTitle( 'no parents' )
+                            ClientGUIMenus.AppendSeparator( siblings_menu )
                             
-                        else:
+                            if s_k_name != ALL_SERVICES_LABEL:
+                                
+                                ClientGUIMenus.AppendMenuLabel( siblings_menu, '--{}--'.format( s_k_name ) )
+                                
                             
-                            parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
+                            for tag in tags:
+                                
+                                ClientGUIMenus.AppendMenuLabel( siblings_menu, tag )
+                                
+                            
+                        
+                    
+                    #
+                    
+                    if num_parents + num_children == 0:
+                        
+                        parents_menu.setTitle( 'no parents' )
+                        
+                    else:
+                        
+                        parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
+                        
+                        ClientGUIMenus.AppendSeparator( parents_menu )
+                        
+                        for ( s_k_name, ( parents, children ) ) in group_and_sort_parents_to_service_keys( parents_to_service_keys, children_to_service_keys ):
                             
                             ClientGUIMenus.AppendSeparator( parents_menu )
                             
-                            for ( s_k_name, ( parents, children ) ) in group_and_sort_parents_to_service_keys( parents_to_service_keys, children_to_service_keys ):
+                            if s_k_name != ALL_SERVICES_LABEL:
                                 
-                                ClientGUIMenus.AppendSeparator( parents_menu )
+                                ClientGUIMenus.AppendMenuLabel( parents_menu, '--{}--'.format( s_k_name ) )
                                 
-                                if s_k_name != ALL_SERVICES_LABEL:
-                                    
-                                    ClientGUIMenus.AppendMenuLabel( parents_menu, '--{}--'.format( s_k_name ) )
-                                    
+                            
+                            for parent in parents:
                                 
-                                for parent in parents:
-                                    
-                                    parent_label = 'parent: {}'.format( parent )
-                                    
-                                    ClientGUIMenus.AppendMenuItem( parents_menu, parent_label, parent_label, HG.client_controller.pub, 'clipboard', 'text', parent )
-                                    
+                                parent_label = 'parent: {}'.format( parent )
                                 
-                                for child in children:
-                                    
-                                    child_label = 'child: {}'.format( child )
-                                    
-                                    ClientGUIMenus.AppendMenuItem( parents_menu, child_label, child_label, HG.client_controller.pub, 'clipboard', 'text', child )
-                                    
+                                ClientGUIMenus.AppendMenuItem( parents_menu, parent_label, parent_label, HG.client_controller.pub, 'clipboard', 'text', parent )
+                                
+                            
+                            for child in children:
+                                
+                                child_label = 'child: {}'.format( child )
+                                
+                                ClientGUIMenus.AppendMenuItem( parents_menu, child_label, child_label, HG.client_controller.pub, 'clipboard', 'text', child )
                                 
                             
                         
                     
-                    async_job = ClientGUIAsync.AsyncQtJob( menu, sp_work_callable, sp_publish_callable )
-                    
-                    async_job.start()
-                    
+                
+                async_job = ClientGUIAsync.AsyncQtJob( menu, sp_work_callable, sp_publish_callable )
+                
+                async_job.start()
                 
             
-            if len( self._selected_terms ) > 0:
+        
+        if len( self._selected_terms ) > 0:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
+            
+            if len( predicates ) > 0:
                 
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                ( predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate ) = self._GetSelectedPredicatesAndInverseCopies()
-                
-                if len( predicates ) > 0:
+                if self.can_spawn_new_windows or self._CanProvideCurrentPagePredicates():
                     
-                    if self.can_spawn_new_windows or self._CanProvideCurrentPagePredicates():
-                        
-                        search_menu = QW.QMenu( menu )
-                        
-                        ClientGUIMenus.AppendMenu( menu, search_menu, 'search' )
-                        
+                    search_menu = QW.QMenu( menu )
+                    
+                    ClientGUIMenus.AppendMenu( menu, search_menu, 'search' )
                     
                     if self.can_spawn_new_windows:
                         
@@ -2773,6 +2846,10 @@ class ListBoxTags( ListBox ):
                         ClientGUIMenus.AppendSeparator( search_menu )
                         
                     
+                    self._AddEditMenu( search_menu )
+                    
+                    ClientGUIMenus.AppendSeparator( search_menu )
+                    
                     if self._CanProvideCurrentPagePredicates():
                         
                         current_predicates = self._GetCurrentPagePredicates()
@@ -2782,20 +2859,13 @@ class ListBoxTags( ListBox ):
                         
                         if len( predicates ) == 1:
                             
-                            ( pred, ) = predicates
+                            ( p, ) = predicates
                             
-                            predicates_selection_string = pred.ToString( with_count = False )
+                            predicates_selection_string = p.ToString( with_count = False )
                             
                         else:
                             
                             predicates_selection_string = 'selected'
-                            
-                        
-                        some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
-                        
-                        if some_selected_in_current:
-                            
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
                             
                         
                         some_selected_not_in_current = len( predicates.intersection( current_predicates ) ) < len( predicates )
@@ -2810,18 +2880,43 @@ class ListBoxTags( ListBox ):
                             ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
                             
                         
-                        some_selected_are_excluded_explicitly = HydrusData.SetsIntersect( inverse_predicates, current_predicates )
+                        some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
                         
-                        if some_selected_are_excluded_explicitly:
+                        if some_selected_in_current:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'permit {} for current search'.format( predicates_selection_string ), 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_inverse_predicates' )
+                            ClientGUIMenus.AppendMenuItem( search_menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
                             
                         
-                        some_selected_are_not_excluded_explicitly = len( inverse_predicates.intersection( current_predicates ) ) < len( inverse_predicates )
+                        we_can_flip_some_of_selection = len( inverse_predicates ) > 0
                         
-                        if some_selected_are_not_excluded_explicitly:
+                        if we_can_flip_some_of_selection:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'exclude {} from the current search'.format( predicates_selection_string ), 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                            inclusives = { p.IsInclusive() for p in inverse_predicates }
+                            
+                            inverse_all_exclusive = True not in inclusives
+                            inverse_all_inclusive = False not in inclusives
+                            
+                            if inverse_all_exclusive:
+                                
+                                text = 'exclude {} from the current search'.format( predicates_selection_string )
+                                desc = 'Disallow the selected predicates for the current search.'
+                                
+                            elif inverse_all_inclusive and len( inverse_predicates ) == 1:
+                                
+                                ( p, ) = inverse_predicates
+                                
+                                inverse_selection_string = p.ToString( with_count = False )
+                                
+                                text = 'require {} for the current search'.format( inverse_selection_string )
+                                desc = 'Stop disallowing the selected predicates from the current search.'
+                                
+                            else:
+                                
+                                text = 'invert selection for the current search'
+                                desc = 'Flip the inclusive/exclusive nature of the selected predicates from the current search.'
+                                
+                            
+                            ClientGUIMenus.AppendMenuItem( search_menu, text, desc, self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
                             
                         
                         if namespace_predicate is not None and namespace_predicate not in current_predicates:
@@ -2835,113 +2930,111 @@ class ListBoxTags( ListBox ):
                             
                         
                     
-                    self._AddEditMenu( menu )
-                    
-                
-                if len( selected_actual_tags ) > 0 and self._page_key is not None:
-                    
-                    select_menu = QW.QMenu( menu )
-                    
-                    tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_actual_tags )
-                    
-                    tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu )
-                    
-                    while len( tags_sorted_to_show_on_menu_string ) > 64:
-                        
-                        if len( tags_sorted_to_show_on_menu ) == 1:
-                            
-                            tags_sorted_to_show_on_menu_string = '(many/long tags)'
-                            
-                        else:
-                            
-                            tags_sorted_to_show_on_menu.pop( -1 )
-                            
-                            tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
-                            
-                        
-                    
-                    if len( selected_actual_tags ) == 1:
-                        
-                        label = 'files with "{}"'.format( tags_sorted_to_show_on_menu_string )
-                        
-                    else:
-                        
-                        label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
-                        
-                    
-                    ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', self._SelectFilesWithTags, 'AND' )
-                    
-                    if len( selected_actual_tags ) > 1:
-                        
-                        label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
-                        
-                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', self._SelectFilesWithTags, 'OR' )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
-                    
                 
             
-            if len( selected_actual_tags ) == 1:
+            if len( selected_actual_tags ) > 0 and self._page_key is not None:
                 
-                ( selected_tag, ) = selected_actual_tags
+                select_menu = QW.QMenu( menu )
                 
-                if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                    ( namespace, subtag ) = HydrusTags.SplitTag( selected_tag )
-                    
-                    hide_menu = QW.QMenu( menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
-                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( selected_tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
-                    
-                    ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
-                    
+                tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_actual_tags )
                 
-                def set_favourite_tags( tag ):
+                tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu )
+                
+                while len( tags_sorted_to_show_on_menu_string ) > 64:
                     
-                    favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-                    
-                    if selected_tag in favourite_tags:
+                    if len( tags_sorted_to_show_on_menu ) == 1:
                         
-                        favourite_tags.remove( tag )
+                        tags_sorted_to_show_on_menu_string = '(many/long tags)'
                         
                     else:
                         
-                        favourite_tags.append( tag )
+                        tags_sorted_to_show_on_menu.pop( -1 )
+                        
+                        tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
                         
                     
-                    HG.client_controller.new_options.SetStringList( 'favourite_tags', favourite_tags )
+                
+                if len( selected_actual_tags ) == 1:
                     
-                    HG.client_controller.pub( 'notify_new_favourite_tags' )
+                    label = 'files with "{}"'.format( tags_sorted_to_show_on_menu_string )
                     
+                else:
+                    
+                    label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', self._SelectFilesWithTags, 'AND' )
+                
+                if len( selected_actual_tags ) > 1:
+                    
+                    label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                    
+                    ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', self._SelectFilesWithTags, 'OR' )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+                
+            
+        
+        if len( selected_actual_tags ) == 1:
+            
+            ( selected_tag, ) = selected_actual_tags
+            
+            if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                ( namespace, subtag ) = HydrusTags.SplitTag( selected_tag )
+                
+                hide_menu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
+                ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( selected_tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                
+                ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
+                
+            
+            def set_favourite_tags( tag ):
                 
                 favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
                 
                 if selected_tag in favourite_tags:
                     
-                    label = 'remove "{}" from favourites'.format( selected_tag )
-                    description = 'Remove this tag from your favourites'
+                    favourite_tags.remove( tag )
                     
                 else:
                     
-                    label = 'add "{}" to favourites'.format( selected_tag )
-                    description = 'Add this tag from your favourites'
+                    favourite_tags.append( tag )
                     
                 
-                favourites_menu = QW.QMenu( menu )
+                HG.client_controller.new_options.SetStringList( 'favourite_tags', favourite_tags )
                 
-                ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, set_favourite_tags, selected_tag )
-                
-                m = ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
+                HG.client_controller.pub( 'notify_new_favourite_tags' )
                 
             
-            self.AddAdditionalMenuItems( menu )
+            favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
             
-            CGC.core().PopupMenu( self, menu )
+            if selected_tag in favourite_tags:
+                
+                label = 'remove "{}" from favourites'.format( selected_tag )
+                description = 'Remove this tag from your favourites'
+                
+            else:
+                
+                label = 'add "{}" to favourites'.format( selected_tag )
+                description = 'Add this tag from your favourites'
+                
             
+            favourites_menu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, set_favourite_tags, selected_tag )
+            
+            m = ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
+            
+        
+        self.AddAdditionalMenuItems( menu )
+        
+        CGC.core().PopupMenu( self, menu )
         
     
     def ForceTagRecalc( self ):
@@ -3615,7 +3708,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         item_to_tag_key_wrapper = lambda term: term.GetTag()
         item_to_sibling_key_wrapper = item_to_tag_key_wrapper
         
-        if self._sibling_decoration_allowed:
+        if self._show_sibling_decorators:
             
             item_to_sibling_key_wrapper = lambda term: term.GetBestTag()
             

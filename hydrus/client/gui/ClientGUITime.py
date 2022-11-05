@@ -329,6 +329,8 @@ class TimeDeltaButton( QW.QPushButton ):
         self._RefreshLabel()
         
         
+    
+
 class TimeDeltaCtrl( QW.QWidget ):
     
     timeDeltaChanged = QC.Signal()

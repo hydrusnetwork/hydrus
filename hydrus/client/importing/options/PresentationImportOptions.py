@@ -1,4 +1,3 @@
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
@@ -245,6 +244,8 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             
             summary = '{}, {}'.format( summary, s )
             
+        
+        summary = 'presenting {}'.format( summary )
         
         return summary
         

@@ -1,3 +1,6 @@
+---
+title: Local Booru
+---
 
 # local booru  
 

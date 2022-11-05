@@ -347,11 +347,9 @@ class QuickDownloadManager( object ):
                             
                         elif service.GetServiceType() == HC.IPFS:
                             
-                            multihashes = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
+                            multihash = media_result.GetLocationsManager().GetServiceFilename( service_key )
                             
-                            if len( multihashes ) > 0:
-                                
-                                multihash = multihashes[0]
+                            if multihash is not None:
                                 
                                 service.ImportFile( multihash, silent = True )
                                 

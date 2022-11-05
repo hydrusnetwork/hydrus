@@ -6,6 +6,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
@@ -13,6 +14,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import QtPorting as QP
 
 SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
 SHORTCUT_TYPE_MOUSE = 1
@@ -256,6 +258,8 @@ simple_shortcut_name_to_action_lookup = {
     'custom' : SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 }
 
+simple_shortcut_name_to_action_lookup = { key : HydrusData.DedupeList( value ) for ( key, value ) in simple_shortcut_name_to_action_lookup.items() }
+
 CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
 
 # ok, the problem here is that I get key codes that are converted, so if someone does shift+1 on a US keyboard, this ends up with Shift+! same with ctrl+alt+ to get accented characters
@@ -435,7 +439,7 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
         
         angle_delta = angle_delta_point.y()
         
-        if event.source() == QC.Qt.MouseEventSynthesizedBySystem:
+        if QP.WheelEventIsSynthesised( event ):
             
             if abs( angle_delta ) < ONE_TICK_ON_A_NORMAL_MOUSE_IN_DEGREES:
                 
@@ -931,6 +935,34 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return s
         
     
+    def TryToIncrementKey( self ):
+        
+        if self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_CHARACTER:
+            
+            new_shortcut_key = self.shortcut_key + 1
+            
+            if ClientData.OrdIsAlphaLower( new_shortcut_key ) or ClientData.OrdIsNumber( new_shortcut_key ):
+                
+                self.shortcut_key = new_shortcut_key
+                
+                return
+                
+            
+        elif self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_SPECIAL:
+            
+            new_shortcut_key = self.shortcut_key + 1
+            
+            if new_shortcut_key in special_key_shortcut_str_lookup:
+                
+                self.shortcut_key = new_shortcut_key
+                
+                return
+                
+            
+        
+        raise HydrusExceptions.VetoException( 'Sorry, cannot increment that shortcut!' )
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
 
 class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
@@ -1076,6 +1108,11 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
         return shortcuts
         
     
+    def GetShortcutsAndCommands( self ):
+        
+        return list( self )
+        
+    
     def SetCommand( self, shortcut, command ):
         
         self._shortcuts_to_commands[ shortcut ] = command
@@ -1107,8 +1144,10 @@ class ShortcutsHandler( QC.QObject ):
         self._shortcuts_names = list( initial_shortcuts_names )
         
         self._ignore_activating_mouse_click = ignore_activating_mouse_click
+        self._activating_wait_job = None
         
         self._frame_activated_time = 0.0
+        self._parent_currently_activated = True
         
         if self._catch_mouse and self._ignore_activating_mouse_click:
             
@@ -1239,16 +1278,19 @@ class ShortcutsHandler( QC.QObject ):
                 
                 if event.type() == QC.QEvent.MouseButtonPress:
                     
-                    self._last_click_down_position = event.globalPos()
+                    self._last_click_down_position = event.globalPosition().toPoint()
                     
                     CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
-                    
                 
-                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
                     
-                    if event.type() == QC.QEvent.MouseButtonRelease:
+                    if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:
                         
-                        self._frame_activated_time = 0.0
+                        # first completed click in the time window sets us active instantly
+                        self._activating_wait_job.Cancel()
+                        
+                        self._parent_currently_activated = True
                         
                     
                     return False
@@ -1256,7 +1298,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 if event.type() == QC.QEvent.MouseButtonRelease:
                     
-                    release_press_pos = event.globalPos()
+                    release_press_pos = event.globalPosition().toPoint()
                     
                     delta = release_press_pos - self._last_click_down_position
                     
@@ -1342,6 +1384,26 @@ class ShortcutsHandler( QC.QObject ):
             
         
     
+    def FrameActivated( self ):
+        
+        def do_it():
+            
+            self._parent_currently_activated = True
+            
+        
+        self._activating_wait_job = HG.client_controller.CallLater( 0.2, do_it )
+        
+    
+    def FrameDeactivated( self ):
+        
+        if self._activating_wait_job is not None:
+            
+            self._activating_wait_job.Cancel()
+            
+        
+        self._parent_currently_activated = False
+        
+    
     def GetCustomShortcutNames( self ):
         
         custom_names = sorted( ( name for name in self._shortcuts_names if name not in SHORTCUTS_RESERVED_NAMES ) )
@@ -1377,11 +1439,7 @@ class ShortcutsHandler( QC.QObject ):
         self._shortcuts_names = list( shortcut_set_names )
         
     
-    def FrameActivated( self ):
-        
-        self._frame_activated_time = HydrusData.GetNowPrecise()
-        
-    
+
 class ShortcutsDeactivationCatcher( QC.QObject ):
     
     def __init__( self, shortcuts_handler: ShortcutsHandler, widget: QW.QWidget ):
@@ -1398,6 +1456,10 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
         if event.type() == QC.QEvent.WindowActivate:
             
             self._shortcuts_handler.FrameActivated()
+            
+        elif event.type() == QC.QEvent.WindowDeactivate:
+            
+            self._shortcuts_handler.FrameDeactivated()
             
         
         return False

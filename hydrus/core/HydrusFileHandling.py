@@ -61,6 +61,7 @@ headers_and_mime.extend( [
     ( ( ( 4, b'ftypqt' ), ), HC.VIDEO_MOV ),
     ( ( ( 0, b'fLaC' ), ), HC.AUDIO_FLAC ),
     ( ( ( 0, b'RIFF' ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
+    ( ( ( 0, b'wvpk' ), ), HC.AUDIO_WAVPACK ),
     ( ( ( 8, b'AVI ' ), ), HC.VIDEO_AVI ),
     ( ( ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C' ), ), HC.UNDETERMINED_WM ),
     ( ( ( 0, b'\x4D\x5A\x90\x00\x03', ), ), HC.APPLICATION_WINDOWS_EXE )
@@ -326,6 +327,32 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
         
     
+    if ok_to_look_for_hydrus_updates and size < 64 * 1024 * 1024:
+        
+        with open( path, 'rb' ) as f:
+            
+            update_network_bytes = f.read()
+            
+        
+        try:
+            
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            
+            if isinstance( update, HydrusNetwork.ContentUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
+                
+            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
+                
+            
+        except:
+            
+            pass
+            
+        
+    
     with open( path, 'rb' ) as f:
         
         bit_to_check = f.read( 256 )
@@ -359,6 +386,13 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
         
     
+    if HydrusText.LooksLikeHTML( bit_to_check ):
+        
+        return HC.TEXT_HTML
+        
+    
+    # it is important this goes at the end, because ffmpeg has a billion false positives!
+    # for instance, it once thought some hydrus update files were mpegs
     try:
         
         mime = HydrusVideoHandling.GetMime( path )
@@ -376,37 +410,6 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         HydrusData.Print( 'FFMPEG had trouble with: ' + path )
         HydrusData.PrintException( e, do_wait = False )
-        
-    
-    if ok_to_look_for_hydrus_updates:
-        
-        with open( path, 'rb' ) as f:
-            
-            update_network_bytes = f.read()
-            
-        
-        try:
-            
-            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
-            
-            if isinstance( update, HydrusNetwork.ContentUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
-                
-            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
-                
-            
-        except:
-            
-            pass
-            
-        
-    
-    if HydrusText.LooksLikeHTML( bit_to_check ):
-        
-        return HC.TEXT_HTML
         
     
     return HC.APPLICATION_UNKNOWN

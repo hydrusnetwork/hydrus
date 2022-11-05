@@ -86,7 +86,7 @@ class ResizingScrolledPanel( QW.QScrollArea ):
             #visible_size = self.widget().visibleRegion().boundingRect().size()
             #size_hint = self.widget().sizeHint() + self.size() - visible_size
             
-            available_screen_size = QW.QApplication.desktop().availableGeometry( self ).size()
+            available_screen_size = self.screen().availableGeometry().size()
             
             screen_fill_factor = 0.85 # don't let size hint be bigger than this percentage of the available screen width/height
             

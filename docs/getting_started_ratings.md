@@ -1,6 +1,7 @@
 ---
-title: ratings
+title: Ratings
 ---
+
 # getting started with ratings  
 
 The hydrus client supports two kinds of ratings: _like/dislike_ and _numerical_. Let's start with the simpler one:

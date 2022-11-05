@@ -22,6 +22,7 @@ from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.metadata import ClientTags
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1
@@ -41,6 +42,7 @@ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD = 14
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD = 15
 REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE = 16
 REGENERATE_FILE_DATA_JOB_PIXEL_HASH = 17
+REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY = 18
 
 regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'regenerate file metadata',
@@ -51,6 +53,7 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'if file is missing, remove record',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 'if file is missing, then if has URL try to redownload',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing, then if has URL try to redownload, else remove record',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY : 'if file is missing, note it in log',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 'if file is missing/incorrect, move file out and remove record',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 'if file is missing/incorrect, then move file out, and if has URL try to redownload',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing/incorrect, then move file out, and if has URL try to redownload, else remove record',
@@ -69,12 +72,41 @@ regen_file_enum_to_description_lookup = {
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : 'This looks for the existing thumbnail, and if it is not the correct resolution or is missing, will regenerate a new one for the source file.',
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 'This regenerates hydrus\'s store of md5, sha1, and sha512 supplementary hashes, which it can use for various external (usually website) lookups.',
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 'Sometimes, a file metadata regeneration will mean a new filetype and thus a new file extension. If the existing, incorrectly named file is in use, it must be copied rather than renamed, and so there is a spare duplicate left over after the operation. This jobs cleans up the duplicate at a later time.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'This checks to see if the file is present in the file system as expected. If it is not, the internal file record in the database is removed, just as if the file were deleted. Use this if you have manually deleted or otherwise lost a number of files from your file structure and need hydrus to re-sync with what it actually has. Missing files will have their known URLs exported to your database directory.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 'This checks to see if the file is present in the file system as expected. If it is not, and it has known post/file URLs, the URLs will be automatically added to a new URL downloader. Missing files will also have their known URLs exported to your database directory.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 'THIS IS THE EASY AND QUICK ONE-SHOT WAY TO FIX A DATABASE WITH MISSING FILES. This checks to see if the file is present in the file system as expected. If it is not, then if it has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Missing files will also have their known URLs exported to your database directory.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with their known URLs, and the file record deleted.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. Incorrect files will also have their known URLs exported to your database directory.',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 'This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect _and_ is has known post/file URLs, the URLs will be automatically added to a new URL downloader. If it has no URLs, then the internal file record in the database is removed, just as if the file were deleted. Incorrect files will also have their known URLs exported to your database directory.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : '''This checks to see if the file is present in the file system as expected. Use this if you have manually deleted or otherwise lost a number of files from your file structure and need hydrus to re-sync with what it actually has.
+
+Missing files will have their internal file record in the database removed. This is just like a file delete except it does not leave a deletion record, so if you ever find the file again in future, you can import it again easily.
+
+All missing files will have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : '''This checks to see if the file is present in the file system as expected. If it is not, and it has known post/file URLs, the URLs will be automatically added to a new URL downloader.'
+
+All missing files will have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : '''THIS IS THE EASY AND QUICK ONE-SHOT WAY TO REPAIR A DATABASE WITH MISSING FILES.
+
+This checks to see if the file is present in the file system as expected. If it is not, and it has known post/file URLs, the URLs will be automatically added to a new URL downloader.
+
+Missing files with no URLs will have their internal file record in the database removed. This is just like a file delete except it does not leave a deletion record, so if you ever find the file again in future, you can import it again easily.
+
+All missing files will have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY : 'This checks to see if the file is present in the file system as expected. If it is not, it records the file\'s hash, tags, and URLs to your database directory, just like the other "missing file" jobs, but makes no other action.',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : '''This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is as expected. This discovers hard drive damage or other external interference. This is a heavy job, so be wary.
+
+Missing/Incorrect files will have their internal file record in the database removed. This is just like a file delete except it does not leave a deletion record, so if you ever find the file again in future, you can import it again easily.
+
+All incorrect files will be exported to a new folder in your database directory for later manual examination if you wish.
+
+All missing/Incorrect files will also have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : '''This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is as expected. This discovers hard drive damage or other external interference. This is a heavy job, so be wary. If the file is incorrect _and_ has known post/file URLs, the URLs will be automatically added to a new URL downloader.
+
+All incorrect files will be exported to a new folder in your database directory for later manual examination if you wish.
+
+All missing/Incorrect files will also have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : '''This does the same check as the \'file is missing\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is as expected. This discovers hard drive damage or other external interference. This is a heavy job, so be wary. If the file is incorrect _and_ has known post/file URLs, the URLs will be automatically added to a new URL downloader.
+
+Missing/Incorrect files with no URLs will have their internal file record in the database removed. This is just like a file delete except it does not leave a deletion record, so if you ever find the file again in future, you can import it again easily.
+
+All incorrect files will be exported to a new folder in your database directory for later manual examination if you wish.
+
+All missing/Incorrect files will also have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 'If the file is where it is expected, this ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with its known URLs. The client\'s file record will not be deleted. This is useful if you have a valid backup and need to clear out invalid files from your live db so you can fill in gaps from your backup with a program like FreeFileSync.',
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 'This ensures that files in the file system are readable and writeable. For Linux/macOS users, it specifically sets 644. If you wish to run this job on Linux/macOS, ensure you are first the file owner of all your files.',
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.',
@@ -93,17 +125,18 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 100,
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 25,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 5,
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 50,
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 55,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 25,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 30,
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY : 5,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : 100,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : 100,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 100,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 100,
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 25,
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 50,
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 20,
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 100,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 100,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 25,
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 100
 }
 
@@ -113,12 +146,13 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : [],
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES : [],
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : [],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : [],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : [],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ],
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY : [],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL ],
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ],
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : [],
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : [],
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : [],
@@ -128,7 +162,7 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : []
 }
 
-ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE, REGENERATE_FILE_DATA_JOB_PIXEL_HASH, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
+ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE, REGENERATE_FILE_DATA_JOB_PIXEL_HASH, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
 def GetAllFilePaths( raw_paths, do_human_sort = True ):
     
@@ -1518,8 +1552,6 @@ class FilesMaintenanceManager( object ):
         hash = media_result.GetHash()
         mime = media_result.GetMime()
         
-        error_dir = os.path.join( self._controller.GetDBDir(), 'missing_and_invalid_files' )
-        
         file_is_missing = False
         file_is_invalid = False
         
@@ -1550,28 +1582,71 @@ class FilesMaintenanceManager( object ):
         
         if file_was_bad:
             
+            error_dir = os.path.join( self._controller.GetDBDir(), 'missing_and_invalid_files' )
+            
+            HydrusPaths.MakeSureDirectoryExists( error_dir )
+            
+            pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._controller.GetBootTime() ) )
+            
+            missing_hashes_filename = '{} missing hashes.txt'.format( pretty_timestamp )
+            
+            missing_hashes_path = os.path.join( error_dir, missing_hashes_filename )
+            
+            with open( missing_hashes_path, 'a', encoding = 'utf-8' ) as f:
+                
+                f.write( hash.hex() )
+                f.write( '\n' )
+                
+            
+            tags = media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+            
+            if len( tags ) > 0:
+                
+                try:
+                    
+                    with open( os.path.join( error_dir, '{}.tags.txt'.format( hash.hex() ) ), 'w', encoding = 'utf-8' ) as f:
+                        
+                        for tag in sorted( tags ):
+                            
+                            f.write( tag )
+                            f.write( '\n' )
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Tried to export tags for missing file {}, but encountered this error:'.format( hash.hex() ) )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                
+            
             urls = media_result.GetLocationsManager().GetURLs()
             
             if len( urls ) > 0:
                 
-                HydrusPaths.MakeSureDirectoryExists( error_dir )
-                
-                with open( os.path.join( error_dir, '{}.urls.txt'.format( hash.hex() ) ), 'w', encoding = 'utf-8' ) as f:
+                try:
                     
-                    for url in urls:
+                    with open( os.path.join( error_dir, '{}.urls.txt'.format( hash.hex() ) ), 'w', encoding = 'utf-8' ) as f:
                         
-                        f.write( url )
-                        f.write( '\n' )
+                        for url in urls:
+                            
+                            f.write( url )
+                            f.write( '\n' )
+                            
                         
                     
-                
-                with open( os.path.join( error_dir, 'all_urls.txt' ), 'a', encoding = 'utf-8' ) as f:
+                    with open( os.path.join( error_dir, 'all_urls.txt' ), 'a', encoding = 'utf-8' ) as f:
+                        
+                        for url in urls:
+                            
+                            f.write( url )
+                            f.write( '\n' )
+                            
+                        
                     
-                    for url in urls:
-                        
-                        f.write( url )
-                        f.write( '\n' )
-                        
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Tried to export URLs for missing file {}, but encountered this error:'.format( hash.hex() ) )
+                    HydrusData.PrintException( e, do_wait = False )
                     
                 
             
@@ -1608,7 +1683,12 @@ class FilesMaintenanceManager( object ):
                     
                 
             
-            if job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ):
+            if job_type == REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY:
+                
+                try_redownload = False
+                delete_record = False
+                
+            elif job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD ):
                 
                 try_redownload = len( useful_urls ) > 0
                 delete_record = not try_redownload
@@ -1620,23 +1700,6 @@ class FilesMaintenanceManager( object ):
                 
             
             do_export = file_is_invalid and ( job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ) or ( job_type == REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL and try_redownload ) )
-            
-            if do_export or delete_record:
-                
-                HydrusPaths.MakeSureDirectoryExists( error_dir )
-                
-                pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._controller.GetBootTime() ) )
-                
-                missing_hashes_filename = '{} missing hashes.txt'.format( pretty_timestamp )
-                
-                missing_hashes_path = os.path.join( error_dir, missing_hashes_filename )
-                
-                with open( missing_hashes_path, 'a', encoding = 'utf-8' ) as f:
-                    
-                    f.write( hash.hex() )
-                    f.write( '\n' )
-                    
-                
             
             if do_export:
                 
@@ -2091,7 +2154,7 @@ class FilesMaintenanceManager( object ):
                         
                         self._FixFilePermissions( media_result )
                         
-                    elif job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE ):
+                    elif job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY ):
                         
                         if not job_key.HasVariable( 'num_bad_files' ):
                             

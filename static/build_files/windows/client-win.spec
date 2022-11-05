@@ -1,11 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import cloudscraper
-import shiboken2
 import os
 import glob
 cloudscraper_dir = os.path.dirname( cloudscraper.__file__ )
-shiboken_dir = os.path.join( os.path.dirname( shiboken2.__file__ ), 'files.dir' )
 
 block_cipher = None
 
@@ -24,9 +22,8 @@ a = Analysis(['hydrus\\client.pyw'],
                ('hydrus\\db', 'db'),
                ('hydrus\\hydrus', 'hydrus'),
                ('hydrus\\sqlite3.dll', '.'),
-               ('hydrus\\mpv-1.dll', '.'),
-               (cloudscraper_dir, 'cloudscraper'),
-               (shiboken_dir, 'shiboken2\\files.dir')
+               ('hydrus\\mpv-2.dll', '.'),
+               (cloudscraper_dir, 'cloudscraper')
              ],
              hiddenimports=['hydrus\\server.py', 'cloudscraper'],
              hookspath=[],

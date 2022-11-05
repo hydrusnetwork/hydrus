@@ -2,6 +2,7 @@ from twisted.web.server import Request
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core.networking import HydrusNetworkVariableHandling
 
 class HydrusRequest( Request ):
     
@@ -10,10 +11,11 @@ class HydrusRequest( Request ):
         Request.__init__( self, *args, **kwargs )
         
         self.start_time = HydrusData.GetNowPrecise()
-        self.parsed_request_args = None
+        self.parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
         self.hydrus_response_context = None
         self.hydrus_account = None
         self.client_api_permissions = None
+        self.disconnect_callables = []
         self.preferred_mime = HC.APPLICATION_JSON
         
     

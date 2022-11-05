@@ -277,6 +277,7 @@ def ConvertStatusToPrefix( status ):
     elif status == HC.CONTENT_STATUS_PENDING: return '(+) '
     elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
     elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
+    else: return '(?)'
     
 def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
     
@@ -1121,9 +1122,9 @@ def LastShutdownWasBad( db_path, instance ):
         return False
         
 
-def MassUnion( lists ):
+def MassUnion( iterables ):
     
-    return { item for item in itertools.chain.from_iterable( lists ) }
+    return { item for item in itertools.chain.from_iterable( iterables ) }
     
 def MedianPop( population ):
     
@@ -1710,7 +1711,7 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
         pass
         
     
-    return '{}{}B'.format( d, suffix )
+    return '{} {}B'.format( d, suffix )
     
 ToHumanBytes = BaseToHumanBytes
 
@@ -2038,11 +2039,14 @@ class JobDatabase( object ):
         
         while True:
             
-            if self._result_ready.wait( 2 ) == True:
+            result_was_ready = self._result_ready.wait( 2 )
+            
+            if result_was_ready:
                 
                 break
                 
-            elif HG.model_shutdown:
+            
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
                 

@@ -1,3 +1,5 @@
+import os
+import random
 import time
 import unittest
 
@@ -47,7 +49,7 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        self._regular_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'regular user', { HC.CONTENT_TYPE_MAPPINGS : HC.PERMISSION_ACTION_CREATE }, HydrusNetworking.BandwidthRules() )
+        self._regular_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'regular user', { HC.CONTENT_TYPE_MAPPINGS : HC.PERMISSION_ACTION_CREATE, HC.CONTENT_TYPE_TAG_PARENTS : HC.PERMISSION_ACTION_PETITION, HC.CONTENT_TYPE_TAG_SIBLINGS : HC.PERMISSION_ACTION_PETITION }, HydrusNetworking.BandwidthRules() )
         self._deletee_user_account_type = HydrusNetwork.AccountType.GenerateNewAccountType( 'deletee user', {}, HydrusNetworking.BandwidthRules() )
         
         new_account_types = [ self._tag_service_admin_account_type, self._null_account_type, self._regular_user_account_type, self._deletee_user_account_type ]
@@ -123,6 +125,28 @@ class TestServerDB( unittest.TestCase ):
             # this registration token has been deleted
             self._read( 'access_key', self._tag_service_key, r_key )
             
+        
+    
+    def _test_account_fetching_from_content( self ):
+        
+        tag = 'character:samus aran'
+        hash = HydrusData.GenerateKey()
+        
+        mappings_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, ( hash, ) ) )
+        mapping_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, mappings_content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        # can extend this to generate and fetch an actual update given a timespan
+        
+        #
+        
+        result = self._read( 'account_from_content', self._tag_service_key, mapping_content )
+        
+        self.assertEqual( result.GetAccountKey(), self._tag_service_regular_account.GetAccountKey() )
         
     
     def _test_account_modification( self ):
@@ -241,27 +265,587 @@ class TestServerDB( unittest.TestCase ):
         self.assertEqual( message, set_message )
         
     
-    def _test_content_creation( self ):
+    def _test_content_creation_and_service_info_counts_files( self ):
         
-        tag = 'character:samus aran'
-        hash = HydrusData.GenerateKey()
+        # files
         
-        mappings_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, ( hash, ) ) )
-        mapping_content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
+        hashes = [ HydrusData.GenerateKey() for i in range( 20 ) ]
+        
+        service_info = self._read( 'service_info', self._file_service_key )
+        
+        expected_num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+        expected_num_hashes = service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
+        expected_num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+        expected_num_petitioned_files = service_info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
+        expected_num_actionable_delete_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS ]
+        
+        def do_num_test():
+            
+            service_info = self._read( 'service_info', self._file_service_key )
+            
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_FILES ], expected_num_files )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ], expected_num_hashes )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ], expected_num_deleted_files )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ], expected_num_petitioned_files )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS ], expected_num_actionable_delete_petitions )
+            
+        
+        # add with admin
+        
+        for ( i, hash ) in enumerate( hashes ):
+            
+            file_dict = {
+                'hash' : hash,
+                'ip' : '127.0.0.1',
+                'height' : 200,
+                'width' : 200,
+                'mime' : 2,
+                'size' : 5270,
+                'path' : os.path.join( HC.STATIC_DIR, 'hydrus.png' ),
+                'thumbnail' : b'abcd'
+            }
+            
+            self._write( 'file', self._file_service, self._file_service_account, file_dict, HydrusData.GetNow() )
+            
+            expected_num_files += 1
+            expected_num_hashes += 1
+            
+            do_num_test()
+            
+        
+        # delete with admin
+        
+        NUM_TO_DELETE = 5
+        
+        deletee_hashes = random.sample( hashes, NUM_TO_DELETE )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, deletee_hashes )
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'files are bad' )
+        
+        self._write( 'update', self._file_service_key, self._file_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_files -= NUM_TO_DELETE
+        expected_num_deleted_files += NUM_TO_DELETE
+        
+        do_num_test()
+        
+        # can't do this until I have a regular account set up earlier in this big test
+        # petition with regular
+        # approve and deny some with admin
+        
+    
+    def _test_content_creation_and_service_info_counts_mappings( self ):
+        
+        service_info = self._read( 'service_info', self._tag_service_key )
+        
+        expected_num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
+        expected_num_hashes = service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
+        expected_num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
+        expected_num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
+        expected_num_petitioned_mappings = service_info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ]
+        expected_num_actionable_delete_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS ]
+        
+        def do_num_test():
+            
+            service_info = self._read( 'service_info', self._tag_service_key )
+            
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_TAGS ], expected_num_tags )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ], expected_num_hashes )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ], expected_num_mappings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ], expected_num_deleted_mappings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ], expected_num_petitioned_mappings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS ], expected_num_actionable_delete_petitions )
+            
+        
+        tag_1 = 'character:samus aran'
+        tag_2 = 'typo'
+        
+        tag_1_hashes = [ HydrusData.GenerateKey() for i in range( 100 ) ]
+        tag_2_hashes = tag_1_hashes[50:] + [ HydrusData.GenerateKey() for i in range( 50 ) ]
+        
+        # add with admin
         
         client_to_server_update = HydrusNetwork.ClientToServerUpdate()
         
-        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, mappings_content )
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_1, tag_1_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tags += 2
+        expected_num_hashes += len( set( tag_1_hashes ).union( tag_2_hashes ) )
+        expected_num_mappings += len( tag_1_hashes ) + len( tag_2_hashes )
+        
+        do_num_test()
+        
+        # delete with admin
+        
+        tag_1_deletee_hashes = random.sample( tag_1_hashes, 15 )
+        tag_2_deletee_hashes = random.sample( tag_2_hashes, 25 )
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_1, tag_1_deletee_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'admin delete' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2_deletee_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'admin delete' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_mappings -= len( tag_1_deletee_hashes ) + len( tag_2_deletee_hashes )
+        expected_num_deleted_mappings += len( tag_1_deletee_hashes ) + len( tag_2_deletee_hashes )
+        
+        do_num_test()
+        
+        # petition with regular
+        
+        tag_1_petition_hashes = random.sample( set( tag_1_hashes ).difference( tag_1_deletee_hashes ), 15 )
+        tag_2_petition_hashes = random.sample( set( tag_2_hashes ).difference( tag_2_deletee_hashes ), 25 )
+        tag_2a_petition_hashes = random.sample( set( tag_2_hashes ).difference( tag_2_deletee_hashes ).difference( tag_2_petition_hashes ), 10 )
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_1, tag_1_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'these are bad' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'these are bad' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2a_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'bad for a stupid reason' )
         
         self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
         
-        # can extend this to generate and fetch an actual update given a timespan
+        expected_num_petitioned_mappings += len( tag_1_petition_hashes ) + len( tag_2_petition_hashes ) + len( tag_2a_petition_hashes )
+        expected_num_actionable_delete_petitions += 3
         
-        #
+        do_num_test()
         
-        result = self._read( 'account_from_content', self._tag_service_key, mapping_content )
+        # approve and deny some with admin
         
-        self.assertEqual( result.GetAccountKey(), self._tag_service_regular_account.GetAccountKey() )
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_1, tag_1_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'these are bad' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'these are bad' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag_2, tag_2a_petition_hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PETITION, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_mappings -= len( tag_1_petition_hashes ) + len( tag_2_petition_hashes )
+        expected_num_deleted_mappings += len( tag_1_petition_hashes ) + len( tag_2_petition_hashes )
+        expected_num_petitioned_mappings -= len( tag_1_petition_hashes ) + len( tag_2_petition_hashes ) + len( tag_2a_petition_hashes )
+        expected_num_actionable_delete_petitions -= 3
+        
+        do_num_test()
+        
+    
+    def _test_content_creation_and_service_info_counts_tag_parents( self ):
+        
+        service_info = self._read( 'service_info', self._tag_service_key )
+        
+        expected_num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
+        expected_num_tag_parents = service_info[ HC.SERVICE_INFO_NUM_TAG_PARENTS ]
+        expected_num_deleted_tag_parents = service_info[ HC.SERVICE_INFO_NUM_DELETED_TAG_PARENTS ]
+        expected_num_pending_tag_parents = service_info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
+        expected_num_actionable_add_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS ]
+        expected_num_petitioned_tag_parents = service_info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
+        expected_num_actionable_delete_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS ]
+        
+        def do_num_test():
+            
+            service_info = self._read( 'service_info', self._tag_service_key )
+            
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_TAGS ], expected_num_tags )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_TAG_PARENTS ], expected_num_tag_parents )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_DELETED_TAG_PARENTS ], expected_num_deleted_tag_parents )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ], expected_num_pending_tag_parents )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS ], expected_num_actionable_add_petitions )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ], expected_num_petitioned_tag_parents )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS ], expected_num_actionable_delete_petitions )
+            
+        
+        child_tag_1 = 'child_tag_1'
+        parent_tag_1 = 'parent_tag_1'
+        
+        child_tag_2 = 'child_tag_2'
+        parent_tag_2 = 'parent_tag_2'
+        
+        child_tag_2a = 'child_tag_2a'
+        parent_tag_2a = 'parent_tag_2a'
+        
+        child_tag_3 = 'child_tag_3'
+        parent_tag_3 = 'parent_tag_3'
+        replacement_parent_tag_3 = 'replacement_parent_tag_3'
+        
+        child_tag_4 = 'child_tag_4'
+        parent_tag_4 = 'parent_tag_4'
+        replacement_parent_tag_4 = 'replacement_parent_tag_4'
+        
+        # get some into the db as existing tags, since count adjustment logic can change
+        
+        hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( child_tag_2, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( parent_tag_2, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( child_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( parent_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( replacement_parent_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        service_info = self._read( 'service_info', self._tag_service_key )
+        
+        expected_num_tags += 5
+        
+        do_num_test()
+        
+        # add with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_1, parent_tag_1 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_3, parent_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_4, parent_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tags += 4
+        expected_num_tag_parents += 3
+        
+        do_num_test()
+        
+        # delete with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_1, parent_tag_1 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'admin delete' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tag_parents -= 1
+        expected_num_deleted_tag_parents += 1
+        
+        do_num_test()
+        
+        # pend with regular
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2, parent_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2a, parent_tag_2a ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_pending_tag_parents += 2
+        expected_num_actionable_add_petitions += 1
+        
+        do_num_test()
+        
+        # approve and deny some with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2, parent_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2a, parent_tag_2a ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PEND, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        # note no increase in num tags. _2 already known, _2a denied
+        expected_num_tag_parents += 1
+        expected_num_pending_tag_parents -= 2
+        expected_num_actionable_add_petitions -= 1
+        
+        do_num_test()
+        
+        # petition with regular
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2, parent_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'this is bad 2' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_3, parent_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_4, parent_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 4' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_3, replacement_parent_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_4, replacement_parent_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 4' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_petitioned_tag_parents += 3
+        expected_num_pending_tag_parents += 2
+        expected_num_actionable_delete_petitions += 3
+        
+        do_num_test()
+        
+        # approve and deny some with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_2, parent_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'this is bad 2' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_3, parent_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_4, parent_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PETITION, content, reason = 'replacing 4' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_3, replacement_parent_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag_4, replacement_parent_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PEND, content, reason = 'replacing 4' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tags += 1
+        expected_num_tag_parents -= 1
+        expected_num_deleted_tag_parents += 2
+        expected_num_petitioned_tag_parents -= 3
+        expected_num_pending_tag_parents -= 2
+        expected_num_actionable_delete_petitions -= 3
+        
+        do_num_test()
+        
+    
+    def _test_content_creation_and_service_info_counts_tag_siblings( self ):
+        
+        service_info = self._read( 'service_info', self._tag_service_key )
+        
+        expected_num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
+        expected_num_tag_siblings = service_info[ HC.SERVICE_INFO_NUM_TAG_SIBLINGS ]
+        expected_num_deleted_tag_siblings = service_info[ HC.SERVICE_INFO_NUM_DELETED_TAG_SIBLINGS ]
+        expected_num_pending_tag_siblings = service_info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ]
+        expected_num_actionable_add_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS ]
+        expected_num_petitioned_tag_siblings = service_info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ]
+        expected_num_actionable_delete_petitions = service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS ]
+        
+        def do_num_test():
+            
+            service_info = self._read( 'service_info', self._tag_service_key )
+            
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_TAGS ], expected_num_tags )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_TAG_SIBLINGS ], expected_num_tag_siblings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_DELETED_TAG_SIBLINGS ], expected_num_deleted_tag_siblings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ], expected_num_pending_tag_siblings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS ], expected_num_actionable_add_petitions )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ], expected_num_petitioned_tag_siblings )
+            self.assertEqual( service_info[ HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS ], expected_num_actionable_delete_petitions )
+            
+        
+        bad_tag_1 = 'bad_tag_1'
+        good_tag_1 = 'good_tag_1'
+        
+        bad_tag_2 = 'bad_tag_2'
+        good_tag_2 = 'good_tag_2'
+        
+        bad_tag_2a = 'bad_tag_2a'
+        good_tag_2a = 'good_tag_2a'
+        
+        bad_tag_3 = 'bad_tag_3'
+        good_tag_3 = 'good_tag_3'
+        replacement_good_tag_3 = 'replacement_good_tag_3'
+        
+        bad_tag_4 = 'bad_tag_4'
+        good_tag_4 = 'good_tag_4'
+        replacement_good_tag_4 = 'replacement_good_tag_4'
+        
+        # get some into the db as existing tags, since count adjustment logic can change
+        
+        hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( bad_tag_2, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( good_tag_2, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( bad_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( good_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( replacement_good_tag_4, hashes ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        service_info = self._read( 'service_info', self._tag_service_key )
+        
+        expected_num_tags += 5
+        
+        do_num_test()
+        
+        # add with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_1, good_tag_1 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_3, good_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_4, good_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'admin add' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tags += 4
+        expected_num_tag_siblings += 3
+        
+        do_num_test()
+        
+        # delete with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_1, good_tag_1 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'admin delete' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tag_siblings -= 1
+        expected_num_deleted_tag_siblings += 1
+        
+        do_num_test()
+        
+        # pend with regular
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2, good_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2a, good_tag_2a ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_pending_tag_siblings += 2
+        expected_num_actionable_add_petitions += 1
+        
+        do_num_test()
+        
+        # approve and deny some with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2, good_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'this is great' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2a, good_tag_2a ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PEND, content )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        # note no increase in num tags. _2 already known, _2a denied
+        expected_num_tag_siblings += 1
+        expected_num_pending_tag_siblings -= 2
+        expected_num_actionable_add_petitions -= 1
+        
+        do_num_test()
+        
+        # petition with regular
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2, good_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'this is bad 2' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_3, good_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_4, good_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 4' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_3, replacement_good_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_4, replacement_good_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 4' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_regular_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_petitioned_tag_siblings += 3
+        expected_num_pending_tag_siblings += 2
+        expected_num_actionable_delete_petitions += 3
+        
+        do_num_test()
+        
+        # approve and deny some with admin
+        
+        client_to_server_update = HydrusNetwork.ClientToServerUpdate()
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_2, good_tag_2 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'this is bad 2' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_3, good_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PETITION, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_4, good_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PETITION, content, reason = 'replacing 4' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_3, replacement_good_tag_3 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason = 'replacing 3' )
+        
+        content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag_4, replacement_good_tag_4 ) )
+        client_to_server_update.AddContent( HC.CONTENT_UPDATE_DENY_PEND, content, reason = 'replacing 4' )
+        
+        self._write( 'update', self._tag_service_key, self._tag_service_account, client_to_server_update, HydrusData.GetNow() )
+        
+        expected_num_tags += 1
+        expected_num_tag_siblings -= 1
+        expected_num_deleted_tag_siblings += 2
+        expected_num_petitioned_tag_siblings -= 3
+        expected_num_pending_tag_siblings -= 2
+        expected_num_actionable_delete_petitions -= 3
+        
+        do_num_test()
         
     
     def _test_init_server_admin( self ):
@@ -331,8 +915,13 @@ class TestServerDB( unittest.TestCase ):
         
         self._test_account_creation()
         
-        self._test_content_creation()
-        
         self._test_account_modification()
+        
+        self._test_content_creation_and_service_info_counts_files()
+        self._test_content_creation_and_service_info_counts_mappings()
+        self._test_content_creation_and_service_info_counts_tag_parents()
+        self._test_content_creation_and_service_info_counts_tag_siblings()
+        
+        self._test_account_fetching_from_content()
         
 

@@ -1,5 +1,5 @@
 ---
-title: subscriptions
+title: Subscriptions
 ---
 
 # subscriptions  

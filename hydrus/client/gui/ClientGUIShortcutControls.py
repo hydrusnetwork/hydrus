@@ -11,7 +11,6 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -109,7 +108,11 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts_panel.SetListCtrl( self._shortcuts )
         
-        self._shortcuts_panel.AddImportExportButtons( ( ClientGUIShortcuts.ShortcutSet, ), self._AddShortcutSet, custom_get_callable = self._GetSelectedShortcutSet )
+        self._shortcuts_panel.AddImportExportButtons( ( ClientGUIShortcuts.ShortcutSet, ), self._AddShortcutSet, custom_get_callable = self._GetSelectedShortcutSet, and_duplicate_button = False )
+        
+        tt = 'Click this to replicate the current selection of commands with "incremented" shortcuts. If you want to create a list of "set rating to 1, 2, 3" or "set tag" commands, use this.'
+        
+        self._shortcuts_panel.AddButton( 'special duplicate', self._SpecialDuplicate, enabled_only_on_selection = True, tooltip = tt )
         
         self._shortcuts.setMinimumSize( QC.QSize( 360, 480 ) )
         
@@ -137,7 +140,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             self._name.setEnabled( False )
             
         
-        self._shortcuts.AddDatas( shortcuts )
+        self._shortcuts.AddDatas( shortcuts.GetShortcutsAndCommands() )
         
         self._shortcuts.Sort()
         
@@ -150,6 +153,14 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( action_buttons, self._remove, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
+        
+        message = 'Please note the shortcut system does not support multiple commands per shortcut yet. If there are shortcut duplicates in this list, only one command will ever fire.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = message )
+        
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -182,10 +193,10 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddShortcutSet( self, shortcut_set: ClientGUIShortcuts.ShortcutSet ):
         
-        self._shortcuts.AddDatas( shortcut_set )
+        self._shortcuts.AddDatas( shortcut_set.GetShortcutsAndCommands() )
         
     
-    def _GetSelectedShortcutSet( self ):
+    def _GetSelectedShortcutSet( self ) -> ClientGUIShortcuts.ShortcutSet:
         
         name = self._name.text()
         
@@ -197,6 +208,51 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return shortcut_set
+        
+    
+    def _SpecialDuplicate( self ):
+        
+        all_existing_shortcuts = { shortcut for ( shortcut, command ) in self._shortcuts.GetData() }
+        
+        shortcut_set = self._GetSelectedShortcutSet()
+        
+        num_not_added = 0
+        
+        for ( shortcut, command ) in shortcut_set.GetShortcutsAndCommands():
+            
+            addee_shortcut = shortcut.Duplicate()
+            command = command.Duplicate()
+            
+            while addee_shortcut in all_existing_shortcuts:
+                
+                try:
+                    
+                    addee_shortcut.TryToIncrementKey()
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    num_not_added += 1
+                    
+                    break
+                    
+                
+            
+            if addee_shortcut not in all_existing_shortcuts:
+                
+                self._shortcuts.AddDatas( [ ( addee_shortcut, command ) ] )
+                
+                all_existing_shortcuts.add( addee_shortcut )
+                
+            
+        
+        self._shortcuts.Sort()
+        
+        if num_not_added > 0:
+            
+            message = 'Not every shortcut could find a new key to use, sorry!'
+            
+            QW.QMessageBox.information( self, 'Information', message )
+            
         
     
     def AddShortcut( self ):

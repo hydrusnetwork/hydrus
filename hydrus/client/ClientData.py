@@ -1,4 +1,3 @@
-import collections
 import os
 import sqlite3
 import sys
@@ -10,9 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusSerialisable
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
 
 def AddPaddingToDimensions( dimensions, padding ):

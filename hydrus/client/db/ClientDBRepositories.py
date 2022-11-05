@@ -166,7 +166,9 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         raise Exception( message )
         
     
-    def _RegisterUpdates( self, service_id, hash_ids = None ):
+    def _RegisterLocalUpdates( self, service_id, hash_ids = None ):
+        
+        # this function takes anything in 'unregistered', sees what is local, and figures out the correct 'content types' for those hash ids in the 'processed' table. converting unknown/bad hash_ids to correct and ready to process
         
         # it is ok if this guy gets hash ids that are already in the 'processed' table--it'll now resync them and correct if needed
         
@@ -224,7 +226,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             if len( insert_rows ) > 0:
                 
                 processed = False
-            
+                
                 self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id, content_type, processed ) VALUES ( ?, ?, ? );'.format( repository_updates_processed_table_name ), ( ( hash_id, content_type, processed ) for ( hash_id, content_type ) in insert_rows ) )
                 
             
@@ -287,7 +289,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for ( update_index, hash_id ) in inserts ) )
             
         
-        self._RegisterUpdates( service_id )
+        self._RegisterLocalUpdates( service_id )
         
     
     def DropRepositoryTables( self, service_id: int ):
@@ -310,7 +312,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
             
-            self._RegisterUpdates( service_id )
+            self._RegisterLocalUpdates( service_id )
             
         
     
@@ -320,7 +322,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         for ( table_name, ( create_query_without_name, version_added ) ) in table_generation_dict.items():
             
-            self._Execute( create_query_without_name.format( table_name ) )
+            self._CreateTable( create_query_without_name, table_name )
             
         
         index_generation_dict = self._GetServiceIndexGenerationDict( service_id )
@@ -594,13 +596,15 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def NotifyUpdatesChanged( self, hash_ids ):
         
+        # a mime changed
+        
         for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
             
             ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
             
             self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
             
-            self._RegisterUpdates( service_id, hash_ids )
+            self._RegisterLocalUpdates( service_id, hash_ids )
             
         
     
@@ -608,7 +612,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
             
-            self._RegisterUpdates( service_id, hash_ids )
+            self._RegisterLocalUpdates( service_id, hash_ids )
             
         
     
@@ -722,15 +726,13 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         current_update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
         
-        deletee_hash_ids = current_update_hash_ids.difference( all_future_update_hash_ids )
-        
-        self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( hash_id, ) for hash_id in deletee_hash_ids ) )
+        self._Execute( 'DELETE FROM {};'.format( repository_updates_table_name ) )
         
         #
         
         self._Execute( 'DELETE FROM {};'.format( repository_unregistered_updates_table_name ) )
         
-        #
+        # we want to keep 'yes we processed this' records on a full metadata resync
         
         good_current_hash_ids = current_update_hash_ids.intersection( all_future_update_hash_ids )
         
@@ -750,21 +752,14 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 
                 hash_id = self.modules_hashes_local_cache.GetHashId( update_hash )
                 
-                if hash_id in current_update_hash_ids:
-                    
-                    self._Execute( 'UPDATE {} SET update_index = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( update_index, hash_id ) )
-                    
-                else:
-                    
-                    inserts.append( ( update_index, hash_id ) )
-                    
+                inserts.append( ( update_index, hash_id ) )
                 
             
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( update_index, hash_id ) VALUES ( ?, ? );'.format( repository_updates_table_name ), inserts )
         self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( repository_unregistered_updates_table_name ), ( ( hash_id, ) for hash_id in all_future_update_hash_ids ) )
         
-        self._RegisterUpdates( service_id )
+        self._RegisterLocalUpdates( service_id )
         
     
     def SetUpdateProcessed( self, service_id: int, update_hash: bytes, content_types: typing.Collection[ int ] ):
@@ -780,4 +775,3 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             self._ClearOutstandingWorkCache( service_id, content_type )
             
         
-    

@@ -214,9 +214,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
                     
-                    tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+                    tag_context = ClientSearch.TagContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context )
+                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
@@ -421,11 +421,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         return self._result
         
     
-class Page( QW.QSplitter ):
+class Page( QW.QWidget ):
     
     def __init__( self, parent, controller, management_controller, initial_hashes ):
         
-        QW.QSplitter.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._parent_notebook = parent
         
@@ -444,7 +444,8 @@ class Page( QW.QSplitter ):
         
         self._pretty_status = ''
         
-        self._search_preview_split = QW.QSplitter( self )
+        self._management_media_split = QW.QSplitter( self )
+        self._search_preview_split = QW.QSplitter( self._management_media_split )
         
         self._done_split_setups = False
         
@@ -460,18 +461,26 @@ class Page( QW.QSplitter ):
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
+        self._management_media_split.addWidget( self._media_panel )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._management_media_split, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
         vbox = QP.VBoxLayout( margin = 0 )
         
         QP.AddToLayout( vbox, self._preview_canvas, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._preview_panel.setLayout( vbox )
         
-        self.widget( 0 ).setMinimumWidth( 120 )
-        self.widget( 1 ).setMinimumWidth( 120 )
-        self.setStretchFactor( 0, 0 )
-        self.setStretchFactor( 1, 1 )
+        self._management_media_split.widget( 0 ).setMinimumWidth( 120 )
+        self._management_media_split.widget( 1 ).setMinimumWidth( 120 )
+        self._management_media_split.setStretchFactor( 0, 0 )
+        self._management_media_split.setStretchFactor( 1, 1 )
         
-        self._handle_event_filter = QP.WidgetEventFilter( self.handle( 1 ) )
+        self._handle_event_filter = QP.WidgetEventFilter( self._management_media_split.handle( 1 ) )
         self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )
         
         self._search_preview_split.widget( 0 ).setMinimumHeight( 180 )
@@ -527,10 +536,7 @@ class Page( QW.QSplitter ):
     
     def _SwapMediaPanel( self, new_panel ):
         
-        # if a new media page comes in while its menu is open, we can enter program instability.
-        # so let's just put it off.
-        
-        previous_sizes = self.sizes()
+        previous_sizes = self._management_media_split.sizes()
         
         self._preview_canvas.ClearMedia()
         
@@ -547,17 +553,21 @@ class Page( QW.QSplitter ):
             new_panel.Sort( media_sort )
             
         
-        self._media_panel.setParent( None )
+        new_panel.setMinimumWidth( 120 )
         
         old_panel = self._media_panel
-        
-        self.addWidget( new_panel )
-        
-        self.setSizes( previous_sizes )
-        
-        self.setStretchFactor( 1, 1 )
-        
         self._media_panel = new_panel
+        
+        # note focus isn't on the thumb panel but some innerwidget scroll gubbins
+        had_focus_before = ClientGUIFunctions.IsQtAncestor( QW.QApplication.focusWidget(), old_panel )
+        
+        # this sets parent of new panel to self and sets parent of old panel to None
+        # rumao, it doesn't work if new_panel is already our child
+        self._management_media_split.replaceWidget( 1, new_panel )
+        
+        self._management_media_split.setSizes( previous_sizes )
+        
+        self._management_media_split.setStretchFactor( 1, 1 )
         
         self._ConnectMediaPanelSignals()
         
@@ -565,6 +575,13 @@ class Page( QW.QSplitter ):
         
         self._controller.pub( 'notify_new_pages_count' )
         
+        if had_focus_before:
+            
+            ClientGUIFunctions.SetFocusLater( new_panel )
+            
+        
+        # if we try to kill a media page while a menu is open on it, we can enter program instability.
+        # so let's just put it off.
         def clean_up_old_panel():
             
             if CGC.core().MenuIsOpen():
@@ -573,6 +590,8 @@ class Page( QW.QSplitter ):
                 
                 return
                 
+            
+            old_panel.CleanBeforeDestroy()
             
             old_panel.deleteLater()
             
@@ -610,6 +629,8 @@ class Page( QW.QSplitter ):
         
         self._preview_canvas.CleanBeforeDestroy()
         
+        self._media_panel.CleanBeforeDestroy()
+        
         self._controller.ReleasePageKey( self._page_key )
         
     
@@ -622,7 +643,7 @@ class Page( QW.QSplitter ):
     
     def EventUnsplit( self, event ):
         
-        QP.Unsplit( self, self._search_preview_split )
+        QP.Unsplit( self._management_media_split, self._search_preview_split )
         
         self._media_panel.SetFocusedMedia( None )
         
@@ -798,7 +819,7 @@ class Page( QW.QSplitter ):
         
         hpos = HC.options[ 'hpos' ]
         
-        sizes = self.sizes()
+        sizes = self._management_media_split.sizes()
         
         if len( sizes ) > 1:
             
@@ -966,7 +987,7 @@ class Page( QW.QSplitter ):
         
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
         
-        QP.SplitVertically( self, self._search_preview_split, self._media_panel, hpos )
+        QP.SplitVertically( self._management_media_split, self._search_preview_split, self._media_panel, hpos )
         
         if HC.options[ 'hide_preview' ]:
             
@@ -976,15 +997,19 @@ class Page( QW.QSplitter ):
     
     def ShowHideSplit( self ):
         
-        if QP.SplitterVisibleCount( self ) > 1:
+        if QP.SplitterVisibleCount( self._management_media_split ) > 1:
             
-            QP.Unsplit( self, self._search_preview_split )
+            QP.Unsplit( self._management_media_split, self._search_preview_split )
+            
+            self.SetMediaFocus()
             
             self._media_panel.SetFocusedMedia( None )
             
         else:
             
             self.SetSplitterPositions()
+            
+            self.SetSearchFocus()
             
         
     
@@ -1147,6 +1172,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.tabBar().tabSpaceDoubleMiddleClicked.connect( self.ChooseNewPage )
         
         self._previous_page_index = -1
+        
+        self._time_of_last_move_selection_event = 0
         
         self._UpdateOptions()
         
@@ -1542,16 +1569,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if isinstance( page, Page ) and not page.IsInitialised():
             
-            page_name = 'initialising'
+            full_page_name = 'initialising'
             
         else:
             
-            page_name = page.GetName()
+            full_page_name = page.GetName()
             
-            page_name = page_name.replace( os.linesep, '' )
+            full_page_name = full_page_name.replace( os.linesep, '' )
             
         
-        page_name = HydrusText.ElideText( page_name, max_page_name_chars )
+        page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
+        
+        do_tooltip = len( page_name ) != len( full_page_name ) or HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' )
         
         num_string = ''
         
@@ -1589,6 +1618,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if existing_page_name not in ( safe_page_name, page_name ):
             
             tab_bar.setTabText( index, safe_page_name )
+            
+            if do_tooltip:
+                
+                self.setTabToolTip( index, full_page_name )
+                
             
         
     
@@ -2947,14 +2981,16 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def MoveSelection( self, delta, just_do_test = False ):
         
-        current_index = self.currentIndex()
-        current_page = self.currentWidget()
-        
-        if current_page is None or current_index is None:
+        if self.count() <= 1: # 1 is a no-op
             
             return False
             
-        elif isinstance( current_page, PagesNotebook ):
+        
+        current_page = self.currentWidget()
+        
+        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        
+        if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
             if current_page.MoveSelection( delta, just_do_test = True ):
                 
@@ -2969,6 +3005,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             if not just_do_test:
                 
                 self.setCurrentIndex( new_index )
+                
+                self._time_of_last_move_selection_event = HydrusData.GetNow()
                 
             
             return True
@@ -2986,7 +3024,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         current_page = self.currentWidget()
         
-        if isinstance( current_page, PagesNotebook ):
+        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        
+        if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
             if current_page.MoveSelectionEnd( delta, just_do_test = True ):
                 
@@ -3006,6 +3046,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if not just_do_test:
             
             self.setCurrentIndex( new_index )
+            
+            self._time_of_last_move_selection_event = HydrusData.GetNow()
             
         
         return True
@@ -3205,9 +3247,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             location_context = location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+        tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         

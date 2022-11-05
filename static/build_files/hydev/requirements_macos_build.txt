@@ -1,0 +1,5 @@
+pyoxidizer
+
+mock>=4.0.0
+httmock>=1.4.0
+mkdocs-material

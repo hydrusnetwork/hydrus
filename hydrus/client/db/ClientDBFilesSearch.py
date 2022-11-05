@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusTags
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBFilesStorage
@@ -40,14 +41,9 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         ClientDBModule.ClientDBModule.__init__( self, 'client file search', cursor )
         
     
-    def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, hash_ids, namespace_wildcard = None, job_key = None ):
+    def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, hash_ids, namespace_wildcard = '*', job_key = None ):
         
         if namespace_wildcard == '*':
-            
-            namespace_wildcard = None
-            
-        
-        if namespace_wildcard is None:
             
             namespace_ids = []
             
@@ -64,7 +60,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             
             for file_service_key in file_service_keys:
                 
-                mapping_and_tag_table_names.update( self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context ) )
+                mapping_and_tag_table_names.update( self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context ) )
                 
             
             # reason why I (JOIN each table) rather than (join the UNION) is based on previous hell with having query planner figure out a "( a UNION b UNION c ) NATURAL JOIN stuff" situation
@@ -83,7 +79,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
                 
                 with self._MakeTemporaryIntegerTable( group_of_hash_ids, 'hash_id' ) as hash_ids_table_name:
                     
-                    if namespace_wildcard is None:
+                    if namespace_wildcard == '*':
                         
                         # temp hashes to mappings
                         select_statements = [ 'SELECT hash_id, tag_id FROM {} CROSS JOIN {} USING ( hash_id )'.format( hash_ids_table_name, mappings_table_name ) for ( mappings_table_name, tags_table_name ) in mapping_and_tag_table_names ]
@@ -122,47 +118,47 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsFromNamespaceIdsSubtagIds( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace_ids, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromNamespaceIdsSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, namespace_ids, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
         
         tag_ids = self.modules_tag_search.GetTagIdsFromNamespaceIdsSubtagIds( file_service_id, tag_service_id, namespace_ids, subtag_ids, job_key = job_key )
         
-        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
     
-    def GetHashIdsFromNamespaceIdsSubtagIdsTables( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, namespace_ids_table_name, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromNamespaceIdsSubtagIdsTables( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, namespace_ids_table_name, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
         
         tag_ids = self.modules_tag_search.GetTagIdsFromNamespaceIdsSubtagIdsTables( file_service_id, tag_service_id, namespace_ids_table_name, subtag_ids_table_name, job_key = job_key )
         
-        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
     
-    def GetHashIdsFromSubtagIds( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
         
         tag_ids = self.modules_tag_search.GetTagIdsFromSubtagIds( file_service_id, tag_service_id, subtag_ids, job_key = job_key )
         
-        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
     
-    def GetHashIdsFromSubtagIdsTable( self, tag_display_type: int, file_service_key, tag_search_context: ClientSearch.TagSearchContext, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromSubtagIdsTable( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
         
         tag_ids = self.modules_tag_search.GetTagIdsFromSubtagIdsTable( file_service_id, tag_service_id, subtag_ids_table_name, job_key = job_key )
         
-        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+        return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
         
     
-    def GetHashIdsFromTag( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, tag, hash_ids = None, hash_ids_table_name = None, allow_unnamespaced_to_fetch_namespaced = True, job_key = None ):
+    def GetHashIdsFromTag( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, tag, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
         
@@ -171,48 +167,53 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             file_location_is_cross_referenced = True
             
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        subtag_id = self.modules_tags.GetSubtagId( subtag )
-        
-        if not self.modules_tags.SubtagExists( subtag ):
+        if not self.modules_tags.TagExists( tag ):
             
             return set()
             
         
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
-        
         results = set()
         
-        for file_service_key in file_service_keys:
+        if tag_context.service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            if namespace == '' and allow_unnamespaced_to_fetch_namespaced:
+            search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = ( self.modules_services.GetServiceId( tag_context.service_key ), )
+            
+        
+        service_ids_to_service_keys = self.modules_services.GetServiceIdsToServiceKeys()
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        subtag_id = self.modules_tags.GetSubtagId( subtag )
+        tag_id = self.modules_tags.GetTagId( tag )
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            search_tag_service_key = service_ids_to_service_keys[ search_tag_service_id ]
+            
+            search_tag_context = ClientSearch.TagContext( service_key = search_tag_service_key, include_current_tags = tag_context.include_current_tags, include_pending_tags = tag_context.include_pending_tags, display_service_key = search_tag_service_key )
+            
+            ideal_tag_id = self.modules_tag_search.modules_tag_siblings.GetIdealTagId( tag_display_type, search_tag_service_id, tag_id )
+            
+            for file_service_key in file_service_keys:
                 
-                file_service_id = self.modules_services.GetServiceId( file_service_key )
+                # just as a legacy note, this is where we used to do the "'samus aran' gets 'character:samus aran'" code. now, that stuff works through wildcards if user explicitly enters '*:samus aran'
                 
-                tag_ids = self.modules_tag_search.GetTagIdsFromSubtagIds( file_service_id, tag_service_id, ( subtag_id, ) )
+                tag_ids = ( ideal_tag_id, )
                 
-            else:
+                some_results = self.GetHashIdsFromTagIds( tag_display_type, file_service_key, search_tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
-                if not self.modules_tags.TagExists( tag ):
+                if len( results ) == 0:
                     
-                    return set()
+                    results = some_results
                     
-                
-                tag_id = self.modules_tags.GetTagId( tag )
-                
-                tag_ids = ( tag_id, )
-                
-            
-            some_results = self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_search_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
-            
-            if len( results ) == 0:
-                
-                results = some_results
-                
-            else:
-                
-                results.update( some_results )
+                else:
+                    
+                    results.update( some_results )
+                    
                 
             
         
@@ -224,16 +225,16 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         do_hash_table_join = False
         
         if hash_ids_table_name is not None and hash_ids is not None:
             
-            tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+            tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
             file_service_id = self.modules_services.GetServiceId( file_service_key )
             
-            estimated_count = self.modules_mappings_counts.GetAutocompleteCountEstimate( tag_display_type, tag_service_id, file_service_id, tag_ids, tag_search_context.include_current_tags, tag_search_context.include_pending_tags )
+            estimated_count = self.modules_mappings_counts.GetAutocompleteCountEstimate( tag_display_type, tag_service_id, file_service_id, tag_ids, tag_context.include_current_tags, tag_context.include_pending_tags )
             
             if ClientDBMappingsStorage.DoingAFileJoinTagSearchIsFaster( len( hash_ids ), estimated_count ):
                 
@@ -243,7 +244,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         
         result_hash_ids = set()
         
-        table_names = self.modules_tag_search.GetMappingTables( tag_display_type, file_service_key, tag_search_context )
+        table_names = self.modules_tag_search.GetMappingTables( tag_display_type, file_service_key, tag_context )
         
         cancelled_hook = None
         
@@ -303,18 +304,13 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
-        if namespace_wildcard in ( '*', '' ):
-            
-            namespace_wildcard = None
-            
-        
         if subtag_wildcard == '*':
             
-            return self.GetHashIdsThatHaveTagsComplexLocation( tag_display_type, location_context, tag_search_context, namespace_wildcard = namespace_wildcard, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            return self.GetHashIdsThatHaveTagsComplexLocation( tag_display_type, location_context, tag_context, namespace_wildcard = namespace_wildcard, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
         
         results = set()
@@ -326,7 +322,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             file_location_is_cross_referenced = True
             
         
-        if namespace_wildcard is None:
+        if namespace_wildcard == '*':
             
             possible_namespace_ids = []
             
@@ -342,7 +338,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( possible_namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
             
-            if namespace_wildcard is None:
+            if namespace_wildcard == '*':
                 
                 namespace_ids_table_name = None
                 
@@ -353,7 +349,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             
             for file_service_key in file_service_keys:
                 
-                some_results = self.GetHashIdsFromWildcardSimpleLocation( tag_display_type, file_service_key, tag_search_context, subtag_wildcard, namespace_ids_table_name = namespace_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                some_results = self.GetHashIdsFromWildcardSimpleLocation( tag_display_type, file_service_key, tag_context, subtag_wildcard, namespace_ids_table_name = namespace_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
                 if len( results ) == 0:
                     
@@ -374,27 +370,27 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsFromWildcardSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, subtag_wildcard, namespace_ids_table_name = None, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsFromWildcardSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, subtag_wildcard, namespace_ids_table_name = None, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
             
             file_service_id = self.modules_services.GetServiceId( file_service_key )
-            tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+            tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
             
             self.modules_tag_search.GetSubtagIdsFromWildcardIntoTable( file_service_id, tag_service_id, subtag_wildcard, temp_subtag_ids_table_name, job_key = job_key )
             
             if namespace_ids_table_name is None:
                 
-                return self.GetHashIdsFromSubtagIdsTable( tag_display_type, file_service_key, tag_search_context, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                return self.GetHashIdsFromSubtagIdsTable( tag_display_type, file_service_key, tag_context, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
             else:
                 
-                return self.GetHashIdsFromNamespaceIdsSubtagIdsTables( tag_display_type, file_service_key, tag_search_context, namespace_ids_table_name, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                return self.GetHashIdsFromNamespaceIdsSubtagIdsTables( tag_display_type, file_service_key, tag_context, namespace_ids_table_name, temp_subtag_ids_table_name, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
             
         
     
-    def GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         if location_context.IsEmpty():
             
@@ -412,7 +408,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         
         for file_service_key in file_service_keys:
             
-            some_results = self.GetHashIdsThatHaveTagAsNumSimpleLocation( tag_display_type, file_service_key, tag_search_context, namespace, num, operator, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            some_results = self.GetHashIdsThatHaveTagAsNumSimpleLocation( tag_display_type, file_service_key, tag_context, namespace_wildcard, num, operator, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
             if len( results ) == 0:
                 
@@ -432,10 +428,10 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, namespace, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_key = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
-        tag_service_id = self.modules_services.GetServiceId( tag_search_context.service_key )
+        tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
         
         if tag_service_id == self.modules_services.combined_tag_service_id:
             
@@ -455,21 +451,19 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             possible_subtag_ids.update( some_possible_subtag_ids )
             
         
-        if namespace == '':
+        if namespace_wildcard == '*':
             
-            return self.GetHashIdsFromSubtagIds( tag_display_type, file_service_key, tag_search_context, possible_subtag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            return self.GetHashIdsFromSubtagIds( tag_display_type, file_service_key, tag_context, possible_subtag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
         else:
             
-            namespace_id = self.modules_tags.GetNamespaceId( namespace )
+            possible_namespace_ids = self.modules_tag_search.GetNamespaceIdsFromWildcard( namespace_wildcard )
             
-            possible_namespace_ids = { namespace_id }
-            
-            return self.GetHashIdsFromNamespaceIdsSubtagIds( tag_display_type, file_service_key, tag_search_context, possible_namespace_ids, possible_subtag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+            return self.GetHashIdsFromNamespaceIdsSubtagIds( tag_display_type, file_service_key, tag_context, possible_namespace_ids, possible_subtag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
             
         
     
-    def GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_search_context: ClientSearch.TagSearchContext, namespace_wildcard = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, namespace_wildcard = '*', hash_ids_table_name = None, job_key = None ):
         
         if location_context.IsEmpty():
             
@@ -477,11 +471,6 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             
         
         if namespace_wildcard == '*':
-            
-            namespace_wildcard = None
-            
-        
-        if namespace_wildcard is None:
             
             possible_namespace_ids = []
             
@@ -499,7 +488,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( possible_namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
             
-            if namespace_wildcard is None:
+            if namespace_wildcard == '*':
                 
                 namespace_ids_table_name = None
                 
@@ -517,7 +506,7 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
             
             for file_service_key in file_service_keys:
                 
-                some_results = self.GetHashIdsThatHaveTagsSimpleLocation( tag_display_type, file_service_key, tag_search_context, namespace_ids_table_name = namespace_ids_table_name, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
+                some_results = self.GetHashIdsThatHaveTagsSimpleLocation( tag_display_type, file_service_key, tag_context, namespace_ids_table_name = namespace_ids_table_name, hash_ids_table_name = hash_ids_table_name, job_key = job_key )
                 
                 if len( results ) == 0:
                     
@@ -538,9 +527,9 @@ class ClientDBFilesSearch( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_search_context: ClientSearch.TagSearchContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_key = None ):
+    def GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_key = None ):
         
-        mapping_and_tag_table_names = self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_search_context )
+        mapping_and_tag_table_names = self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context )
         
         if hash_ids_table_name is None:
             

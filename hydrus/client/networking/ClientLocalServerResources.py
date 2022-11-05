@@ -40,6 +40,7 @@ from hydrus.client import ClientSearch
 from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
@@ -55,8 +56,8 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
-CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names' }
+CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason', 'tag_display_type' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -309,9 +310,17 @@ def ParseClientAPIPOSTArgs( request ):
             
             json_string = str( json_bytes, 'utf-8' )
             
-            args = json.loads( json_string )
+            try:
+                
+                args = json.loads( json_string )
+                
+            except json.decoder.JSONDecodeError as e:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand the JSON you gave me: {}'.format( str( e ) ) )
+                
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
+            
         
         elif request_content_type_mime == HC.APPLICATION_CBOR:
             
@@ -350,7 +359,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     return ( parsed_request_args, total_bytes_read )
     
-def ParseClientAPISearchPredicates( request ):
+def ParseClientAPISearchPredicates( request ) -> typing.List[ ClientSearch.Predicate ]:
     
     default_search_values = {}
     
@@ -373,7 +382,23 @@ def ParseClientAPISearchPredicates( request ):
     
     predicates = ConvertTagListToPredicates( request, tags )
     
+    if system_inbox:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        
+    elif system_archive:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+    
     if len( predicates ) == 0:
+        
+        return predicates
+        
+    
+    we_have_at_least_one_inclusive_tag = True in ( predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG and predicate.IsInclusive() for predicate in predicates )
+    
+    if not we_have_at_least_one_inclusive_tag:
         
         try:
             
@@ -383,15 +408,6 @@ def ParseClientAPISearchPredicates( request ):
             
             raise HydrusExceptions.InsufficientCredentialsException( 'Sorry, you do not have permission to see all files on this client. Please add a regular tag to your search.' )
             
-        
-    
-    if system_inbox:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
-        
-    elif system_archive:
-        
-        predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
     
     return predicates
@@ -524,7 +540,7 @@ def ParseRequestedResponseMime( request: HydrusServerRequest.HydrusRequest ):
     return HC.APPLICATION_JSON
     
 
-def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) -> list:
+def ConvertTagListToPredicates( request, tag_list, do_permission_check = True, error_on_invalid_tag = True ) -> typing.List[ ClientSearch.Predicate ]:
     
     or_tag_lists = [ tag for tag in tag_list if isinstance( tag, list ) ]
     tag_strings = [ tag for tag in tag_list if isinstance( tag, str ) ]
@@ -535,12 +551,47 @@ def ConvertTagListToPredicates( request, tag_list, do_permission_check = True ) 
     negated_tags = [ tag for tag in tags if tag.startswith( '-' ) ]
     tags = [ tag for tag in tags if not tag.startswith( '-' ) ]
     
-    negated_tags = HydrusTags.CleanTags( negated_tags )
-    tags = HydrusTags.CleanTags( tags )
+    dirty_negated_tags = negated_tags
+    dirty_tags = tags
+    
+    negated_tags = HydrusTags.CleanTags( dirty_negated_tags )
+    tags = HydrusTags.CleanTags( dirty_tags )
+    
+    if error_on_invalid_tag:
+        
+        jobs = [
+            ( dirty_negated_tags, negated_tags ),
+            ( dirty_tags, tags )
+        ]
+        
+        for ( dirty_ts, ts ) in jobs:
+            
+            if len( ts ) != dirty_ts:
+                
+                for dirty_t in dirty_ts:
+                    
+                    try:
+                        
+                        clean_t = HydrusTags.CleanTag( dirty_t )
+                        
+                        HydrusTags.CheckTagNotEmpty( clean_t )
+                        
+                    except Exception as e:
+                        
+                        message = 'Could not understand the tag: "{}"'.format( dirty_t )
+                        
+                        raise HydrusExceptions.BadRequestException( message )
+                        
+                    
+                
+            
+        
     
     if do_permission_check:
         
-        if len( tags ) == 0:
+        raw_inclusive_tags = [ tag for tag in tags if '*' not in tags ]
+        
+        if len( raw_inclusive_tags ) == 0:
             
             if len( negated_tags ) > 0:
                 
@@ -1259,7 +1310,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         ( os_file_handle, temp_path ) = request.temp_file_info
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
         
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
         
@@ -1713,29 +1764,29 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         return tag_service_key
         
     
-    def _GetTagMatches( self, tag_service_key, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> typing.List[ ClientSearch.Predicate ]:
+    def _GetTagMatches( self, request: HydrusServerRequest.HydrusRequest, tag_display_type: int, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> typing.List[ ClientSearch.Predicate ]:
         
         matches = []
         
         if parsed_autocomplete_text.IsAcceptableForTagSearches():
             
-            tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+            tag_context = ClientSearch.TagContext( service_key = tag_service_key )
             
             autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
             
             default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_search_context = tag_search_context )
+            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = tag_context )
             
-            job_key = ClientThreading.JobKey()
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            request.disconnect_callables.append( job_key.Cancel )
             
             search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
             
-            # TODO: update this request to take storage/display for add vs search tags
-            # we could even roll in parent/sibling info from the predicates I think
-            predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, add_namespaceless = False, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+            predicates = HG.client_controller.Read( 'autocomplete_predicates', tag_display_type, file_search_context, search_text = autocomplete_search_text, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
             
-            display_tag_service_key = tag_search_context.display_service_key
+            display_tag_service_key = tag_context.display_service_key
             
             matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
             
@@ -1749,15 +1800,21 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         search = request.parsed_request_args.GetValue( 'search', str )
         
+        tag_display_type_str = request.parsed_request_args.GetValue( 'tag_display_type', str, default_value = 'storage' )
+        
+        tag_display_type = ClientTags.TAG_DISPLAY_STORAGE if tag_display_type_str == 'storage' else ClientTags.TAG_DISPLAY_ACTUAL
+        
         tag_service_key = self._GetTagServiceKey( request )
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText( search, tag_service_key )
         
-        matches = self._GetTagMatches( tag_service_key, parsed_autocomplete_text )
+        matches = self._GetTagMatches( request, tag_display_type, tag_service_key, parsed_autocomplete_text )
         
         matches = request.client_api_permissions.FilterTagPredicateResponse( matches )
         
         body_dict = {}
+        
+        # TODO: Ok so we could add sibling/parent info here if the tag display type is storage, or in both cases. probably only if client asks for it
         
         tags = [ { 'value' : match.GetValue(), 'count' : match.GetCount().GetMinCount() } for match in matches ]
         
@@ -1902,6 +1959,8 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         url = request.parsed_request_args.GetValue( 'url', str )
         
+        do_file_system_check = request.parsed_request_args.GetValue( 'doublecheck_file_system', bool, default_value = False )
+        
         if url == '':
             
             raise HydrusExceptions.BadRequestException( 'Given URL was empty!' )
@@ -1922,7 +1981,10 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         for file_import_status in url_statuses:
             
-            file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
+            if do_file_system_check:
+                
+                file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
+                
             
             d = {}
             
@@ -2144,50 +2206,60 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
             raise HydrusExceptions.BadRequestException( 'Sorry, search for all known tags over all known files is not supported!' )
             
         
-        tag_search_context = ClientSearch.TagSearchContext( service_key = tag_service_key )
+        tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         predicates = ParseClientAPISearchPredicates( request )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
-        
-        file_sort_type = CC.SORT_FILES_BY_IMPORT_TIME
-        
-        if 'file_sort_type' in request.parsed_request_args:
-            
-            file_sort_type = request.parsed_request_args[ 'file_sort_type' ]
-            
-        
-        if file_sort_type not in CC.SYSTEM_SORT_TYPES:
-            
-            raise HydrusExceptions.BadRequestException( 'Sorry, did not understand that sort type!' )
-            
-        
-        file_sort_asc = False
-        
-        if 'file_sort_asc' in request.parsed_request_args:
-            
-            file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool )
-            
-        
-        sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
-        
-        # newest first
-        sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = sort_order )
-        
         return_hashes = False
-        
-        if 'return_hashes' in request.parsed_request_args:
-            
-            return_hashes = request.parsed_request_args.GetValue( 'return_hashes', bool )
-            
-        
         return_file_ids = True
         
-        if 'return_file_ids' in request.parsed_request_args:
+        if len( predicates ) == 0:
             
-            return_file_ids = request.parsed_request_args.GetValue( 'return_file_ids', bool )
+            hash_ids = []
             
-        
-        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, sort_by = sort_by, apply_implicit_limit = False )
+        else:
+            
+            file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
+            
+            file_sort_type = CC.SORT_FILES_BY_IMPORT_TIME
+            
+            if 'file_sort_type' in request.parsed_request_args:
+                
+                file_sort_type = request.parsed_request_args[ 'file_sort_type' ]
+                
+            
+            if file_sort_type not in CC.SYSTEM_SORT_TYPES:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand that sort type!' )
+                
+            
+            file_sort_asc = False
+            
+            if 'file_sort_asc' in request.parsed_request_args:
+                
+                file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool )
+                
+            
+            sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
+            
+            # newest first
+            sort_by = ClientMedia.MediaSort( sort_type = ( 'system', file_sort_type ), sort_order = sort_order )
+            
+            if 'return_hashes' in request.parsed_request_args:
+                
+                return_hashes = request.parsed_request_args.GetValue( 'return_hashes', bool )
+                
+            
+            if 'return_file_ids' in request.parsed_request_args:
+                
+                return_file_ids = request.parsed_request_args.GetValue( 'return_file_ids', bool )
+                
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            request.disconnect_callables.append( job_key.Cancel )
+            
+            hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, job_key = job_key, sort_by = sort_by, apply_implicit_limit = False )
+            
         
         request.client_api_permissions.SetLastSearchResults( hash_ids )
         
@@ -2394,6 +2466,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
             services_manager = HG.client_controller.services_manager
             
+            ipfs_service_keys = services_manager.GetServiceKeys( ( HC.IPFS, ) )
+            
             service_keys_to_names = {}
             
             for media_result in media_results:
@@ -2457,6 +2531,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 known_urls = sorted( locations_manager.GetURLs() )
                 
                 metadata_row[ 'known_urls' ] = known_urls
+                
+                metadata_row[ 'ipfs_multihashes' ] = { ipfs_service_key.hex() : multihash for ( ipfs_service_key, multihash ) in locations_manager.GetServiceFilenames().items() if ipfs_service_key in ipfs_service_keys }
                 
                 if detailed_url_information:
                     

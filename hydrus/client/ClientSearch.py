@@ -16,6 +16,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientLocation
+from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
@@ -108,6 +109,32 @@ SYSTEM_PREDICATE_TYPES = {
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
 
+def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+    
+    specific_mimes_to_process = set( specific_mimes )
+    
+    summary_mimes = set()
+    
+    for ( general_mime, mime_group ) in HC.general_mimetypes_to_mime_groups.items():
+        
+        if only_searchable:
+            
+            mime_group = set( mime_group )
+            mime_group.intersection_update( HC.SEARCHABLE_MIMES )
+            
+        
+        if specific_mimes_to_process.issuperset( mime_group ):
+            
+            summary_mimes.add( general_mime )
+            specific_mimes_to_process.difference_update( mime_group )
+            
+        
+    
+    summary_mimes.update( specific_mimes_to_process )
+    
+    return summary_mimes
+    
+
 def ConvertSubtagToSearchable( subtag ):
     
     if subtag == '':
@@ -125,6 +152,47 @@ def ConvertSubtagToSearchable( subtag ):
     
     return subtag
     
+
+def ConvertSummaryFiletypesToSpecific( summary_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+    
+    specific_mimes = set()
+    
+    for mime in summary_mimes:
+        
+        if mime in HC.GENERAL_FILETYPES:
+            
+            specific_mimes.update( HC.general_mimetypes_to_mime_groups[ mime ] )
+            
+        else:
+            
+            specific_mimes.add( mime )
+            
+        
+    
+    if only_searchable:
+        
+        specific_mimes.intersection_update( HC.SEARCHABLE_MIMES )
+        
+    
+    return specific_mimes
+    
+
+def ConvertSummaryFiletypesToString( summary_mimes: typing.Collection[ int ] ) -> str:
+    
+    if set( summary_mimes ) == HC.GENERAL_FILETYPES:
+        
+        mime_text = 'anything'
+        
+    else:
+        
+        summary_mimes = sorted( summary_mimes, key = lambda m: HC.mime_mimetype_string_lookup[ m ] )
+        
+        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in summary_mimes ] )
+        
+    
+    return mime_text
+    
+
 def ConvertTagToSearchable( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
@@ -138,13 +206,6 @@ def CollapseWildcardCharacters( text ):
     while '**' in text:
         
         text = text.replace( '**', '*' )
-        
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( text )
-    
-    if namespace == '*':
-        
-        text = subtag
         
     
     return text
@@ -296,6 +357,7 @@ class FileSystemPredicates( object ):
         self._not_local = False
         
         self._common_info = {}
+        self._timestamp_ranges = collections.defaultdict( dict )
         
         self._limit = None
         self._similar_to = None
@@ -361,22 +423,6 @@ class FileSystemPredicates( object ):
             
             if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
-                if predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
-                    
-                    min_label = 'min_import_timestamp'
-                    max_label = 'max_import_timestamp'
-                    
-                elif predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
-                    
-                    min_label = 'min_last_viewed_timestamp'
-                    max_label = 'max_last_viewed_timestamp'
-                    
-                elif predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
-                    
-                    min_label = 'min_modified_timestamp'
-                    max_label = 'max_modified_timestamp'
-                    
-                
                 ( operator, age_type, age_value ) = value
                 
                 if age_type == 'delta':
@@ -389,57 +435,78 @@ class FileSystemPredicates( object ):
                     
                     # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
                     
+                    # the before/since semantic logic is:
+                    # '<' 7 days age means 'since that date'
+                    # '>' 7 days ago means 'before that date'
+                    
                     if operator == '<':
                         
-                        self._common_info[ min_label ] = now - age
+                        time_pivot = now - age
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
                         
                     elif operator == '>':
                         
-                        self._common_info[ max_label ] = now - age
+                        time_pivot = now - age
+                        
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        self._common_info[ min_label ] = now - int( age * 1.15 )
-                        self._common_info[ max_label ] = now - int( age * 0.85 )
+                        earliest = now - int( age * 1.15 )
+                        latest = now - int( age * 0.85 )
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = earliest
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = latest
                         
                     
                 elif age_type == 'date':
                     
                     ( year, month, day ) = age_value
                     
-                    # convert this dt, which is in local time, to a gmt timestamp
+                    dt = ClientTime.GetDateTime( year, month, day )
                     
-                    day_dt = datetime.datetime( year, month, day )
-                    timestamp = int( time.mktime( day_dt.timetuple() ) )
+                    time_pivot = ClientTime.CalendarToTimestamp( dt )
+                    next_day_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, day_delta = 1 ) )
+                    
+                    # the before/since semantic logic is:
+                    # '<' 2022-05-05 means 'before that date'
+                    # '>' 2022-05-05 means 'since that date'
                     
                     if operator == '<':
                         
-                        self._common_info[ max_label ] = timestamp
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
                     elif operator == '>':
                         
-                        self._common_info[ min_label ] = timestamp + 86400
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = next_day_timestamp
                         
                     elif operator == '=':
                         
-                        self._common_info[ min_label ] = timestamp
-                        self._common_info[ max_label ] = timestamp + 86400
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_day_timestamp
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        self._common_info[ min_label ] = timestamp - 86400 * 30
-                        self._common_info[ max_label ] = timestamp + 86400 * 30
+                        previous_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
+                        next_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = previous_month_timestamp
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_month_timestamp
                         
                     
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
                 
-                mimes = value
+                summary_mimes = value
                 
-                if isinstance( mimes, int ): mimes = ( mimes, )
+                if isinstance( summary_mimes, int ):
+                    
+                    summary_mimes = ( summary_mimes, )
+                    
                 
-                self._common_info[ 'mimes' ] = mimes
+                self._common_info[ 'mimes' ] = ConvertSummaryFiletypesToSpecific( summary_mimes )
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
@@ -687,7 +754,7 @@ class FileSystemPredicates( object ):
                 
                 ( operator, status, service_key ) = value
                 
-                if operator == True:
+                if operator:
                     
                     self._required_file_service_statuses[ service_key ].add( status )
                     
@@ -775,11 +842,6 @@ class FileSystemPredicates( object ):
         return namespaces_to_tests
         
     
-    def GetSimpleInfo( self ):
-        
-        return self._common_info
-        
-    
     def GetRatingsPredicates( self ):
         
         return self._ratings_predicates
@@ -788,6 +850,16 @@ class FileSystemPredicates( object ):
     def GetSimilarTo( self ):
         
         return self._similar_to
+        
+    
+    def GetSimpleInfo( self ):
+        
+        return self._common_info
+        
+    
+    def GetTimestampRanges( self ):
+        
+        return self._timestamp_ranges
         
     
     def HasSimilarTo( self ):
@@ -822,16 +894,16 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_context = None, tag_search_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
         
         if location_context is None:
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
         
-        if tag_search_context is None:
+        if tag_context is None:
             
-            tag_search_context = TagSearchContext()
+            tag_context = TagContext()
             
         
         if predicates is None:
@@ -840,7 +912,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
         self._location_context = location_context
-        self._tag_search_context = tag_search_context
+        self._tag_context = tag_context
         
         self._search_type = search_type
         
@@ -856,15 +928,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
         serialisable_location_context = self._location_context.GetSerialisableTuple()
         
-        return ( serialisable_location_context, self._tag_search_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
+        return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_location_context, serialisable_tag_search_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
+        ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
         self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
-        self._tag_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_search_context )
+        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
         
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
         
@@ -953,18 +1025,18 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             tag_service_key = bytes.fromhex( tag_service_key_hex )
             
-            tag_search_context = TagSearchContext( service_key = tag_service_key, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags )
+            tag_context = TagContext( service_key = tag_service_key, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags )
             
-            serialisable_tag_search_context = tag_search_context.GetSerialisableTuple()
+            serialisable_tag_context = tag_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( file_service_key_hex, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
             
             return ( 4, new_serialisable_info )
             
         
         if version == 4:
             
-            ( file_service_key_hex, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
+            ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
             
             file_service_key = bytes.fromhex( file_service_key_hex )
             
@@ -972,7 +1044,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
             
             serialisable_location_context = location_context.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_location_context, serialisable_tag_search_context, search_type, serialisable_predicates, search_complete )
+            new_serialisable_info = ( serialisable_location_context, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
             
             return ( 5, new_serialisable_info )
             
@@ -981,7 +1053,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def FixMissingServices( self, filter_method ):
         
         self._location_context.FixMissingServices( filter_method )
-        self._tag_search_context.FixMissingServices( filter_method )
+        self._tag_context.FixMissingServices( filter_method )
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -999,9 +1071,9 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return self._system_predicates
         
     
-    def GetTagSearchContext( self ) -> "TagSearchContext":
+    def GetTagContext( self ) -> "TagContext":
         
-        return self._tag_search_context
+        return self._tag_context
         
     
     def GetTagsToExclude( self ): return self._tags_to_exclude
@@ -1036,12 +1108,12 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def SetIncludeCurrentTags( self, value ):
         
-        self._tag_search_context.include_current_tags = value
+        self._tag_context.include_current_tags = value
         
     
     def SetIncludePendingTags( self, value ):
         
-        self._tag_search_context.include_pending_tags = value
+        self._tag_context.include_pending_tags = value
         
     
     def SetPredicates( self, predicates ):
@@ -1053,15 +1125,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def SetTagServiceKey( self, tag_service_key ):
         
-        self._tag_search_context.service_key = tag_service_key
-        self._tag_search_context.display_service_key = tag_service_key
+        self._tag_context.service_key = tag_service_key
+        self._tag_context.display_service_key = tag_service_key
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
 
-class TagSearchContext( HydrusSerialisable.SerialisableBase ):
+class TagContext( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_tag_context
     SERIALISABLE_NAME = 'Tag Search Context'
     SERIALISABLE_VERSION = 2
     
@@ -1080,6 +1152,21 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
             
             self.display_service_key = display_service_key
             
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, TagContext ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self.service_key, self.include_current_tags, self.include_pending_tags, self.display_service_key ).__hash__()
         
     
     def _GetSerialisableInfo( self ):
@@ -1122,7 +1209,13 @@ class TagSearchContext( HydrusSerialisable.SerialisableBase ):
         return self.service_key == CC.COMBINED_TAG_SERVICE_KEY
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SEARCH_CONTEXT ] = TagSearchContext
+    def ToString( self, name_method ):
+        
+        return name_method( self.service_key )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_tag_context ] = TagContext
 
 class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
@@ -1414,11 +1507,44 @@ class PredicateCount( object ):
         return PredicateCount( current_count, pending_count, None, None )
         
     
+
+EDIT_PRED_TYPES = {
+    PREDICATE_TYPE_SYSTEM_AGE,
+    PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+    PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    PREDICATE_TYPE_SYSTEM_HEIGHT,
+    PREDICATE_TYPE_SYSTEM_WIDTH,
+    PREDICATE_TYPE_SYSTEM_RATIO,
+    PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
+    PREDICATE_TYPE_SYSTEM_DURATION,
+    PREDICATE_TYPE_SYSTEM_FRAMERATE,
+    PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+    PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+    PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    PREDICATE_TYPE_SYSTEM_HASH,
+    PREDICATE_TYPE_SYSTEM_LIMIT,
+    PREDICATE_TYPE_SYSTEM_MIME,
+    PREDICATE_TYPE_SYSTEM_RATING,
+    PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+    PREDICATE_TYPE_SYSTEM_NUM_NOTES,
+    PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
+    PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    PREDICATE_TYPE_SYSTEM_SIZE,
+    PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+    PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
+    PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
+    PREDICATE_TYPE_OR_CONTAINER,
+    PREDICATE_TYPE_NAMESPACE,
+    PREDICATE_TYPE_WILDCARD,
+    PREDICATE_TYPE_TAG
+}
+
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__(
         self,
@@ -1427,6 +1553,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         inclusive: bool = True,
         count = None
         ):
+        
+        if predicate_type == PREDICATE_TYPE_SYSTEM_MIME and value is not None:
+            
+            value = tuple( ConvertSpecificFiletypesToSummary( value ) )
+            
+        
+        if predicate_type == PREDICATE_TYPE_OR_CONTAINER:
+            
+            value = list( value )
+            
+            value.sort( key = lambda p: HydrusTags.ConvertTagToSortable( p.ToString() ) )
+            
         
         if isinstance( value, ( list, set ) ):
             
@@ -1675,7 +1813,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 ( operator, num ) = serialisable_value
                 
-                namespace = None
+                namespace = '*'
                 
                 serialisable_value = ( namespace, operator, num )
                 
@@ -1683,6 +1821,24 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
             
             return ( 4, new_serialisable_info )
+            
+        
+        if version == 4:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
+                
+                specific_mimes = serialisable_value
+                
+                summary_mimes = ConvertSpecificFiletypesToSummary( specific_mimes )
+                
+                serialisable_value = tuple( summary_mimes )
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 5, new_serialisable_info )
             
         
     
@@ -1877,6 +2033,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def HasParentPredicates( self ):
         
         return len( self._parent_predicates ) > 0
+        
+    
+    def IsEditable( self ):
+        
+        return self._predicate_type in EDIT_PRED_TYPES
         
     
     def IsInclusive( self ):
@@ -2140,9 +2301,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     number_test = NumberTest.STATICCreateFromCharacters( operator, value )
                     
+                    any_namespace = namespace is None or namespace == '*'
+                    
                     if number_test.IsAnythingButZero():
                         
-                        if namespace is None:
+                        if any_namespace:
                             
                             base = 'has tags'
                             
@@ -2154,7 +2317,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     elif number_test.IsZero():
                         
-                        if namespace is None:
+                        if any_namespace:
                             
                             base = 'untagged'
                             
@@ -2166,7 +2329,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        if namespace is not None:
+                        if not any_namespace:
                             
                             base = 'number of {} tags'.format( ClientTags.RenderNamespaceForUser( namespace ) )
                             
@@ -2263,8 +2426,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         dt = datetime.datetime( year, month, day )
                         
-                        # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
-                        timestamp = int( time.mktime( dt.timetuple() ) )
+                        try:
+                            
+                            # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
+                            timestamp = int( time.mktime( dt.timetuple() ) )
+                            
+                        except:
+                            
+                            timestamp = HydrusData.GetNow()
+                            
                         
                         if operator == '<':
                             
@@ -2371,36 +2541,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    mimes = self._value
+                    summary_mimes = self._value
                     
-                    if set( mimes ) == set( HC.SEARCHABLE_MIMES ):
-                        
-                        mime_text = 'anything'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.APPLICATIONS ) ):
-                        
-                        mime_text = 'application'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.AUDIO ) ):
-                        
-                        mime_text = 'audio'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.IMAGES ) ):
-                        
-                        mime_text = 'image'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.ANIMATIONS ) ):
-                        
-                        mime_text = 'animation'
-                        
-                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.VIDEO ) ):
-                        
-                        mime_text = 'video'
-                        
-                    else:
-                        
-                        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in mimes ] )
-                        
+                    mime_text = ConvertSummaryFiletypesToString( summary_mimes )
                     
                     base += ' is ' + mime_text
                     
@@ -2429,7 +2572,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                         else:
                             
-                            pretty_value = service.ConvertRatingToString( value )
+                            pretty_value = service.ConvertNoneableRatingToString( value )
                             
                             base += ' for {} {} {}'.format( service.GetName(), operator, pretty_value )
                             
@@ -2461,8 +2604,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, status, service_key ) = self._value
                     
-                    if operator == True: base = 'is'
-                    else: base = 'is not'
+                    base = 'is' if operator else 'is not'
                     
                     if status == HC.CONTENT_STATUS_CURRENT:
                         
@@ -2503,9 +2645,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( namespace, operator, num ) = self._value
                     
-                    if namespace == '':
+                    if namespace == '*':
                         
-                        n_text = 'tag'
+                        n_text = 'any namespace'
+                        
+                    elif namespace == '':
+                        
+                        n_text = 'lone number'
                         
                     else:
                         
@@ -2786,7 +2932,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
     
     return matches
     
-def MergePredicates( predicates, add_namespaceless = False ):
+def MergePredicates( predicates ):
     
     master_predicate_dict = {}
     
@@ -2804,46 +2950,9 @@ def MergePredicates( predicates, add_namespaceless = False ):
             
         
     
-    if add_namespaceless:
-        
-        # we want to include the count for namespaced tags in the namespaceless version when:
-        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
-        
-        unnamespaced_predicate_dict = {}
-        subtag_nonzero_instance_counter = collections.Counter()
-        
-        for predicate in master_predicate_dict.values():
-            
-            if predicate.GetCount().HasNonZeroCount():
-                
-                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
-                
-                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
-                
-                if unnamespaced_predicate in unnamespaced_predicate_dict:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ].GetCount().AddCounts( unnamespaced_predicate.GetCount() )
-                    
-                else:
-                    
-                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
-                    
-                
-            
-        
-        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
-            
-            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
-            
-            if count > 1:
-                
-                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
-                
-            
-        
-    
     return list( master_predicate_dict.values() )
     
+
 def SearchTextIsFetchAll( search_text: str ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
@@ -2978,6 +3087,14 @@ class ParsedAutocompleteText( object ):
             elif self.IsExplicitWildcard():
                 
                 search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
+                
+                for s in list( search_texts ):
+                    
+                    if ':' not in s:
+                        
+                        search_texts.append( '*:{}'.format( s ) )
+                        
+                    
                 
                 search_texts = HydrusData.DedupeList( search_texts )
                 

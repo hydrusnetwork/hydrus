@@ -2,6 +2,8 @@
 title: IPFS
 ---
 
+# IPFS
+
 IPFS is a p2p protocol that makes it easy to share many sorts of data. The hydrus client can communicate with an IPFS daemon to send and receive files.
 
 You can read more about IPFS from [their homepage](http://ipfs.io), or [this guide](https://medium.com/@ConsenSys/an-introduction-to-ipfs-9bba4860abd0) that explains its various rules in more detail.

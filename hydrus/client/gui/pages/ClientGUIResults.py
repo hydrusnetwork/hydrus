@@ -2,7 +2,6 @@ import itertools
 import os
 import random
 import time
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -28,7 +27,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDuplicates
-from hydrus.client.gui import ClientGUIExport
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
@@ -41,6 +39,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -61,6 +60,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
     if HG.client_controller.DBCurrentlyDoingJob():
         
         file_duplicate_info = {}
+        all_local_files_file_duplicate_info = {}
         
     else:
         
@@ -550,7 +550,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             hash = media.GetHash()
             
-            ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
+            filename = media.GetLocationsManager().GetServiceFilename( service_key )
+            
+            if filename is None:
+                
+                return
+                
             
             service = HG.client_controller.services_manager.GetService( service_key )
             
@@ -576,11 +581,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             prefix = service.GetMultihashPrefix()
             
         
-        hashes = self._GetSelectedHashes( is_in_file_service_key = service_key )
+        flat_media = self._GetSelectedFlatMedia( is_in_file_service_key = service_key )
         
-        if len( hashes ) > 0:
+        if len( flat_media ) > 0:
             
-            filenames = [ prefix + filename for filename in HG.client_controller.Read( 'service_filenames', service_key, hashes ) ]
+            filenames_or_none = [ media.GetLocationsManager().GetServiceFilename( service_key ) for media in flat_media ]
+            
+            filenames = [ prefix + filename for filename in filenames_or_none if filename is not None ]
             
             if len( filenames ) > 0:
                 
@@ -1182,7 +1189,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def _Inbox( self ):
         
-        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_ARCHIVE )
+        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_ARCHIVE, is_in_file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY  )
         
         if len( hashes ) > 0:
             
@@ -1575,59 +1582,49 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                 
-                text = 'This will reparse the {} selected files\' metadata.'.format( HydrusData.ToHumanInt( num_files ) )
-                text += os.linesep * 2
-                text += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
+                message = 'This will reparse the {} selected files\' metadata.'.format( HydrusData.ToHumanInt( num_files ) )
+                message += os.linesep * 2
+                message += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
                 
             elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                 
-                text = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
+                message = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
                 
             elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                 
-                text = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
+                message = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
+                
+            else:
+                
+                message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
                 
             
             do_it_now = True
             
             if num_files > 50:
                 
-                text += os.linesep * 2
-                text += 'You have selected {} files, so this job may take some time. You can run it all now or schedule it to the overall file maintenance queue for later spread-out processing.'.format( HydrusData.ToHumanInt( num_files ) )
+                message += os.linesep * 2
+                message += 'You have selected {} files, so this job may take some time. You can run it all now or schedule it to the overall file maintenance queue for later spread-out processing.'.format( HydrusData.ToHumanInt( num_files ) )
                 
                 yes_tuples = []
                 
                 yes_tuples.append( ( 'do it now', 'now' ) )
                 yes_tuples.append( ( 'do it later', 'later' ) )
                 
-                with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        value = dlg.GetValue()
-                        
-                        if value == 'now':
-                            
-                            do_it_now = True
-                            
-                        elif value == 'later':
-                            
-                            do_it_now = False
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    else:
-                        
-                        return
-                        
+                    result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                do_it_now = result == 'now'
                 
             else:
                 
-                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
                 if result != QW.QDialog.Accepted:
                     
@@ -1754,8 +1751,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def _SetDuplicates( self, duplicate_type, media_pairs = None, media_group = None, duplicate_action_options = None, silent = False ):
         
-        yes_no_text = 'unknown duplicate action'
-        
         if duplicate_type == HC.DUPLICATE_POTENTIAL:
             
             yes_no_text = 'queue all possible and valid pair combinations into the duplicate filter'
@@ -1824,25 +1819,32 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             yes_label = 'yes'
             no_label = 'no'
             
-            if len( media_pairs ) > 100 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
+            if len( media_pairs ) > 1 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                 
-                if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                media_pairs_str = HydrusData.ToHumanInt( len( media_pairs ) )
+                
+                message = 'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_pairs_str )
+                
+                if len( media_pairs ) > 100:
                     
-                    message = 'False positive records are complicated, and setting that relationship for {} files at once is likely a mistake.'.format( num_files_str )
-                    message += os.linesep * 2
-                    message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
-                    
-                    yes_label = 'I know what I am doing'
-                    no_label = 'step back for now'
-                    
-                elif duplicate_type == HC.DUPLICATE_ALTERNATE:
-                    
-                    message = 'Are you certain all these {} files are alternates with every other member of the selection, and that none are duplicates?'.format( num_files_str )
-                    message += os.linesep * 2
-                    message += 'If some of them may be duplicates, I recommend you either deselect the possible duplicates and try again, or just leave this group to be processed in the normal duplicate filter.'
-                    
-                    yes_label = 'they are all alternates'
-                    no_label = 'some may be duplicates'
+                    if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                        
+                        message = 'False positive records are complicated, and setting that relationship for {} files ({} pairs) at once is likely a mistake.'.format( num_files_str, media_pairs_str )
+                        message += os.linesep * 2
+                        message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
+                        
+                        yes_label = 'I know what I am doing'
+                        no_label = 'step back for now'
+                        
+                    elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+                        
+                        message = 'Are you certain all these {} files are alternates with every other member of the selection, and that none are duplicates?'.format( num_files_str )
+                        message += os.linesep * 2
+                        message += 'If some of them may be duplicates, I recommend you either deselect the possible duplicates and try again, or just leave this group to be processed in the normal duplicate filter.'
+                        
+                        yes_label = 'they are all alternates'
+                        no_label = 'some may be duplicates'
+                        
                     
                 
             else:
@@ -1867,14 +1869,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             if duplicate_action_options is None:
                 
-                service_keys_to_content_updates = {}
+                list_of_service_keys_to_content_updates = []
                 
             else:
                 
-                service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason )
+                list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason ) ]
                 
             
-            pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
+            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
             
         
         if len( pair_info ) > 0:
@@ -2149,9 +2151,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
+    def CleanBeforeDestroy( self ):
+        
+        self.Clear()
+        
+    
     def ClearPageKey( self ):
         
-        self._page_key = 'dead media panel page key'
+        self._page_key = b'dead media panel page key'
         
     
     def Collect( self, page_key, media_collect = None ):
@@ -2636,6 +2643,8 @@ class MediaPanelThumbnails( MediaPanel ):
         self._thumbnails_being_faded_in = {}
         self._hashes_faded = set()
         
+        self._last_device_pixel_ratio = self.devicePixelRatio()
+        
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
@@ -2697,7 +2706,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( HG.client_controller.bitmap_manager.GetQtImage( my_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
+        dpr = self.devicePixelRatio()
+        
+        canvas_width = int( my_width * dpr )
+        canvas_height = int( self._num_rows_per_canvas_page * thumbnail_span_height * dpr )
+        
+        canvas_page = HG.client_controller.bitmap_manager.GetQtImage( canvas_width, canvas_height, 32 )
+        
+        canvas_page.setDevicePixelRatio( dpr )
+        
+        self._dirty_canvas_pages.append( canvas_page )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -2798,7 +2816,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
-                painter.drawImage( x, y, thumbnail.GetQtImage() )
+                painter.drawImage( x, y, thumbnail.GetQtImage( self.devicePixelRatio() ) )
                 
             else:
                 
@@ -2859,7 +2877,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._StopFading( hash )
             
-            bmp = thumbnail.GetQtImage()
+            bmp = thumbnail.GetQtImage( self.devicePixelRatio() )
             
             alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
             
@@ -2915,8 +2933,10 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
         
-        x = mouse_event.pos().x()
-        y = mouse_event.pos().y()
+        pos = mouse_event.position().toPoint()
+        
+        x = pos.x()
+        y = pos.y()
         
         ( t_span_x, t_span_y ) = self._GetThumbnailSpanDimensions()
         
@@ -2933,11 +2953,22 @@ class MediaPanelThumbnails( MediaPanel ):
         column_index = x // t_span_x
         row_index = y // t_span_y
         
-        if column_index >= self._num_columns: return None
+        if column_index >= self._num_columns:
+            
+            return None
+            
         
         thumbnail_index = self._num_columns * row_index + column_index
         
-        if thumbnail_index >= len( self._sorted_media ): return None
+        if thumbnail_index < 0:
+            
+            return None
+            
+        
+        if thumbnail_index >= len( self._sorted_media ):
+            
+            return None
+            
         
         return self._sorted_media[ thumbnail_index ]
         
@@ -3220,9 +3251,6 @@ class MediaPanelThumbnails( MediaPanel ):
         
         MediaPanel._RemoveMediaDirectly( self, singleton_media, collected_media )
         
-        self._selected_media.difference_update( singleton_media )
-        self._selected_media.difference_update( collected_media )
-        
         self._EndShiftSelect()
         
         self._RecalculateVirtualSize()
@@ -3339,6 +3367,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 if len( self._selected_media ) == 0:
                     
                     self._PublishSelectionIncrement( thumbnails )
+                    
+                else:
+                    
+                    self.statusTextChanged.emit( self._GetPrettyStatusForStatusBar() )
                     
                 
             
@@ -3483,6 +3515,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         def paintEvent( self, event ):
+            
+            if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
+                
+                self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
+                
+                self._parent._DirtyAllPages()
+                self._parent._DeleteAllDirtyPages()
+                
             
             painter = QG.QPainter( self )
             
@@ -3659,6 +3699,11 @@ class MediaPanelThumbnails( MediaPanel ):
             m.RecalcInternals()
             
         
+        for thumbnail in self._sorted_media:
+            
+            thumbnail.ClearTagSummaryCaches()
+            
+        
         self.widget().update()
         
     
@@ -3679,10 +3724,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         def ctrl_space_callback( self ):
-
+            
             if self._focused_media is not None:
                 
                 self._HitMedia( self._focused_media, True, False )
+                
+            
         
         QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Home, self._ScrollHome, False )
         QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
@@ -3756,7 +3803,7 @@ class MediaPanelThumbnails( MediaPanel ):
         selection_has_local_file_domain = True in ( locations_manager.IsLocal() and not locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
-        selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
+        selection_has_archive = True in ( media.HasArchive() and media.GetLocationsManager().IsLocal() for media in self._selected_media )
         
         all_file_domains = HydrusData.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
@@ -3921,6 +3968,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # valid commands for the files
             
+            current_file_service_keys = set()
+            
             uploadable_file_service_keys = set()
             
             downloadable_file_service_keys = set()
@@ -3943,6 +3992,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 deleted = locations_manager.GetDeleted()
                 pending = locations_manager.GetPending()
                 petitioned = locations_manager.GetPetitioned()
+                
+                # ALL
+                
+                current_file_service_keys.update( current )
                 
                 # FILE REPOS
                 
@@ -4141,7 +4194,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            for file_service_key in all_local_file_domains_sorted:
+            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( local_media_file_service_keys ), key = HG.client_controller.services_manager.GetName )
+            
+            for file_service_key in local_file_service_keys_we_are_in:
                 
                 ClientGUIMenus.AppendMenuItem( menu, '{} from {}'.format( local_delete_phrase, HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete the selected files.', self._Delete, file_service_key )
                 
@@ -4192,6 +4247,10 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'similar files data', 'Regenerated the selected files\' perceptual hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'duplicate pixel data', 'Regenerated the selected files\' pixel hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'full presence check', 'Check file presence and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'full integrity check', 'Check file integrity and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
             
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
             
@@ -4654,7 +4713,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         selected_count = file_filter_selected.GetCount( win, filter_counts )
         
-        if selected_count > 0 and selected_count < file_filter_all.GetCount( win, filter_counts ):
+        if 0 < selected_count < file_filter_all.GetCount( win, filter_counts ):
             
             ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_selected.ToString( win, filter_counts ), 'Remove all the selected files from the current view.', win._Remove, file_filter_selected )
             
@@ -4679,24 +4738,9 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            all_specific_file_domains = list( all_specific_file_domains )
+            all_specific_file_domains = ClientLocation.SortFileServiceKeysNicely( all_specific_file_domains )
             
-            if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                
-                all_specific_file_domains.remove( CC.TRASH_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
-                
-            
-            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
-                
-                service_key = service.GetServiceKey()
-                
-                if service_key in all_specific_file_domains:
-                    
-                    all_specific_file_domains.remove( service_key )
-                    all_specific_file_domains.insert( 0, service_key )
-                    
-                
+            all_specific_file_domains = ClientLocation.FilterOutRedundantMetaServices( all_specific_file_domains )
             
             for file_service_key in all_specific_file_domains:
                 
@@ -4769,24 +4813,9 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            all_specific_file_domains = list( all_specific_file_domains )
+            all_specific_file_domains = ClientLocation.SortFileServiceKeysNicely( all_specific_file_domains )
             
-            if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                
-                all_specific_file_domains.remove( CC.TRASH_SERVICE_KEY )
-                all_specific_file_domains.insert( 0, CC.TRASH_SERVICE_KEY )
-                
-            
-            for service in HG.client_controller.services_manager.GetLocalMediaFileServices():
-                
-                service_key = service.GetServiceKey()
-                
-                if service_key in all_specific_file_domains:
-                    
-                    all_specific_file_domains.remove( service_key )
-                    all_specific_file_domains.insert( 0, service_key )
-                    
-                
+            all_specific_file_domains = ClientLocation.FilterOutRedundantMetaServices( all_specific_file_domains )
             
             for file_service_key in all_specific_file_domains:
                 
@@ -4851,7 +4880,21 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def GetQtImage( self ):
+    def ClearTagSummaryCaches( self ):
+        
+        self._last_tags = None
+        
+        self._last_upper_summary = None
+        self._last_lower_summary = None
+        
+    
+    def GetQtImage( self, device_pixel_ratio ):
+        
+        # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
+        # or just give the qt_image to be drawn to?
+        # or just give a painter and a rect and draw to that or something
+        # we don't really want to mess around with DPR here, we just want to draw thumbs
+        # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
         
         thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
@@ -4859,13 +4902,58 @@ class Thumbnail( Selectable ):
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
-        qt_image = HG.client_controller.bitmap_manager.GetQtImage( width, height, 24 )
+        qt_image_width = int( width * device_pixel_ratio )
+        
+        qt_image_height = int( height * device_pixel_ratio )
+        
+        qt_image = HG.client_controller.bitmap_manager.GetQtImage( qt_image_width, qt_image_height, 24 )
+        
+        qt_image.setDevicePixelRatio( device_pixel_ratio )
         
         inbox = self.HasInbox()
         
         local = self.GetLocationsManager().IsLocal()
         
+        #
+        # BAD FONT QUALITY AT 100% UI Scale (semi fixed now, look at the bottom)
+        #
+        # Ok I have spent hours on this now trying to figure it out and can't, so I'll just write about it for when I come back
+        # So, if you boot with two monitors at 100% UI scale, the text here on a QImage is ugly, but on QWidget it is fine
+        # If you boot with one monitor at 125%, the text is beautiful on QImage both screens
+        # My current assumption is booting Qt with unusual UI scales triggers some extra init and that spills over to QImage QPainter initialisation
+        #
+        # I checked painter hints, font stuff, fontinfo and fontmetrics, and the only difference was with fontmetrics, on all-100% vs one >100%:
+        # minLeftBearing: -1, -7
+        # minRightBearing: -1, -8
+        # xHeight: 3, 6
+        #
+        # The fontmetric produced a text size one pixel less wide on the both-100% run, so it is calculating different
+        # However these differences are global to the program so don't explain why painting on a QImage specifically has bad font rather than QWidget
+        # The ugly font is anti-aliased, but it looks like not drawn with sub-pixel calculations, like ClearType isn't kicking in or something
+        # If I blow the font size up to 72, there is still a difference in screenshots between the all-100% and some >100% boot.
+        # So, maybe if the program boots with any weird UI scale going on, Qt kicks in a different renderer for all QImages, the same renderer for QWidgets, perhaps more expensively
+        # Or this is just some weird bug
+        # Or I am still missing some flag
+        #
+        # bit like this https://stackoverflow.com/questions/31043332/qt-antialiasing-of-vertical-text-rendered-using-qpainter
+        #
+        # EDIT: OK, I 'fixed' it with setStyleStrategy( preferantialias ), which has no change in 125%, but in all-100% it draws something different but overall better quality
+        # Note you can't setStyleStrategy on the font when it is in the QPainter. either it gets set read only or there is some other voodoo going on
+        # It does look very slightly weird, but it is a step up so I won't complain. it really seems like the isolated QPainter of only-100% world has some different initialisation. it just can't find the nice font renderer
+        #
+        # EDIT 2: I think it may only look weird when the thumb banner has opacity. Maybe I need to learn about CompositionModes
+        #
+        # EDIT 3: Appalently Qt 6.4.0 may fix the basic 100% UI scale QImage init bug!
+        
         painter = QG.QPainter( qt_image )
+        
+        painter.setRenderHint( QG.QPainter.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
+        painter.setRenderHint( QG.QPainter.Antialiasing, True ) # seems to do nothing, it only affects primitives?
+        
+        if device_pixel_ratio > 1.0:
+            
+            painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb scale up prettily and expensively when we need it
+            
         
         new_options = HG.client_controller.new_options
         
@@ -4892,11 +4980,16 @@ class Thumbnail( Selectable ):
                 
             
         
-        painter.setPen( QC.Qt.NoPen )
+        # the painter isn't getting QSS style from the qt_image, we need to set the font explitly to get font size changes from QSS etc..
         
-        painter.setBrush( QG.QBrush( new_options.GetColour( background_colour_type ) ) )
+        f = QG.QFont( HG.client_controller.gui.font() )
         
-        painter.drawRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ) )
+        # this line magically fixes the bad text, as above
+        f.setStyleStrategy( QG.QFont.PreferAntialias )
+        
+        painter.setFont( f )
+        
+        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), new_options.GetColour( background_colour_type ) )
         
         ( thumb_width, thumb_height ) = thumbnail_hydrus_bmp.GetSize() 
         
@@ -4942,11 +5035,7 @@ class Thumbnail( Selectable ):
                     
                     text_colour_with_alpha = upper_tag_summary_generator.GetTextColour()
                     
-                    painter.setFont( QW.QApplication.font() )
-                    
                     background_colour_with_alpha = upper_tag_summary_generator.GetBackgroundColour()
-                    
-                    painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
                     ( text_size, upper_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, upper_summary )
                     
@@ -4955,9 +5044,7 @@ class Thumbnail( Selectable ):
                     box_width = width - ( thumbnail_border * 2 )
                     box_height = text_size.height() + 2
                     
-                    painter.setPen( QG.QPen( QC.Qt.NoPen ) )
-                    
-                    painter.drawRect( box_x, box_y, box_width, box_height )
+                    painter.fillRect( box_x, box_y, box_width, box_height, background_colour_with_alpha )
                     
                     text_x = ( width - text_size.width() ) // 2
                     text_y = box_y + TEXT_BORDER
@@ -4971,11 +5058,7 @@ class Thumbnail( Selectable ):
                     
                     text_colour_with_alpha = lower_tag_summary_generator.GetTextColour()
                     
-                    painter.setFont( QW.QApplication.font() )
-                    
                     background_colour_with_alpha = lower_tag_summary_generator.GetBackgroundColour()
-                    
-                    painter.setBrush( QG.QBrush( background_colour_with_alpha ) )
                     
                     ( text_size, lower_summary ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, lower_summary )
                     
@@ -4987,9 +5070,7 @@ class Thumbnail( Selectable ):
                     box_x = width - box_width - thumbnail_border
                     box_y = height - text_height - thumbnail_border
                     
-                    painter.setPen( QG.QPen( QC.Qt.NoPen ) )
-                    
-                    painter.drawRect( box_x, box_y, box_width, box_height )
+                    painter.fillRect( box_x, box_y, box_width, box_height, background_colour_with_alpha )
                     
                     text_x = box_x + TEXT_BORDER
                     text_y = box_y + TEXT_BORDER
@@ -5101,23 +5182,17 @@ class Thumbnail( Selectable ):
             
             num_files_str = HydrusData.ToHumanInt( self.GetNumFiles() )
             
-            painter.setFont( QW.QApplication.font() )
-            
             ( text_size, num_files_str ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, num_files_str )
             
             text_width = text_size.width()
             text_height = text_size.height()
-            
-            painter.setBrush( QG.QBrush( CC.COLOUR_UNSELECTED ) )
-            
-            painter.setPen( QC.Qt.NoPen )
             
             box_width = text_width + ( ICON_MARGIN * 2 )
             box_x = icon_x + icon.width() + ICON_MARGIN
             box_height = text_height + ( ICON_MARGIN * 2 )
             box_y = ( height - 1 ) - box_height
             
-            painter.drawRect( box_x, height - text_height - 3, box_width, box_height )
+            painter.fillRect( box_x, height - text_height - 3, box_width, box_height, CC.COLOUR_UNSELECTED )
             
             painter.setPen( QG.QPen( CC.COLOUR_SELECTED_DARK ) )
             

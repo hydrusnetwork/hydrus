@@ -1,3 +1,10 @@
+*** The purpose of this document ***
+
+If you have missing files or missing file records, this document will walk you through the specific steps on how to fix it. If you have encountered a related problem, such as losing one of your 'fxx' sub-folders, it may also help as background reading.
+
+
+*** Missing Files ***
+
 If you have lost lots of media files due to a mistake or a drive failing, or if you have rolled back to an older backup and now your file structure is out of sync with your database record, there are several things to do.
 
 First off, make sure you are running on good hard drives now. Check the 'help my db is broke' help document for info here. If your .db files were also on a failing disk, you'll want to run through that whole document to make sure your database itself is ok--there's no point trying to fix the file record on a malformed database.
@@ -17,7 +24,7 @@ Next, we have two classes of problem: files in the database but not in storage, 
 
 These are the cause of the missing file errors. They could have been deleted or damaged, or they might have been imported after you made your file storage backup. The are not on disk any more, but the database doesn't know that, so any time it tries to access where they _were_, it is surprised and throws the error. We need to let it fix all those records.
 
-Hit _database->file maintenance->review_, and then hit the 'add new jobs' tab. Click the 'all media files' button, or just run a search for 'system:everything', and then queue up the job that says 'if file is missing and has URL, try to download, else remove record'. It should be the default job. There are other jobs--feel free to read their descriptions--but you want to deal with the 'missing' suite for now.
+Hit _database->file maintenance->manage scheduled jobs_, and then hit the 'add new jobs' tab. Click the 'all media files' button, or just run a search for 'system:everything', and then queue up the job that says 'if file is missing and has URL, try to download, else remove record'. It should be the default job. There are other jobs--feel free to read their descriptions--but you want to deal with the 'missing' suite for now.
 
 Queue up that job for everything and then on the first tab you can hurry all that work along. It may take an hour or more to check all your files. Any of the files with URLs (i.e. anything you once downloaded) will be queued up in a new download page that may get pretty large, so you might like to pause file maintenance under the same _database->file maintenance_ menu for a bit if it gets too big.
 

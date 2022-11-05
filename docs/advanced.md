@@ -1,7 +1,8 @@
 ---
-title: general clever tricks
+title: General Clever Tricks
 ---
 
+# general clever tricks
 
 !!! note "this is non-comprehensive"
 	I am always changing and adding little things. The best way to learn is just to look around. If you think a shortcut should probably do something, try it out! If you can't find something, let me know and I'll try to add it!

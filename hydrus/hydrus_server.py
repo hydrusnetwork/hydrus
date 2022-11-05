@@ -6,6 +6,8 @@
 
 action = 'start'
 
+import sys
+
 try:
     
     import locale
@@ -14,7 +16,6 @@ try:
     except: pass
     
     import os
-    import sys
     import threading
     
     from hydrus.core import HydrusBoot
@@ -48,6 +49,7 @@ try:
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
+    argparser.add_argument( '--profile_mode', action='store_true', help = 'start the server with profile mode on' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'OBSOLETE: run using TRUNCATE db journaling' )
     argparser.add_argument( '--db_memory_journaling', action='store_true', help = 'OBSOLETE: run using MEMORY db journaling (DANGEROUS)' )
     
@@ -78,7 +80,11 @@ try:
     
     if not HydrusPaths.DirectoryIsWriteable( db_dir ):
         
-        raise Exception( 'The given db path "{}" is not a writeable-to!'.format( db_dir ) )
+        message = 'The given db path "{}" is not a writeable-to!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     try:
@@ -87,12 +93,20 @@ try:
         
     except:
         
-        raise Exception( 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir ) )
+        message = 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     if not os.path.isdir( db_dir ):
         
-        raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
+        message = 'The given db path "{}" is not a directory!'.format( db_dir )
+        
+        db_dir = HC.USERPATH_DB_DIR
+        
+        raise Exception( message )
         
     
     HG.db_journal_mode = result.db_journal_mode
@@ -143,6 +157,9 @@ try:
     HG.no_db_temp_files = result.no_db_temp_files
     
     HG.boot_debug = result.boot_debug
+    
+    HG.profile_mode = result.profile_mode
+    HG.profile_start_time = HydrusData.GetNow()
     
     if result.temp_dir is not None:
         

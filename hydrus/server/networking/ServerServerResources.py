@@ -879,6 +879,22 @@ class HydrusResourceRestrictedLockOff( HydrusResourceRestricted ):
         return response_context
         
     
+class HydrusResourceRestrictedMaintenanceRegenServiceInfo( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        HG.server_controller.WriteSynchronous( 'maintenance_regen_service_info', self._service_key )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1073,6 +1089,26 @@ class HydrusResourceRestrictedRepositoryThumbnail( HydrusResourceRestricted ):
         path = ServerFiles.GetThumbnailPath( hash )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceRestrictedServiceInfo( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        # you can always fetch the service info
+        
+        pass
+        
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        service_info = HG.server_controller.Read( 'service_info', self._service_key )
+        
+        body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'service_info' : list( service_info.items() ) } )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
         return response_context
         

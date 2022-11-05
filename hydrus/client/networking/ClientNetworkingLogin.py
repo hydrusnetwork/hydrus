@@ -765,7 +765,9 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'meta', tag_attributes = { 'id' : 'tumblr_form_key' } ) ], content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE, attribute_to_fetch = "content" )
         
-        results = formula.Parse( {}, html )
+        collapse_newlines = True
+        
+        results = formula.Parse( {}, html, collapse_newlines )
         
         if len( results ) != 1:
             
@@ -1496,7 +1498,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._subdomain is not None:
             
-            self._subdomain = re.sub( '[^a-z\\.]+', '', self._subdomain )
+            self._subdomain = re.sub( '[^a-z.]+', '', self._subdomain )
             
         
         if not self._path.startswith( '/' ):

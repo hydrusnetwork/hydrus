@@ -11,6 +11,7 @@ nav:
     - gettingStartedOverview.md
     - getting_started_installing.md
     - getting_started_files.md
+    - getting_started_importing.md
     - getting_started_searching.md
     - getting_started_tags.md
     - getting_started_downloading.md
@@ -20,10 +21,9 @@ nav:
       - PTR.md
       - petitionPractices.md
     - Next Steps:
-      - getting_started_exporting.md
       - adding_new_downloaders.md
       - getting_started_subscriptions.md
-      - filtering duplicates: duplicates.md
+      - duplicates.md
   - Advanced:
     - advanced_siblings.md
     - advanced_parents.md
@@ -54,7 +54,7 @@ nav:
           - downloader_parsers_full_example_file_page.md
           - downloader_parsers_full_example_api.md
       - downloader_completion.md
-      - Sharing: downloader_sharing.md
+      - downloader_sharing.md
       - downloader_login.md
   - API: 
     - client_api.md

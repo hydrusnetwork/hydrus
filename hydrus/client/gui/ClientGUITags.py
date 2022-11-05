@@ -70,7 +70,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
             
             edited_string = dlg.GetValue()
             
-            edited_escaped_namespaces = re.split( r'(?<!\\)\-', edited_string )
+            edited_escaped_namespaces = re.split( r'(?<!\\)-', edited_string )
             
             edited_namespaces = [ namespace.replace( escaped_char, correct_char ) for namespace in edited_escaped_namespaces ]
             
@@ -326,9 +326,14 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        message = 'While a tag service normally applies its own siblings and parents to itself, it does not have to. If you want a different service\'s siblings (e.g. putting the PTR\'s siblings on your "my tags"), or multiple services\', then set it here. You can also apply no siblings or parents at all.'
+        warning = 'THIS IS COMPLICATED, THINK CAREFULLY'
+        
+        self._warning = ClientGUICommon.BetterStaticText( self, label = warning )
+        self._warning.setObjectName( 'HydrusWarning' )
+        
+        message = 'While a tag service normally only applies its own siblings and parents to itself, it does not have to. You can have other services\' rules apply (e.g. putting the PTR\'s siblings on your "my tags"), or no siblings/parents at all.'
         message += os.linesep * 2
-        message += 'If there are conflicts, the services at the top of the list have precedence. Parents are collapsed by sibling rules before they are applied.'
+        message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -359,6 +364,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         self._sync_status.style().polish( self._sync_status )
         
+        QP.AddToLayout( vbox, self._warning, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2407,7 +2413,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
                     suggestions = []
                     
                     suggestions.append( 'mangled parse/typo' )
-                    suggestions.append( 'not applicable' )
+                    suggestions.append( 'not applicable/incorrect' )
+                    suggestions.append( 'clearing mass-pasted junk' )
                     suggestions.append( 'splitting filename/title/etc... into individual tags' )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
@@ -2926,13 +2933,20 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_all = QW.QCheckBox( self )
             
+            # leave up here since other things have updates based on them
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_parents )
             
             self._tag_parents.Sort()
+            
+            self._listctrl_panel.AddButton( 'add', self._AddButton, enabled_check_func = self._CanAddFromCurrentInput )
+            self._listctrl_panel.AddButton( 'delete', self._DeleteSelectedRows, enabled_only_on_selection = True )
             
             menu_items = []
             
@@ -2952,9 +2966,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel.setEnabled( False )
             
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
-            
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
             self._children.setMinimumHeight( preview_height )
@@ -2967,10 +2978,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, default_location_context, service_key, show_paste_button = True )
             self._parent_input.setEnabled( False )
-            
-            self._add = QW.QPushButton( 'add', self )
-            self._add.clicked.connect( self.EventAddButton )
-            self._add.setEnabled( False )
             
             #
             
@@ -3008,7 +3015,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._add, CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -3016,13 +3022,28 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._tag_parents.itemSelectionChanged.connect( self._SetButtonStatus )
-            
             self._children.listBoxChanged.connect( self._UpdateListCtrlData )
             self._parents.listBoxChanged.connect( self._UpdateListCtrlData )
             self._show_all.clicked.connect( self._UpdateListCtrlData )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            
+        
+        def _AddButton( self ):
+            
+            children = self._children.GetTags()
+            parents = self._parents.GetTags()
+            
+            pairs = list( itertools.product( children, parents ) )
+            
+            self._AddPairs( pairs )
+            
+            self._children.SetTags( [] )
+            self._parents.SetTags( [] )
+            
+            self._UpdateListCtrlData()
+            
+            self._listctrl_panel.UpdateButtons()
             
         
         def _AddPairs( self, pairs, add_only = False ):
@@ -3065,10 +3086,14 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             affected_pairs = []
             
             if len( new_pairs ) > 0:
-            
+                
                 do_it = True
                 
-                if not self._i_am_local_tag_service:
+                if self._i_am_local_tag_service:
+                    
+                    reason = 'added by user'
+                    
+                else:
                     
                     if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
                         
@@ -3105,13 +3130,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if do_it:
-                        
-                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
-                        
-                    
                 
                 if do_it:
+                    
+                    for pair in new_pairs:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
                     
                     self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
@@ -3124,7 +3149,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    if not self._i_am_local_tag_service:
+                    if self._i_am_local_tag_service:
+                        
+                        reason = 'removed by user'
+                        
+                    else:
                         
                         if len( current_pairs ) > 10:
                             
@@ -3177,19 +3206,19 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                     
                                 
                             
-                            if do_it:
-                                
-                                for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
-                                
-                            
-                            
                         else:
                             
                             do_it = False
                             
                         
                     
+                    
                     if do_it:
+                        
+                        for pair in current_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
@@ -3317,6 +3346,16 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
+        def _CanAddFromCurrentInput( self ):
+            
+            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0:
+                
+                return False
+                
+            
+            return True
+            
+        
         def _ConvertPairToListCtrlTuples( self, pair ):
             
             ( child, parent ) = pair
@@ -3342,6 +3381,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             sort_tuple = ( status, child, parent )
             
             return ( display_tuple, sort_tuple )
+            
+        
+        def _DeleteSelectedRows( self ):
+            
+            parents_to_children = collections.defaultdict( set )
+            
+            pairs = self._tag_parents.GetData( only_selected = True )
+            
+            if len( pairs ) > 0:
+                
+                self._AddPairs( pairs )
+                
             
         
         def _DeserialiseImportString( self, import_string ):
@@ -3461,30 +3512,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateListCtrlData()
             
         
-        def _ListCtrlActivated( self ):
-            
-            parents_to_children = collections.defaultdict( set )
-            
-            pairs = self._tag_parents.GetData( only_selected = True )
-            
-            if len( pairs ) > 0:
-                
-                self._AddPairs( pairs )
-                
-            
-        
-        def _SetButtonStatus( self ):
-            
-            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0:
-                
-                self._add.setEnabled( False )
-                
-            else:
-                
-                self._add.setEnabled( True )
-                
-            
-        
         def _UpdateListCtrlData( self ):
             
             children = self._children.GetTags()
@@ -3547,7 +3574,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._UpdateListCtrlData()
                 
-                self._SetButtonStatus()
+                self._listctrl_panel.UpdateButtons()
                 
             
         
@@ -3561,25 +3588,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._UpdateListCtrlData()
                 
-                self._SetButtonStatus()
+                self._listctrl_panel.UpdateButtons()
                 
-            
-        
-        def EventAddButton( self ):
-            
-            children = self._children.GetTags()
-            parents = self._parents.GetTags()
-            
-            pairs = list( itertools.product( children, parents ) )
-            
-            self._AddPairs( pairs )
-            
-            self._children.SetTags( [] )
-            self._parents.SetTags( [] )
-            
-            self._UpdateListCtrlData()
-            
-            self._SetButtonStatus()
             
         
         def GetContentUpdates( self ):
@@ -3910,6 +3920,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     class _Panel( QW.QWidget ):
         
+        AUTO_PETITION_REASON = 'TO BE AUTO-PETITIONED'
+        
         def __init__( self, parent, service_key, tags = None ):
             
             QW.QWidget.__init__( self, parent )
@@ -3929,11 +3941,18 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_all = QW.QCheckBox( self )
             
+            # leave up here since other things have updates based on them
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            self._new_sibling = ClientGUICommon.BetterStaticText( self )
+            
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
+            
+            self._listctrl_panel.AddButton( 'add', self._AddButton, enabled_check_func = self._CanAddFromCurrentInput )
+            self._listctrl_panel.AddButton( 'delete', self._DeleteSelectedRows, enabled_only_on_selection = True )
             
             self._tag_siblings.Sort()
             
@@ -3955,9 +3974,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel.setEnabled( False )
             
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
-            self._new_sibling = ClientGUICommon.BetterStaticText( self )
-            
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
             
             self._old_siblings.setMinimumHeight( preview_height )
@@ -3969,10 +3985,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key )
             self._new_input.setEnabled( False )
-            
-            self._add = QW.QPushButton( 'add', self )
-            self._add.clicked.connect( self.EventAddButton )
-            self._add.setEnabled( False )
             
             #
             
@@ -4010,7 +4022,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._add, CC.FLAGS_ON_RIGHT )
             QP.AddToLayout( vbox, text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -4018,12 +4029,33 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._tag_siblings.itemSelectionChanged.connect( self._SetButtonStatus )
-            
             self._show_all.clicked.connect( self._UpdateListCtrlData )
             self._old_siblings.listBoxChanged.connect( self._UpdateListCtrlData )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            
+        
+        def _AddButton( self ):
+            
+            if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
+                
+                olds = self._old_siblings.GetTags()
+                
+                pairs = [ ( old, self._current_new ) for old in olds ]
+                
+                self._AutoPetitionConflicts( pairs )
+                
+                self._AutoPetitionLoops( pairs )
+                
+                self._AddPairs( pairs )
+                
+                self._old_siblings.SetTags( set() )
+                self.SetNew( set() )
+                
+                self._UpdateListCtrlData()
+                
+                self._listctrl_panel.UpdateButtons()
+                
             
         
         def _AddPairs( self, pairs, add_only = False, remove_only = False, default_reason = None ):
@@ -4070,13 +4102,17 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 do_it = True
                 
-                if not self._i_am_local_tag_service:
+                if default_reason is not None:
                     
-                    if default_reason is not None:
-                        
-                        reason = default_reason
-                        
-                    elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
+                    reason = default_reason
+                    
+                elif self._i_am_local_tag_service:
+                    
+                    reason = 'added by user'
+                    
+                else:
+                    
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                         
                         reason = 'admin'
                         
@@ -4111,13 +4147,38 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if do_it:
-                        
-                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
-                        
-                    
                 
                 if do_it:
+                    
+                    we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
+                    
+                    if we_are_autopetitioning:
+                        
+                        if self._i_am_local_tag_service:
+                            
+                            reason = 'REPLACEMENT: by user'
+                            
+                        else:
+                            
+                            reason = 'REPLACEMENT: {}'.format( reason )
+                            
+                        
+                    
+                    for pair in new_pairs:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                    if we_are_autopetitioning:
+                        
+                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                            
+                            if r == self.AUTO_PETITION_REASON:
+                                
+                                self._pairs_to_reasons[ p ] = reason
+                                
+                            
+                        
                     
                     self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
@@ -4128,9 +4189,15 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    reason = default_reason
-                    
-                    if reason is None and not self._i_am_local_tag_service:
+                    if default_reason is not None:
+                        
+                        reason = default_reason
+                        
+                    elif self._i_am_local_tag_service:
+                        
+                        reason = 'removed by user'
+                        
+                    else:
                         
                         if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                             
@@ -4175,11 +4242,33 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if do_it:
                         
-                        if reason is not None:
+                        we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
+                        
+                        if we_are_autopetitioning:
                             
-                            for pair in current_pairs:
+                            if self._i_am_local_tag_service:
                                 
-                                self._pairs_to_reasons[ pair ] = reason
+                                reason = 'REPLACEMENT: by user'
+                                
+                            else:
+                                
+                                reason = 'REPLACEMENT: {}'.format( reason )
+                                
+                            
+                        
+                        for pair in current_pairs:
+                            
+                            self._pairs_to_reasons[ pair ] = reason
+                            
+                        
+                        if we_are_autopetitioning:
+                            
+                            for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                                
+                                if r == self.AUTO_PETITION_REASON:
+                                    
+                                    self._pairs_to_reasons[ p ] = reason
+                                    
                                 
                             
                         
@@ -4274,7 +4363,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs_to_auto_petition = list( pairs_to_auto_petition )
                 
-                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
+                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
                 
             
         
@@ -4300,7 +4389,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             pairs_to_auto_petition = [ ( loop_new, next_new ) ]
                             
-                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO BREAK LOOP FOR: {}->{}'.format( potential_old, potential_new ) )
+                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
                             
                             current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
                             
@@ -4370,19 +4459,47 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
+        def _CanAddFromCurrentInput( self ):
+            
+            if self._current_new is None or len( self._old_siblings.GetTags() ) == 0:
+                
+                return False
+                
+            
+            return True
+            
+        
         def _ConvertPairToListCtrlTuples( self, pair ):
             
             ( old, new ) = pair
             
-            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+            note = ''
+            
+            in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+            in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+            
+            if in_pending or in_petitioned:
                 
-                status = HC.CONTENT_STATUS_PENDING
+                if pair in self._pairs_to_reasons:
+                    
+                    note = self._pairs_to_reasons[ pair ]
+                    
+                    if note is None:
+                        
+                        note = 'unknown'
+                        
+                    
                 
-            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                if in_pending:
+                    
+                    status = HC.CONTENT_STATUS_PENDING
+                    
+                else:
+                    
+                    status = HC.CONTENT_STATUS_PETITIONED
+                    
                 
-                status = HC.CONTENT_STATUS_PETITIONED
-                
-            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+            else:
                 
                 status = HC.CONTENT_STATUS_CURRENT
                 
@@ -4392,13 +4509,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             pretty_status = sign
             
             existing_olds = self._old_siblings.GetTags()
-            
-            note = ''
-            
-            if pair in self._pairs_to_reasons:
-                
-                note = self._pairs_to_reasons[ pair ]
-                
             
             if old in existing_olds:
                 
@@ -4416,6 +4526,18 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             sort_tuple = ( status, old, new, note )
             
             return ( display_tuple, sort_tuple )
+            
+        
+        def _DeleteSelectedRows( self ):
+            
+            pairs = self._tag_siblings.GetData( only_selected = True )
+            
+            if len( pairs ) > 0:
+                
+                self._AddPairs( pairs )
+                
+            
+            self._UpdateListCtrlData()
             
         
         def _DeserialiseImportString( self, import_string ):
@@ -4543,30 +4665,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateListCtrlData()
             
         
-        def _ListCtrlActivated( self ):
-            
-            pairs = self._tag_siblings.GetData( only_selected = True )
-            
-            if len( pairs ) > 0:
-                
-                self._AddPairs( pairs )
-                
-            
-            self._UpdateListCtrlData()
-            
-        
-        def _SetButtonStatus( self ):
-            
-            if self._current_new is None or len( self._old_siblings.GetTags() ) == 0:
-                
-                self._add.setEnabled( False )
-                
-            else:
-                
-                self._add.setEnabled( True )
-                
-            
-        
         def _UpdateListCtrlData( self ):
             
             olds = self._old_siblings.GetTags()
@@ -4634,30 +4732,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._UpdateListCtrlData()
             
-            self._SetButtonStatus()
-            
-        
-        def EventAddButton( self ):
-            
-            if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
-                
-                olds = self._old_siblings.GetTags()
-                
-                pairs = [ ( old, self._current_new ) for old in olds ]
-                
-                self._AutoPetitionConflicts( pairs )
-                
-                self._AutoPetitionLoops( pairs )
-                
-                self._AddPairs( pairs )
-                
-                self._old_siblings.SetTags( set() )
-                self.SetNew( set() )
-                
-                self._UpdateListCtrlData()
-                
-                self._SetButtonStatus()
-                
+            self._listctrl_panel.UpdateButtons()
             
         
         def GetContentUpdates( self ):
@@ -4735,7 +4810,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._UpdateListCtrlData()
             
-            self._SetButtonStatus()
+            self._listctrl_panel.UpdateButtons()
             
         
         def SetTagBoxFocus( self ):
@@ -4762,7 +4837,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.setText( 'Tags on the left will be appear as those on the right.' )
+                self._status_st.setText( 'Tags on the left will appear as those on the right.' )
                 
                 looking_good = True
                 
@@ -5188,6 +5263,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class TagFilterButton( ClientGUICommon.BetterButton ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, message, tag_filter, only_show_blacklist = False, label_prefix = None ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
@@ -5224,6 +5301,8 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
                 self._tag_filter = panel.GetValue()
                 
                 self._UpdateLabel()
+                
+                self.valueChanged.emit()
                 
             
         

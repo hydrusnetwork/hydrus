@@ -206,6 +206,7 @@ SYSTEM_PREDICATES = {
 # The parse_* functions consume some of the string and return a (remaining part of the string, parsed value) tuple.
 def parse_system_predicate( string: str ):
     string = string.lower().strip()
+    string = string.replace( '_', ' ' )
     if string.startswith( "-" ):
         raise ValueError( "System predicate can't start with negation" )
     if not string.startswith( SYSTEM_PREDICATE_PREFIX ):
@@ -282,7 +283,7 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], (hashes, distance)
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
-        match = re.match( '(?P<hashes>[0-9a-f]+((\s|,)+[0-9a-f]+)*)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
+        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
         if match:
             hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             algorithm = match[ 'algorithm' ] if len( match[ 'algorithm' ] ) > 0 else 'sha256'
@@ -315,7 +316,7 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], datetime.date( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
         raise ValueError( "Invalid value, expected a date or a time interval" )
     elif spec == Value.TIME_SEC_MSEC:
-        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|milliseconds|msecs|msec|ms))?', string )
+        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
             seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
             mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0
@@ -470,6 +471,7 @@ examples = [
     "system:import time > 2011-06-04",
     "system:import time > 7 years 2 months",
     "system:import time < 1 day",
+    "system:import time = 1 day",
     "system:import time < 0 years 1 month 1 day 1 hour",
     " system:import time ~= 2011-1-3 ",
     "system:import time ~= 1996-05-2",

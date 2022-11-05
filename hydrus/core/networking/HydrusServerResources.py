@@ -2,6 +2,7 @@ import os
 import time
 import traceback
 
+import twisted.internet.error
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
@@ -432,10 +433,6 @@ class HydrusResource( Resource ):
         self._service_key = self._service.GetServiceKey()
         self._domain = domain
         
-        service_type = self._service.GetServiceType()
-        
-        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
-        
     
     def _callbackCheckAccountRestrictions( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -679,6 +676,7 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
             request.setHeader( 'Content-Disposition', content_disposition )
+            request.setHeader( 'Cache-Control', 'max-age={}'.format( 4 ) ) # hydrus won't change its mind about dynamic data under 4 seconds even if you ask repeatedly
             
             request.write( body_bytes )
             
@@ -733,6 +731,11 @@ class HydrusResource( Resource ):
                     
                     if client == 'hydrus':
                         
+                        if ' ' in network_version:
+                            
+                            ( network_version, software_version_gumpf ) = network_version.split( ' ', 1 )
+                            
+                        
                         request.is_hydrus_user_agent = True
                         
                         network_version = int( network_version )
@@ -756,7 +759,7 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request: HydrusServerRequest.HydrusRequest ):
         
-        HydrusData.Profile( 'Profiling client api: {}'.format( request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
+        HydrusData.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
         
         return request.result_lmao
         
@@ -766,9 +769,21 @@ class HydrusResource( Resource ):
         return False
         
     
-    def _errbackDisconnected( self, failure, request_deferred ):
+    def _errbackDisconnected( self, failure, request: HydrusServerRequest.HydrusRequest, request_deferred: defer.Deferred ):
         
         request_deferred.cancel()
+        
+        for c in request.disconnect_callables:
+            
+            try:
+                
+                c()
+                
+            except:
+                
+                pass
+                
+            
         
     
     def _errbackHandleProcessingError( self, failure, request: HydrusServerRequest.HydrusRequest ):
@@ -776,6 +791,13 @@ class HydrusResource( Resource ):
         try:
             
             e = failure.value
+            
+            if isinstance( e, twisted.internet.defer.CancelledError ):
+                
+                # the connection disconnected and further deferred processing was cancelled
+                
+                return request
+                
             
             if isinstance( e, HydrusExceptions.DBException ):
                 
@@ -1043,6 +1065,7 @@ class HydrusResource( Resource ):
                 request.setHeader( 'Access-Control-Allow-Headers', '*' )
                 request.setHeader( 'Access-Control-Allow-Origin', '*' )
                 request.setHeader( 'Access-Control-Allow-Methods', allowed_methods_string )
+                request.setHeader( 'Access-Control-Max-Age', "86400" )
                 
             else:
                 
@@ -1100,7 +1123,7 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleProcessingError, request )
         
-        request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        request.notifyFinish().addErrback( self._errbackDisconnected, request, d )
         
         reactor.callLater( 0, d.callback, request )
         
@@ -1119,7 +1142,7 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleProcessingError, request )
         
-        request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        request.notifyFinish().addErrback( self._errbackDisconnected, request, d )
         
         reactor.callLater( 0, d.callback, request )
         
@@ -1146,7 +1169,7 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleProcessingError, request )
         
-        request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        request.notifyFinish().addErrback( self._errbackDisconnected, request, d )
         
         reactor.callLater( 0, d.callback, request )
         

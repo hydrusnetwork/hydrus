@@ -1,0 +1,744 @@
+import json
+import os
+import sys
+import traceback
+import typing
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTemp
+from hydrus.core import HydrusText
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientParsing
+from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIStringControls
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.networking import ClientNetworkingJobs
+
+class TestPanel( QW.QWidget ):
+    
+    def __init__( self, parent, object_callable, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        if test_data is None:
+            
+            test_data = ClientParsing.ParsingTestData( {}, ( '', ) )
+            
+        
+        self._collapse_newlines = True
+        
+        self._object_callable = object_callable
+        
+        self._example_parsing_context = ClientGUIStringControls.StringToStringDictButton( self, 'edit example parsing context' )
+        
+        self._data_preview_notebook = QW.QTabWidget( self )
+        
+        raw_data_panel = QW.QWidget( self._data_preview_notebook )
+        
+        self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
+        
+        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
+        
+        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().link, self._FetchFromURL )
+        self._fetch_button.setToolTip( 'Fetch data from a URL.' )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste the current clipboard data into here.' )
+        
+        self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
+        self._example_data_raw_preview.setReadOnly( True )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
+        
+        self._example_data_raw_preview.setMinimumWidth( width )
+        self._example_data_raw_preview.setMinimumHeight( height )
+        
+        self._test_parse = ClientGUICommon.BetterButton( self, 'test parse', self.TestParse )
+        
+        self._results = QW.QPlainTextEdit( self )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._results, ( 80, 12 ) )
+        
+        self._results.setMinimumWidth( width )
+        self._results.setMinimumHeight( height )
+        
+        #
+        
+        self._example_parsing_context.SetValue( test_data.parsing_context )
+        
+        self._example_data_raw = ''
+        
+        self._results.setPlainText( 'Successfully parsed results will be printed here.' )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._example_data_raw_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._fetch_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_raw_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        raw_data_panel.setLayout( vbox )
+        
+        self._data_preview_notebook.addTab( raw_data_panel, 'raw data' )
+        self._data_preview_notebook.setCurrentWidget( raw_data_panel )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._example_parsing_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._data_preview_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+        if len( test_data.texts ) > 0:
+            
+            QP.CallAfter( self._SetExampleData, test_data.texts[0] )
+            
+        
+    
+    def _Copy( self ):
+        
+        HG.client_controller.pub( 'clipboard', 'text', self._example_data_raw )
+        
+    
+    def _FetchFromURL( self ):
+        
+        def qt_code( example_data, example_bytes ):
+            
+            if not self or not QP.isValid( self ):
+                
+                return
+                
+            
+            example_parsing_context = self._example_parsing_context.GetValue()
+            
+            example_parsing_context[ 'url' ] = url
+            example_parsing_context[ 'post_index' ] = '0'
+            
+            self._example_parsing_context.SetValue( example_parsing_context )
+            
+            self._SetExampleData( example_data, example_bytes = example_bytes )
+            
+        
+        def do_it( url ):
+            
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            example_bytes = None
+            
+            try:
+                
+                network_job.WaitUntilDone()
+                
+                example_data = network_job.GetContentText()
+                
+                example_bytes = network_job.GetContentBytes()
+                
+            except HydrusExceptions.CancelledException:
+                
+                example_data = 'fetch cancelled'
+                
+            except Exception as e:
+                
+                example_data = 'fetch failed:' + os.linesep * 2 + str( e )
+                
+                HydrusData.ShowException( e )
+                
+            
+            QP.CallAfter( qt_code, example_data, example_bytes )
+            
+        
+        message = 'Enter URL to fetch data for.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, placeholder = 'enter url', allow_blank = False) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                url = dlg.GetValue()
+                
+                HG.client_controller.CallToThread( do_it, url )
+                
+            
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+            try:
+                
+                raw_bytes = raw_text.decode( 'utf-8' )
+                
+            except:
+                
+                raw_bytes = None
+                
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            QW.QMessageBox.critical( self, 'Error', str(e) )
+            
+            return
+            
+        
+        self._SetExampleData( raw_text, example_bytes = raw_bytes )
+        
+    
+    def _SetExampleData( self, example_data, example_bytes = None ):
+        
+        self._example_data_raw = example_data
+        
+        test_parse_ok = True
+        looked_like_json = False
+        
+        MAX_CHARS_IN_PREVIEW = 1024 * 64
+        
+        if len( example_data ) > 0:
+            
+            good_type_found = True
+            
+            if HydrusText.LooksLikeJSON( example_data ):
+                
+                # prioritise this, so if the JSON contains some HTML, it'll overwrite here. decent compromise
+                
+                looked_like_json = True
+                
+                parse_phrase = 'looks like JSON'
+                
+            elif HydrusText.LooksLikeHTML( example_data ):
+                
+                # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
+                
+                parse_phrase = 'looks like HTML'
+                
+            else:
+                
+                good_type_found = False
+                
+                if example_bytes is not None:
+                    
+                    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+                    
+                    try:
+                        
+                        with open( temp_path, 'wb' ) as f:
+                            
+                            f.write( example_bytes )
+                            
+                        
+                        mime = HydrusFileHandling.GetMime( temp_path )
+                        
+                    except:
+                        
+                        mime = HC.APPLICATION_UNKNOWN
+                        
+                    finally:
+                        
+                        HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+                        
+                    
+                else:
+                    
+                    mime = HC.APPLICATION_UNKNOWN
+                    
+                
+            
+            if good_type_found:
+                
+                description = HydrusData.ToHumanBytes( len( example_data ) ) + ' total, ' + parse_phrase
+                
+                example_data_to_show = example_data
+                
+                if looked_like_json:
+                    
+                    try:
+                        
+                        j = HG.client_controller.parsing_cache.GetJSON( example_data )
+                        
+                        example_data_to_show = json.dumps( j, indent = 4 )
+                        
+                    except:
+                        
+                        pass
+                        
+                    
+                
+                if len( example_data_to_show ) > MAX_CHARS_IN_PREVIEW:
+                    
+                    preview = 'PREVIEW:' + os.linesep + str( example_data_to_show[:MAX_CHARS_IN_PREVIEW] )
+                    
+                else:
+                    
+                    preview = example_data_to_show
+                    
+                
+            else:
+                
+                if mime in HC.ALLOWED_MIMES:
+                    
+                    description = 'that looked like a {}!'.format( HC.mime_string_lookup[ mime ] )
+                    
+                    preview = 'no preview'
+                    
+                    test_parse_ok = False
+                    
+                else:
+                    
+                    description = 'that did not look like HTML or JSON, but will try to show it anyway'
+                    
+                    if len( example_data ) > MAX_CHARS_IN_PREVIEW:
+                        
+                        preview = 'PREVIEW:' + os.linesep + repr( example_data[:MAX_CHARS_IN_PREVIEW] )
+                        
+                    else:
+                        
+                        preview = repr( example_data )
+                        
+                    
+                
+            
+        else:
+            
+            description = 'no example data set yet'
+            preview = ''
+            
+            test_parse_ok = False
+            
+        
+        self._test_parse.setEnabled( test_parse_ok )
+        
+        self._example_data_raw_description.setText( description )
+        self._example_data_raw_preview.setPlainText( preview )
+        
+    
+    def GetExampleParsingContext( self ):
+        
+        return self._example_parsing_context.GetValue()
+        
+    
+    def GetTestData( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, ( self._example_data_raw, ) )
+        
+    
+    def GetTestDataForChild( self ):
+        
+        return self.GetTestData()
+        
+    
+    def SetCollapseNewlines( self, value: bool ):
+        
+        self._collapse_newlines = value
+        
+    
+    def SetExampleData( self, example_data, example_bytes = None ):
+        
+        self._SetExampleData( example_data, example_bytes = example_bytes )
+        
+    
+    def SetExampleParsingContext( self, example_parsing_context ):
+        
+        self._example_parsing_context.SetValue( example_parsing_context )
+        
+    
+    def TestParse( self ):
+        
+        obj = self._object_callable()
+        
+        test_data = self.GetTestData()
+        
+        test_text = ''
+        
+        # change this to be for every text, do a diff panel, whatever
+        
+        if len( test_data.texts ) > 0:
+            
+            test_text = test_data.texts[0]
+            
+        
+        try:
+            
+            if 'post_index' in test_data.parsing_context:
+                
+                del test_data.parsing_context[ 'post_index' ]
+                
+            
+            if isinstance( obj, ClientParsing.ParseFormula ):
+                
+                results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0], self._collapse_newlines )
+                
+            else:
+                
+                results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0] )
+                
+            
+            self._results.setPlainText( results_text )
+            
+        except Exception as e:
+            
+            etype = type( e )
+            
+            ( etype, value, tb ) = sys.exc_info()
+            
+            trace = ''.join( traceback.format_exception( etype, value, tb ) )
+            
+            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+            
+            self._results.setPlainText( message )
+            
+        
+        
+    
+class TestPanelFormula( TestPanel ):
+    
+    def GetTestDataForStringProcessor( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        formula = self._object_callable()
+        
+        try:
+            
+            formula.SetStringProcessor( ClientStrings.StringProcessor() )
+            
+            texts = formula.Parse( example_parsing_context, self._example_data_raw, self._collapse_newlines )
+            
+        except:
+            
+            texts = [ '' ]
+            
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, texts )
+        
+    
+class TestPanelPageParser( TestPanel ):
+    
+    def __init__( self, parent, object_callable, pre_parsing_converter_callable, test_data = None ):
+        
+        self._pre_parsing_converter_callable = pre_parsing_converter_callable
+        
+        TestPanel.__init__( self, parent, object_callable, test_data = test_data )
+        
+        post_conversion_panel = QW.QWidget( self._data_preview_notebook )
+        
+        self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
+        
+        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().copy, self._CopyPostConversion )
+        self._copy_button_post_conversion.setToolTip( 'Copy the current post conversion data to the clipboard.' )
+        
+        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
+        self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
+        self._example_data_post_conversion_preview.setReadOnly( True )
+        
+        #
+        
+        self._example_data_post_conversion = ''
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._example_data_post_conversion_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button_post_conversion, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._refresh_post_conversion_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_post_conversion_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        post_conversion_panel.setLayout( vbox )
+        
+        #
+        
+        self._data_preview_notebook.addTab( post_conversion_panel, 'post pre-parsing conversion' )
+        
+    
+    def _CopyPostConversion( self ):
+        
+        HG.client_controller.pub( 'clipboard', 'text', self._example_data_post_conversion )
+        
+    
+    def _RefreshDataPreviews( self ):
+        
+        self._SetExampleData( self._example_data_raw )
+        
+    
+    def _SetExampleData( self, example_data, example_bytes = None ):
+        
+        TestPanel._SetExampleData( self, example_data, example_bytes = example_bytes )
+        
+        pre_parsing_converter = self._pre_parsing_converter_callable()
+        
+        if pre_parsing_converter.MakesChanges():
+            
+            try:
+                
+                post_conversion_example_data = ClientParsing.MakeParsedTextPretty( pre_parsing_converter.Convert( self._example_data_raw ) )
+                
+                if len( post_conversion_example_data ) > 1024:
+                    
+                    preview = 'PREVIEW:' + os.linesep + str( post_conversion_example_data[:1024] )
+                    
+                else:
+                    
+                    preview = post_conversion_example_data
+                    
+                
+                parse_phrase = 'uncertain data type'
+                
+                # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
+                if HydrusText.LooksLikeHTML( post_conversion_example_data ):
+                    
+                    parse_phrase = 'looks like HTML'
+                    
+                
+                # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
+                if HydrusText.LooksLikeJSON( example_data ):
+                    
+                    parse_phrase = 'looks like JSON'
+                    
+                
+                description = HydrusData.ToHumanBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
+                
+            except Exception as e:
+                
+                post_conversion_example_data = self._example_data_raw
+                
+                etype = type( e )
+                
+                ( etype, value, tb ) = sys.exc_info()
+                
+                trace = ''.join( traceback.format_exception( etype, value, tb ) )
+                
+                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+                
+                preview = message
+                
+                description = 'Could not convert.'
+                
+            
+        else:
+            
+            post_conversion_example_data = self._example_data_raw
+            
+            preview = 'No changes made.'
+            
+            description = self._example_data_raw_description.text()
+            
+        
+        self._example_data_post_conversion_description.setText( description )
+        
+        self._example_data_post_conversion = post_conversion_example_data
+        
+        self._example_data_post_conversion_preview.setPlainText( preview )
+        
+    
+    def GetTestDataForChild( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, ( self._example_data_post_conversion, ) )
+        
+    
+class TestPanelPageParserSubsidiary( TestPanelPageParser ):
+    
+    def __init__( self, parent, object_callable, pre_parsing_converter_callable, formula_callable, test_data = None ):
+        
+        TestPanelPageParser.__init__( self, parent, object_callable, pre_parsing_converter_callable, test_data = test_data )
+        
+        self._formula_callable = formula_callable
+        
+        post_separation_panel = QW.QWidget( self._data_preview_notebook )
+        
+        self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
+        
+        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().copy, self._CopyPostSeparation )
+        self._copy_button_post_separation.setToolTip( 'Copy the current post separation data to the clipboard.' )
+        
+        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
+        self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
+        self._example_data_post_separation_preview.setReadOnly( True )
+        
+        #
+        
+        self._example_data_post_separation = []
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._example_data_post_separation_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button_post_separation, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._refresh_post_separation_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_post_separation_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        post_separation_panel.setLayout( vbox )
+        
+        #
+        
+        self._data_preview_notebook.addTab( post_separation_panel, 'post separation' )
+        
+    
+    def _CopyPostSeparation( self ):
+        
+        joiner = os.linesep * 2
+        
+        HG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
+        
+    
+    def _SetExampleData( self, example_data, example_bytes = None ):
+        
+        TestPanelPageParser._SetExampleData( self, example_data, example_bytes = example_bytes )
+        
+        formula = self._formula_callable()
+        
+        if formula is None:
+            
+            separation_example_data = []
+            description = 'No formula set!'
+            preview = ''
+            
+        else:
+            
+            try:
+                
+                example_parsing_context = self._example_parsing_context.GetValue()
+                
+                separation_example_data = formula.Parse( example_parsing_context, self._example_data_post_conversion, self._collapse_newlines )
+                
+                joiner = os.linesep * 2
+                
+                preview = joiner.join( separation_example_data )
+                
+                if len( preview ) > 1024:
+                    
+                    preview = 'PREVIEW:' + os.linesep + str( preview[:1024] )
+                    
+                
+                description = HydrusData.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
+                
+            except Exception as e:
+                
+                separation_example_data = []
+                
+                etype = type( e )
+                
+                ( etype, value, tb ) = sys.exc_info()
+                
+                trace = ''.join( traceback.format_exception( etype, value, tb ) )
+                
+                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+                
+                preview = message
+                
+                description = 'Could not convert.'
+                
+            
+        
+        self._example_data_post_separation_description.setText( description )
+        
+        self._example_data_post_separation = separation_example_data
+        
+        self._example_data_post_separation_preview.setPlainText( preview )
+        
+    
+    def GetTestDataForChild( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, list( self._example_data_post_separation ) )
+        
+    
+    def TestParse( self ):
+        
+        formula = self._formula_callable()
+        
+        page_parser = self._object_callable()
+        
+        try:
+            
+            test_data = self.GetTestData()
+            
+            test_data.parsing_context[ 'post_index' ] = 0
+            
+            if formula is None:
+                
+                posts = test_data.texts
+                
+            else:
+                
+                posts = []
+                
+                collapse_newlines = False
+                
+                for test_text in test_data.texts:
+                    
+                    posts.extend( formula.Parse( test_data.parsing_context, test_text, collapse_newlines ) )
+                    
+                
+            
+            pretty_texts = []
+            
+            for post in posts:
+                
+                pretty_text = page_parser.ParsePretty( test_data.parsing_context, post )
+                
+                pretty_texts.append( pretty_text )
+                
+            
+            separator = os.linesep * 2
+            
+            end_pretty_text = separator.join( pretty_texts )
+            
+            self._results.setPlainText( end_pretty_text )
+            
+        except Exception as e:
+            
+            etype = type( e )
+            
+            ( etype, value, tb ) = sys.exc_info()
+            
+            trace = ''.join( traceback.format_exception( etype, value, tb ) )
+            
+            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+            
+            self._results.setPlainText( message )
+            
+        
+    
+    

@@ -376,6 +376,9 @@ def GetDefaultShortcuts():
     main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'Z' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_UNDO ) )
     main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'P' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_COMMAND_PALETTE ) )
     
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_PAGES_SELECTION_LEFT ) )
+    main_gui.SetCommand( ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ), CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_PAGES_SELECTION_RIGHT ) )
+    
     shortcuts.append( main_gui )
     
     media_viewer_browser = ClientGUIShortcuts.ShortcutSet( 'media_viewer_browser' )
@@ -526,9 +529,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     rules = HydrusNetworking.BandwidthRules()
     
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 60, 512 * MB ) # smooth out heavy usage. db and gui prob need a break
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 16 * GB ) # check your inbox lad
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, rules )
     
@@ -538,7 +540,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 ) # don't ever hammer a domain
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # don't go nuts on a site in a single day
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 8 * GB ) # don't go nuts on a site in a single day
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
     
@@ -554,7 +556,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 512 * MB ) # just a careful stopgap
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 1024 * MB ) # just a careful stopgap
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE ), rules )
     
@@ -563,15 +565,17 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     rules = HydrusNetworking.BandwidthRules()
     
     # most gallery downloaders need two rqs per file (page and file), remember
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 800 ) # catch up on a big sub in little chunks every day
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 1000 ) # catch up on a swell of many new things in chunks every day
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 768 * MB ) # catch up on a big sub in little chunks every day
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 1024 * MB ) # catch up on a stonking bump in chunks every day
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
     
     #
     
     rules = HydrusNetworking.BandwidthRules()
+    
+    # watchers have time pressure, so no additional rules beyond global and domain limits
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_WATCHER_PAGE ), rules )
     
@@ -654,6 +658,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     domain_manager.SetDefaultFilePostTagImportOptions( tag_import_options )
     
+
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     from hydrus.client.media import ClientMedia
@@ -668,7 +673,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_search_context = ClientSearch.TagSearchContext()
+    tag_context = ClientSearch.TagContext()
     
     predicates = []
     
@@ -682,7 +687,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
@@ -697,11 +702,11 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_search_context = ClientSearch.TagSearchContext()
+    tag_context = ClientSearch.TagContext()
     
     predicates = []
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_search_context = tag_search_context, predicates = predicates )
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = None

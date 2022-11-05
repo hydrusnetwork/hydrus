@@ -251,9 +251,22 @@ class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProces
                 
                 if rating_state != original_rating_state:
                     
-                    if rating_state == ClientRatings.LIKE: rating = 1
-                    elif rating_state == ClientRatings.DISLIKE: rating = 0
-                    else: rating = None
+                    if rating_state == ClientRatings.MIXED:
+                        
+                        continue
+                        
+                    elif rating_state == ClientRatings.LIKE:
+                        
+                        rating = 1
+                        
+                    elif rating_state == ClientRatings.DISLIKE:
+                        
+                        rating = 0
+                        
+                    else:
+                        
+                        rating = None
+                        
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
@@ -383,7 +396,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProces
                 
                 rating_state = control.GetRatingState()
                 
-                if rating_state == ClientRatings.NULL:
+                if rating_state == ClientRatings.MIXED:
+                    
+                    continue
+                    
+                elif rating_state == ClientRatings.NULL:
                     
                     rating = None
                     

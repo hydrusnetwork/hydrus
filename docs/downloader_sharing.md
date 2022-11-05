@@ -1,5 +1,5 @@
 ---
-title: Sharing Downloaders
+title: Sharing
 ---
 
 # Sharing Downloaders

@@ -346,16 +346,17 @@ class TagDisplayMaintenanceManager( object ):
             
         else:
             
-            if actual_work_time > expected_work_time * 5:
+            if actual_work_time > expected_work_time * 10:
                 
                 # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
-                
-                return 1800
+                work_rest_ratio = 30
                 
             else:
                 
-                return 30
+                work_rest_ratio = 9
                 
+            
+            return max( actual_work_time, expected_work_time ) * work_rest_ratio
             
         
     
@@ -402,7 +403,7 @@ class TagDisplayMaintenanceManager( object ):
             
         else:
             
-            return 0.5
+            return 0.1
             
         
     

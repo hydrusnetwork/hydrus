@@ -1,3 +1,7 @@
+---
+title: Privacy
+---
+
 # privacy
 
 !!! tldr "tl;dr"

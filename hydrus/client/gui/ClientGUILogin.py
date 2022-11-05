@@ -17,7 +17,6 @@ from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -26,6 +25,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
+from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
@@ -259,7 +259,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 8, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 16, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
         
         self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         
@@ -1647,9 +1647,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def do_it( login_script, domain, credentials, network_job_presentation_context_factory ):
             
+            login_result = 'login did not finish'
+            
             try:
-                
-                login_result = 'login did not finish'
                 
                 # a potential here is to properly inform the login manager of the domain map and hence read back the invalidation text
                 # but I am catching the info in the raised exception, so nbd really, I think

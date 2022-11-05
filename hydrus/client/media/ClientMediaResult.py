@@ -146,6 +146,23 @@ class MediaResult( object ):
         return self._notes_manager.GetNumNotes() > 0
         
     
+    def IsDeleteLocked( self ):
+        
+        # TODO: ultimately replace this with metadata conditionals for whatever the user likes, 'don't delete anything rated 5 stars', whatever
+        
+        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        
+        if delete_lock_for_archived_files:
+            
+            if not self.GetInbox():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def IsStaticImage( self ):
         
         image = self._file_info_manager.mime in HC.IMAGES

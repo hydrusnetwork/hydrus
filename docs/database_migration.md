@@ -1,6 +1,8 @@
 ---
-title: database migration
+title: Database Migration
 ---
+
+# database migration
 
 ## the hydrus database { id="intro" }
 
@@ -60,9 +62,9 @@ A straight call to the client executable will look for a database in _install_di
 
 So, pass it a -d or --db_dir command line argument, like so:
 
-*   `client -d="D:\\media\\my\_hydrus\_database"`
+*   `client -d="D:\media\my_hydrus_database"`
 *   _--or--_
-*   `client --db_dir="G:\\misc documents\\New Folder (3)\\DO NOT ENTER"`
+*   `client --db_dir="G:\misc documents\New Folder (3)\DO NOT ENTER"`
 *   _--or, for macOS--_
 *   `open -n -a "Hydrus Network.app" --args -d="/path/to/db"`
 

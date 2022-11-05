@@ -13,8 +13,19 @@ body:
       id: hydrus_version
       attributes:
         label: Hydrus version
-        description: You can find this in the about page from the "help" menu. Kindly update to the latest version before filing a report.
+        description: You can find this in the "about" dialog from the "help" menu. Kindly update to the latest version before filing a report.
         placeholder: v447 or just 447 are both acceptable.
+      validations:
+        required: true
+        
+    - type: dropdown
+      id: qt_version
+      attributes:
+        label: Qt major version
+        description: You can find this in the "about Qt" dialog from the "help" menu.
+        options:
+          - Qt 6
+          - Qt 5
       validations:
         required: true
 
@@ -24,9 +35,11 @@ body:
         label: Operating system
         description: What operating system do you use?
         options:
-          - Windows 10
           - Windows 11
+          - Windows 10
           - Windows other (specify in comments)
+          - macOS 12 "Monterey" (Apple silicon)
+          - macOS 12 "Monterey" (Intel)
           - macOS 11 "Big Sur" (Apple silicon)
           - macOS 11 "Big Sur" (Intel)
           - macOS 10.15 "Catalina"

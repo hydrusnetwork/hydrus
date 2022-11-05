@@ -1,3 +1,7 @@
+---
+title: FAQ
+---
+
 # FAQ
 
 ## What is a repository? { id="repositories" }

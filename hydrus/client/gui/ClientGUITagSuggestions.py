@@ -15,10 +15,10 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
-from hydrus.client.gui import ClientGUIParsing
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
+from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -463,7 +463,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._fetch_button.setEnabled( False )
         
-        self._script_management = ClientGUIParsing.ScriptManagementControl( self )
+        self._script_management = ClientGUIParsingLegacy.ScriptManagementControl( self )
         
         self._tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = True )
         

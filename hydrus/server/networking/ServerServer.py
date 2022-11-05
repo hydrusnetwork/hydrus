@@ -8,6 +8,8 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root = HydrusServer.HydrusService._InitRoot( self )
         
+        root.putChild( b'busy', ServerServerResources.HydrusResourceBusyCheck() )
+        
         root.putChild( b'access_key', ServerServerResources.HydrusResourceAccessKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'access_key_verification', ServerServerResources.HydrusResourceAccessKeyVerification( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'auto_create_account_types', ServerServerResources.HydrusResourceAutoCreateAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
@@ -35,6 +37,9 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root.putChild( b'registration_keys', ServerServerResources.HydrusResourceRestrictedRegistrationKeys( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
+        root.putChild( b'service_info', ServerServerResources.HydrusResourceRestrictedServiceInfo( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'maintenance_regen_service_info', ServerServerResources.HydrusResourceRestrictedMaintenanceRegenServiceInfo( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
         return root
         
     
@@ -44,7 +49,6 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         
         root = HydrusServiceRestricted._InitRoot( self )
         
-        root.putChild( b'busy', ServerServerResources.HydrusResourceBusyCheck() )
         root.putChild( b'backup', ServerServerResources.HydrusResourceRestrictedBackup( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'lock_on', ServerServerResources.HydrusResourceRestrictedLockOn( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'lock_off', ServerServerResources.HydrusResourceRestrictedLockOff( self._service, HydrusServer.REMOTE_DOMAIN ) )

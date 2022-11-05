@@ -4,9 +4,7 @@ import threading
 import time
 import typing
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -22,14 +20,14 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -117,6 +115,7 @@ def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscript
     
     return query_log_containers
     
+
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ):
@@ -206,7 +205,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
         self._this_is_a_random_sample_sub.setToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' )
         
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'file publication' )
         
@@ -234,10 +233,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        show_downloader_options = True
+        note_import_options = subscription.GetNoteImportOptions()
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options, allow_default_selection = True )
+        show_downloader_options = True
+        allow_default_selection = True
+        
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
+        self._import_options_button.SetTagImportOptions( tag_import_options )
+        self._import_options_button.SetNoteImportOptions( note_import_options )
+        
         
         #
         
@@ -323,10 +329,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
+        
+        self._checker_options.valueChanged.connect( self._CheckerOptionsUpdated )
         
         self._UpdateDelayText()
         
@@ -1112,7 +1119,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._delay_st.setText( status )
         
     
-    def GetValue( self ) -> ClientImportSubscriptions.Subscription:
+    def GetValue( self ) -> typing.Tuple[ ClientImportSubscriptions.Subscription, typing.Dict[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ]:
         
         if not self.isEnabled():
             
@@ -1131,10 +1138,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         paused = self._paused.isChecked()
         
         checker_options = self._checker_options.GetValue()
-        file_import_options = self._file_import_options.GetValue()
-        tag_import_options = self._tag_import_options.GetValue()
+        
+        file_import_options = self._import_options_button.GetFileImportOptions()
+        tag_import_options = self._import_options_button.GetTagImportOptions()
+        note_import_options = self._import_options_button.GetNoteImportOptions()
         
         subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        
+        subscription.SetNoteImportOptions( note_import_options )
         
         subscription.SetThisIsARandomSampleSubscription( self._this_is_a_random_sample_sub.isChecked() )
         
@@ -1180,8 +1191,11 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
+        allow_default_selection = True
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options )
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetTagImportOptions( tag_import_options )
         
         #
         
@@ -1231,7 +1245,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 1 )
         
@@ -1261,7 +1275,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_header.SetDisplayName( self._display_name.GetValue() )
         
-        query_header.SetTagImportOptions( self._tag_import_options.GetValue() )
+        query_header.SetTagImportOptions( self._import_options_button.GetTagImportOptions() )
         
         query_log_container = self._original_query_log_container.Duplicate()
         
@@ -1353,7 +1367,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
         self._subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'overwrite file import options', self.SetFileImportOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
+        self._subscriptions_panel.AddButton( 'overwrite note import options', self.SetNoteImportOptions, enabled_only_on_selection = True )
         
         #
         
@@ -2191,40 +2207,37 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             yes_tuples.append( ( 'do them all', 'all' ) )
             yes_tuples.append( ( 'select which to do', 'select' ) )
             
-            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() != QW.QDialog.Accepted:
+                result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if result == 'all':
+                
+                query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
+                
+            else:
+                
+                selected = True
+                
+                choice_tuples = [ ( query_text, query_text, selected ) for query_text in potential_dupe_query_texts ]
+                
+                try:
+                    
+                    query_texts_we_want_to_dedupe_now = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'Select which query texts to dedupe', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
                     
                     return
                     
-                else:
+                
+                if len( query_texts_we_want_to_dedupe_now ) == 0:
                     
-                    value = dlg.GetValue()
-                    
-                    if value == 'all':
-                        
-                        query_texts_we_want_to_dedupe_now = potential_dupe_query_texts
-                        
-                    else:
-                        
-                        selected = True
-                        
-                        choice_tuples = [ ( query_text, query_text, selected ) for query_text in potential_dupe_query_texts ]
-                        
-                        try:
-                            
-                            query_texts_we_want_to_dedupe_now = ClientGUIDialogsQuick.SelectMultipleFromList( self, 'Select which query texts to dedupe', choice_tuples )
-                            
-                        except HydrusExceptions.CancelledException:
-                            
-                            return
-                            
-                        
-                        if len( query_texts_we_want_to_dedupe_now ) == 0:
-                            
-                            return
-                            
-                        
+                    return
                     
                 
             
@@ -2643,16 +2656,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message = 'Are you sure you want to separate the selected subscriptions? Separating breaks merged subscriptions apart into smaller pieces.'
             yes_tuples = [ ( 'break it in half', 'half' ), ( 'break it all into single-query subscriptions', 'whole' ), ( 'only extract some of the subscription', 'part' ) ]
             
-            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    action = dlg.GetValue()
-                    
-                else:
-                    
-                    return
-                    
+                action = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
                 
             
         else:
@@ -2687,16 +2697,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'Do you want the extracted queries to be a new merged subscription, or many subscriptions with only one query?'
                 
-                with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        want_post_merge = dlg.GetValue()
-                        
-                    else:
-                        
-                        return
-                        
+                    want_post_merge = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             
@@ -2830,6 +2837,71 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def SetFileImportOptions( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        file_import_options = subscriptions[0].GetFileImportOptions()
+        show_downloader_options = True
+        allow_default_selection = True
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit file import options' ) as dlg:
+            
+            panel = ClientGUIImportOptions.EditFileImportOptionsPanel( dlg, file_import_options, show_downloader_options, allow_default_selection )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                file_import_options = panel.GetValue()
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetFileImportOptions( file_import_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
+    def SetNoteImportOptions( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        note_import_options = subscriptions[0].GetNoteImportOptions()
+        allow_default_selection = True
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit note import options' ) as dlg:
+            
+            panel = ClientGUIImportOptions.EditNoteImportOptionsPanel( dlg, note_import_options, allow_default_selection )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                note_import_options = panel.GetValue()
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetNoteImportOptions( note_import_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
     def SetTagImportOptions( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -2841,10 +2913,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = subscriptions[0].GetTagImportOptions()
         show_downloader_options = True
+        allow_default_selection = True
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection = True )
+            panel = ClientGUIImportOptions.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             

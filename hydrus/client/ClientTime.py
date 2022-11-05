@@ -1,33 +1,65 @@
+import datetime
+import time
 import typing
+
+try:
+    
+    from dateutil.relativedelta import relativedelta
+    
+    DATEUTIL_OK = True
+    
+except:
+    
+    DATEUTIL_OK = False
+    
 
 from hydrus.core import HydrusData
 
-def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: int ):
+def CalendarToTimestamp( dt: datetime.datetime ) -> int:
     
-    # assume anything too early is a meme and a timestamp parsing conversion error
-    if new_timestamp <= 86400 * 7:
+    try:
         
-        return False
+        # mktime is local calendar time to timestamp, so this is client specific
+        timestamp = int( time.mktime( dt.timetuple() ) )
         
-    
-    # only go backwards, in general
-    if new_timestamp >= existing_timestamp:
+    except:
         
-        return False
+        timestamp = HydrusData.GetNow()
         
     
-    return True
+    return timestamp
+    
+
+def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
+    
+    if DATEUTIL_OK:
+        
+        delta = relativedelta( months = month_delta, days = day_delta )
+        
+        return dt + delta
+        
+    else:
+        
+        total_days = ( 30 * month_delta ) + day_delta
+        
+        return dt + datetime.timedelta( days = total_days )
+        
+    
+
+def GetDateTime( year: int, month: int, day: int ) -> datetime.datetime:
+    
+    return datetime.datetime( year, month, day )
     
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:
     
-    if existing_timestamp is None:
+    if not TimestampIsSensible( existing_timestamp ):
         
-        return new_timestamp
+        existing_timestamp = None
         
     
-    if new_timestamp is None:
+    if not TimestampIsSensible( new_timestamp ):
         
-        return existing_timestamp
+        new_timestamp = None
         
     
     if ShouldUpdateDomainModifiedTime( existing_timestamp, new_timestamp ):
@@ -38,4 +70,41 @@ def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestam
         
         return existing_timestamp
         
+    
+
+def ShouldUpdateDomainModifiedTime( existing_timestamp: int, new_timestamp: typing.Optional[ int ] ) -> bool:
+    
+    if not TimestampIsSensible( new_timestamp ):
+        
+        return False
+        
+    
+    if not TimestampIsSensible( existing_timestamp ):
+        
+        return True
+        
+    
+    # only go backwards, in general
+    if new_timestamp >= existing_timestamp:
+        
+        return False
+        
+    
+    return True
+    
+
+def TimestampIsSensible( timestamp: typing.Optional[ int ] ) -> bool:
+    
+    if timestamp is None:
+        
+        return False
+        
+    
+    # assume anything too early is a meme and a timestamp parsing conversion error
+    if timestamp <= 86400 * 7:
+        
+        return False
+        
+    
+    return True
     

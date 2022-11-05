@@ -1,5 +1,5 @@
 ---
-title: duplicates
+title: Filtering Duplicates
 ---
 
 # duplicates { id="intro" }

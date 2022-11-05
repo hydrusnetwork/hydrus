@@ -1,5 +1,5 @@
 ---
-title: adding new downloaders
+title: Adding New Downloaders
 ---
 
 # adding new downloaders

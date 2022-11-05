@@ -97,7 +97,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        self.assertEqual( tags_manager.GetNamespaceSlice( ( 'character', ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'character:cibo' } ) )
+        self.assertEqual( tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'character', ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'character:cibo' } ) )
         
     
 class TestTagsManager( unittest.TestCase ):
@@ -196,31 +196,31 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_namespace_slice( self ):
         
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( [], ClientTags.TAG_DISPLAY_ACTUAL ), frozenset() )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'creator', 'series' ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, [], ClientTags.TAG_DISPLAY_ACTUAL ), frozenset() )
         
     
     def test_get_num_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._first_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._first_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 8 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 2 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 3 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 2 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._second_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._second_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 3 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._third_key, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = self._third_key, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 10 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagSearchContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 11 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), ClientTags.TAG_DISPLAY_STORAGE ), 10 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), ClientTags.TAG_DISPLAY_STORAGE ), 11 )
         
     
     def test_get_pending( self ):
@@ -521,7 +521,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 'samus*', 'samus*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:samus*' ) ] ] )
         
         #
         
@@ -546,7 +546,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s' ) ] ] )
         
         #
         
@@ -554,7 +554,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, False ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s', inclusive = False ) ] ] )
         
         #
         
@@ -576,7 +576,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s a*n', 's*s a*n*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n' ) ] ] )
         
         #
         
@@ -1839,7 +1839,13 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
-        self.assertEqual( p.ToString(), 'system:filetype is webm, gif' )
+        self.assertEqual( p.ToString(), 'system:filetype is gif, webm' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.GENERAL_AUDIO, HC.GENERAL_VIDEO ) )
+        
+        self.assertEqual( p.ToString(), 'system:filetype is audio, video' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
@@ -1849,7 +1855,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( None, '<', 2 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '<', 2 ) )
         
         self.assertEqual( p.ToString(), 'system:number of tags < 2' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1939,16 +1945,16 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
         
-        self.assertEqual( p.ToString(), 'system:height < 2,000 OR blue eyes OR character:samus aran' )
+        self.assertEqual( p.ToString(), 'blue eyes OR character:samus aran OR system:height < 2,000' )
         self.assertEqual( p.GetNamespace(), '' )
         
         or_texts_and_namespaces = []
         
-        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'system' ) )
-        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
         or_texts_and_namespaces.append( ( 'blue eyes', '' ) )
         or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
         or_texts_and_namespaces.append( ( 'character:samus aran', 'character' ) )
+        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
+        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'system' ) )
         
         
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), or_texts_and_namespaces )
@@ -1990,7 +1996,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:limit is 5,000', "system:limit is 5000" ),
             ( 'system:limit is 100', "system:limit = 100" ),
             ( 'system:filetype is jpeg', "system:filetype is jpeg" ),
-            ( 'system:filetype is jpeg, png, apng', "system:filetype =   image/jpg, image/png, apng" ),
+            ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
             ( 'system:sha256 hash is in 3 hashes', "system:hash = abcdef01 abcdef02 abcdef03" ),
             ( 'system:md5 hash is in 3 hashes', "system:hash = abcdef01 abcdef, abcdef04 md5" ),
             ( 'system:md5 hash is abcdef01', "system:hash = abcdef01 md5" ),
@@ -2016,6 +2022,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:import time: since 2011-06-04', "system:import time > 2011-06-04" ),
             ( 'system:import time: before 7 years 2 months ago', "system:import time > 7 years 2 months" ),
             ( 'system:import time: since 1 day ago', "system:import time < 1 day" ),
+            ( 'system:import time: around 1 day ago', "system:import time = 1 day" ),
             ( 'system:import time: since 1 month 1 day ago', "system:import time < 0 years 1 month 1 day 1 hour" ),
             ( 'system:import time: a month either side of 2011-01-03', " system:import time ~= 2011-1-3 " ),
             ( 'system:import time: a month either side of 1996-05-02', "system:import time ~= 1996-05-2" ),

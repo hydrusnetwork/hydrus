@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
@@ -84,11 +85,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
     data_bytearray = qt_image.bits()
     
-    if QP.qtpy.PYSIDE2:
+    if QtInit.WE_ARE_PYSIDE:
         
         data_bytes = bytes( data_bytearray )
         
-    elif QP.qtpy.PYQT5:
+    elif QtInit.WE_ARE_PYQT:
         
         data_bytes = data_bytearray.asstring( height * width * depth )
         
@@ -126,16 +127,19 @@ def DialogIsOpen():
     
     return False
     
+
 def DrawText( painter, x, y, text ):
     
-    ( boundingRect, text ) = GetTextSizeFromPainter( painter, text )
+    ( size, text ) = GetTextSizeFromPainter( painter, text )
     
-    painter.drawText( QC.QRectF( x, y, boundingRect.width(), boundingRect.height() ), text )
+    painter.drawText( QC.QRectF( x, y, size.width(), size.height() ), text )
+    
 
 def EscapeMnemonics( s: str ):
     
     return s.replace( "&", "&&" )
     
+
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
     new_hue = colour.hsvHueF()
@@ -162,11 +166,11 @@ def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
 def GetDisplayPosition( window ):
     
-    return QW.QApplication.desktop().availableGeometry( window ).topLeft()
+    return window.screen().availableGeometry().topLeft()
     
 def GetDisplaySize( window ):
     
-    return QW.QApplication.desktop().availableGeometry( window ).size()
+    return window.screen().availableGeometry().size()
     
 def GetLighterDarkerColour( colour, intensity = 3 ):
     
@@ -248,7 +252,12 @@ def GetTLWParents( widget ):
     
     return parent_tlws
     
-def IsQtAncestor( child, ancestor, through_tlws = False ):
+def IsQtAncestor( child: QW.QWidget, ancestor: QW.QWidget, through_tlws = False ):
+    
+    if child is None:
+        
+        return False
+        
     
     if child == ancestor:
         

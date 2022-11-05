@@ -3,15 +3,10 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
-from hydrus.client.db import ClientDBFilesMetadataBasic
-from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
-from hydrus.client.db import ClientDBSimilarFiles
-from hydrus.client.media import ClientMediaResultCache
 
 class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     

@@ -424,6 +424,19 @@ class TestNoteImportOptions( unittest.TestCase ):
         
         #
         
+        names_and_notes = [ ( 'garbage', 'lol randumb' ), ( 'artist', 'I drew this in two days' ) ]
+        
+        note_import_options.SetNameWhitelist( [ 'artist' ] )
+        
+        result = note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes )
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'artist', 'I drew this in two days' ) ) ] }
+        
+        self.assertEqual( result, expected_result )
+        
+        note_import_options.SetNameWhitelist( [] )
+        
+        #
+        
         extending_names_and_notes = [ ( 'notes', 'and here is a note that is more interesting' ) ]
         
         note_import_options.SetExtendExistingNoteIfPossible( True )
@@ -486,7 +499,8 @@ class TestNoteImportOptions( unittest.TestCase ):
         
         renames = [ ( 'a', 'aaa' ), ( 'wew', 'wew note' ) ]
         
-        note_import_options.SetNameOverrides( 'override', { 'wew' : 'lad' } )
+        note_import_options.SetAllNameOverride( 'override' )
+        note_import_options.SetNamesToNameOverrides( { 'wew' : 'lad' } )
         
         result = note_import_options.GetServiceKeysToContentUpdates( media_result, renames )
         expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'override', 'aaa' ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'lad', 'wew note' ) ) ] }

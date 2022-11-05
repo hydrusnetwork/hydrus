@@ -13,7 +13,7 @@ if [ -f "/opt/hydrus/static/build_files/docker/client/patch.patch" ]; then
 fi
 
 if [ -f "/opt/hydrus/static/build_files/docker/client/requests.patch" ]; then
-  cd /usr/lib/python3.9/site-packages/requests
+  cd /usr/lib/python3.10/site-packages/requests
     echo "Patching Requests"
     patch -f -p2 -i /opt/hydrus/static/build_files/docker/client/requests.patch
   cd /opt/hydrus/

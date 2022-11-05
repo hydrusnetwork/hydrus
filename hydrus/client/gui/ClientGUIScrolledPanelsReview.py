@@ -6,6 +6,8 @@ import threading
 import time
 import traceback
 
+from PIL import ExifTags
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -40,17 +42,19 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIImport
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIImport
+from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -696,28 +700,25 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         yes_tuples.append( ( 'run for 1 hour', 3600 ) )
         yes_tuples.append( ( 'run indefinitely', None ) )
         
-        with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                value = dlg.GetValue()
-                
-                if value is None:
-                    
-                    stop_time = None
-                    
-                else:
-                    
-                    stop_time = HydrusData.GetNow() + value
-                    
-                
-                job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
-                
-            else:
-                
-                return
-                
+            result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if result is None:
+            
+            stop_time = None
+            
+        else:
+            
+            stop_time = HydrusData.GetNow() + result
+            
+        
+        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
         
         HG.client_controller.pub( 'do_file_storage_rebalance', job_key )
         
@@ -1052,6 +1053,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_file_filter = ClientGUICommon.BetterChoice( self._migration_panel )
         
         source_file_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.IPFS, ) ) )
+        source_file_service_keys.append( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         source_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         source_file_service_keys.append( CC.COMBINED_FILE_SERVICE_KEY )
         
@@ -2289,6 +2293,115 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         self._ImportPaths( paths )
         
     
+
+class ReviewFileEXIF( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, exif_dict ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'Double-click a row to copy its value to clipboard.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, 24, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
+        
+        datas = []
+        
+        for ( exif_id, value ) in exif_dict.items():
+            
+            if isinstance( value, dict ):
+                
+                datas.extend( value.items() )
+                
+            else:
+                
+                datas.append( ( exif_id, value ) )
+                
+            
+        
+        self._exif_listctrl.AddDatas( datas )
+        
+        QP.AddToLayout( vbox, self._exif_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _ConvertEXIFToListCtrlTuples( self, exif_tuple ):
+    
+        ( exif_id, raw_value ) = exif_tuple
+        
+        if exif_id in ExifTags.TAGS:
+            
+            label = ExifTags.TAGS[ exif_id ]
+            pretty_label = label
+            
+        elif exif_id in ExifTags.GPSTAGS:
+            
+            label = ExifTags.GPSTAGS[ exif_id ]
+            pretty_label = label
+            
+        else:
+            
+            label = 'zzz'
+            pretty_label = 'Unknown'
+            
+        
+        pretty_id = str( exif_id )
+        
+        if isinstance( raw_value, bytes ):
+            
+            value = raw_value.hex()
+            pretty_value = '{}: {}'.format( HydrusData.ToHumanBytes( len( raw_value ) ), value )
+            
+        else:
+            
+            value = str( raw_value )
+            
+            if HydrusText.NULL_CHARACTER in value:
+                
+                value = value.replace( HydrusText.NULL_CHARACTER, '[null]' )
+                
+            
+            pretty_value = value
+            
+        
+        display_tuple = ( pretty_id, pretty_label, pretty_value )
+        sort_tuple = ( exif_id, label, value )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _CopyRow( self ):
+        
+        selected_exif_tuples = self._exif_listctrl.GetData( only_selected = True )
+        
+        if len( selected_exif_tuples ) == 0:
+            
+            return
+            
+        
+        ( first_row_id, first_row_value ) = selected_exif_tuples[0]
+        
+        if isinstance( first_row_value, bytes ):
+            
+            copy_text = first_row_value.hex()
+            
+        else:
+            
+            copy_text = str( first_row_value )
+            
+        
+        HG.client_controller.pub( 'clipboard', 'text', copy_text )
+        
+    
 class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, file_history ):
@@ -2759,7 +2872,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
             
         
-        if num_supertotal == 0:
+        if num_total == 0:
             
             nothing_label = 'You have yet to board the ride.'
             
@@ -2769,6 +2882,48 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
+            supertotal_average_filesize = size_supertotal // num_supertotal
+            
+            current_num_percent = num_total / num_supertotal
+            current_size_percent = size_total / size_supertotal
+            current_average_filesize = size_total // num_total
+            
+            inbox_num_percent = num_inbox / num_total
+            inbox_size_percent = size_inbox / size_total
+            
+            if num_inbox > 0:
+                
+                inbox_average_filesize = size_inbox // num_inbox
+                
+            else:
+                
+                inbox_average_filesize = 0
+                
+            
+            archive_num_percent = num_archive / num_total
+            archive_size_percent = size_archive / size_total
+            
+            if num_archive > 0:
+                
+                archive_average_filesize = size_archive // num_archive
+                
+            else:
+                
+                archive_average_filesize = 0
+                
+            
+            deleted_num_percent = num_deleted / num_supertotal
+            deleted_size_percent = size_deleted / size_supertotal
+            
+            if num_deleted > 0:
+                
+                deleted_average_filesize = size_deleted // num_deleted
+                
+            else:
+                
+                deleted_average_filesize = 0
+                
+            
             notebook = ClientGUICommon.BetterNotebook( self )
             
             #
@@ -2777,40 +2932,76 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
             panel_vbox = QP.VBoxLayout()
             
-            average_filesize = size_total // num_total
+            # spacing to make the weird unicode characters join up neater
+            text_table_layout = QP.GridLayout( cols = 6, spacing = 0 )
             
-            summary_label = 'Total: {} files, totalling {}, averaging {}'.format( HydrusData.ToHumanInt( num_total ), HydrusData.ToHumanBytes( size_total ), HydrusData.ToHumanBytes( average_filesize ) )
+            text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
             
-            summary_st = ClientGUICommon.BetterStaticText( panel, label = summary_label )
+            text_table_layout.setColumnStretch( 0, 1 )
             
-            QP.AddToLayout( panel_vbox, summary_st, CC.FLAGS_CENTER )
+            #
             
-            num_archive_percent = num_archive / num_total
-            size_archive_percent = size_archive / size_total
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Files' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Size' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Average' ), CC.FLAGS_CENTER )
             
-            num_inbox_percent = num_inbox / num_total
-            size_inbox_percent = size_inbox / size_total
+            #
             
-            num_deleted_percent = num_deleted / num_supertotal
-            size_deleted_percent = size_deleted / size_supertotal
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Total Ever Imported:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_supertotal ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( supertotal_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            archive_label = 'Archive: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_archive ), ClientData.ConvertZoomToPercentage( num_archive_percent ), HydrusData.ToHumanBytes( size_archive ), ClientData.ConvertZoomToPercentage( size_archive_percent ) )
+            #
             
-            archive_st = ClientGUICommon.BetterStaticText( panel, label = archive_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u251cAll My Files:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_size_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            inbox_label = 'Inbox: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_inbox ), ClientData.ConvertZoomToPercentage( num_inbox_percent ), HydrusData.ToHumanBytes( size_inbox ), ClientData.ConvertZoomToPercentage( size_inbox_percent ) )
+            #
             
-            inbox_st = ClientGUICommon.BetterStaticText( panel, label = inbox_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_size_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            deleted_label = 'Deleted: {} files ({}), totalling {} ({})'.format( HydrusData.ToHumanInt( num_deleted ), ClientData.ConvertZoomToPercentage( num_deleted_percent ), HydrusData.ToHumanBytes( size_deleted ), ClientData.ConvertZoomToPercentage( size_deleted_percent ) )
+            #
             
-            deleted_st = ClientGUICommon.BetterStaticText( panel, label = deleted_label )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
             
-            QP.AddToLayout( panel_vbox, archive_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, inbox_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, deleted_st, CC.FLAGS_CENTER )
+            #
+            
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
+            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+            
+            #
+            
+            QP.AddToLayout( panel_vbox, text_table_layout, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
             
             if 'earliest_import_time' in boned_stats:
+                
+                panel_vbox.addSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
                 
                 eit = boned_stats[ 'earliest_import_time' ]
                 
@@ -2917,10 +3108,15 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.StopProgress )
         self._progress_cancel.setEnabled( False )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        show_downloader_options = False
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
+        show_downloader_options = False
+        allow_default_selection = True
+        
+        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        
+        self._import_options_button.SetFileImportOptions( file_import_options )
         
         menu_items = []
         
@@ -2940,7 +3136,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._add_button = ClientGUICommon.BetterButton( self, 'import now', self._DoImport )
         self._add_button.setObjectName( 'HydrusAccept' )
         
-        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags before the import >>', self._AddTags )
+        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags/urls with the import >>', self._AddTags )
         self._tag_button.setObjectName( 'HydrusAccept' )
         
         self._tag_button.setToolTip( 'You can add specific tags to these files, import from sidecar files, or generate them based on filename. Don\'t be afraid to experiment!' )
@@ -2958,7 +3154,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         import_options_buttons = QP.HBoxLayout()
         
-        QP.AddToLayout( import_options_buttons, self._file_import_options, CC.FLAGS_CENTER )
+        QP.AddToLayout( import_options_buttons, self._import_options_button, CC.FLAGS_CENTER )
         QP.AddToLayout( import_options_buttons, self._cog_button, CC.FLAGS_CENTER )
         
         buttons = QP.HBoxLayout()
@@ -3017,11 +3213,15 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddTags( self ):
         
+        # TODO: convert this class to have a filenametaggingoptions and the structure for 'tags for these files', which is separate
+        # then make this button not start the import. just edit the options and routers and return
+        # if needed, we convert to paths_to_additional_tags on ultimate ok, or we convert the hdd import to just hold service_keys_to_filenametaggingoptions, like an import folder does
+        
         paths = self._paths_list.GetData()
         
         if len( paths ) > 0:
             
-            file_import_options = self._file_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
                 
@@ -3031,11 +3231,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    paths_to_additional_service_keys_to_tags = panel.GetValue()
+                    ( metadata_routers, paths_to_additional_service_keys_to_tags ) = panel.GetValue()
                     
                     delete_after_success = self._delete_after_success.isChecked()
                     
-                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
                     
                     self._OKParent()
                     
@@ -3063,13 +3263,14 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( paths ) > 0:
             
-            file_import_options = self._file_import_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
             
+            metadata_routers = []
             paths_to_additional_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
             
             delete_after_success = self._delete_after_success.isChecked()
             
-            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_additional_service_keys_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
             
         
         self._OKParent()
@@ -3628,11 +3829,11 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The content of the database is copied to a new file, which then has tightly packed pages and no empty 'free' pages.
+        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The entire database is copied contiguously to a new file, which then has tightly packed pages and no empty 'free' pages.
 
 Because the new database is tightly packed, it will generally be smaller than the original file. This is currently the only way to truncate a hydrus database file.
 
-Vacuuming is an expensive operation. It requires lots of free space on your drive(s), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
+Vacuuming is an expensive operation. It requires lots of free space on your drive(s) (including a full copy in your temp directory!), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
         
         st = ClientGUICommon.BetterStaticText( self, label = info_message )
         

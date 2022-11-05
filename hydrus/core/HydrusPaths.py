@@ -1,5 +1,7 @@
 import collections
 import os
+import typing
+
 import psutil
 import re
 import send2trash
@@ -223,45 +225,34 @@ def DirectoryIsWriteable( path ):
             
         
     
-    return os.access( path, os.W_OK | os.X_OK )
-    
-    # old crazy method:
-    '''
-    # testing access bits on directories to see if we can make new files is multiplatform hellmode
-    # so, just try it and see what happens
-    
-    temp_path = os.path.join( path, 'hydrus_temp_test_top_jej' )
-    
-    if os.path.exists( temp_path ):
+    if not os.access( path, os.W_OK | os.X_OK ):
         
-        try:
-            
-            os.unlink( temp_path )
-            
-        except:
-            
-            return False
-            
+        return False
         
+    
+    # we'll actually do a file, since Program Files passes the above test lmaoooo
     
     try:
         
-        # using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
+        # also, using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
         # so, just do it manually!
         
-        f = open( temp_path, 'wb' )
+        test_path = os.path.join( path, 'hydrus_permission_test' )
         
-        f.close()
+        with open( test_path, 'wb' ) as f:
+            
+            f.write( b'If this file still exists, this directory can be written to but not deleted from.' )
+            
         
-        os.unlink( temp_path )
-        
-        return True
+        os.unlink( test_path )
         
     except:
         
         return False
         
-    '''
+    
+    return True
+    
 def FileisWriteable( path: str ):
     
     return os.access( path, os.W_OK )
@@ -301,7 +292,7 @@ def GetDefaultLaunchPath():
         return 'open "%path%"'
         
     
-def GetDevice( path ):
+def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
     
     path = path.lower()
     
@@ -322,7 +313,7 @@ def GetDevice( path ):
                 
                 if path.startswith( partition_info.mountpoint.lower() ):
                     
-                    return partition_info.device
+                    return partition_info
                     
                 
             
@@ -334,11 +325,46 @@ def GetDevice( path ):
     
     return None
     
+
+def GetDevice( path ) -> typing.Optional[ str ]:
+    
+    partition_info = GetPartitionInfo( path )
+    
+    if partition_info is None:
+        
+        return None
+        
+    else:
+        
+        return partition_info.device
+        
+    
+
+def GetFileSystemType( path ):
+    
+    partition_info = GetPartitionInfo( path )
+    
+    if partition_info is None:
+        
+        return None
+        
+    else:
+        
+        return partition_info.fstype
+        
+    
+
 def GetFreeSpace( path ):
     
     disk_usage = psutil.disk_usage( path )
     
     return disk_usage.free
+    
+def GetTotalSpace( path ):
+    
+    disk_usage = psutil.disk_usage( path )
+    
+    return disk_usage.total
     
 def LaunchDirectory( path ):
     
@@ -466,6 +492,20 @@ def LaunchFile( path, launch_path = None ):
     thread.start()
     
 def MakeSureDirectoryExists( path ):
+    
+    it_exists_already = os.path.exists( path )
+    
+    if it_exists_already:
+        
+        if os.path.isdir( path ):
+            
+            return
+            
+        else:
+            
+            raise Exception( 'Sorry, the desired directory "{}" already exists as a normal file!'.format( path ) )
+            
+        
     
     os.makedirs( path, exist_ok = True )
     
@@ -806,20 +846,42 @@ def RecyclePath( path ):
             
         
     
-def SanitizeFilename( filename ):
+def SanitizeFilename( filename, force_ntfs = False ) -> str:
     
-    if HC.PLATFORM_WINDOWS:
+    if HC.PLATFORM_WINDOWS or force_ntfs:
         
         # \, /, :, *, ?, ", <, >, |
-        filename = re.sub( r'\\|/|:|\*|\?|"|<|>|\|', '_', filename )
+        bad_characters = r'[\\/:*?"<>|]'
         
     else:
         
-        filename = re.sub( '/', '_', filename )
+        bad_characters = '/'
         
     
-    return filename
+    return re.sub( bad_characters, '_', filename )
     
+
+def SanitizePathForExport( directory_path, directories_and_filename ):
+    
+    # this does not figure out the situation where the suffix directories cross a mount point to a new file system, but at that point it is user's job to fix
+    
+    components = directories_and_filename.split( os.path.sep )
+    
+    filename = components[-1]
+    
+    suffix_directories = components[:-1]
+    
+    force_ntfs = GetFileSystemType( directory_path ).lower() in ( 'ntfs', 'exfat' )
+    
+    suffix_directories = [ SanitizeFilename( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
+    filename = SanitizeFilename( filename, force_ntfs = force_ntfs )
+    
+    sanitized_components = suffix_directories
+    sanitized_components.append( filename )
+    
+    return os.path.join( *sanitized_components )
+    
+
 def TryToGiveFileNicePermissionBits( path ):
     
     if not os.path.exists( path ):

@@ -1,8 +1,11 @@
+import typing
+
 import numpy
 import os
 import re
 import struct
 import subprocess
+from typing import Optional
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
@@ -43,7 +46,7 @@ def CheckFFMPEGError( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'FFMPEG could not parse.' )
         
     
-def GetAPNGChunks( file_header_bytes: bytes ):
+def GetAPNGChunks( file_header_bytes: bytes ) ->list:
     
     # https://wiki.mozilla.org/APNG_Specification
     # a chunk is:
@@ -72,7 +75,7 @@ def GetAPNGChunks( file_header_bytes: bytes ):
     
     return chunks
     
-def GetAPNGACTLChunkData( file_header_bytes: bytes ):
+def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> Optional[bytes]:
     
     # the acTL chunk can be in different places, but it has to be near the top
     # although it is almost always in fixed position (I think byte 29), we have seen both pHYs and sRGB chunks appear before it
@@ -92,7 +95,7 @@ def GetAPNGACTLChunkData( file_header_bytes: bytes ):
         return None
         
     
-def GetAPNGDuration( apng_bytes: bytes ):
+def GetAPNGDuration( apng_bytes: bytes ) -> float:
     
     frame_control_chunk_name = b'fcTL'
     
@@ -100,20 +103,23 @@ def GetAPNGDuration( apng_bytes: bytes ):
     
     total_duration = 0
     
+    CRAZY_FRAME_TIME = 0.1
+    MIN_FRAME_TIME = 0.001
+    
     for ( chunk_name, chunk_data ) in chunks:
         
         if chunk_name == frame_control_chunk_name and len( chunk_data ) >= 24:
-    
+            
             ( delay_numerator, ) = struct.unpack( '>H', chunk_data[20:22] )
             ( delay_denominator, ) = struct.unpack( '>H', chunk_data[22:24] )
             
             if delay_denominator == 0:
                 
-                duration = 0.1
+                duration = CRAZY_FRAME_TIME
                 
             else:
                 
-                duration = delay_numerator / delay_denominator
+                duration = max( delay_numerator / delay_denominator, MIN_FRAME_TIME )
                 
             
             total_duration += duration
@@ -122,7 +128,7 @@ def GetAPNGDuration( apng_bytes: bytes ):
     
     return total_duration
     
-def GetAPNGNumFrames( apng_actl_bytes: bytes ):
+def GetAPNGNumFrames( apng_actl_bytes: bytes ) -> int:
     
     ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ : 4 ] )
     
@@ -330,7 +336,14 @@ def GetFFMPEGAPNGProperties( path ):
     
     resolution = ParseFFMPEGVideoResolution( lines, png_ok = True )
     
+    duration_in_ms_float = duration * 1000
+    
     duration_in_ms = int( duration * 1000 )
+    
+    if duration_in_ms == 0 and duration_in_ms_float > 0:
+        
+        duration_in_ms = 1
+        
     
     has_audio = False
     
@@ -562,10 +575,18 @@ def GetMime( path ):
             return HC.AUDIO_WMA
             
         
+    elif mime_text == 'wav':
+        
+        return HC.AUDIO_WAVE
+        
+    elif mime_text == 'wv':
+        
+        return HC.AUDIO_WAVPACK
+        
     
     return HC.APPLICATION_UNKNOWN
     
-def HasVideoStream( path ):
+def HasVideoStream( path ) -> bool:
     
     lines = GetFFMPEGInfoLines( path )
     
@@ -823,7 +844,7 @@ def ParseFFMPEGFPSPossibleResults( video_line ):
     
     return ( possible_results, confident )
     
-def ParseFFMPEGHasVideo( lines ):
+def ParseFFMPEGHasVideo( lines ) -> bool:
     
     try:
         
@@ -893,7 +914,7 @@ def ParseFFMPEGMimeText( lines ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error reading file type!' )
         
     
-def ParseFFMPEGNumFramesManually( lines ):
+def ParseFFMPEGNumFramesManually( lines ) -> int:
     
     frame_lines = [ line for line in lines if line.startswith( 'frame=' ) ]
     
@@ -950,7 +971,7 @@ def ParseFFMPEGVideoFormat( lines ):
     
     return ( True, video_format )
     
-def ParseFFMPEGVideoLine( lines, png_ok = False ):
+def ParseFFMPEGVideoLine( lines, png_ok = False ) -> str:
     
     if png_ok:
         
@@ -974,7 +995,7 @@ def ParseFFMPEGVideoLine( lines, png_ok = False ):
     
     return line
     
-def ParseFFMPEGVideoResolution( lines, png_ok = False ):
+def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> typing.Tuple[ int, int ]:
     
     try:
         
@@ -1023,7 +1044,7 @@ def ParseFFMPEGVideoResolution( lines, png_ok = False ):
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Error parsing resolution!' )
         
     
-def VideoHasAudio( path, info_lines ):
+def VideoHasAudio( path, info_lines ) -> bool:
     
     ( audio_found, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( info_lines )
     
@@ -1127,7 +1148,7 @@ class VideoRendererFFMPEG( object ):
         self.initialize()
         
     
-    def close( self ):
+    def close( self ) -> None:
         
         if self.process is not None:
             
@@ -1224,7 +1245,7 @@ class VideoRendererFFMPEG( object ):
             
         
     
-    def skip_frames( self, n ):
+    def skip_frames( self, n ) -> None:
         
         n = int( n )
         
@@ -1300,7 +1321,7 @@ class VideoRendererFFMPEG( object ):
         return result
         
     
-    def set_position( self, pos ):
+    def set_position( self, pos ) -> None:
         
         rewind = pos < self.pos
         jump_a_long_way_ahead = pos > self.pos + 60
@@ -1315,7 +1336,7 @@ class VideoRendererFFMPEG( object ):
             
         
     
-    def Stop( self ):
+    def Stop( self ) -> None:
         
         self.close()
         

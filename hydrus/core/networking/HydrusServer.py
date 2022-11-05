@@ -23,7 +23,14 @@ class HydrusService( Site ):
         
         service_type = self._service.GetServiceType()
         
-        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
+        if service_type == HC.CLIENT_API_SERVICE:
+            
+            self._server_version_string = '{}/{} ({})'.format( HC.service_string_lookup[ service_type ], str( HC.CLIENT_API_VERSION ), str( HC.SOFTWARE_VERSION ) )
+            
+        else:
+            
+            self._server_version_string = '{}/{}'.format( HC.service_string_lookup[ service_type ], str( HC.NETWORK_VERSION ) )
+            
         
         root = self._InitRoot()
         
@@ -63,4 +70,3 @@ class HydrusService( Site ):
         request.setHeader( 'Hydrus-Server', self._server_version_string )
         
         return Site.getResourceFor( self, request )
-        

@@ -768,13 +768,13 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ShowDefaultRulesHelp( self ):
         
-        help_text = 'Network requests act in multiple contexts. Most use the \'global\' and \'web domain\' network contexts, but a hydrus server request, for instance, will add its own service-specific context, and a subscription will add both itself and its downloader.'
+        help_text = 'Network requests act in multiple contexts. Most use the \'global\' and \'web domain\' network contexts, but a downloader page or subscription will also add a special label for itself. Each context can have its own set of bandwidth rules.'
         help_text += os.linesep * 2
-        help_text += 'If a network context does not have some specific rules set up, it will use its respective default, which may or may not have rules of its own. If you want to set general policy, like "Never download more than 1GB/day from any individual website," or "Limit the entire client to 2MB/s," do it through \'global\' and these defaults.'
+        help_text += 'If a network context does not have some specific rules set up, it will fall back to its respective default. It is possible for a default to not have any rules. If you want to set general policy, like "Never download more than 1GB/day from any individual website," or "Limit the entire client to 2MB/s," do it through \'global\' and the defaults.'
         help_text += os.linesep * 2
-        help_text += 'All contexts\' rules are consulted and have to pass before a request can do work. If you set a 200KB/s limit on a website domain and a 50KB/s limit on global, your download will only ever run at 50KB/s. To make sense, network contexts with broader scope should have more lenient rules.'
+        help_text += 'All contexts\' rules are consulted and have to pass before a request can do work. If you set a 2MB/s limit on a website domain and a 64KB/s limit on global, your download will only ever run at 64KB/s (and it fact it will probably run much slower, since everything shares the global context!). To make sense, network contexts with broader scope should have more lenient rules.'
         help_text += os.linesep * 2
-        help_text += 'There are two special \'instance\' contexts, for downloaders and threads. These represent individual queries, either a single gallery search or a single watched thread. It is useful to set rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
+        help_text += 'There are two special ephemeral \'instance\' contexts, for downloaders and thread watchers. These represent individual queries, either a single gallery search or a single watched thread. It can be useful to set default rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
         help_text += os.linesep * 2
         help_text += 'Please note that this system bases its calendar dates on UTC/GMT time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
         help_text += os.linesep * 2
@@ -1131,7 +1131,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         position = network_engine_status
         url = job.GetURL()
         ( status, current_speed, num_bytes_read, num_bytes_to_read ) = job.GetStatus()
-        progress = ( num_bytes_read, num_bytes_to_read )
+        progress = ( num_bytes_read, num_bytes_to_read if num_bytes_to_read is not None else 0 )
         
         pretty_position = ClientNetworking.job_status_str_lookup[ position ]
         pretty_url = url

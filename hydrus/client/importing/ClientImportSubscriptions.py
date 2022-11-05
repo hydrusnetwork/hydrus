@@ -19,6 +19,7 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingGUG
@@ -27,7 +28,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
     SERIALISABLE_NAME = 'Subscription'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, name, gug_key_and_name = None ):
         
@@ -61,8 +62,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._paused = False
         
-        self._file_import_options = new_options.GetDefaultFileImportOptions( 'quiet' )
+        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options.SetIsDefault( True )
+        
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        
+        self._note_import_options = NoteImportOptions.NoteImportOptions()
+        self._note_import_options.SetIsDefault( True )
         
         self._no_work_until = 0
         self._no_work_until_reason = ''
@@ -111,6 +117,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def _DelayWork( self, time_delta, reason ):
+        
+        if len( reason ) > 0:
+            
+            reason = reason.splitlines()[0]
+            
         
         self._no_work_until = HydrusData.GetNow() + time_delta
         self._no_work_until_reason = reason
@@ -165,6 +176,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_checker_options = self._checker_options.GetSerialisableTuple()
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
+        serialisable_note_import_options = self._note_import_options.GetSerialisableTuple()
         
         return (
             serialisable_gug_key_and_name,
@@ -176,6 +188,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             self._paused,
             serialisable_file_import_options,
             serialisable_tag_import_options,
+            serialisable_note_import_options,
             self._no_work_until,
             self._no_work_until_reason,
             self._show_a_popup_while_working,
@@ -198,6 +211,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             self._paused,
             serialisable_file_import_options,
             serialisable_tag_import_options,
+            serialisable_note_import_options,
             self._no_work_until,
             self._no_work_until_reason,
             self._show_a_popup_while_working,
@@ -214,6 +228,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
         
     
     def _NoDelays( self ):
@@ -227,7 +242,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         message += os.linesep
         message += 'Either a user uploaded a lot of files to that query in a short period, in which case there is a gap in your subscription you may wish to fill, or the site has just changed its URL format, in which case you may see several of these messages for this site over the coming weeks, and you should ignore them.'
         
-        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, self._file_import_options.Duplicate(), self._tag_import_options.Duplicate(), file_limit * 5 )
+        call = HydrusData.Call( HG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, self._file_import_options.Duplicate(), self._tag_import_options.Duplicate(), self._note_import_options, file_limit * 5 )
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
@@ -407,7 +422,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             message += os.linesep * 2
                             message += login_reason
                             message += os.linesep * 2
-                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
                             
@@ -789,6 +804,55 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            (
+                serialisable_gug_key_and_name,
+                serialisable_query_headers,
+                serialisable_checker_options,
+                initial_file_limit,
+                periodic_file_limit,
+                this_is_a_random_sample_sub,
+                paused,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                no_work_until,
+                no_work_until_reason,
+                show_a_popup_while_working,
+                publish_files_to_popup_button,
+                publish_files_to_page,
+                publish_label_override,
+                merge_query_publish_events
+            ) = old_serialisable_info
+            
+            note_import_options = NoteImportOptions.NoteImportOptions()
+            note_import_options.SetIsDefault( True )
+            
+            serialisable_note_import_options = note_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = (
+                serialisable_gug_key_and_name,
+                serialisable_query_headers,
+                serialisable_checker_options,
+                initial_file_limit,
+                periodic_file_limit,
+                this_is_a_random_sample_sub,
+                paused,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                serialisable_note_import_options,
+                no_work_until,
+                no_work_until_reason,
+                show_a_popup_while_working,
+                publish_files_to_popup_button,
+                publish_files_to_page,
+                publish_label_override,
+                merge_query_publish_events
+            )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def _WorkOnQueriesFiles( self, job_key ):
         
@@ -968,7 +1032,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             message += os.linesep * 2
                             message += login_reason
                             message += os.linesep * 2
-                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                            message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
                             
@@ -1006,7 +1070,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
                         
                     
-                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
+                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET, self._tag_import_options, self._note_import_options )
                     
                     query_tag_import_options = query_header.GetTagImportOptions()
                     
@@ -1029,7 +1093,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
-                    if file_seed.ShouldPresent( self._file_import_options.GetPresentationImportOptions() ):
+                    real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                    
+                    if file_seed.ShouldPresent( real_presentation_import_options ):
                         
                         hash = file_seed.GetHash()
                         
@@ -1267,6 +1333,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return self._checker_options
         
     
+    def GetFileImportOptions( self ):
+        
+        return self._file_import_options
+        
+    
     def GetGUGKeyAndName( self ):
         
         return self._gug_key_and_name
@@ -1295,6 +1366,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         return ( mergeable, unmergeable )
+        
+    
+    def GetNoteImportOptions( self ):
+        
+        return self._note_import_options
         
     
     def GetPresentationOptions( self ):
@@ -1488,6 +1564,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def SetFileImportOptions( self, file_import_options ):
+        
+        self._file_import_options = file_import_options.Duplicate()
+        
+    
     def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ):
         
         self._show_a_popup_while_working = show_a_popup_while_working
@@ -1500,6 +1581,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def SetQueryHeaders( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         self._query_headers = list( query_headers )
+        
+    
+    def SetNoteImportOptions( self, note_import_options ):
+        
+        self._note_import_options = note_import_options.Duplicate()
         
     
     def SetTagImportOptions( self, tag_import_options ):
@@ -1582,7 +1668,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     self._SyncQueries( job_key )
                     
                 
-                self._file_import_options.CheckReadyToImport()
+                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
+                
+                real_file_import_options.CheckReadyToImport()
                 
                 self._WorkOnQueriesFiles( job_key )
                 

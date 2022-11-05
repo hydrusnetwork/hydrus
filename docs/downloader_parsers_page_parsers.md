@@ -1,3 +1,7 @@
+---
+title: Page Parsers
+---
+
 # Page Parsers
 
 We can now produce individual rows of rich metadata. To arrange them all into a useful structure, we will use Page Parsers.

@@ -126,7 +126,7 @@ class HydrusController( object ):
             
         
     
-    def _GetPubsubValidCallable( self ):
+    def _GetPubsubValidCallable( self ) -> bool:
         
         return lambda o: True
         
@@ -207,7 +207,7 @@ class HydrusController( object ):
         pass
         
     
-    def _ShowJustWokeToUser( self ):
+    def _ShowJustWokeToUser( self ) -> None:
         
         HydrusData.Print( 'Just woke from sleep.' )
         
@@ -243,7 +243,7 @@ class HydrusController( object ):
         return result
         
     
-    def pub( self, topic, *args, **kwargs ):
+    def pub( self, topic, *args, **kwargs ) -> None:
         
         if HG.model_shutdown:
             
@@ -255,17 +255,17 @@ class HydrusController( object ):
             
         
     
-    def pubimmediate( self, topic, *args, **kwargs ):
+    def pubimmediate( self, topic, *args, **kwargs ) -> None:
         
         self._pubsub.pubimmediate( topic, *args, **kwargs )
         
     
-    def sub( self, object, method_name, topic ):
+    def sub( self, object, method_name, topic ) -> None:
         
         self._pubsub.sub( object, method_name, topic )
         
     
-    def AcquireThreadSlot( self, thread_type ):
+    def AcquireThreadSlot( self, thread_type ) -> bool:
         
         with self._thread_slot_lock:
             
@@ -289,7 +289,7 @@ class HydrusController( object ):
             
         
     
-    def CallLater( self, initial_delay, func, *args, **kwargs ):
+    def CallLater( self, initial_delay, func, *args, **kwargs ) -> HydrusThreading.SingleJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         
@@ -315,7 +315,7 @@ class HydrusController( object ):
         return job
         
     
-    def CallToThread( self, callable, *args, **kwargs ):
+    def CallToThread( self, callable, *args, **kwargs ) -> None:
         
         if HG.callto_report_mode:
             
@@ -339,7 +339,7 @@ class HydrusController( object ):
         call_to_thread.put( callable, *args, **kwargs )
         
     
-    def CallToThreadLongRunning( self, callable, *args, **kwargs ):
+    def CallToThreadLongRunning( self, callable, *args, **kwargs ) -> None:
         
         if HG.callto_report_mode:
             
@@ -363,7 +363,7 @@ class HydrusController( object ):
         call_to_thread.put( callable, *args, **kwargs )
         
     
-    def CleanRunningFile( self ):
+    def CleanRunningFile( self ) -> None:
         
         if self._i_own_running_file:
             
@@ -371,22 +371,22 @@ class HydrusController( object ):
             
         
     
-    def ClearCaches( self ):
+    def ClearCaches( self ) -> None:
         
-        for cache in list(self._caches.values()): cache.Clear()
+        for cache in self._caches.values(): cache.Clear()
         
     
-    def CurrentlyIdle( self ):
+    def CurrentlyIdle( self ) -> bool:
         
         return True
         
     
-    def CurrentlyPubSubbing( self ):
+    def CurrentlyPubSubbing( self ) -> bool:
         
         return self._pubsub.WorkToDo() or self._pubsub.DoingWork()
         
     
-    def DBCurrentlyDoingJob( self ):
+    def DBCurrentlyDoingJob( self ) -> bool:
         
         if self.db is None:
             
@@ -500,7 +500,7 @@ class HydrusController( object ):
         return threads
         
     
-    def GetTimestamp( self, name: str ) -> str:
+    def GetTimestamp( self, name: str ) -> int:
         
         with self._timestamps_lock:
             
@@ -508,12 +508,12 @@ class HydrusController( object ):
             
         
     
-    def GoodTimeToStartBackgroundWork( self ):
+    def GoodTimeToStartBackgroundWork( self ) -> bool:
         
         return self.CurrentlyIdle() and not ( self.JustWokeFromSleep() or self.SystemBusy() )
         
     
-    def GoodTimeToStartForegroundWork( self ):
+    def GoodTimeToStartForegroundWork( self ) -> bool:
         
         return not self.JustWokeFromSleep()
         
@@ -525,7 +525,7 @@ class HydrusController( object ):
         return self._just_woke_from_sleep
         
     
-    def InitModel( self ):
+    def InitModel( self ) -> None:
         
         try:
             
@@ -718,17 +718,17 @@ class HydrusController( object ):
         pass
         
     
-    def ResetIdleTimer( self ):
+    def ResetIdleTimer( self ) -> None:
         
         self.TouchTimestamp( 'last_user_action' )
         
     
-    def SetDoingFastExit( self, value: bool ):
+    def SetDoingFastExit( self, value: bool ) -> None:
         
         self._doing_fast_exit = value
         
     
-    def SetTimestamp( self, name: str, value: int ):
+    def SetTimestamp( self, name: str, value: int ) -> None:
         
         with self._timestamps_lock:
             
@@ -736,7 +736,7 @@ class HydrusController( object ):
             
         
     
-    def ShouldStopThisWork( self, maintenance_mode, stop_time = None ):
+    def ShouldStopThisWork( self, maintenance_mode, stop_time = None ) -> bool:
         
         if maintenance_mode == HC.MAINTENANCE_IDLE:
             
@@ -764,7 +764,7 @@ class HydrusController( object ):
         return False
         
     
-    def ShutdownModel( self ):
+    def ShutdownModel( self ) -> None:
         
         if self.db is not None:
             
@@ -815,7 +815,7 @@ class HydrusController( object ):
         self._pubsub.Wake()
         
     
-    def ShutdownView( self ):
+    def ShutdownView( self ) -> None:
         
         HG.view_shutdown = True
         
@@ -827,7 +827,7 @@ class HydrusController( object ):
         raise Exception( 'This hydrus application cannot be shut down from the server!' )
         
     
-    def SleepCheck( self ):
+    def SleepCheck( self ) -> None:
         
         with self._sleep_lock:
             
@@ -852,7 +852,7 @@ class HydrusController( object ):
             
         
     
-    def SimulateWakeFromSleepEvent( self ):
+    def SimulateWakeFromSleepEvent( self ) -> None:
         
         with self._sleep_lock:
             
@@ -867,7 +867,7 @@ class HydrusController( object ):
         return self._system_busy
         
     
-    def TouchTimestamp( self, name: str ):
+    def TouchTimestamp( self, name: str ) -> None:
         
         with self._timestamps_lock:
             
@@ -875,7 +875,7 @@ class HydrusController( object ):
             
         
     
-    def WaitUntilDBEmpty( self ):
+    def WaitUntilDBEmpty( self ) -> None:
         
         while True:
             
@@ -894,7 +894,7 @@ class HydrusController( object ):
             
         
     
-    def WaitUntilModelFree( self ):
+    def WaitUntilModelFree( self ) -> None:
         
         self.WaitUntilPubSubsEmpty()
         

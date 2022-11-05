@@ -42,6 +42,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportSubscriptions
@@ -56,7 +57,7 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
-PubSubEventType = QC.QEvent.Type( QC.QEvent.registerEventType() )
+PubSubEventType = QP.registerEventType()
 
 class PubSubEvent( QC.QEvent ):
     
@@ -95,7 +96,7 @@ class PubSubEventCatcher( QC.QObject ):
     
 def MessageHandler( msg_type, context, text ):
     
-    if msg_type not in ( QC.QtDebugMsg, QC.QtInfoMsg ):
+    if msg_type not in ( QC.QtMsgType.QtDebugMsg, QC.QtMsgType.QtInfoMsg ):
         
         # Set a breakpoint here to be able to see where the warnings originate from.
         HydrusData.Print( text )
@@ -542,12 +543,12 @@ class Controller( HydrusController.HydrusController ):
                 
             else:
                 
-                QP.CallAfter( QW.QApplication.instance().quit )
+                QP.CallAfter( QW.QApplication.instance().exit )
                 
             
         elif sig == signal.SIGTERM:
             
-            QP.CallAfter( QW.QApplication.instance().quit )
+            self.Exit()
             
         
     
@@ -1004,12 +1005,6 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
-        self.frame_splash_status.SetText( 'initialising managers' )
-        
-        self.frame_splash_status.SetSubtext( 'services' )
-        
-        self.services_manager = ClientServices.ServicesManager( self )
-        
         self.frame_splash_status.SetSubtext( 'options' )
         
         self.options = self.Read( 'options' )
@@ -1024,6 +1019,22 @@ class Controller( HydrusController.HydrusController ):
                 HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
                 
             
+        
+        self.frame_splash_status.SetSubtext( 'image caches' )
+        
+        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
+        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        
+        self.frame_splash_status.SetText( 'initialising managers' )
+        
+        # careful: outside of qt since they don't need qt for init, seems ok _for now_
+        
+        self.bitmap_manager = ClientManagers.BitmapManager( self )
+        
+        self.frame_splash_status.SetSubtext( 'services' )
+        
+        self.services_manager = ClientServices.ServicesManager( self )
         
         # important this happens before repair, as repair dialog has a column list lmao
         
@@ -1191,14 +1202,6 @@ class Controller( HydrusController.HydrusController ):
         #
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
-        
-        self.frame_splash_status.SetSubtext( 'image caches' )
-        
-        # careful: outside of qt since they don't need qt for init, seems ok _for now_
-        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
-        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
-        self.bitmap_manager = ClientManagers.BitmapManager( self )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
         
@@ -1586,11 +1589,28 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        QP.MonkeyPatchMissingMethods()
+        QtInit.MonkeyPatchMissingMethods()
         
         from hydrus.client.gui import ClientGUICore
         
         ClientGUICore.GUICore()
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            try:
+                
+                # this makes the 'application user model' of the program unique, allowing instantiations to group on their own taskbar icon
+                # also allows the window icon to go to the taskbar icon, instead of python if you are running from source
+                
+                import ctypes
+                
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID( 'hydrus network client' )
+                
+            except:
+                
+                pass
+                
+            
         
         self.app = App( self._pubsub, sys.argv )
         
@@ -1960,7 +1980,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._ShutdownManagers()
             
-            self.frame_splash_status.SetText( 'waiting for daemons to exit' )
+            self.frame_splash_status.SetText( 'waiting for workers to exit' )
             
             self._ShutdownDaemons()
             
@@ -1986,7 +2006,7 @@ class Controller( HydrusController.HydrusController ):
             
             try:
                 
-                self.frame_splash_status.SetText( 'waiting for twisted to exit' )
+                self.frame_splash_status.SetText( 'waiting for services to exit' )
                 
                 self.SetRunningTwistedServices( [] )
                 
@@ -2102,7 +2122,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._DestroySplash()
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
             return
             
@@ -2123,7 +2143,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.CleanRunningFile()
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
         except Exception as e:
             
@@ -2198,7 +2218,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._program_is_shut_down = True
             
-            QP.CallAfter( QW.QApplication.quit )
+            QP.CallAfter( QW.QApplication.exit )
             
         
     
@@ -2281,14 +2301,20 @@ class Controller( HydrusController.HydrusController ):
     
     def WaitUntilThumbnailsFree( self ):
         
-        self._caches[ 'thumbnail' ].WaitUntilFree()
+        if 'thumbnail' in self._caches:
+            
+            self._caches[ 'thumbnail' ].WaitUntilFree()
+            
         
     
     def Write( self, action, *args, **kwargs ):
         
         if action == 'content_updates':
             
-            self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+            if 'undo' in self._managers:
+                
+                self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+                
             
         
         return HydrusController.HydrusController.Write( self, action, *args, **kwargs )

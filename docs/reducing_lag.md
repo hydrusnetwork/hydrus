@@ -1,6 +1,8 @@
 ---
-title: reducing lag
+title: Reducing Lag
 ---
+
+# reducing lag
 
 ## hydrus is cpu and hdd hungry { id="intro" }
 
