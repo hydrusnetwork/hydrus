@@ -2,17 +2,17 @@
 title: Installing and Updating  
 ---
 
-# installing and updating
+# Installing and Updating
 
 If any of this is confusing, a simpler guide is [here](https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md), and some video guides are [here](https://github.com/CuddleBear92/Hydrus-guides)!
 
-## downloading
+## Downloading
 
 You can get the latest release at [the github releases page](https://github.com/hydrusnetwork/hydrus/releases).
 
 I try to release a new version every Wednesday by 8pm EST and write an accompanying post on [my tumblr](http://hydrus.tumblr.com/) and a Hydrus Network General thread on [8chan.moe /t/](https://8chan.moe/t/catalog.html).
 
-## installing
+## Installing
 
 !!! warning ""
     The hydrus releases are 64-bit only. If you are a python expert, there is the slimmest chance you'll be able to get it running from source on a 32-bit machine, but it would be easier just to find a newer computer to run it on.
@@ -63,7 +63,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "Docker"
 
-    * A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](https://github.com/hydrusnetwork/hydrus/blob/master/static/build_files/docker/README.md).
+    * A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](docker.md).
 
 === "From Source"
 
@@ -77,7 +77,7 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
 !!! info "For macOS users"
     The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.
 
-## anti-virus { id="anti_virus" }
+## Anti-virus { id="anti_virus" }
 
 Hydrus is made by an Anon out of duct tape and string. It combines file parsing tech with lots of network and database code in unusual and powerful ways, and all through a hacked-together executable that isn't signed by any big official company.
 
@@ -95,7 +95,7 @@ If you are still concerned, please feel free to run from source, as above. You a
 
 In 2022 I am going to explore a different build process to see if that reduces the false positives. We currently make the executable with PyInstaller, which has some odd environment set-up the anti-virus testbeds don't seem to like, and perhaps PyOxidizer will be better. We'll see.
 
-## running
+## Running
 
 To run the client:
 
@@ -110,17 +110,17 @@ To run the client:
 
 === "Linux"
 
-    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are run `./client` from the terminal.
+    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are running `./client` from the terminal.
     *   If you experience virtual memory crashes, please review [this thorough guide](Fixing_Hydrus_Random_Crashes_Under_Linux.md) by a user.
 
-## updating
+## Updating
 
 !!! warning
     Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!
 
 **Hydrus does not auto-update. It will stay the same version unless you download and install a new one.**
 
-Although I put out an new version every week, you can update far less often if you want. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
+Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
 
 A user has written a longer and more formal guide to updating, and information on the 334->335 step [here](update_guide.rtf).
 
@@ -138,7 +138,7 @@ Releases typically need to update your database to their version. New releases c
 
 Clients and servers of different versions can usually connect to one another, but from time to time, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or _vice versa_. There is still no _need_ to update the client--it'll still do local stuff like searching for files completely fine. Read my release posts and judge for yourself what you want to do.
 
-## clean installs
+## Clean installs
 
 **This is usually only relevant if you know you have a dll conflict or otherwise update and cannot boot at all.**
 
@@ -155,7 +155,7 @@ However, you need to be careful not to delete your database! It sounds silly, bu
 
 After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
 
-## big updates
+## Big updates
 
 If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v250->v290, is likely not going to work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to [bitrot](https://en.wikipedia.org/wiki/Software_rot), and so some underlying truth I assumed for the v255->v256 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.
 
@@ -165,7 +165,7 @@ If you narrow the gap down to just one version and still get an error, please le
 
 _All that said, and while updating is complex and every client is different, one user recently did a giant multi-year update and found this route worked and was efficient: 204 > 238 > 246 > 291 > 328 > 335 > 376 > 421 > 466 > 474_ 
 
-## backing up
+## Backing up
 
 !!! danger "I am not joking around: if you end up liking hydrus, you should back up your database"
 
@@ -197,7 +197,7 @@ I use [ToDoList](http://abstractspoon.com/) to remind me of my jobs for the day,
 
 By default, hydrus stores all your user data in one location, so backing up is simple:
 
-#### the simple way - inside the client
+#### The simple way - inside the client
 :   
     Go _database->set up a database backup location_ in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.
 
@@ -205,7 +205,7 @@ By default, hydrus stores all your user data in one location, so backing up is s
 
     Advanced users who have migrated their database and files across multiple locations will not have this option--use an external program in this case.
     
-#### the powerful (and best) way - using an external program
+#### The powerful (and best) way - using an external program
 :   
     Doing it yourself is best. If you are an advanced user with a complicated hydrus install migrated across multiple drives, then you will have to do it this way--the simple backup will be disabled.
 
@@ -244,7 +244,7 @@ There is significantly more information about the database structure [here](data
 
 I recommend you always backup before you update, just in case there is a problem with my update code that breaks your database. If that happens, please [contact me](contact.md), describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.
 
-## backing up with not much space { id="backing_up_small" }
+## Backing up with not much space { id="backing_up_small" }
 
 If you decide not to maintain a backup because you cannot afford drive space for all your files, please please at least back up your actual database files. Use FreeFileSync or a similar program to back up the four 'client*.db' files in install_dir/db when the client is not running. Just make sure you have a copy of those files, and then if your main install becomes damaged, we will have a reference to either roll back to or manually restore data from. Even if you lose a bunch of media files in this case, with an intact database we'll be able to schedule recovery of anything with a URL.
 

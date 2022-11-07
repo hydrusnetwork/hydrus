@@ -6,7 +6,7 @@ title: Contact and Links
 
 I welcome all your bug reports, questions, ideas, and comments. It is always interesting to see how other people are using my software and what they generally think of it. Most of the changes every week are suggested by users.
 
-You can contact me by email, twitter, tumblr, discord, or the 8chan.moe /t/ thread or Endchan board--I do not mind which. Please know that I have difficulty with social media, and while I try to reply to all messages, it sometimes takes me a while to catch up.
+You can contact me by email, twitter, discord, or the release threads on 8chan or Endchan--I do not mind which. Please know that I have difficulty with social media, and while I try to reply to all messages, it sometimes takes me a while to catch up.
 
 The [Github Issue Tracker](https://github.com/hydrusnetwork/hydrus/issues) was turned off for some time, as it did not fit my workflow and I could not keep up, but it is now running again, managed by a team of volunteer users. Please feel free to submit feature requests there if you are comfortable with Github. I am not socially active on Github, please do not ping me there.
 

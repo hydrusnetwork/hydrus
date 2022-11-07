@@ -84,16 +84,16 @@ IF "%install_type%" == "s" (
 	
 ) ELSE (
 	
-	pip3 install -r requirements_core.txt
+	pip3 install -r static\requirements\advanced\requirements_core.txt
 	
-	IF "%qt%" == "5" pip3 install -r requirements_qt5.txt
-	IF "%qt%" == "6" pip3 install -r requirements_qt6.txt
+	IF "%qt%" == "5" pip3 install -r static\requirements\advanced\requirements_qt5.txt
+	IF "%qt%" == "6" pip3 install -r static\requirements\advanced\requirements_qt6.txt
 	
-	IF "%mpv%" == "o" pip3 install -r requirements_old_mpv.txt
-	IF "%mpv%" == "n" pip3 install -r requirements_new_mpv.txt
+	IF "%mpv%" == "o" pip3 install -r static\requirements\advanced\requirements_old_mpv.txt
+	IF "%mpv%" == "n" pip3 install -r static\requirements\advanced\requirements_new_mpv.txt
 	
-	IF "%opencv%" == "o" pip3 install -r requirements_old_opencv.txt
-	IF "%opencv%" == "n" pip3 install -r requirements_new_opencv.txt
+	IF "%opencv%" == "o" pip3 install -r static\requirements\advanced\requirements_old_opencv.txt
+	IF "%opencv%" == "n" pip3 install -r static\requirements\advanced\requirements_new_opencv.txt
 	
 )
 

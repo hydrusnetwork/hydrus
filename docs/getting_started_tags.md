@@ -2,21 +2,22 @@
 title: Tags
 ---
 
-# getting started with tags
+# Getting started with tags
+A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'the legend of zelda' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
 
-## how do we find files? { id="intro" }
+## How do we find files? { id="intro" }
 
 So, you have stored some media in your database. Everything is hashed and cached. You can search by inbox and resolution and size and so on, but if you really want to find what we are looking for, you will have to use _tags_.
 
-[FAQ: what is a tag?](faq.md#tags)
+[FAQ: what is a tag?](faq.md#what_is_a_tag)
 
-Your client starts with one local tags service, called 'my tags', which keeps all of its file->tag mappings in your client's database where only you can see them. It is a good place to practise. So, select a file and press F3:
+Your client starts with two [local tags services](getting_started_tags.md#tag_services), called 'my tags' and 'downloader tags' which keeps all of its file->tag mappings in your client's database where only you can see them. It is a good place to practise. So, select a file and press F3:
 
 [![](images/sororitas_local.png)](images/sororitas_local.png)
 
 The autocomplete dropdown in the manage tags dialog works very like the one in a normal search page--you type part of a tag, and matching results will appear below. You select the tag you want with the arrow keys and hit enter. Since your 'my tags' service doesn't have any tags in it yet, you won't get any results here except the exact match of what you typed. If you want to remove a tag, enter the exact same thing again or double-click it in the box above.
 
-Prefixing a tag with a category and a colon will create a _namespaced_ tag. This helps inform the software and other users about what the tag is. Examples of namespaced tags are:
+Prefixing a tag with a category and a colon will create a [_namespaced_ tag](faq.md#what-is-a-namespace). This helps inform the software and other users about what the tag is. Examples of namespaced tags are:
 
 *   `character:batman`
 *   `series:street fighter`
@@ -39,7 +40,30 @@ If you add more tags or system predicates to a search, you will limit the result
 
 You can also exclude a tag by prefixing it with a hyphen (e.g. `-heresy`).
 
-## tag repositories
+## Siblings and parents
+For more in-depth information about them see [siblings](advanced_siblings.md) and [parents](advanced_parents.md).
+
+tl;dr is that siblings lets you chain together different tags that mean the same thing, top sibling in the chain decides what it will look like in lists.  
+Parents lets you virtually add one or more tags (parents) if the 'child' tag is present.
+
+## Tag services
+Hydrus uses services to let you organise tags into various groups as you chose. By default there are two, but you can have however many you want. Some uses are different sets of siblings/parents, tags you don't want to see but still search by, parsing tags into different services based on reliability of the source or the source itself. You could for example parse all tags from Pixiv into one service, Danbooru tags into another, Deviantart etc. and so on as you chose.  
+You are however unable to have less than one.
+
+Services are always local. No tags will accidentally leak or anything like that nor will siblings and parents. So feel free to go wild with whatever odd scheme you want to try out.
+
+Each tag service comes with its own tags, siblings and parents.
+
+### Display rules
+If you go to `tags -> manage where siblings and parents apply` you'll get a window where you can customise where and in what order siblings and parents apply. The service at the top of the list has precedence over all else, then second, and so on depending on how many you have. If you for example have PTR you can use a tag service to overwrite tags/siblings for cases where you disagree with the PTR standards.
+
+### My tags
+The intent is to use this service for tags you yourself want to add.
+
+### Downloader tags
+The default [tag parse target](getting_started_downloading.md#parsing). Tags of things you download will end up here unless you change the settings. It's probably a good idea to set up some tag blacklists for tags you don't want.
+
+## Tag repositories
 
 It can take a long time to tag even small numbers of files well, so I created _tag repositories_ so people can share the work.
 

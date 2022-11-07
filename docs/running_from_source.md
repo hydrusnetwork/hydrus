@@ -204,7 +204,7 @@ After you have activated the venv, you can use pip to install everything you nee
 pip install -r requirements.txt
 ```
 
-You can also pick and choose from the other advanced requirements. Check and compare their contents to the main requirements.txt to see what is going on.
+If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on.
 
 ## Qt { id="qt" }
 

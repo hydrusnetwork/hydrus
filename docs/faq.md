@@ -4,11 +4,11 @@ title: FAQ
 
 # FAQ
 
-## what is a repository? { id="repositories" }
+## What is a repository? { id="repositories" }
 
 A _repository_ is a service in the hydrus network that stores a certain kind of information--files or tag mappings, for instance--as submitted by users all over the internet. Those users periodically synchronise with the repository so they know everything that it stores. Sometimes, like with tags, this means creating a complete local copy of everything on the repository. Hydrus network clients never send queries to repositories; they perform queries over their local cache of the repository's data, keeping everything confined to the same computer.
 
-## what is a tag? { id="tags" }
+## What is a tag? { id="tags" }
 
 [wiki](https://en.wikipedia.org/wiki/Tag_(metadata))
 
@@ -31,13 +31,13 @@ becomes
 
 'yellow dress'
 
-## what is a namespace? { id="namespaces" }
+## What is a namespace? { id="namespaces" }
 
 A _namespace_ is a category that in hydrus prefixes a tag. An example is 'person' in the tag 'person:ron paul'--it lets people and software know that 'ron paul' is a name. You can create any namespace you like; just type one or more words and then a colon, and then the next string of text will have that namespace.
 
 The hydrus client gives namespaces different colours so you can pick out important tags more easily in a large list, and you can also search by a particular namespace, even creating complicated predicates like 'give all files that do not have any character tags', for instance.
 
-## why not use filenames and folders? { id="filenames" }
+## Why not use filenames and folders? { id="filenames" }
 
 As a retrieval method, filenames and folders are less and less useful as the number of files increases. Why?
 
@@ -52,7 +52,7 @@ So, the client tracks files by their _hash_. This technical identifier easily el
 
 As a general rule, I suggest you not set up hydrus to parse and display all your imported files' filenames as tags. 'image.jpg' is useless as a tag. [Shed the concept of filenames as you would chains.](https://www.youtube.com/watch?v=_yYS0ZZdsnA)
 
-## can the client manage files from their original locations? { id="external_files" }
+## Can the client manage files from their original locations? { id="external_files" }
 
 When the client imports a file, it makes a quickly accessible but human-ugly copy in its internal database, by default under _install\_dir/db/client\_files_. When it needs to access that file again, it always knows where it is, and it can be confident it is what it expects it to be. It never accesses the original again.
 
@@ -71,7 +71,7 @@ It is not unusual for new users who ask for this feature to find their feelings 
 
 For this reason, if you are hesitant about doing things the hydrus way, I advise you try running it on a smaller subset of your collection, say 5,000 files, leaving the original copies completely intact. After a month or two, think about how often you used hydrus to look at the files versus navigating through folders. If you barely used the folders, you probably do not need them any more, but if you used them a lot, then hydrus might not be for you, or it might only be for some sorts of files in your collection.
 
-## why use sqlite? { id="sqlite" }
+## Why use SQLite? { id="sqlite" }
 
 Hydrus uses SQLite for its database engine. Some users who have experience with other engines such as MySQL or PostgreSQL sometimes suggest them as alternatives. SQLite serves hydrus's needs well, and at the moment, there are no plans to change.
 
@@ -79,7 +79,7 @@ Since this question has come up frequently, a user has written an excellent docu
 
 [https://gitgud.io/prkc/hydrus-why-sqlite/blob/master/README.md](https://gitgud.io/prkc/hydrus-why-sqlite/blob/master/README.md)
 
-## what is a hash? { id="hashes" }
+## What is a hash? { id="hashes" }
 
 [wiki](https://en.wikipedia.org/wiki/Hash_function)
 
@@ -87,7 +87,7 @@ Hashes are a subject you usually have to be a software engineer to find interest
 
 _For those who_ are _interested: hydrus uses SHA-256, which spits out 32-byte (256-bit) hashes. The software stores the hash densely, as 32 bytes, only encoding it to 64 hex characters when the user views it or copies to clipboard. SHA-256 is not perfect, but it is a great compromise candidate; it is secure for now, it is reasonably fast, it is available for most programming languages, and newer CPUs perform it more efficiently all the time._
 
-## what is an access key? { id="access_keys" }
+## What is an access key? { id="access_keys" }
 
 The hydrus network's repositories do not use username/password, but instead a single strong identifier-password like this:
 
@@ -101,11 +101,11 @@ They are long enough to be impossible to guess, and also randomly generated, so 
 
 The access key is the account. Do not give it to anyone you do not want to have access to the account. An administrator will never need it; instead they will want your _account id_.
 
-## what is an account id? { id="account_ids" }
+## What is an account id? { id="account_ids" }
 
 This is another long string of random hexadecimal that _identifies_ your account without giving away access. If you need to identify yourself to a repository administrator (say, to get your account's permissions modified), you will need to tell them your account id. You can copy it to your clipboard in _services->review services_.
 
-## why can my friend not see what I just uploaded? { id="delays" }
+## Why can my friend not see what I just uploaded? { id="delays" }
 
 The repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.
 

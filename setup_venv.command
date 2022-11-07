@@ -77,24 +77,24 @@ pip3 install --upgrade wheel
 if [ $install_type = "s" ]; then
 	pip3 install -r requirements.txt
 elif [ $install_type = "a" ]; then
-	pip3 install -r requirements_core.txt
+	pip3 install -r static/requirements/advanced/requirements_core.txt
 	
 	if [ $qt = "5" ]; then
-		pip3 install -r requirements_qt5.txt
+		pip3 install -r static/requirements/advanced/requirements_qt5.txt
 	elif [ $qt = "6" ]; then
-		pip3 install -r requirements_qt6.txt
+		pip3 install -r static/requirements/advanced/requirements_qt6.txt
 	fi
 	
 	if [ $mpv = "o" ]; then
-		pip3 install -r requirements_old_mpv.txt
+		pip3 install -r static/requirements/advanced/requirements_old_mpv.txt
 	elif [ $mpv = "n" ]; then
-		pip3 install -r requirements_new_mpv.txt
+		pip3 install -r static/requirements/advanced/requirements_new_mpv.txt
 	fi
 	
 	if [ $opencv = "o" ]; then
-		pip3 install -r requirements_old_opencv.txt
+		pip3 install -r static/requirements/advanced/requirements_old_opencv.txt
 	elif [ $opencv = "n" ]; then
-		pip3 install -r requirements_new_opencv.txt
+		pip3 install -r static/requirements/advanced/requirements_new_opencv.txt
 	fi
 fi
 

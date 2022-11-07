@@ -2,6 +2,4 @@
 
 git pull
 
-Done!
-
-read
+echo "Done!"

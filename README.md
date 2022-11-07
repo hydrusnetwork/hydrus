@@ -4,7 +4,7 @@ The hydrus network client is an application written for Anon and other internet-
 
 I am continually working on the software and try to put out a new release every Wednesday by 8pm EST.
 
-This github repository is currently a weekly sync with my home dev environment, where I work on hydrus by myself. **Feel free to fork and do whatever you like with my code, but please do not make pull requests.** The [issue tracker here on Github](https://github.com/hydrusnetwork/hydrus/issues) is active and run by blessed volunteer users. I am not active here on Github, and I have difficulty keeping up with social media in general, but I welcome feedback of any sort and will eventually catch up with and reply to email, the 8chan or Endchan, tumblr, twitter, or the discord.
+This github repository is currently a weekly sync with my home dev environment, where I work on hydrus by myself. **Feel free to fork and do whatever you like with my code, but please do not make pull requests.** The [issue tracker here on Github](https://github.com/hydrusnetwork/hydrus/issues) is active and run by blessed volunteer users. I am not active here on Github, and I have difficulty keeping up with social media in general, but I welcome feedback of any sort and will eventually catch up with and reply to email, twitter @s/DMs, discord @s/DMs, or posts in the 8chan or Endchan release threads.
 
 ## Start Here!
 

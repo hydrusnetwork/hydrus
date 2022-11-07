@@ -21,5 +21,3 @@ mkdocs build -d help
 deactivate
 
 echo "Done!"
-
-read
