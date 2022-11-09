@@ -504,13 +504,9 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_has_exif = has_exif( shown_media )
     c_has_exif = has_exif( comparison_media )
     
-    if s_has_exif or c_has_exif:
+    if s_has_exif ^ c_has_exif:
         
-        if s_has_exif and c_has_exif:
-            
-            exif_statement = 'both have exif data'
-            
-        elif s_has_exif:
+        if s_has_exif:
             
             exif_statement = 'has exif data, the other does not'
             
@@ -522,16 +518,29 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
         
     
+    s_has_human_readable_embedded_metadata = shown_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+    c_has_human_readable_embedded_metadata = comparison_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+    
+    if s_has_human_readable_embedded_metadata ^ c_has_human_readable_embedded_metadata:
+        
+        if s_has_human_readable_embedded_metadata:
+            
+            embedded_metadata_statement = 'has embedded metadata, the other does not'
+            
+        else:
+            
+            embedded_metadata_statement = 'the other has embedded metadata, this does not'
+            
+        
+        statements_and_scores[ 'embedded_metadata' ] = ( embedded_metadata_statement, 0 )
+        
+    
     s_has_icc = shown_media.GetMediaResult().GetFileInfoManager().has_icc_profile
     c_has_icc = comparison_media.GetMediaResult().GetFileInfoManager().has_icc_profile
     
-    if s_has_icc or c_has_icc:
+    if s_has_icc ^ c_has_icc:
         
-        if s_has_icc and c_has_icc:
-            
-            icc_statement = 'both have icc profiles'
-            
-        elif s_has_icc:
+        if s_has_icc:
             
             icc_statement = 'has icc profile, the other does not'
             

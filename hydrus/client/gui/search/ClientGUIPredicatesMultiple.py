@@ -244,11 +244,6 @@ class PanelPredicateSystemMultiple( ClientGUIPredicatesSingle.PanelPredicateSyst
         raise NotImplementedError()
         
     
-    def SetPredicates( self, predicates: typing.Collection[ ClientSearch.Predicate ] ):
-        
-        raise NotImplementedError()
-        
-    
     def UsesCustomDefault( self ) -> bool:
         
         raise NotImplementedError()

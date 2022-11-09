@@ -46,6 +46,7 @@ except:
     CLOUDSCRAPER_OK = False
     PYPARSING_OK = False
     
+
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
     ( error_text, encoding ) = HydrusText.NonFailingUnicodeDecode( data, 'utf-8' )

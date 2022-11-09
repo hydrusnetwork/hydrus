@@ -1,5 +1,21 @@
+import datetime
 import os
 import stat
+
+try:
+    
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    
+    CRYPTO_OK = True
+    
+except:
+    
+    CRYPTO_OK = False
+    
 
 try:
     
@@ -11,26 +27,47 @@ except:
     
     OPENSSL_OK = False
     
+
 def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
     
-    key = OpenSSL.crypto.PKey()
+    if not CRYPTO_OK:
+        
+        raise Exception( 'Sorry, to make your own cert, you need "cryptography" library! You should be able to get it with pip.' )
+        
     
-    key.generate_key( OpenSSL.crypto.TYPE_RSA, 2048 )
+    # cribbed from here https://cryptography.io/en/latest/x509/tutorial/#creating-a-self-signed-certificate
+    
+    # private key
+    key = rsa.generate_private_key( public_exponent = 65537, key_size = 2048 )
     
     # create a self-signed cert
-    cert = OpenSSL.crypto.X509()
     
-    cert.get_subject().countryName = 'HN'
-    cert.get_subject().organizationName = 'hydrus network'
-    cert.get_subject().organizationalUnitName = os.urandom( 32 ).hex()
-    cert.set_serial_number( 1 )
-    cert.gmtime_adj_notBefore( 0 )
-    cert.gmtime_adj_notAfter( 10*365*24*60*60 )
-    cert.set_issuer( cert.get_subject() )
-    cert.set_pubkey( key )
-    cert.sign( key, 'sha256' )
+    subject = issuer = x509.Name(
+        [
+        x509.NameAttribute( NameOID.COUNTRY_NAME, 'HN' ),
+        x509.NameAttribute( NameOID.ORGANIZATION_NAME, 'hydrus network' ),
+        x509.NameAttribute( NameOID.ORGANIZATIONAL_UNIT_NAME, os.urandom( 32 ).hex() )
+        ]
+    )
     
-    cert_bytes = OpenSSL.crypto.dump_certificate( OpenSSL.crypto.FILETYPE_PEM, cert )
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.utcnow()
+    ).not_valid_after(
+        datetime.datetime.utcnow() + datetime.timedelta( days = 365 * 10 )
+    ).add_extension(
+        x509.SubjectAlternativeName( [ x509.DNSName( 'localhost' ) ] ),
+        critical = False
+    ).sign( key, hashes.SHA256() )
+    
+    cert_bytes = cert.public_bytes( serialization.Encoding.PEM )
     
     with open( cert_path, 'wb' ) as f:
         
@@ -39,7 +76,14 @@ def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
     
     os.chmod( cert_path, stat.S_IREAD )
     
-    key_bytes = OpenSSL.crypto.dump_privatekey( OpenSSL.crypto.FILETYPE_PEM, key )
+    # no pass, we are full jej mode here for ease (it wants the pass prompt on service startup)
+    # encryption_algorithm = serialization.BestAvailableEncryption( b"passphrase" )
+    
+    key_bytes = key.private_bytes(
+        encoding = serialization.Encoding.PEM,
+        format = serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm = serialization.NoEncryption()
+    )
     
     with open( key_path, 'wb' ) as f:
         

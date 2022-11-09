@@ -35,6 +35,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -1252,8 +1253,8 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
             
-            border_ctrl = ClientGUICommon.BetterColourControl( self )
-            fill_ctrl = ClientGUICommon.BetterColourControl( self )
+            border_ctrl = ClientGUIColourPicker.ColourPickerButton( self )
+            fill_ctrl = ClientGUIColourPicker.ColourPickerButton( self )
             
             border_ctrl.setMaximumWidth( 20 )
             fill_ctrl.setMaximumWidth( 20 )

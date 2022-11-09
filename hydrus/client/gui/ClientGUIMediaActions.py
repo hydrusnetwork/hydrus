@@ -553,11 +553,13 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     job.start()
     
 
-def ShowFileEXIF( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
+def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
     
     if not media.GetLocationsManager().IsLocal():
         
         QW.QMessageBox.warning( win, 'Warning', 'This file is not local to this computer!' )
+        
+        return
         
     
     hash = media.GetHash()
@@ -567,18 +569,29 @@ def ShowFileEXIF( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
     
     pil_image = HydrusImageHandling.RawOpenPILImage( path )
     
-    exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+    exif_dict = None
+    file_text = None
     
-    if exif_dict is None:
+    if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
         
-        QW.QMessageBox.information( win, 'No EXIF', 'Sorry, could not see any EXIF information in this file!' )
+        exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+        
+    
+    if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+        
+        file_text = HydrusImageHandling.GetEmbeddedFileText( pil_image )
+        
+    
+    if exif_dict is None and file_text is None:
+        
+        QW.QMessageBox.information( win, 'Nothing found', 'Sorry, could not see any human-readable information in this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
         
         return
         
     
-    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'File EXIF' )
+    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Embedded Metadata' )
     
-    panel = ClientGUIScrolledPanelsReview.ReviewFileEXIF( frame, exif_dict )
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, exif_dict, file_text )
     
     frame.SetPanel( panel )
     

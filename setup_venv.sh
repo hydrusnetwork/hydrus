@@ -10,7 +10,7 @@ else
 	read
 fi
 
-echo "Users on <=Ubuntu 20.04 equivalents or python >=3.10 need the advanced install."
+echo "Users on Ubuntu <=20.04 equivalents or python >=3.10 need the advanced install."
 echo
 echo "Your Python version is:"
 python --version

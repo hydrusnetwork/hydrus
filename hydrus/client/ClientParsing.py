@@ -677,6 +677,16 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         self._string_processor = string_processor
         
     
+    def _GetSerialisableInfo( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        raise NotImplementedError()
+        
+    
     def _GetParsePrettySeparator( self ):
         
         return os.linesep

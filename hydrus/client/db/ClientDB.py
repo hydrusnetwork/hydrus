@@ -2717,8 +2717,8 @@ class DB( HydrusDB.HydrusDB ):
                 ClientSearch.PREDICATE_TYPE_SYSTEM_TIME,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
@@ -3790,6 +3790,44 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if 'has_exif' in simple_preds:
+            
+            has_exif = simple_preds[ 'has_exif' ]
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( temp_hash_ids_table_name )
+                
+            
+            if has_exif:
+                
+                query_hash_ids.intersection_update( has_exif_hash_ids )
+                
+            else:
+                
+                query_hash_ids.difference_update( has_exif_hash_ids )
+                
+            
+        
+        if 'has_human_readable_embedded_metadata' in simple_preds:
+            
+            has_human_readable_embedded_metadata = simple_preds[ 'has_human_readable_embedded_metadata' ]
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( temp_hash_ids_table_name )
+                
+            
+            if has_human_readable_embedded_metadata:
+                
+                query_hash_ids.intersection_update( has_human_readable_embedded_metadata_hash_ids )
+                
+            else:
+                
+                query_hash_ids.difference_update( has_human_readable_embedded_metadata_hash_ids )
+                
+            
+        
         if 'has_icc_profile' in simple_preds:
             
             has_icc_profile = simple_preds[ 'has_icc_profile' ]
@@ -4375,6 +4413,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
+                has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( temp_table_name )
+                has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( temp_table_name )
                 has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( temp_table_name )
                 
             
@@ -4490,6 +4530,8 @@ class DB( HydrusDB.HydrusDB ):
                     file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
                     
                 
+                file_info_manager.has_exif = hash_id in has_exif_hash_ids
+                file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
                 file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
                 
                 missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
@@ -5354,6 +5396,8 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
+            self.modules_files_metadata_basic.SetHasEXIF( hash_id, file_import_job.HasEXIF() )
+            self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
             
             #
@@ -10584,6 +10628,83 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 504:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( (
+                    'furry.booru.org file page',
+                    'furry.booru.org gallery page',
+                    'twitter tweet',
+                    'twitter syndication api tweet-result'
+                ) )
+                
+                domain_manager.OverwriteDefaultParsers( (
+                    'twitter syndication api tweet parser',
+                    'gelbooru 0.1.11 file page parser'
+                ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                
+                self._controller.frame_splash_status.SetSubtext( 'scheduling files for embedded metadata scan' )
+                
+                result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'has_exif', ) ).fetchone()
+                
+                if result is None:
+                    
+                    self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_exif ( hash_id INTEGER PRIMARY KEY );' )
+                    
+                    hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusData.SplayListForDB( HC.FILES_THAT_CAN_HAVE_EXIF ) ) ) )
+                    
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
+                    
+                
+                result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'has_human_readable_embedded_metadata', ) ).fetchone()
+                
+                if result is None:
+                    
+                    self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_human_readable_embedded_metadata ( hash_id INTEGER PRIMARY KEY );' )
+                    
+                    hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusData.SplayListForDB( HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA ) ) ) )
+                    
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to schedule image files for embedded metadata maintenance failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

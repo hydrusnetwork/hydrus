@@ -23,9 +23,6 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 #### Core
 
-!!! warning ".sh and .command are in testing"
-    Hey, the .sh and .command setup files for Linux/macOS are new. I cannot promise they are bug free, so please only test them if you are brave and/or know a little about this, and let me know how it goes.
-
 === "Windows"
 
     First of all, you will need to install Python. Get 3.8.x or 3.9.x [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.

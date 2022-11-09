@@ -474,22 +474,6 @@ class TestNetworkingEngine( unittest.TestCase ):
         self.assertTrue( engine.IsRunning() )
         self.assertFalse( engine.IsShutdown() )
         
-        HG.model_shutdown = True
-        
-        try:
-            
-            engine._new_work_to_do.set()
-            
-            time.sleep( 0.1 )
-            
-            self.assertFalse( engine.IsRunning() )
-            self.assertTrue( engine.IsShutdown() )
-            
-        finally:
-            
-            HG.model_shutdown = False
-            
-        
     
     def test_engine_shutdown_manual( self ):
         

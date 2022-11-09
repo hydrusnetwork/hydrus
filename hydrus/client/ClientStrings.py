@@ -44,6 +44,16 @@ conversion_type_str_lookup[ STRING_CONVERSION_DATE_ENCODE ] = 'timestamp to date
 
 class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
     
+    def _GetSerialisableInfo( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        raise NotImplementedError()
+        
+    
     def MakesChanges( self ) -> bool:
         
         raise NotImplementedError()

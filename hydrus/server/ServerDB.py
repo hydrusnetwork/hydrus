@@ -709,11 +709,6 @@ class DB( HydrusDB.HydrusDB ):
             
             if result is None:
                 
-                result = self._Execute( 'SELECT account_id FROM ' + deleted_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
-                
-            
-            if result is None:
-                
                 raise HydrusExceptions.NotFoundException( 'The service could not find that hash in its database.' )
                 
             
@@ -757,11 +752,6 @@ class DB( HydrusDB.HydrusDB ):
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
             
             result = self._Execute( 'SELECT account_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
-            
-            if result is None:
-                
-                result = self._Execute( 'SELECT account_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
-                
             
             if result is None:
                 

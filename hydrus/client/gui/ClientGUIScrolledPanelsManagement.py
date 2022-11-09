@@ -1,7 +1,6 @@
 import collections
 import os
 import random
-import re
 import traceback
 
 from qtpy import QtCore as QC
@@ -15,12 +14,10 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientLocation
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -42,6 +39,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
+from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.media import ClientMedia
@@ -193,7 +191,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for colour_type in colour_types:
                     
-                    ctrl = ClientGUICommon.BetterColourControl( colour_panel )
+                    ctrl = ClientGUIColourPicker.ColourPickerButton( colour_panel )
                     
                     ctrl.setMaximumWidth( 20 )
                     
@@ -1461,8 +1459,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._total_pages_warning.setToolTip( tt )
             
-            self._reverse_page_shift_drag_behaviour = QW.QCheckBox( self._pages_panel )
-            self._reverse_page_shift_drag_behaviour.setToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
+            self._page_drop_chase_normally = QW.QCheckBox( self._pages_panel )
+            self._page_drop_chase_normally.setToolTip( 'When you drop a page to a new location, should hydrus follow the page selection to the new location?' )
+            self._page_drop_chase_with_shift = QW.QCheckBox( self._pages_panel )
+            self._page_drop_chase_with_shift.setToolTip( 'When you drop a page to a new location with shift held down, should hydrus follow the page selection to the new location?' )
+            
+            self._page_drag_change_tab_normally = QW.QCheckBox( self._pages_panel )
+            self._page_drag_change_tab_normally.setToolTip( 'When you drag media or a page to a new location, should hydrus navigate and change tabs as you move the mouse around?' )
+            self._page_drag_change_tab_with_shift = QW.QCheckBox( self._pages_panel )
+            self._page_drag_change_tab_with_shift.setToolTip( 'When you drag media or a page to a new location with shift held down, should hydrus navigate and change tabs as you move the mouse around?' )
+            
+            self._wheel_scrolls_tab_bar = QW.QCheckBox( self._pages_panel )
+            self._wheel_scrolls_tab_bar.setToolTip( 'When you scroll your mouse wheel over some tabs, the normal behaviour is to change the tab selection. If you often have overloaded tab bars, you might like to have the mouse wheel actually scroll the tab bar itself.' )
             
             self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._pages_panel )
             
@@ -1537,7 +1545,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._import_page_progress_display.setChecked( self._new_options.GetBoolean( 'import_page_progress_display' ) )
             
-            self._reverse_page_shift_drag_behaviour.setChecked( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
+            self._page_drop_chase_normally.setChecked( self._new_options.GetBoolean( 'page_drop_chase_normally' ) )
+            self._page_drop_chase_with_shift.setChecked( self._new_options.GetBoolean( 'page_drop_chase_with_shift' ) )
+            self._page_drag_change_tab_normally.setChecked( self._new_options.GetBoolean( 'page_drag_change_tab_normally' ) )
+            self._page_drag_change_tab_with_shift.setChecked( self._new_options.GetBoolean( 'page_drag_change_tab_with_shift' ) )
+            
+            self._wheel_scrolls_tab_bar.setChecked( self._new_options.GetBoolean( 'wheel_scrolls_tab_bar' ) )
             
             self._total_pages_warning.setValue( self._new_options.GetInteger( 'total_pages_warning' ) )
             
@@ -1565,7 +1578,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'By default, put new page tabs on: ', self._default_new_page_goes ) )
             rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
-            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
+            rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
+            rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )
+            rows.append( ( 'Navigate tabs during drag and drop: ', self._page_drag_change_tab_normally ) )
+            rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
+            rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
@@ -1646,7 +1663,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )
             
-            self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.isChecked() )
+            self._new_options.SetBoolean( 'page_drop_chase_normally', self._page_drop_chase_normally.isChecked() )
+            self._new_options.SetBoolean( 'page_drop_chase_with_shift', self._page_drop_chase_with_shift.isChecked() )
+            self._new_options.SetBoolean( 'page_drag_change_tab_normally', self._page_drag_change_tab_normally.isChecked() )
+            self._new_options.SetBoolean( 'page_drag_change_tab_with_shift', self._page_drag_change_tab_with_shift.isChecked() )
+            
+            self._new_options.SetBoolean( 'wheel_scrolls_tab_bar', self._wheel_scrolls_tab_bar.isChecked() )
             
             self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
             
@@ -3566,11 +3588,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( namespace_colours_panel, HC.options[ 'namespace_colours' ] )
             
-            self._edit_namespace_colour = QW.QPushButton( 'edit selected', namespace_colours_panel )
-            self._edit_namespace_colour.clicked.connect( self.EventEditNamespaceColour )
-            
-            self._new_namespace_colour = QW.QLineEdit( namespace_colours_panel )
-            self._new_namespace_colour.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._new_namespace_colour, self.AddNamespaceColour ) )
+            self._add_namespace_colour = ClientGUICommon.BetterButton( self, 'add', self._AddNamespaceColour )
+            self._edit_namespace_colour = ClientGUICommon.BetterButton( self, 'edit', self._EditNamespaceColour )
+            self._delete_namespace_colour = ClientGUICommon.BetterButton( self, 'delete', self._DeleteNamespaceColour )
             
             #
             
@@ -3582,8 +3602,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             namespace_colours_panel.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
-            namespace_colours_panel.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            namespace_colours_panel.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( hbox, self._add_namespace_colour, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._edit_namespace_colour, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._delete_namespace_colour, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            namespace_colours_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3630,12 +3656,46 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.setLayout( vbox )
             
         
-        def _NamespacesUpdated( self ):
+        def _AddNamespaceColour( self ):
             
-            self._show_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the namespace', allow_blank = False ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    namespace = dlg.GetValue()
+                    
+                    if namespace.endswith( ':' ):
+                        
+                        namespace = namespace[:-1]
+                        
+                    
+                    if namespace in ( '', ':' ):
+                        
+                        QW.QMessageBox.warning( self, 'Not allowed', 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
+                        
+                        return
+                        
+                    
+                    existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()
+                    
+                    if namespace in existing_namespaces:
+                        
+                        QW.QMessageBox.warning( self, 'Already exists', 'Sorry, that namespace is already listed!' )
+                        
+                        return
+                        
+                    
+                    self._namespace_colours.SetNamespaceColour( namespace, QG.QColor( random.randint(0,255), random.randint(0,255), random.randint(0,255) ) )
+                    
+                
             
         
-        def EventEditNamespaceColour( self ):
+        def _DeleteNamespaceColour( self ):
+            
+            self._namespace_colours.DeleteSelected()
+            
+        
+        def _EditNamespaceColour( self ):
             
             results = self._namespace_colours.GetSelectedNamespaceColours()
             
@@ -3643,25 +3703,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 colour = QG.QColor( r, g, b )
                 
-                colour = QW.QColorDialog.getColor( colour, self, 'Namespace colour', QW.QColorDialog.ShowAlphaChannel )
+                colour = ClientGUIColourPicker.EditColour( self, colour )
                 
-                if colour.isValid():
-                
-                    self._namespace_colours.SetNamespaceColour( namespace, colour )
-                    
+                self._namespace_colours.SetNamespaceColour( namespace, colour )
                 
             
         
-        def AddNamespaceColour( self ):
+        def _NamespacesUpdated( self ):
             
-            namespace = self._new_namespace_colour.text()
-            
-            if namespace != '':
-                
-                self._namespace_colours.SetNamespaceColour( namespace, QG.QColor( random.randint(0,255), random.randint(0,255), random.randint(0,255) ) )
-                
-                self._new_namespace_colour.clear()
-                
+            self._show_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
             
         
         def UpdateOptions( self ):

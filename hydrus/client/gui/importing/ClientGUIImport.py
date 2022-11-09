@@ -486,6 +486,10 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._filename_checkbox = QW.QCheckBox( 'add filename? [namespace]', self._checkboxes_panel )
             
+            # TODO: Ok, when we move to arbitrary string processing from filenames, and we scrub this, we will want 'easy-add rule' buttons to do this
+            # When we do, add a thing that adds the nth, including negative n index values. as some users want four deep
+            # there must be a way to wangle this code into String Processors
+            
             self._directory_namespace_controls = {}
             
             directory_items = []
@@ -1062,6 +1066,13 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
                 processed_strings = router.GetStringProcessor().ProcessStrings( pre_processed_strings )
+                
+                exporter = router.GetExporter()
+                
+                if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
+                    
+                    processed_strings = HydrusTags.CleanTags( processed_strings )
+                    
                 
                 strings.extend( sorted( processed_strings ) )
                 

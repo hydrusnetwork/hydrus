@@ -2117,10 +2117,29 @@ class TestClientAPI( unittest.TestCase ):
         expected_cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
         expected_cookies.append( [ 'four', '4', '.somesite.com', '/', None ] )
         
-        frozen_result_cookies = { tuple( row ) for row in result_cookies }
-        frozen_expected_cookies = { tuple( row ) for row in expected_cookies }
+        frozen_result_cookies = { tuple( row[:-1] ) for row in result_cookies }
+        frozen_expected_cookies = { tuple( row[:-1] ) for row in expected_cookies }
         
         self.assertEqual( frozen_result_cookies, frozen_expected_cookies )
+        
+        result_times = [ row[-1] for row in sorted( result_cookies ) ]
+        expected_times = [ row[-1] for row in sorted( expected_cookies ) ]
+        
+        for ( a, b ) in zip( result_times, expected_times ):
+            
+            if a is None:
+                
+                self.assertIsNone( b )
+                
+            elif b is None:
+                
+                self.assertIsNone( a )
+                
+            else:
+                
+                self.assertIn( a, ( b - 1, b, b + 1 ) )
+                
+            
         
         #
         

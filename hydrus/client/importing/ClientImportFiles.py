@@ -117,6 +117,8 @@ class FileImportJob( object ):
         self._thumbnail_bytes = None
         self._perceptual_hashes = None
         self._extra_hashes = None
+        self._has_exif = None
+        self._has_human_readable_embedded_metadata = None
         self._has_icc_profile = None
         self._pixel_hash = None
         self._file_modified_timestamp = None
@@ -384,6 +386,40 @@ class FileImportJob( object ):
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
+        #
+        
+        has_exif = False
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
+            
+            try:
+                
+                has_exif = HydrusImageHandling.HasEXIF( self._temp_path )
+                
+            except:
+                
+                pass
+                
+            
+        
+        self._has_exif = has_exif
+        
+        has_human_readable_embedded_metadata = False
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            try:
+                
+                has_human_readable_embedded_metadata = HydrusImageHandling.HasHumanReadableEmbeddedMetadata( self._temp_path )
+                
+            except:
+                
+                pass
+                
+            
+        
+        self._has_human_readable_embedded_metadata = has_human_readable_embedded_metadata
+        
         has_icc_profile = False
         
         if mime in HC.FILES_THAT_CAN_HAVE_ICC_PROFILE:
@@ -401,6 +437,8 @@ class FileImportJob( object ):
             
         
         self._has_icc_profile = has_icc_profile
+        
+        #
         
         if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and duration is None:
             
@@ -455,6 +493,16 @@ class FileImportJob( object ):
     def GetPixelHash( self ):
         
         return self._pixel_hash
+        
+    
+    def HasEXIF( self ) -> bool:
+        
+        return self._has_exif
+        
+    
+    def HasHumanReadableEmbeddedMetadata( self ) -> bool:
+        
+        return self._has_human_readable_embedded_metadata
         
     
     def HasICCProfile( self ) -> bool:

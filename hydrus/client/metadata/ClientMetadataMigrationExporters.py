@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.metadata import ClientMetadataMigrationCore
@@ -124,9 +125,14 @@ class SingleFileMetadataExporterMediaTags( HydrusSerialisable.SerialisableBase, 
         
         hashes = { hash }
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in rows ]
+        tags = HydrusTags.CleanTags( rows )
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        if len( tags ) > 0:
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in rows ]
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+            
         
     
     def SetServiceKey( self, service_key: bytes ):
@@ -345,7 +351,9 @@ class SingleFileMetadataExporterJSON( HydrusSerialisable.SerialisableBase, Singl
         
         suffix_s = '' if self._suffix == '' else '.{}'.format( self._suffix )
         
-        return 'to {}.json sidecar ({})'.format( suffix_s, '>'.join( self._nested_object_names ) )
+        non_s = '' if len( self._nested_object_names ) == 0 else ' ({})'.format( '>'.join( self._nested_object_names ) )
+        
+        return 'to {}.json sidecar{}'.format( suffix_s, non_s )
         
     
 

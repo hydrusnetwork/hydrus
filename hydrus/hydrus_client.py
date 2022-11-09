@@ -24,6 +24,12 @@ try:
     from hydrus.client.gui import QtInit
     
     from hydrus.core import HydrusConstants as HC
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        QtInit.DoWinDarkMode()
+        
+    
     from hydrus.core import HydrusData
     from hydrus.core import HydrusGlobals as HG
     from hydrus.core import HydrusLogger

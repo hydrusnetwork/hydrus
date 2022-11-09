@@ -440,7 +440,21 @@ class TabBar( QW.QTabBar ):
             
             if tab_index != -1:
                 
-                self.parentWidget().setCurrentIndex( tab_index )
+                shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                
+                if shift_down:
+                    
+                    do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
+                    
+                else:
+                    
+                    do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
+                    
+                
+                if do_navigate:
+                    
+                    self.parentWidget().setCurrentIndex( tab_index )
+                    
                 
             
         else:
@@ -465,6 +479,48 @@ class TabBar( QW.QTabBar ):
             event.ignore()
             
         
+    
+    def wheelEvent( self, event ):
+        
+        try:
+            
+            if HG.client_controller.new_options.GetBoolean( 'wheel_scrolls_tab_bar' ):
+                
+                children = self.children()
+                
+                if len( children ) >= 2:
+                    
+                    scroll_left = children[0]
+                    scroll_right = children[1]
+                    
+                    if event.angleDelta().y() > 0:
+                        
+                        b = scroll_left
+                        
+                    else:
+                        
+                        b = scroll_right
+                        
+                    
+                    if isinstance( b, QW.QAbstractButton ):
+                        
+                        b.click()
+                        
+                    
+                
+                event.accept()
+                
+                return
+                
+            
+        except:
+            
+            pass
+            
+        
+        QW.QTabBar.wheelEvent( self, event )
+        
+    
 
 # A heavily extended/tweaked version of https://forum.qt.io/topic/67542/drag-tabs-between-qtabwidgets/
 class TabWidgetWithDnD( QW.QTabWidget ):
@@ -637,7 +693,19 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             shift_down = event.modifiers() & QC.Qt.ShiftModifier
             
-            self.setCurrentIndex( tab_index )
+            if shift_down:
+                
+                do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
+                
+            else:
+                
+                do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
+                
+            
+            if do_navigate:
+                
+                self.setCurrentIndex( tab_index )
+                
             
         
         if 'application/hydrus-tab' not in event.mimeData().formats():
@@ -801,10 +869,14 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             follow_dropped_page = not shift_down
 
             new_options = HG.client_controller.new_options
-
-            if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
+            
+            if shift_down:
                 
-                follow_dropped_page = not follow_dropped_page
+                follow_dropped_page = new_options.GetBoolean( 'page_drop_chase_with_shift' )
+                
+            else:
+                
+                follow_dropped_page = new_options.GetBoolean( 'page_drop_chase_normally' )
                 
             
             if follow_dropped_page:
@@ -1057,15 +1129,15 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             
             if flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS ):
                 
-                stretch_factor = 5
+                stretch_factor = 50
                 
             elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_POLITE:
                 
-                stretch_factor = 3
+                stretch_factor = 30
                 
             elif flag == CC.FLAGS_EXPAND_BOTH_WAYS_SHY:
                 
-                stretch_factor = 1
+                stretch_factor = 10
                 
             
             layout.setStretchFactor( item, stretch_factor )
@@ -2193,81 +2265,6 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
         for i in range( item.childCount() ):
             
             self._UpdateCheckState( item.child( i ), check_state )
-            
-        
-    
-class ColourPickerCtrl( QW.QPushButton ):
-    
-    def __init__( self, parent = None ):
-        
-        QW.QPushButton.__init__( self, parent )
-        
-        self._colour = QG.QColor( 0, 0, 0, 0 )
-        
-        self.clicked.connect( self._ChooseColour )
-        
-        self._highlighted = False
-    
-    
-    def SetColour( self, colour ):
-        
-        self._colour = colour
-
-        self._UpdatePixmap()
-        
-
-    def _UpdatePixmap( self ):
-        
-        px = QG.QPixmap( self.contentsRect().height(), self.contentsRect().height() )
-        
-        painter = QG.QPainter( px )
-        
-        colour = self._colour
-        
-        if self._highlighted:
-            
-            colour = self._colour.lighter( 125 ) # 25% lighter
-            
-        
-        painter.fillRect( px.rect(), QG.QBrush( colour ) )
-        
-        painter.end()
-        
-        self.setIcon( QG.QIcon( px ) )
-        
-        self.setIconSize( px.size() )
-        
-        self.setFlat( True )
-        
-        self.setFixedSize( px.size() )
-        
-    
-    def enterEvent( self, event ):
-        
-        self._highlighted = True
-        
-        self._UpdatePixmap()
-        
-    
-    def leaveEvent( self, event ):
-        
-        self._highlighted = False
-        
-        self._UpdatePixmap()
-        
-    
-    def GetColour( self ):
-        
-        return self._colour
-        
-    
-    def _ChooseColour( self ):
-        
-        new_colour = QW.QColorDialog.getColor( initial = self._colour )
-        
-        if new_colour.isValid():
-            
-            self.SetColour( new_colour )
             
         
     

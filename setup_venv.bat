@@ -25,7 +25,7 @@ IF EXIST "venv\" (
 :questions
 
 ECHO:
-ECHO Users on ^<=Windows 8.1 or python ^>=3.10 need the advanced install.
+ECHO Users on Windows ^<=8.1 or python ^>=3.10 need the advanced install.
 ECHO:
 ECHO Your Python version is:
 python --version

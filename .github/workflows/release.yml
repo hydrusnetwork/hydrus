@@ -165,7 +165,7 @@ jobs:
           architecture: x64
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
+        run: python3 -m pip install -r hydrus/static/build_files/windows/requirements.txt
       - 
         name: Build docs to /help
         run: mkdocs build -d help

@@ -1,3 +1,5 @@
+import os
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -70,15 +72,23 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._sidecar_help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowSidecarHelp )
+        
         self._nested_object_names_panel = QW.QWidget( self )
         
-        self._nested_object_names_list = ClientGUIListBoxes.QueueListBox( self, 6, str, self._AddObjectName, self._EditObjectName )
-        tt = 'If you set this as [files,tags], the exported strings will be placed under the nested objects with keys "files"->"tags". Note that this will also update an existing file, so, if you are feeling clever, you can have multiple routers writing tags and URLs to different locations in the same file!'
+        self._nested_object_names_list = ClientGUIListBoxes.QueueListBox( self, 4, str, self._AddObjectName, self._EditObjectName )
+        tt = 'If you leave this empty, the strings will be exported as a simple list. If you set it as [files,tags], the exported string list will be placed under nested objects with keys "files"->"tags". Note that this will also update an existing file, so, if you are feeling clever, you can have multiple routers writing tags and URLs to different destinations in the same file!'
         self._nested_object_names_list.setToolTip( tt )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self._nested_object_names_panel, 'JSON Objects structure' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        message = 'JSON Objects structure'
+        
+        st = ClientGUICommon.BetterStaticText( self._nested_object_names_panel, message )
+        
+        st.setToolTip( self._nested_object_names_list.toolTip() )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._nested_object_names_list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._nested_object_names_panel.setLayout( vbox )
@@ -101,6 +111,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._change_type_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._service_selection_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._sidecar_help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._nested_object_names_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._suffix_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -249,6 +260,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._change_type_button.setText( choice_tuple_label_lookup[ self._current_exporter_class ] )
         
         self._service_selection_panel.setVisible( False )
+        self._sidecar_help_button.setVisible( False )
         self._nested_object_names_panel.setVisible( False )
         self._suffix_panel.setVisible( False )
         
@@ -264,7 +276,9 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pass
             
-        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT ):
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
+            
+            self._sidecar_help_button.setVisible( True )
             
             suffix = exporter.GetSuffix()
             
@@ -272,21 +286,16 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._suffix_panel.setVisible( True )
             
-        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ):
-            
-            suffix = exporter.GetSuffix()
-            
-            self._suffix.setText( suffix )
-            
-            self._suffix_panel.setVisible( True )
-            
-            nested_object_names = exporter.GetNestedObjectNames()
-            
-            self._nested_object_names_list.Clear()
-            
-            self._nested_object_names_list.AddDatas( nested_object_names )
-            
-            self._nested_object_names_panel.setVisible( True )
+            if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ):
+                
+                nested_object_names = exporter.GetNestedObjectNames()
+                
+                self._nested_object_names_list.Clear()
+                
+                self._nested_object_names_list.AddDatas( nested_object_names )
+                
+                self._nested_object_names_panel.setVisible( True )
+                
             
         else:
             
@@ -294,9 +303,27 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _ShowSidecarHelp( self ):
+        
+        message = 'Sidecars are typically named just as their associated file but with the additional extension. \'image.jpg\' makes \'image.jpg.txt\', and so on.'
+        message += os.linesep * 2
+        message += 'Sidecar exporters will overwrite whatever is at their set destination, so be careful if you intend to set up multiple simultaneous exports, or the second will overwrite the first. You can safely export to two or more different locations in the same .json file, but if you export to .txt, use the \'suffix\' control to export to different files.'
+        message += os.linesep * 2
+        message += 'If there is no content to write, no new file will be created.'
+        
+        QW.QMessageBox.information( self, 'Sidecars', message )
+        
+    
     def _UpdateServiceKeyButtonLabel( self ):
         
-        name = HG.client_controller.services_manager.GetName( self._service_key )
+        try:
+            
+            name = HG.client_controller.services_manager.GetName( self._service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            name = 'unknown'
+            
         
         self._service_selection_button.setText( name )
         

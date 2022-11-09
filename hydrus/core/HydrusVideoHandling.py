@@ -5,7 +5,6 @@ import os
 import re
 import struct
 import subprocess
-from typing import Optional
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
@@ -75,7 +74,7 @@ def GetAPNGChunks( file_header_bytes: bytes ) ->list:
     
     return chunks
     
-def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> Optional[bytes]:
+def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> typing.Optional[ bytes ]:
     
     # the acTL chunk can be in different places, but it has to be near the top
     # although it is almost always in fixed position (I think byte 29), we have seen both pHYs and sRGB chunks appear before it
