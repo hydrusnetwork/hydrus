@@ -1306,6 +1306,10 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:is not the best quality file of its duplicate group
     *   system:has audio
     *   system:no audio
+    *   system:has exif
+    *   system:no exif
+    *   system:has human-readable embedded metadata
+    *   system:no human-readable embedded metadata
     *   system:has icc profile
     *   system:no icc profile
     *   system:has tags

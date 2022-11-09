@@ -1,4 +1,5 @@
 cbor2
+cryptography
 python-dateutil
 
 beautifulsoup4>=4.0.0
