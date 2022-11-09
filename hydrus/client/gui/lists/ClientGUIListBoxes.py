@@ -3164,6 +3164,23 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         return dict( ( term.GetNamespaceAndColour() for term in self._ordered_terms ) )
         
     
+    def DeleteSelected( self ):
+        
+        self._DeleteActivate()
+        
+    
+    def GetNamespaceColours( self ):
+        
+        return self._GetNamespaceColours()
+        
+    
+    def GetSelectedNamespaceColours( self ):
+        
+        namespace_colours = dict( ( term.GetNamespaceAndColour() for term in self._selected_terms ) )
+        
+        return namespace_colours
+        
+    
     def SetNamespaceColour( self, namespace, colour: QG.QColor ):
         
         colour_tuple = ( colour.red(), colour.green(), colour.blue() )
@@ -3185,18 +3202,6 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._Sort()
         
         self._DataHasChanged()
-        
-    
-    def GetNamespaceColours( self ):
-        
-        return self._GetNamespaceColours()
-        
-    
-    def GetSelectedNamespaceColours( self ):
-        
-        namespace_colours = dict( ( term.GetNamespaceAndColour() for term in self._selected_terms ) )
-        
-        return namespace_colours
         
     
 class ListBoxTagsFilter( ListBoxTags ):

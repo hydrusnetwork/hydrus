@@ -25,6 +25,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
     ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA,
     ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
@@ -32,6 +33,8 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
     ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
@@ -534,6 +537,31 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ), show_remove_button = False ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA:
+            
+            recent_predicate_types = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF:
+            
+            recent_predicate_types = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ), ), show_remove_button = False ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            recent_predicate_types = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
             

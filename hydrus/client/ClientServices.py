@@ -1606,6 +1606,11 @@ class ServiceRepository( ServiceRestricted ):
         HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_key.SetVariable( 'popup_text_2', popup_message )
         
+        if HG.profile_mode:
+            
+            HG.client_controller.PrintProfile( popup_message )
+            
+        
     
     def _SetNewServiceOptions( self, service_options ):
         

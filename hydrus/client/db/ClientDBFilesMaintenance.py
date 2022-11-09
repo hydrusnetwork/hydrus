@@ -96,6 +96,28 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     self.modules_hashes.SetExtraHashes( hash_id, md5, sha1, sha512 )
                     
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF:
+                    
+                    previous_has_exif = self.modules_files_metadata_basic.GetHasEXIF( hash_id )
+                    
+                    has_exif = additional_data
+                    
+                    if previous_has_exif != has_exif:
+                        
+                        self.modules_files_metadata_basic.SetHasEXIF( hash_id, has_exif )
+                        
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
+                    
+                    previous_has_human_readable_embedded_metadata = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadata( hash_id )
+                    
+                    has_human_readable_embedded_metadata = additional_data
+                    
+                    if previous_has_human_readable_embedded_metadata != has_human_readable_embedded_metadata:
+                        
+                        self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, has_human_readable_embedded_metadata )
+                        
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE:
                     
                     previous_has_icc_profile = self.modules_files_metadata_basic.GetHasICCProfile( hash_id )

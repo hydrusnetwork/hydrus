@@ -1,6 +1,11 @@
 @ECHO off
 
-IF NOT EXIST "venv\" goto :missing_venv
+IF NOT EXIST "venv\" (
+
+	SET /P gumpf=You need to set up a venv! Check the running from source help for more info!
+	EXIT /B 1
+	
+)
 
 CALL venv\Scripts\activate.bat
 
@@ -12,11 +17,3 @@ start "" "pythonw" client.pyw
 
 REM Here is an alternate line that will keep the console open and see live log updates. Useful for boot/live debugging.
 REM python client.py
-
-goto :done
-
-:missing_venv
-
-SET /P ready=You need to set up a venv! Check the running from source help for more info!
-
-:done

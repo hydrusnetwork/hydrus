@@ -17,7 +17,7 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
 
 *   Your list of tags:
     
-    ```py
+    ```
     [ 'character:samus aran', 'creator:青い桜', 'system:height > 2000' ]
     ```
     
@@ -35,7 +35,7 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
     
 *   In python, converting your tag list to the URL encoded string would be:
     
-    ```py
+    ```
     urllib.parse.quote( json.dumps( tag_list ) )
     ```
     
@@ -61,17 +61,17 @@ To send CBOR, for POST put Content-Type `application/cbor` in your request heade
 
 For POST requests, just print the pure bytes in the body, like this:
 
-```py
+```
 cbor2.dumps( arg_dict )
 ```
 
 For GET, encode the parameter value in base64, like this:
 
-```py
+```
 base64.urlsafe_b64encode( cbor2.dumps( argument ) )
 ```
 -or-
-```py
+```
 str( base64.urlsafe_b64encode( cbor2.dumps( argument ) ), 'ascii' )
 ```
 
@@ -1306,6 +1306,10 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:is not the best quality file of its duplicate group
     *   system:has audio
     *   system:no audio
+    *   system:has exif
+    *   system:no exif
+    *   system:has human-readable embedded metadata
+    *   system:no human-readable embedded metadata
     *   system:has icc profile
     *   system:no icc profile
     *   system:has tags

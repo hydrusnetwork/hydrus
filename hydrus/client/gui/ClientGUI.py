@@ -16,6 +16,7 @@ import PIL
 import sqlite3
 
 import qtpy
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -748,13 +749,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             library_versions.append( ( 'cloudscraper present: ', 'False' ) )
             
         
+        library_versions.append( ( 'cryptography present:', str( HydrusEncryption.CRYPTO_OK ) ) )
         library_versions.append( ( 'dateutil present: ', str( ClientTime.DATEUTIL_OK ) ) )
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
-        library_versions.append( ( 'PyOpenSSL present:', str( HydrusEncryption.OPENSSL_OK ) ) )
-        library_versions.append( ( 'pyparsing present: ', str( ClientNetworkingJobs.PYPARSING_OK ) ) )
-        
+        library_versions.append( ( 'pyopenssl present:', str( HydrusEncryption.OPENSSL_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )

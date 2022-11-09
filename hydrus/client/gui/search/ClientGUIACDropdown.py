@@ -913,9 +913,13 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def _RestoreTextCtrlFocus( self ):
         
-        # if an event came from clicking the dropdown, we want to put focus back on textctrl
+        # if an event came from clicking the dropdown or stop or something, we want to put focus back on textctrl
+        current_focus_widget = QW.QApplication.focusWidget()
         
-        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+        if ClientGUIFunctions.IsQtAncestor( current_focus_widget, self ):
+            
+            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+            
         
     
     def _ScheduleResultsRefresh( self, delay ):
@@ -1745,7 +1749,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             
         
-        self._RestoreTextCtrlFocus()
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -1823,7 +1827,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         except HydrusExceptions.CancelledException:
             
-            self._RestoreTextCtrlFocus()
+            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
             
             return
             
@@ -1832,7 +1836,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._BroadcastChoices( predicates, shift_down )
         
-        self._RestoreTextCtrlFocus()
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
     def _FavouriteSearchesMenu( self ):
@@ -2017,6 +2021,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 HG.client_controller.favourite_search_manager.SetFavouriteSearchRows( edited_favourite_searches_rows )
                 
+            
+        
+    
+    def _RestoreTextCtrlFocus( self ):
+        
+        # if an event came from clicking the dropdown or stop or something, we want to put focus back on textctrl
+        current_focus_widget = QW.QApplication.focusWidget()
+        
+        if current_focus_widget != self._favourite_searches_button:
+            
+            AutoCompleteDropdownTags._RestoreTextCtrlFocus( self )
             
         
     

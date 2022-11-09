@@ -28,7 +28,19 @@ if 'QT_API' not in os.environ:
 
 #
 
-import qtpy
+def DoWinDarkMode():
+    
+    os.environ[ 'QT_QPA_PLATFORM' ] = 'windows:darkmode=2'
+    
+
+try:
+    
+    import qtpy
+    
+except ModuleNotFoundError:
+    
+    raise Exception( 'The qtpy module was not found! Are you sure you installed and activated your venv correctly? Check the \'running from source\' section of the help if you are confused!' )
+    
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW

@@ -103,11 +103,16 @@ def SetStyleFromName( name ):
         raise HydrusExceptions.DataMissing( 'Style "{}" does not exist! If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it.'.format( name ) )
         
     
-def SetStyleSheet( stylesheet ):
+def SetStyleSheet( stylesheet, prepend_hydrus = True ):
     
-    global DEFAULT_HYDRUS_STYLESHEET
+    stylesheet_to_use = stylesheet
     
-    stylesheet_to_use = DEFAULT_HYDRUS_STYLESHEET + os.linesep * 2 + stylesheet
+    if prepend_hydrus:
+        
+        global DEFAULT_HYDRUS_STYLESHEET
+        
+        stylesheet_to_use = DEFAULT_HYDRUS_STYLESHEET + os.linesep * 2 + stylesheet
+        
     
     global CURRENT_STYLESHEET
     

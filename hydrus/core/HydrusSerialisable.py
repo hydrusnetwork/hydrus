@@ -303,6 +303,16 @@ class SerialisableBaseNamed( SerialisableBase ):
         self._name = name
         
     
+    def _GetSerialisableInfo( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        raise NotImplementedError()
+        
+    
     def GetSerialisableTuple( self ):
         
         return ( self.SERIALISABLE_TYPE, self._name, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )

@@ -190,6 +190,11 @@ class MigrationDestinationList( MigrationDestination ):
         self._time_started = 0
         
     
+    def DoSomeWork( self, source ):
+        
+        raise NotImplementedError()
+        
+    
     def GetDataReceived( self ):
         
         return self._data_received
@@ -244,6 +249,11 @@ class MigrationDestinationTagService( MigrationDestination ):
         
         self._tag_service_type = service.GetServiceType()
         self._content_action = content_action
+        
+    
+    def DoSomeWork( self, source ):
+        
+        raise NotImplementedError()
         
     
 class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):

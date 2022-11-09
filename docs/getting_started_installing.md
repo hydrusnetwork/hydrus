@@ -2,7 +2,7 @@
 title: Installing and Updating  
 ---
 
-# installing and updating
+# Installing and Updating
 
 If any of this is confusing, a simpler guide is [here](https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md), and some video guides are [here](https://github.com/CuddleBear92/Hydrus-guides)!
 
@@ -63,7 +63,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "Docker"
 
-    * A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](https://github.com/hydrusnetwork/hydrus/blob/master/static/build_files/docker/README.md).
+    * A rudimentary documentation for the [container](https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus) setup can be found [here](docker.md).
 
 === "From Source"
 
@@ -110,7 +110,7 @@ To run the client:
 
 === "Linux"
 
-    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are run `./client` from the terminal.
+    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are running `./client` from the terminal.
     *   If you experience virtual memory crashes, please review [this thorough guide](Fixing_Hydrus_Random_Crashes_Under_Linux.md) by a user.
 
 ## Updating
@@ -120,7 +120,7 @@ To run the client:
 
 **Hydrus does not auto-update. It will stay the same version unless you download and install a new one.**
 
-Although I put out an new version every week, you can update far less often if you want. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
+Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
 
 A user has written a longer and more formal guide to updating, and information on the 334->335 step [here](update_guide.rtf).
 

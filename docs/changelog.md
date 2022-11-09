@@ -7,6 +7,84 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 505](https://github.com/hydrusnetwork/hydrus/releases/tag/v505)
+
+### exif update
+
+* the client now has the ability to check your image files for basic human-readable metadata. sometimes this is timing data for a gif, often it is something like DPI, and for many of the recent ML-generated pngs, this is the original generating prompt. this is now viewable in the same way as EXIF, on the same panel. since this (and future expansions) are not EXIF _per se_, the overarching UI around here is broadly renamed 'embedded metadata'
+* the client now scans for and remembers if files have EXIF or human-readable embedded metadata. two predicates, 'system:image has exif' and 'system:image has human-readable embedded metadata' let you search for them. the vast majority of images have some sort of human-readable embedded metadata, so 'system:no human-readable embedded metadata' may typically be the more useful predicate in the latter case
+* the system predicate parser can handle these new system preds
+* to keep the system predicate list tidy, the new system preds are wrapped with 'has icc profile' into a meta-system predicate 'system:embedded metadata', like how 'system:dimensions' works
+* the media viewer now knows ahead of time if a media has embedded metadata. the button in the media viewer's top hover window that shows this is no longer a cog but a little text-on-window image, and it now only appears if the file has data to show. the tooltip previews whether this is EXIF, other data, or both
+* this knowledge is obviously now generated on file imports going forward, and new file maintenance jobs can retroactively scan for it
+* all your existing image files and gifs/apngs are scheduled for this work. they will catch up in the background over the coming weeks
+* the duplicate filter shows if one or both files have exif or other human-readable data. I had written off adding new 'scores' to the dupe filter panel until a full overhaul, but this was a simple copy/paste of the icc profile statement, so I snuck it in. also, these statements now only appear if for one image it is true and the other is false--no more 'they both have icc profiles m8', which is not a helpful comparison statement
+* added some unit tests for this new tech
+* a future expansion here will be to record the specific keys and values into the database so you can search specifically over those values (e.g. 'EXIF ISO level > 400', or 'has "parameters" text value')
+
+### misc
+
+* the 'reverse page drop shift behaviour' checkbox in _options->gui pages_ is replaced with four checkboxes. two govern whether page drops should chase the drop, either normally or with shift held down, and two new ones govern whether hydrus should dynamically navigate tabs as you move a media or page drag and drop over the tab bar. set them how you like!
+* a new EXPERIMENTAL checkbox just beneath these lets you change what the mouse wheel does to a row of page tabs--by default, the wheel will change tab selection, but if you often have an overloaded row (i.e. they overspill the bar width and you see the left/right arrows), you can set the wheel to _scroll/pan the bar_ instead
+* the 'if file is missing, remove record' job is now split into two--one that leaves no deletion record (old behaviour), and one that does (new). this new job lets you do some 'yes and I want it to stay gone' tasks like if you are syncing an old database backup to a newer client_files structure
+* thanks to user pointing out what was needed, turned on a beta 'darkmode detection' in Qt for Windows. if you launch the client in official Windows 'Apps darkmode' (under Windows settings->Colors), it should now start with your system darkmode colours. switching between light and dark mode while the client is running is pretty buggy (also my Explorer windows are buggy at this too jej), but this is a step forward. fingers crossed this feature matures and gets reliable multiplatform support in future (issue #756)
+
+### fixes
+
+* thanks to a user, the twitter downloader is fixed. seems like twitter (maybe due to Elon's new team?) changed one tiny name in the API we use. let's see if they change anything more significant in the coming weeks (issue #1268)
+* thanks to a user the 'gelbooru 0.1.11 file page parser' stops getting borked 'Rating: ' tags, and I fixed its source time fetch too. I'm pretty sure these broke because of the multiline string processing change a couple months ago, sorry for the trouble!
+* fixed a recent stupid typo that broke the media viewer's do an edge pan' action (issue #1266)
+* fixed an issue with the furry.booru.org url classes, which were normalising URLs to http rather than https for some accidental reason
+* I finally figured out the weird bug where the colour picker dialog would sometimes treat mouse moves as mouse drags over the colour-selection gradient box. this is due to a bug in Qt6 where if you have a stylesheet with a certain hover value set, the colour picker goes bananas. I tried many things to fix this and finally settled on a sledgehammer: if you have the offending value in your stylesheet, it now does some stuff that takes a second or two of lag to launch the colour picker and a second or two of lag to exit it. sorry, but that fixes it! if you want to skip the lag in the options dialog, set your stylesheet to 'default' for the duration (issue #1260)
+* fixed an issue where the new sidecar importer system was not correctly cleaning tags (removing extra whitespace, lowercasing) before committing them to the database! if you got hit with this, a simple restart should fix the incorrect labels (it wasn't _actually_ writing bad tags to the database), but if a restart does not fix it, please run _database->check and repair->fix invalid tags_ (issue #1264)
+* fixed an issue opening the new metadata sidecar edit UI when you had removed and replaced the original 'my tags' service
+* think I fixed a bug in the duplicate filter where if a file in the current pair is deleted (and removed from view), the index/pair tracking would desynchronise and cause an error if you attempted to rewind to the first pair
+* I fixed the reported 'committable decisions' count for duplicate filters set to do no duplicate content merge at all
+
+### build version woes
+
+* all the builds now run on python 3.9 (Linux and Windows were 3.8 previously). any users on systems too old to run 3.9 are encouraged to run from source instead
+* the linux build is rolled back to the older version of python-mpv. thanks to the users who helped me test this, and the specific user who let me know about the different version incompatibilities going on. basically we can't move to the new mpv on the Linux build for a little while, so the official release is rolling back to safe and stable. if you are on a newer Linux flavour, like 22.04, I recommend you pursue running from source, which is now easy on Linux
+* I am considering, in let's say two or three months, no longer supporting the Linux build. we'll see how well the running from source easy-setup scripts work out, but if they aren't a hassle, that really is the proper way to do things on Linux, and it'll solve many crashes and mpv issues
+
+### running from source is now simple and easy for everyone
+
+* transcribed the setup .bat files in the base directory to .sh for linux users and .command for macOS users! the 'running from source' help is updated too. all users are now welcome to try it out!
+* folded the 'setup_venv_qt5.bat' script into the main 'setup_venv.bat' script as a user choice for 'advanced' setup, and expanded it with prompts for qt5, mpv, and opencv
+* the setup files now say your python version and guide you through all choices
+* as Windows 8.1 users have reported problems with Qt6, the help and script recommendations on Qt5 are now <=8.1, not just 7. but it is easy to switch now, so if you want to play around, let me know what you discover
+
+### boring running from source and help gubbins
+
+* took the 'update' option out of the 'setup-venv.bat' script. this process was not doing what I thought it would and was not particularly useful. the script now always reinstalls after user hits Enter to continue, which is very reliable, gets newer versions of libraries when available, and almost always takes less than a minute
+* updated the github readme and website index to point obviously and directly at the getting started guide
+* took out some of the bloviating from the initial introduction page
+* updated the running from source help to talk about the new advanced setup and added a couple extra warnings
+* updated the running from source help to talk about Linux and macOS
+* if qtpy is missing at the very start of the program, a new error catch asks the user if they installed and activated their venv correctly (should also catch people who run client.py right off the bat without reading the docs)
+* deleted the old user-written help document about which packages to use with which Linux flavours, as the author says it is now out of date and modern pip as used by the scripts navigates it better nowadays
+* the setup_venv.bat now checks and informs the user if they do not have python installed
+* cleaned up the flow control of the batch files. more conditionals, fewer gotos
+* to keep the base install dir clean, moved the 'advanced' setup script's cut-up requirements.txts to a new folder under static/requirements. if you are manually setting up a venv and need unusual libraries, check them out for known good specific versions, otherwise you are set with the basic requirements.txt
+* to keep the install dir clean, moved the obscure 'build' requirements.txts to a new folder under static/requirements. these are mostly just notes for me when setting up a new test dev environment
+
+### cleanup and other boring stuff
+
+* as recommended by the pyopenssl page, I moved the server self-signed cert generation routine to 'cryptography' (which I'm pretty sure pyopenssl was just wrapping anyway). cryptography is added to the requirements.txt, but you should already have it. pyopenssl is still used by twisted, so it stays in the requirements.txts. both of these libraries remain optional and are only used by people hosting https services
+* if you load up a favourite search, the focus no longer goes to the autocomplete text box right after. hydev liked most of the focus propagation changes here but found this one incredibly annoying
+* when you are in profile mode and doing repository processing, the current speed is now printed regularly to the profile log to help see how fast the profiled jobs are at each step
+* simplified some duplicate filter code
+* the 'add tags/urls with the import' window now also shows 'cleaned' tags in the preview column for sidecar routers that go to tags
+* added some extra help text and tooltips to the new sidecar exporter UI
+* removed the weird '()' empty name component in .json exporters
+* cleaned up the namespace colour list widget in options->tag presentation. it now has proper add and delete buttons
+* refactored the colour picker button significantly and moved and merged its old wx patch code into the main object
+* the duplicate filter handles 'cannot rewind' errors better, including if the first pair is no longer viewable
+* pretty sure I fixed a long-time stupid hang in the unit tests that appeared occasionally after a 'favicon' fech test. it was due to a previous network engine shutdown test applying too broadly to test objects
+* cleaned up some edge cases in the 'which account added this file/mapping to the server?' tech, where it might have been possible, when looking up deleted content, to get another janitor account (i.e. who deleted the content), although I am pretty sure this situation was never possible to actually start in UI. if I add 'who deleted this?' tech in future, it'll be a separate specific call
+* cleaned up some specifically 'Qt6' references in the build script. the build requirements.txts and spec files are also collapsed down, with old Qt5 versions removed
+* filled out some incomplete abstract class definitions
+
 ## [Version 504](https://github.com/hydrusnetwork/hydrus/releases/tag/v504)
 
 ### Qt5
@@ -369,74 +447,3 @@ _almost all the changes this week are only important to server admins and janito
 * cleaned up some old painter code and hacks to simpler alternatives
 * cleaned a tangle of file/tag domain update code in the autocomplete dropdowns
 * cleaned up some options getting/setting methods in the downloaders
-
-## [Version 495](https://github.com/hydrusnetwork/hydrus/releases/tag/v495)
-
-### Qt6
-* if available, Qt6 is now the default. specifically, if the QT_API environment variable is not set, the default is now PySide6, and if that is not available, then PySide2 (Qt5). previously, the opposite was true
-* fixed a bug in last week's File Import Options default update with the new 'default' FIOs always showing 'new' files on a gallery/watcher highlight. the Presentation Import Options and the check to see if the pending local file domains actually exist now correctly look up the 'default' FIOs
-* Qt6 has much better UI scaling support than Qt5 for zooms other than 100%/200%. many Windows users are at 125%/150%, which revealed some pretty ugly thumbnails and thumb banner text in Qt6. thank you for the reports. I did my homework and read up on how this is _supposed_ to work and I have hacked pretty thumbnails at unusual UI scales. it also redraws itself correctly when I move from a 100% screen to a different one at 125%; let me know how you get on. I'm quite pleased
-* the media viewer is still slightly borked at >100%. the fix will be slightly different, but I have a plan and hope to have it sorted for next week.
-* fixed setting a mouse scroll wheel shortcut in shortcut options in Qt6
-* as a reminder, as far as I know, Windows 7 cannot run Qt6. I will be dropping the Qt5 build in a few weeks, so if you are a Windows 7 user, have a think on what you want to do--either stop updating, move hydrus to a newer OS, or run from source on Win 7/Qt5
-
-### note import options and note parsing
-* note parsing is ready in parts. I am rolling them out for feedback from advanced users and hope to link it all up into a working system next week!
-* the different 'x import options', previously file and tag import options, and this week adding 'note import options', are now edited through one combined button and dialog. this 'import options' button dynamically adjusts to deal with how many types of import options the importer has and will relabel and tooltip and right-click-menu itself appropriately
-* this new button and multi-edit-panel show '(is default)' status in menus and tabs for quick referral
-* if you want to play with note import options, check out the new EXPERIMENTAL menu option under _network->downloader components_. read the help and tooltips and let me know if I have missed anything simple, obvious, and important
-* I have no default system for Note Import Options set up yet, so I have not added it for real. I will do something domain-based, similar to Tag Import Options.
-* I did however write simple note parsing support. any Content Parser can now have a 'note' parsing type, with a note name. downloader creators, please feel free to play with this, although it isn't complicated and isn't plugged in yet. I think we should review what sites have parseable notes and plan for that rather than start implementing for real just yet. the main limitation is that the parsing system can't do multi-line results yet
-* I'd like to see if I can get NIO defaults going next week, and this should suddenly all lock into place. multi-line parsing may be easy or a massive pain, I'm not sure yet
-
-### misc
-* added two new checkboxes to _options->files and trash_ to turn off the yes/no confirmation when you copy/move file across multiple local file services
-* the 'overwrite this session?' confirmation dialog now says the session name you are overwriting
-* fixed a bug where thumbnails were not immediately updating their banner text on changes to the summary generator objects in _options->tag presentation_
-* moved the 'focus thumbnail in preview window' checkboxes from 'gui pages' options page to 'thumbnails'
-* updated the text and enabled status of the 'BUGFIX: discord DnD' stuff in _options->gui_
-* updated the job description texts in the file maintenance dialog, improving formatting and clarifying what happens in each missing/incorrect job, and what 'remove record' means precisely (it leaves no deletion record)
-* fixed a bug from last week when trying to edit your default tag import options
-
-### boring note import options cleanup and refactoring
-* moved ClientGUIImport code up to a new hydrus.client.gui.importing module, refactored it into multiple files, and merged in some other edit panels for various import gui
-* merged the file/tag import options buttons into one cleverer and cleaner class. changed its update callables into nicer Qt signals. wrote a new tabbed edit panel for it to work with, and replaced all old import option buttons across the program with the new system
-* fixed an issue where the 'import options' buttons (now merged) would allow you to set them as 'default' through the right-click menu even when the button was set to not allow defaults (this state occurs in the options dialog, when you _set_ what the defaults are)
-* fixed the same when you try to paste default options into the button
-* brushed up and completed the note import options object
-* wrote a 'edit note import options' panel
-* fixed a small thing where the 'string-to-string' list widget wasn't setting the custom 'value' column header name correctly
-
-## [Version 494](https://github.com/hydrusnetwork/hydrus/releases/tag/v494)
-
-### QT6
-* thanks to a user's help, we are rolling out a Qt6 test build this week. we've been running Qt5 for a few years now. 6 is mostly a very large bugfix patch, and I am hopeful this update will relieve several legacy issues related to UI scale, colour support, draw flickering, and other unusual stuff. so far, it is working for me great. I'll be putting out joint 5 and 6 builds for 4-8 weeks, to iron out any big problems, and then I'll switch over to 6 releases exclusively. if you are an advanced user, please give it a go this or next week and let me know if you run into any traceback errors about deprecated method names or completely jank layout in the less used parts of the program
-* the actual changes you'll see are mostly style, just slightly different font spacing, things like that. if you have a system-baked Qt5 style that hydrus magically inherits, this will no longer work, you need to get a Qt6 version of the style (although I understand this is happening already for the popular styles, so you may already have them)
-* users on Windows 7 and similarly old OS versions are unable to run Qt6 programs, sorry!
-* I intend to keep the code 5-compatible, and users who run from source can choose whichever version of Qt they prefer, as here in the help: https://hydrusnetwork.github.io/hydrus/running_from_source.html#qt
-* the linux Qt6 build also goes up from ubuntu 18.04 to 20.04. let me know if you have any trouble, but it feels like it is time to update this too
-
-### file import options overhaul
-* I wanted to do note parsing this week, but when I reviewed the whole job, there wasn't enough time to do it properly. so, in prep for a cleaner introduction of 'note import options' next week, I am overhauling how the other import options do some stuff
-* all file import options now support filetype filtering! it uses the same control as system:filetype or in import folders, but with some improved logic. on update, existing import folder filetype settings will be copied down to the file import options
-* file import options now work on a similar 'default' system as tag import options. existing file import options will stay as-is, but new ones will begin in a 'use the default settings at time of import' state. those defaults are editable under _options->importing_. for now I am not adding a 'use this file import options default for this web domain' system, but it might happen in future. let's see how this all shakes out first
-* the file import options button now has a right-click menu like the tag import options button
-* the manage subscriptions panel now has a 'overwrite file import options' button to mass-set FIO
-* cleaned up a bunch of old file import and import options code
-
-### misc
-* system:filetype now remembers meta filetypes better. if you select 'all video', it will now still select all video even if hydev adds support for a new video type in future. also if you select 'video + animations', it'll say that rather than listing out every possible specific-type
-* fixed an issue where loading a favourite search wasn't always setting 'include current/pending' values on the buttons correct
-* fixed up a status display in the gallery downloader and watcher pages--if you pause an importer while it is doing work, it now says 'pausing...' as its status until any current jobs are finished. it was giving empty text before, as if it were finished already
-* fixed some unusual behaviour with downloader highlighting where the first query pended to an empty page was secretly highlighted for the next session load, and fixed the 'subscription gap downloader' also doing this and not obeying the normal 'highlight new downloaders if nothing already highlighted' option
-* improved the error when the 'make sure this directory exists' function runs into a file with that pathname
-* fixed a rare selection position error, maybe Qt6 only, when clicking in the thumbnail grid as it is loading
-
-### boring Qt6 code cleanup
-* as a side thing, I set up quick-launch environments for QtPy5, QtPy6, PySide2, and PySide6 in my IDE this week, so I can now test all these situations and jump back in time no problem in future
-* integrated a user's patch to bring us up to Qt6 compatibility and did a little more work to get it backwards compatible with older qtpy and Qt5
-* refactored the critical Qt boot setup and monkeypatching from QtPorting to a new QtInit module
-* migrated the hydrus code for keyboardModifiers, event-pos, and globalPos all to the Qt6 equivalents so the monkeypatching is always going to be on older versions looking forward
-* fiddled with QPoint and QPointF conversions a little so I _think_ Qt5 and Qt6 is always talking about the same type
-* updated build scripts and requirements.txts for the new situation
-* updated the help a bit for the new situation

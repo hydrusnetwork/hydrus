@@ -2140,7 +2140,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         pair_info = []
         
-        for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+        for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
             
             if duplicate_type is None:
                 
@@ -2247,9 +2247,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             was_auto_skipped = False
             
-            self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, jobs, was_auto_skipped ) )
+            ( first_media_result, second_media_result ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
-            self._ShowNextPair()
+            first_media = ClientMedia.MediaSingleton( first_media_result )
+            second_media = ClientMedia.MediaSingleton( second_media_result )
+            
+            process_tuple = ( None, first_media, second_media, jobs, was_auto_skipped )
+            
+            self._ShowNextPair( process_tuple )
             
         
         return deleted
@@ -2419,7 +2424,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if len( list_of_service_keys_to_content_updates ) > 0 ] )
+        return len( [ 1 for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
         
     
     def _GetNumRemainingDecisions( self ):
@@ -2583,43 +2588,54 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
         
-        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) )
+        process_tuple = ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped )
         
-        self._ShowNextPair()
+        self._ShowNextPair( process_tuple )
         
     
     def _RewindProcessing( self ) -> bool:
         
+        def test_we_can_pop():
+            
+            if len( self._processed_pairs ) == 0:
+                
+                # the first one shouldn't be auto-skipped, so if it was and now we can't pop, something weird happened
+                
+                HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                
+                QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It could be some files were deleted during processing. The filter will now close.' )
+                
+                self.window().deleteLater()
+                
+                return False
+                
+            
+            return True
+            
+        
         if self._current_pair_index > 0:
             
-            ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
-            
-            self._current_pair_index -= 1
-            
-            while was_auto_skipped:
+            while True:
                 
-                if len( self._processed_pairs ) == 0:
-                    
-                    # the first one shouldn't be auto-skipped, so if it was and now we can't pop, something weird happened
-                    
-                    HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-                    
-                    QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It will now close.' )
-                    
-                    self.window().deleteLater()
+                if not test_we_can_pop():
                     
                     return False
                     
                 
-                ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
                 self._current_pair_index -= 1
                 
+                if not was_auto_skipped:
+                    
+                    break
+                    
+                
             
             # only want this for the one that wasn't auto-skipped
-            for media_result in media_result_pair:
+            for m in ( first_media, second_media ):
                 
-                hash = media_result.GetHash()
+                hash = m.GetHash()
                 
                 self._hashes_due_to_be_deleted_in_this_batch.discard( hash )
                 self._hashes_processed_in_this_batch.discard( hash )
@@ -2672,16 +2688,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._media_container.show()
         
     
-    def _ShowNextPair( self ):
+    def _ShowNextPair( self, process_tuple: tuple ):
         
         if self._currently_fetching_pairs:
             
             return
             
-        
-        self._current_pair_index += 1
-        
-        #
         
         # hackery dackery doo to quick solve something that is calling this a bunch of times while the 'and continue?' dialog is open, making like 16 of them
         # a full rewrite is needed on this awful workflow
@@ -2726,6 +2738,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return True
             
         
+        #
+        
+        self._processed_pairs.append( process_tuple )
+        
+        self._current_pair_index += 1
+        
         while True:
             
             num_remaining = self._GetNumRemainingDecisions()
@@ -2762,7 +2780,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     we_saw_a_non_auto_skip = False
                     
-                    for ( media_result_pair, duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+                    for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
                         
                         if not was_auto_skipped:
                             
@@ -2801,7 +2819,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( current_pair, None, None, None, [], was_auto_skipped ) )
+                self._processed_pairs.append( ( None, None, None, [], was_auto_skipped ) )
                 
                 self._current_pair_index += 1
                 
@@ -2826,10 +2844,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
         was_auto_skipped = False
+
+        ( first_media_result, second_media_result ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
         
-        self._processed_pairs.append( ( self._batch_of_pairs_to_process[ self._current_pair_index ], None, None, None, [], was_auto_skipped ) )
+        first_media = ClientMedia.MediaSingleton( first_media_result )
+        second_media = ClientMedia.MediaSingleton( second_media_result )
         
-        self._ShowNextPair()
+        process_tuple = ( None, first_media, second_media, [], was_auto_skipped )
+        
+        self._ShowNextPair( process_tuple )
         
     
     def _SwitchMedia( self ):
@@ -2951,9 +2974,18 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             # ugly, but it will do for now
             
-            if len( self._media_list ) < 2:
+            if len( self._media_list ) < 2 and len( self._batch_of_pairs_to_process ) > self._current_pair_index:
                 
-                self._ShowNextPair()
+                was_auto_skipped = True
+                
+                ( first_media_result, second_media_result ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+                
+                first_media = ClientMedia.MediaSingleton( first_media_result )
+                second_media = ClientMedia.MediaSingleton( second_media_result )
+                
+                process_tuple = ( None, first_media, second_media, [], was_auto_skipped )
+                
+                self._ShowNextPair( process_tuple )
                 
             else:
                 
@@ -2961,7 +2993,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        HG.client_controller.CallLaterQtSafe( self, 0.1, 'duplicates filter post-processing wait', catch_up )
+        HG.client_controller.CallLaterQtSafe( self, 0.01, 'duplicates filter post-processing wait', catch_up )
         
     
     def SetMedia( self, media ):
@@ -3042,7 +3074,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         def qt_continue( unprocessed_pairs ):
             
-            if not self or not QP.isValid( self):
+            if not self or not QP.isValid( self ):
                 
                 return
                 

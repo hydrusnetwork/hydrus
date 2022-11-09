@@ -106,6 +106,16 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class GUISessionContainerPage( HydrusSerialisable.SerialisableBaseNamed ):
     
+    def _GetSerialisableInfo( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        raise NotImplementedError()
+        
+    
     def GetPageDataHashes( self ):
         
         raise NotImplementedError()

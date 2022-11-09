@@ -1,17 +1,10 @@
 @ECHO off
 
-IF EXIST "venv\" goto :venv_exists
+IF NOT EXIST "venv\" (
 
-goto :venv_missing
-
-:venv_exists
+	SET /P gumpf=Sorry, you do not seem to have a venv!
+	EXIT /B 1
+	
+)
 
 start venv\Scripts\activate.bat
-
-goto :done
-
-:venv_missing
-
-SET /P done=Sorry, you do not seem to have a venv!
-
-:done

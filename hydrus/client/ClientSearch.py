@@ -64,6 +64,9 @@ PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME = 40
 PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE = 41
 PREDICATE_TYPE_SYSTEM_TIME = 42
 PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME = 43
+PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA = 44
+PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA = 45
+PREDICATE_TYPE_SYSTEM_HAS_EXIF = 46
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -84,6 +87,9 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FRAMERATE,
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_HAS_EXIF,
+    PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
@@ -405,6 +411,20 @@ class FileSystemPredicates( object ):
                 has_audio = value
                 
                 self._common_info[ 'has_audio' ] = has_audio
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
+                
+                has_exif = value
+                
+                self._common_info[ 'has_exif' ] = has_exif
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
+                
+                has_human_readable_embedded_metadata = value
+                
+                self._common_info[ 'has_human_readable_embedded_metadata' ] = has_human_readable_embedded_metadata
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
@@ -1951,7 +1971,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, self._value, not self._inclusive )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
             
             return Predicate( self._predicate_type, not self._value )
             
@@ -2186,6 +2206,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_UNTAGGED: base = 'untagged'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA: base = 'embedded metadata'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
@@ -2494,9 +2515,37 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
+                
+                base = 'image has exif'
+                
+                if self._value is not None:
+                    
+                    has_exif = self._value
+                    
+                    if not has_exif:
+                        
+                        base = 'no exif'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
+                
+                base = 'image has human-readable embedded metadata'
+                
+                if self._value is not None:
+                    
+                    has_human_readable_embedded_metadata = self._value
+                    
+                    if not has_human_readable_embedded_metadata:
+                        
+                        base = 'no human-readable embedded metadata'
+                        
+                    
+                
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
                 
-                base = 'has icc profile'
+                base = 'image has icc profile'
                 
                 if self._value is not None:
                     

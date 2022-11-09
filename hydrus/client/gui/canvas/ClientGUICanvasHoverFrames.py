@@ -684,9 +684,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         shortcuts.setToolTip( 'shortcuts' )
         shortcuts.setFocusPolicy( QC.Qt.TabFocus )
         
-        self._cog_icon = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
-        self._cog_icon.setToolTip( 'extra options' )
-        self._cog_icon.setFocusPolicy( QC.Qt.TabFocus )
+        self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
+        self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.TabFocus )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( 'fullscreen switch' )
@@ -718,7 +717,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._cog_icon, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._show_embedded_metadata_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -768,9 +767,29 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 self._undelete_button.show()
                 
             
-            exif_possible = self._current_media.GetMime() in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF )
+            has_exif = self._current_media.GetMediaResult().GetFileInfoManager().has_exif
+            has_human_readable_embedded_metadata = self._current_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
             
-            self._cog_icon.setEnabled( exif_possible )
+            if has_exif or has_human_readable_embedded_metadata:
+                
+                tt_components = []
+                
+                if has_exif:
+                    
+                    tt_components.append( 'exif' )
+                    
+                
+                if has_human_readable_embedded_metadata:
+                    
+                    tt_components.append( 'non-exif human-readable embedded metadata')
+                    
+                
+                tt = 'show {}'.format( ' and '.join( tt_components ) )
+                
+                self._show_embedded_metadata_button.setToolTip( tt )
+                
+            
+            self._show_embedded_metadata_button.setVisible( has_exif or has_human_readable_embedded_metadata )
             
         
     
@@ -823,18 +842,14 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         new_options.SetStringList( 'default_media_viewer_custom_shortcuts', default_media_viewer_custom_shortcuts )
         
     
-    def _ShowCogMenu( self ):
+    def _ShowFileEmbeddedMetadata( self ):
         
         if self._current_media is None:
             
             return
             
         
-        menu = QW.QMenu()
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'check for exif data', 'See if the file has any EXIF data.', ClientGUIMediaActions.ShowFileEXIF, self, self._current_media )
-        
-        CGC.core().PopupMenu( self._cog_icon, menu )
+        ClientGUIMediaActions.ShowFileEmbeddedMetadata( self, self._current_media )
         
     
     def _ShowShortcutMenu( self ):
@@ -1711,7 +1726,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'icc_profile' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'embedded_metadata', 'icc_profile' ]
         
         self._comparison_statements_sts = {}
         

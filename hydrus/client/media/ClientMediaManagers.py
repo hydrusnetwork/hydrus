@@ -85,6 +85,8 @@ class FileInfoManager( object ):
         self.has_audio = has_audio
         self.num_words = num_words
         
+        self.has_exif = False
+        self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
         
     

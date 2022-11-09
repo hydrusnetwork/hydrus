@@ -1783,9 +1783,33 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True )
+        
+        self.assertEqual( p.ToString(), 'system:image has exif' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False )
+        
+        self.assertEqual( p.ToString(), 'system:no exif' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True )
+        
+        self.assertEqual( p.ToString(), 'system:image has human-readable embedded metadata' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False )
+        
+        self.assertEqual( p.ToString(), 'system:no human-readable embedded metadata' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True )
         
-        self.assertEqual( p.ToString(), 'system:has icc profile' )
+        self.assertEqual( p.ToString(), 'system:image has icc profile' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
@@ -1978,6 +2002,12 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:has tags', "system:has tags" ),
             ( 'system:untagged', "system:no tags" ),
             ( 'system:untagged', "system:untagged" ),
+            ( 'system:image has human-readable embedded metadata', "system:has human readable embedded metadata" ),
+            ( 'system:no human-readable embedded metadata', "system:no human readable embedded metadata" ),
+            ( 'system:image has human-readable embedded metadata', "system:has embedded metadata" ),
+            ( 'system:no human-readable embedded metadata', "system:no embedded metadata" ),
+            ( 'system:image has icc profile', "system:has icc profile" ),
+            ( 'system:no icc profile', "system:no icc profile" ),
             ( 'system:number of tags > 5', "system:number of tags > 5" ),
             ( 'system:number of tags \u2248 10', "system:number of tags ~= 10" ),
             ( 'system:has tags', "system:number of tags > 0  " ),

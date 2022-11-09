@@ -1706,8 +1706,8 @@ class MediaContainer( QW.QWidget ):
             
         
         canvas_size = self.parentWidget().size()
-        my_size = self._media_container.size()
-        my_pos = self._media_container.pos()
+        my_size = self.size()
+        my_pos = self.pos()
         
         delta_x = 0
         delta_y = 0

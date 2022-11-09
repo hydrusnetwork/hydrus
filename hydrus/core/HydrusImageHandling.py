@@ -1,5 +1,6 @@
 import hashlib
 import io
+import os
 import typing
 
 import numpy
@@ -543,7 +544,10 @@ def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
             
             exif_dict = pil_image._getexif()
             
-            return exif_dict
+            if len( exif_dict ) > 0:
+                
+                return exif_dict
+                
             
         except:
             
@@ -709,6 +713,75 @@ def GetJPEGQuantizationQualityEstimate( path ):
     
     return ( 'unknown', None )
     
+
+def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
+    
+    def render_dict( d, prefix ):
+        
+        texts = []
+        
+        keys = sorted( d.keys() )
+        
+        for key in keys:
+            
+            if key in ( 'exif', 'icc_profile' ):
+                
+                continue
+                
+            
+            value = d[ key ]
+            
+            if isinstance( value, bytes ):
+                
+                continue
+                
+            
+            if isinstance( value, dict ):
+                
+                value_string = render_dict( value, prefix = '    ' + prefix )
+                
+                if value_string is None:
+                    
+                    continue
+                    
+                
+            else:
+                
+                value_string = '    {}{}'.format( prefix, value )
+                
+            
+            row_text = '{}{}:'.format( prefix, key )
+            row_text += os.linesep
+            row_text += value_string
+            
+            texts.append( row_text )
+            
+        
+        if len( texts ) > 0:
+            
+            return os.linesep.join( texts )
+            
+        else:
+            
+            return None
+            
+        
+    
+    if hasattr( pil_image, 'info' ):
+        
+        try:
+            
+            return render_dict( pil_image.info, '' )
+            
+        except:
+            
+            pass
+            
+        
+    
+    return None
+    
+
 def GetPSDResolution( path ):
     
     with open( path, 'rb' ) as f:
@@ -873,6 +946,39 @@ def GetTimesToPlayGIFFromPIL( pil_image: PILImage.Image ) -> int:
     
     return times_to_play_gif
     
+
+def HasEXIF( path: str ) -> bool:
+    
+    try:
+        
+        pil_image = RawOpenPILImage( path )
+        
+    except:
+        
+        return False
+        
+    
+    result = GetEXIFDict( pil_image )
+    
+    return result is not None
+    
+
+def HasHumanReadableEmbeddedMetadata( path: str ) -> bool:
+    
+    try:
+        
+        pil_image = RawOpenPILImage( path )
+        
+    except:
+        
+        return False
+        
+    
+    result = GetEmbeddedFileText( pil_image )
+    
+    return result is not None
+    
+
 def HasICCProfile( pil_image: PILImage.Image ) -> bool:
     
     if 'icc_profile' in pil_image.info:
@@ -887,6 +993,7 @@ def HasICCProfile( pil_image: PILImage.Image ) -> bool:
     
     return False
     
+
 def IsDecompressionBomb( path ) -> bool:
     
     # there are two errors here, the 'Warning' and the 'Error', which atm is just a test vs a test x 2 for number of pixels

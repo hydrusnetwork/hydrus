@@ -4,7 +4,7 @@ title: Running From Source
 
 # running from source
 
-I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. If none of the built packages work for you (for instance if you use Windows 7 or 18.04 Ubuntu (or equivalent)), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.
+I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. If none of the built packages work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent)), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.
 
 ## Simple Setup Guide
 
@@ -23,16 +23,13 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 #### Core
 
-!!! warning ".sh and .command are in testing"
-    Hey, the .sh and .command setup files for Linux/macOS are new. I cannot promise they are bug free, so please only test them if you are brave and/or know a little about this, and let me know how it goes.
-
 === "Windows"
 
     First of all, you will need to install Python. Get 3.8.x or 3.9.x [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.
 
 === "Linux"
 
-    You should already have a fairly new python. Ideally, you want 3.8.x or 3.9.x. If you are on 3.10.x, run the 'advanced' setup script later on and choose the newer OpenCV.
+    You should already have a fairly new python. Ideally, you want 3.8.x or 3.9.x. If you are on 3.10.x, run the 'advanced' setup later on and choose the newer OpenCV.
 
 === "macOS"
 
@@ -53,8 +50,8 @@ There are three external libraries. You just have to get them and put them in th
 
     1. mpv  
         
-        1. If you are on Windows 7, get [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z).
-        2. If you are on Windows 8 or newer, get [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
+        1. If you are on Windows 8.1 or older, get [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z).
+        2. If you are on Windows 10 or newer, get [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
         
         Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into `install_dir`.
         
@@ -75,7 +72,7 @@ There are three external libraries. You just have to get them and put them in th
         
         Try running `apt-get install libmpv1` in a new terminal. You can type `apt show libmpv1` to see your current version. Or, if you use a different package manager, try searching `libmpv` or `libmpv1` on that.
         
-        1. If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup script in the next section and selecting the 'old' mpv.
+        1. If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.
         2. If you have 0.34.1 or later, you can run the normal setup script.
         
     2. SQLite3  
@@ -106,35 +103,30 @@ There are three external libraries. You just have to get them and put them in th
 
 === "Windows"
 
-    1. If you are on Windows 7, you want 'setup_venv_advanced.bat'.
-    2. Everyone else go for 'setup_venv.bat'.
     
-    Just double-click the file.
+    Double-click `setup_venv.bat`.
+    
 
 === "Linux"
 
-    1. If you are on or below Ubuntu 20.04 or equivalent, or are otherwise stuck with an older mpv version, you want 'setup_venv_advanced.sh'.
-    2. Everyone else go for 'setup_venv.sh'.
     
-    You might be able to double-click the file. Otherwise, open a terminal in the folder and type:  
+    The file is `setup_venv.sh`. You may be able to double-click it. If not, open a terminal in the folder and type:  
     `. setup_venv.sh`
+    
 
 === "macOS"
 
-    I do not know which versions of macOS are unable to run Qt6, so you probably want to try setup_venv.command, and if that fails, experiment with setup_venv_advanced.command. Try Qt5 and the other older libraries first, then test the newer ones later.
     
-    Please let me know what you discover.
-
-The setup should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
-
-!!! info "Advanced Setup"
-    The advanced setup script allows you to choose between old or newer versions of several libraries:  
+    Double-click `setup_venv.command`.
     
-    1. Qt: Win 7 and Ubuntu 18.04 equivalents should go for Qt5, everyone else Qt6.
-    2. mpv: Win 7 and Ubuntu 20.04 equivalents should go for the old one, everyone else the new.
-    3. OpenCV: Does not matter much, but Python 3.10 users may need the new.
+    I do not know which versions of macOS are unable to run Qt6, so you may need to experiment with the advanced options. Try Qt5 and the other older libraries first, then test the newer ones later.
+    
+    Let me know what you discover.
+    
 
-If something messes up, or you want to switch between Qt5/Qt6, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall'. It should _just work_ on most normal computers, but let me know if you have any trouble.
+The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, you may need the (a)dvanced. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
+
+If something messes up, or you want to switch between Qt5/Qt6, or you need to try a different version of a library, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall'. It should _just work_ on most normal computers, but let me know if you have any trouble.
 
 Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.
 
@@ -190,8 +182,6 @@ Inside the extract should be client.py and server.py. You will be treating these
 
 Hydrus needs a whole bunch of libraries, so let's now set your python up. I **strongly** recommend you create a virtual environment. It is easy and doesn't mess up your system python.
 
-_Note, if you are on Linux and you have trouble with venv, it may be easier to use your package manager instead. A user has written a great summary with all needed packages [here](running_from_source_linux_packages.txt)._
-
 To create a new venv environment:
 
 * Open a terminal at your hydrus extract folder.
@@ -211,7 +201,7 @@ After you have activated the venv, you can use pip to install everything you nee
 pip install -r requirements.txt
 ```
 
-You can also pick and choose from the other advanced requirements. Check and compare their contents to the main requirements.txt to see what is going on.
+If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on.
 
 ## Qt { id="qt" }
 
@@ -229,7 +219,7 @@ If you want to set QT_API in a batch file, do this:
 
 `set QT_API=pyqt6`
 
-If you run Windows 7 or Ubuntu 18.04, you cannot run Qt6. Please try PySide2 or PyQt5.
+If you run Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Please try PySide2 or PyQt5.
 
 ## mpv support { id="mpv" }
 

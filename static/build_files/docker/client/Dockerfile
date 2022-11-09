@@ -9,7 +9,7 @@ LABEL git="https://github.com/hydrusnetwork/hydrus"
 
 RUN apk --no-cache add fvwm x11vnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq \
  openssl nodejs patch font-noto font-noto-emoji font-noto-cjk \
- py3-pyside6 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-pip py3-opencv py3-lxml py3-chardet \
+ py3-pyside6 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-cryptography py3-pip py3-opencv py3-lxml py3-chardet \
  py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 py3-html5lib py3-dateutil
 RUN pip install qtpy Send2Trash python-mpv cloudscraper pyparsing cbor2
 

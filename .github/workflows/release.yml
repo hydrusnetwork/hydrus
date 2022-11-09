@@ -18,6 +18,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       -
+        name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      -
         name: Install mkdocs-material
         run: python3 -m pip install mkdocs-material
       -
@@ -74,7 +79,7 @@ jobs:
         name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
           architecture: x64
       - 
         name: APT Install
@@ -156,11 +161,11 @@ jobs:
         name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
           architecture: x64
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
+        run: python3 -m pip install -r hydrus/static/build_files/windows/requirements.txt
       - 
         name: Build docs to /help
         run: mkdocs build -d help

@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import traceback
+import typing
 
 from PIL import ExifTags
 
@@ -2294,42 +2295,77 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
     
 
-class ReviewFileEXIF( ClientGUIScrolledPanels.ReviewPanel ):
+class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, exif_dict ):
+    def __init__( self, parent, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ] ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        vbox = QP.VBoxLayout()
+        #
+        
+        exif_panel = ClientGUICommon.StaticBox( self, 'EXIF' )
         
         label = 'Double-click a row to copy its value to clipboard.'
         
-        st = ClientGUICommon.BetterStaticText( self, label = label )
+        st = ClientGUICommon.BetterStaticText( exif_panel, label = label )
         
         st.setWordWrap( True )
         st.setAlignment( QC.Qt.AlignCenter )
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( exif_panel, CGLC.COLUMN_LIST_EXIF_DATA.ID, 16, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
         
-        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, 24, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
+        exif_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        exif_panel.Add( self._exif_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        datas = []
+        #
         
-        for ( exif_id, value ) in exif_dict.items():
+        text_panel = ClientGUICommon.StaticBox( self, 'embedded text' )
+        
+        self._text = QW.QPlainTextEdit( text_panel )
+        self._text.setReadOnly( True )
+        
+        text_panel.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        if exif_dict is None:
             
-            if isinstance( value, dict ):
+            exif_panel.setVisible( False )
+            
+        else:
+            
+            datas = []
+            
+            for ( exif_id, value ) in exif_dict.items():
                 
-                datas.extend( value.items() )
-                
-            else:
-                
-                datas.append( ( exif_id, value ) )
+                if isinstance( value, dict ):
+                    
+                    datas.extend( value.items() )
+                    
+                else:
+                    
+                    datas.append( ( exif_id, value ) )
+                    
                 
             
+            self._exif_listctrl.AddDatas( datas )
+            
         
-        self._exif_listctrl.AddDatas( datas )
+        if file_text is None:
+            
+            text_panel.setVisible( False )
+            
+        else:
+            
+            self._text.setPlainText( file_text )
+            
         
-        QP.AddToLayout( vbox, self._exif_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, exif_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, text_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -2824,6 +2860,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         return len( self._job_types_to_counts ) > 0
         
     
+
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, boned_stats ):
