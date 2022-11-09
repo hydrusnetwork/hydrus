@@ -27,7 +27,7 @@ try:
     
     if HC.PLATFORM_WINDOWS:
         
-        QtInit.DoWinDarkMode()
+        pass #QtInit.DoWinDarkMode()
         
     
     from hydrus.core import HydrusData
