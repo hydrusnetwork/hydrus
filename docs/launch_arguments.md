@@ -75,7 +75,7 @@ This starts the program with 'Profile Mode' turned on, which captures the perfor
 
 ##**`--win_qt_darkmode_test`**
 
-**Windows only, client only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments). It fundamentally works, but it overrides any existing qt.conf, locks the style to `windowsvista`, and can't handle switches between light and dark mode. 
+**Windows only, client only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
 
 # server arguments
 
