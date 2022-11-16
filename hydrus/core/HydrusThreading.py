@@ -709,6 +709,7 @@ class SchedulableJob( object ):
         self._work_lock = threading.Lock()
         
         self._currently_working = threading.Event()
+        self._actual_work_started = threading.Event()
         self._is_cancelled = threading.Event()
         
     
@@ -734,7 +735,12 @@ class SchedulableJob( object ):
         self._scheduler.JobCancelled()
         
     
-    def CurrentlyWorking( self ) -> None:
+    def CurrentlyWorking( self ) -> bool:
+        
+        if self._is_cancelled.is_set() and not self._actual_work_started.is_set():
+            
+            return False
+            
         
         return self._currently_working.is_set()
         
@@ -869,6 +875,8 @@ class SchedulableJob( object ):
             
             with self._work_lock:
                 
+                self._actual_work_started.set()
+                
                 self._work_callable()
                 
             
@@ -879,6 +887,7 @@ class SchedulableJob( object ):
                 HG.controller.ReleaseThreadSlot( self._thread_slot_type )
                 
             
+            self._actual_work_started.clear()
             self._currently_working.clear()
             
         

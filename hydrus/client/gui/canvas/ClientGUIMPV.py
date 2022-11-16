@@ -136,6 +136,8 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         # self._player[ 'osd-level' ] = 1
         # self._player[ 'input-default-bindings' ] = True
         
+        self._previous_conf_content_bytes = b''
+        
         self.UpdateConf()
         
         self._player.loop = True
@@ -616,6 +618,22 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
                 HydrusPaths.MirrorFile( default_mpv_config_path, mpv_config_path )
                 
+            
+        
+        # let's touch mpv core functions as little ans possible
+        
+        with open( mpv_config_path, 'rb' ) as f:
+            
+            conf_content_bytes = f.read()
+            
+        
+        if self._previous_conf_content_bytes == conf_content_bytes:
+            
+            return
+            
+        else:
+            
+            self._previous_conf_content_bytes = conf_content_bytes
             
         
         #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):

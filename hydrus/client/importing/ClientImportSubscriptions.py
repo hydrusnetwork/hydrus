@@ -686,7 +686,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if this_is_initial_sync:
                 
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?'.format( query_name, self._name ) )
+                if len( file_seeds_to_add_in_this_sync_ordered ) == 0:
+                    
+                    HydrusData.ShowText( 'The query "{}" for subscription "{}" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?'.format( query_name, self._name ) )
+                    
+                else:
+                    
+                    HydrusData.ShowText( 'The query "{}" for subscription "{}" performed its first sync ok, but the query seems to be already dead! Hydrus will get all the outstanding files, but it will not check for new ones in future. If you know this query has not had any uploads in a long time and just wanted to catch up on what was already there, then no worries.'.format( query_name, self._name ) )
+                    
                 
             else:
                 

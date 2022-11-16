@@ -30,7 +30,7 @@ if 'QT_API' not in os.environ:
 
 def DoWinDarkMode():
     
-    os.environ[ 'QT_QPA_PLATFORM' ] = 'windows:darkmode=2'
+    os.environ[ 'QT_QPA_PLATFORM' ] = 'windows:darkmode=1'
     
 
 try:

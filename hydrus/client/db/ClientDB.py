@@ -8823,7 +8823,6 @@ class DB( HydrusDB.HydrusDB ):
             raise
             
         
-        self._cursor_transaction_wrapper.pub_after_job( 'reset_thumbnail_cache' )
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_options' )
         
     

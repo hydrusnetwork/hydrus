@@ -5,8 +5,6 @@ import random
 import threading
 import time
 
-from qtpy import QtWidgets as QW
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -1330,7 +1328,7 @@ class ClientFilesManager( object ):
             
             if self._bad_error_occurred:
                 
-                QW.QMessageBox.warning( None, 'Warning', 'A serious file error has previously occurred during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
+                HydrusData.ShowText( 'A serious file error has previously occurred during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
                 
                 return
                 

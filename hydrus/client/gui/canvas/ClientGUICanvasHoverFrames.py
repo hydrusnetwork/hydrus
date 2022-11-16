@@ -704,7 +704,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         drag_button.setIcon( QG.QIcon( CC.global_pixmaps().drag ) )
         drag_button.setIconSize( CC.global_pixmaps().drag.size() )
         drag_button.setToolTip( 'drag from here to export file' )
-        drag_button.pressed.connect( self.EventDragButton )
+        drag_button.pressed.connect( self.DragButtonHit )
         drag_button.setFocusPolicy( QC.Qt.TabFocus )
         
         close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
@@ -810,9 +810,12 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 self._title_text.show()
                 
-            else: self._title_text.hide()
+            else:
+                
+                self._title_text.hide()
+                
             
-            lines = self._current_media.GetPrettyInfoLines( only_interesting_lines = True )
+            lines = [ line for line in self._current_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
             
             label = ' | '.join( lines )
             
@@ -889,11 +892,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         CGC.core().PopupMenu( self, menu )
         
     
-    def EventDragButton( self ):
+    def DragButtonHit( self ):
         
         if self._current_media is None:
             
-            return True # was: event.ignore()
+            return
             
         
         page_key = None

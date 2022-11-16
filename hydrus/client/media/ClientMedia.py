@@ -2753,6 +2753,25 @@ class MediaSingleton( Media ):
             
             lines.append( ( line_is_interesting, 'modified: {}'.format( ClientData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) ) )
             
+            modified_timestamp_lines = []
+            
+            timestamp = timestamp_manager.GetFileModifiedTimestamp()
+            
+            if timestamp is not None:
+                
+                modified_timestamp_lines.append( 'local: {}'.format( ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+                
+            
+            for ( domain, timestamp ) in sorted( timestamp_manager.GetDomainModifiedTimestamps().items() ):
+                
+                modified_timestamp_lines.append( '{}: {}'.format( domain, ClientData.TimestampToPrettyTimeDelta( timestamp ) ) )
+                
+            
+            if len( modified_timestamp_lines ) > 1:
+                
+                lines.append( ( False, ( 'all modified dates', modified_timestamp_lines ) ) )
+                
+            
         
         if not locations_manager.inbox:
             

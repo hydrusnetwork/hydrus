@@ -1,5 +1,14 @@
 #!/bin/bash
 
+py_command=python3
+
+type -P $py_command
+
+if [ $? -ne 0 ]; then
+	echo "No python3 found, using python."
+	py_command=python
+fi
+
 if [ -d "venv" ]; then
 	echo "Virtual environment will be reinstalled. Hit Enter to start."
 	read
@@ -13,7 +22,7 @@ fi
 echo "Users on Ubuntu <=20.04 equivalents or python >=3.10 need the advanced install."
 echo
 echo "Your Python version is:"
-python --version
+$py_command --version
 echo
 echo "Do you want the (s)imple or (a)dvanced install? "
 
@@ -66,35 +75,40 @@ else
 fi
 
 echo "Creating new venv..."
-python -m venv venv
+$py_command -m venv venv
 
 source venv/bin/activate
 
+if [ $? -ne 0 ]; then
+    echo "The venv failed to activate, stopping now!"
+	exit 1
+fi
+
 python -m pip install --upgrade pip
 
-pip3 install --upgrade wheel
+python -m pip install --upgrade wheel
 
 if [ $install_type = "s" ]; then
-	pip3 install -r requirements.txt
+	python -m pip install -r requirements.txt
 elif [ $install_type = "a" ]; then
-	pip3 install -r static/requirements/advanced/requirements_core.txt
+	python -m pip install -r static/requirements/advanced/requirements_core.txt
 	
 	if [ $qt = "5" ]; then
-		pip3 install -r static/requirements/advanced/requirements_qt5.txt
+		python -m pip install -r static/requirements/advanced/requirements_qt5.txt
 	elif [ $qt = "6" ]; then
-		pip3 install -r static/requirements/advanced/requirements_qt6.txt
+		python -m pip install -r static/requirements/advanced/requirements_qt6.txt
 	fi
 	
 	if [ $mpv = "o" ]; then
-		pip3 install -r static/requirements/advanced/requirements_old_mpv.txt
+		python -m pip install -r static/requirements/advanced/requirements_old_mpv.txt
 	elif [ $mpv = "n" ]; then
-		pip3 install -r static/requirements/advanced/requirements_new_mpv.txt
+		python -m pip install -r static/requirements/advanced/requirements_new_mpv.txt
 	fi
 	
 	if [ $opencv = "o" ]; then
-		pip3 install -r static/requirements/advanced/requirements_old_opencv.txt
+		python -m pip install -r static/requirements/advanced/requirements_old_opencv.txt
 	elif [ $opencv = "n" ]; then
-		pip3 install -r static/requirements/advanced/requirements_new_opencv.txt
+		python -m pip install -r static/requirements/advanced/requirements_new_opencv.txt
 	fi
 fi
 

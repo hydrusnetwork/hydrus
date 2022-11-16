@@ -559,6 +559,7 @@ class ImageTileCache( object ):
         self._data_cache = DataCache( self._controller, 'image tile cache', cache_size, timeout = cache_timeout )
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        self._controller.sub( self, 'Clear', 'clear_image_tile_cache' )
         
     
     def Clear( self ):

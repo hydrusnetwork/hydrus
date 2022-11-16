@@ -73,5 +73,10 @@ Prints additional debug information to the log during the bootup phase of the ap
 
 This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.
 
+##**`--win_qt_darkmode_test`**
 
-The server supports the same arguments. It also takes a _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.
+**Windows only, client only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments). It fundamentally works, but it overrides any existing qt.conf, locks the style to `windowsvista`, and can't handle switches between light and dark mode. 
+
+# server arguments
+
+The server supports the same arguments. It also takes an optional _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.

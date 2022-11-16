@@ -369,6 +369,24 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         self.assertNotEqual( set( result ), set( rows ) )
         self.assertEqual( set( result ), set( string_processor.ProcessStrings( rows ) ) )
         
+        # with filename remove ext and string conversion
+        
+        expected_input_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
+        
+        with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( os.linesep.join( rows ) )
+            
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
+        
+        result = importer.Import( actual_file_path )
+        
+        os.unlink( expected_input_path )
+        
+        self.assertTrue( len( result ) > 0 )
+        self.assertEqual( set( result ), set( rows ) )
+        
     
     def test_media_json( self ):
         
@@ -438,6 +456,25 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         self.assertTrue( len( result ) > 0 )
         self.assertNotEqual( set( result ), set( rows ) )
         self.assertEqual( set( result ), set( string_processor.ProcessStrings( rows ) ) )
+        
+        # with filename remove ext and string conversion
+        
+        expected_input_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
+        
+        with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
+            
+            j = json.dumps( rows )
+            
+            f.write( j )
+            
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
+        
+        result = importer.Import( actual_file_path )
+        
+        os.unlink( expected_input_path )
+        
+        self.assertEqual( set( result ), set( rows ) )
         
     
 
@@ -586,6 +623,26 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         self.assertEqual( set( rows ), set( HydrusText.DeserialiseNewlinedTexts( text ) ) )
         
+        # with filename remove ext and string conversion
+        
+        expected_output_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
+        
+        with open( expected_output_path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( os.linesep.join( rows ) )
+            
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
+        
+        with open( expected_output_path, 'r', encoding = 'utf-8' ) as f:
+            
+            text = f.read()
+            
+        
+        os.unlink( expected_output_path )
+        
+        self.assertEqual( set( rows ), set( HydrusText.DeserialiseNewlinedTexts( text ) ) )
+        
     
     def test_media_json( self ):
         
@@ -639,6 +696,25 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         os.unlink( expected_output_path )
         
         self.assertEqual( set( rows ), set( json.loads( text )[ 'file_data' ][ 'tags' ] ) )
+        
+        # with filename remove ext and string conversion
+        
+        expected_output_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
+        
+        exporter.Export( actual_file_path, rows )
+        
+        self.assertTrue( os.path.exists( expected_output_path ) )
+        
+        with open( expected_output_path, 'r', encoding = 'utf-8' ) as f:
+            
+            text = f.read()
+            
+        
+        os.unlink( expected_output_path )
+        
+        self.assertEqual( set( rows ), set( json.loads( text ) ) )
         
     
     def test_media_json_combined( self ):

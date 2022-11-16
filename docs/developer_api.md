@@ -125,8 +125,8 @@ Response:
 
 ```json title="Example response"
 {
-  "version": 17,
-  "hydrus_version": 441
+  "version" : 17,
+  "hydrus_version" : 441
 }
 ```
 
@@ -177,7 +177,7 @@ Response:
 :   Some JSON with a new session key in hex.    
 ```json title="Example response"
 {
-  "session_key": "f6e651e7467255ade6f7c66050f3d595ff06d6f3d3693a3a6fb1a9c2b278f800"
+  "session_key" : "f6e651e7467255ade6f7c66050f3d595ff06d6f3d3693a3a6fb1a9c2b278f800"
 }
 ```
         
@@ -201,8 +201,8 @@ Response:
 :   401/403/419 and some error text if the provided access/session key is invalid, otherwise some JSON with basic permission info. 
 ```json title="Example response"
 {
-  "basic_permissions": [0, 1, 3],
-  "human_description": "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"
+  "basic_permissions" : [0, 1, 3],
+  "human_description" : "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"
 }
 ```
         
@@ -222,63 +222,63 @@ Response:
 :   Some JSON listing the client's file and tag services by name and 'service key'.
 ```json title="Example response"
 {
-  "local_tags": [
+  "local_tags" : [
     {
-      "name": "my tags",
-      "service_key": "6c6f63616c2074616773"
+      "name" : "my tags",
+      "service_key" : "6c6f63616c2074616773"
     },
     {
-      "name": "filenames",
-      "service_key": "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b"
+      "name" : "filenames",
+      "service_key" : "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b"
     }
   ],
-  "tag_repositories": [
+  "tag_repositories" : [
     {
-      "name": "PTR",
-      "service_key": "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9"
+      "name" : "PTR",
+      "service_key" : "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9"
     }
   ],
-  "local_files": [
+  "local_files" : [
     {
-      "name": "my files",
-      "service_key": "6c6f63616c2066696c6573"
+      "name" : "my files",
+      "service_key" : "6c6f63616c2066696c6573"
     }
   ],
-  "local_updates": [
+  "local_updates" : [
     {
-      "name": "repository updates",
-      "service_key": "7265706f7369746f72792075706461746573"
+      "name" : "repository updates",
+      "service_key" : "7265706f7369746f72792075706461746573"
     }
   ],
-  "file_repositories": [],
-  "all_local_files": [
+  "file_repositories" : [],
+  "all_local_files" : [
     {
-      "name": "all local files",
-      "service_key": "616c6c206c6f63616c2066696c6573"
+      "name" : "all local files",
+      "service_key" : "616c6c206c6f63616c2066696c6573"
     }
   ],
-  "all_local_media": [
+  "all_local_media" : [
     {
-      "name": "all my files",
-      "service_key": "616c6c206c6f63616c206d65646961"
+      "name" : "all my files",
+      "service_key" : "616c6c206c6f63616c206d65646961"
     }
   ],
-  "all_known_files": [
+  "all_known_files" : [
     {
-      "name": "all known files",
-      "service_key": "616c6c206b6e6f776e2066696c6573"
+      "name" : "all known files",
+      "service_key" : "616c6c206b6e6f776e2066696c6573"
     }
   ],
-  "all_known_tags": [
+  "all_known_tags" : [
     {
-      "name": "all known tags",
-      "service_key": "616c6c206b6e6f776e2074616773"
+      "name" : "all known tags",
+      "service_key" : "616c6c206b6e6f776e2074616773"
     }
   ],
-  "trash": [
+  "trash" : [
     {
-      "name": "trash",
-      "service_key": "7472617368"
+      "name" : "trash",
+      "service_key" : "7472617368"
     }
   ]
 }
@@ -302,7 +302,7 @@ Arguments (in JSON):
 :   - `path`: (the path you want to import)
 
 ```json title="Example request body"
-{"path": "E:\to_import\ayanami.jpg"}
+{"path" : "E:\to_import\ayanami.jpg"}
 ```
 
 Arguments (as bytes): 
@@ -312,9 +312,9 @@ Response:
 :   Some JSON with the import result. Please note that file imports for large files may take several seconds, and longer if the client is busy doing other db work, so make sure your request is willing to wait that long for the response.
 ```json title="Example response"
 {
-  "status": 1,
-  "hash": "29a15ad0c035c0a0e86e2591660207db64b10777ced76565a695102a481c3dd1",
-  "note": ""
+  "status" : 1,
+  "hash" : "29a15ad0c035c0a0e86e2591660207db64b10777ced76565a695102a481c3dd1",
+  "note" : ""
 }
 ```
     
@@ -353,7 +353,7 @@ Arguments (in JSON):
 *   `reason`: (optional, string, the reason attached to the delete action)
 
 ```json title="Example request body"
-{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
 ```
     
 Response:
@@ -384,7 +384,7 @@ Arguments (in JSON):
 *   `file_service_key`: (optional, selective, hexadecimal, the local file domain to which to undelete)
 
 ```json title="Example request body"
-{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
 ```
 
 Response: 
@@ -414,7 +414,7 @@ Arguments (in JSON):
 *   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
-{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
 ```
     
 Response: 
@@ -444,7 +444,7 @@ Arguments (in JSON):
 *   `file_ids`: (a list of numerical file ids)
 
 ```json title="Example request body"
-{"hash": "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
 ```
     
 Response: 
@@ -471,7 +471,7 @@ Arguments (in percent-encoded JSON):
 *   `tags`: (a list of the tags you want cleaned)
 
 Example request:
-:   Given tags `#!json [ " bikini ", "blue    eyes", " character : samus aran ", ":)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]`:
+:   Given tags `#!json [ " bikini ", "blue    eyes", " character : samus aran ", " :)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]`:
     ```
     /add_tags/clean_tags?tags=%5B%22%20bikini%20%22%2C%20%22blue%20%20%20%20eyes%22%2C%20%22%20character%20%3A%20samus%20aran%20%22%2C%20%22%3A%29%22%2C%20%22%20%20%20%22%2C%20%22%22%2C%20%2210%22%2C%20%2211%22%2C%20%229%22%2C%20%22system%3Awew%22%2C%20%22-flower%22%5D
     ```
@@ -480,7 +480,7 @@ Response:
 :  The tags cleaned according to hydrus rules. They will also be in hydrus human-friendly sorting order.
 ```json title="Example response"
 {
-  "tags" : ["9", "10", "11", "::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew"]
+  "tags" : ["9", "10", "11", " ::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew"]
 }
 ```
 
@@ -505,8 +505,8 @@ Response:
 :   Some JSON listing the client's 'local tags' and tag repository services by name.
 ```json title="Example response"
 {
-  "local_tags": ["my tags"],
-  "tag_repositories": [ "public tag repository", "mlp fanfic tagging server" ]
+  "local_tags" : ["my tags"],
+  "tag_repositories" : [ "public tag repository", "mlp fanfic tagging server" ]
 }
 ```
 
@@ -541,18 +541,18 @@ Response:
 :   
 ```json title="Example response"
 {
-  "tags": [
+  "tags" : [
     {
-      "value": "series:kim possible", 
-      "count": 3
+      "value" : "series:kim possible", 
+      "count" : 3
     },
     {
-      "value": "kimchee", 
-      "count": 2
+      "value" : "kimchee", 
+      "count" : 2
     },
     {
-      "value": "character:kimberly ann possible", 
-      "count": 1
+      "value" : "character:kimberly ann possible", 
+      "count" : 1
     }
   ]
 }
@@ -607,37 +607,37 @@ Some example requests:
 :   
 ```json title="Adding some tags to a file"
 {
-  "hash": "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-  "service_names_to_tags": {
-    "my tags": ["character:supergirl", "rating:safe"]
+  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
+  "service_names_to_tags" : {
+    "my tags" : ["character:supergirl", "rating:safe"]
   }
 }
 ```
 ```json title="Adding more tags to two files"
 {
-  "hashes": [
+  "hashes" : [
     "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
     "f2b022214e711e9a11e2fcec71bfd524f10f0be40c250737a7861a5ddd3faebf"
   ],
-  "service_names_to_tags": {
-    "my tags": ["process this"],
-    "public tag repository": ["creator:dandon fuga"]
+  "service_names_to_tags" : {
+    "my tags" : ["process this"],
+    "public tag repository" : ["creator:dandon fuga"]
   }
 }
 ```
 ```json title="A complicated transaction with all possible actions"
 {
-  "hash": "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-  "service_keys_to_actions_to_tags": {
-    "6c6f63616c2074616773": {
-      "0": ["character:supergirl", "rating:safe"],
-      "1": ["character:superman"]
+  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
+  "service_keys_to_actions_to_tags" : {
+    "6c6f63616c2074616773" : {
+      "0" : ["character:supergirl", "rating:safe"],
+      "1" : ["character:superman"]
     },
-    "aa0424b501237041dab0308c02c35454d377eebd74cfbc5b9d7b3e16cc2193e9": {
-      "2": ["character:supergirl", "rating:safe"],
-      "3": ["filename:image.jpg"],
-      "4": [["creator:danban faga", "typo"], ["character:super_girl", "underscore"]],
-      "5": ["skirt"]
+    "aa0424b501237041dab0308c02c35454d377eebd74cfbc5b9d7b3e16cc2193e9" : {
+      "2" : ["character:supergirl", "rating:safe"],
+      "3" : ["filename:image.jpg"],
+      "4" : [["creator:danban faga", "typo"], ["character:super_girl", "underscore"]],
+      "5" : ["skirt"]
     }
   }
 }
@@ -686,12 +686,12 @@ Response:
 :   Some JSON which files are known to be mapped to that URL. Note this needs a database hit, so it may be delayed if the client is otherwise busy. Don't rely on this to always be fast. 
 ```json title="Example response"
 {
-  "normalised_url": "https://safebooru.org/index.php?id=2753608&page=post&s=view",
-  "url_file_statuses": [
+  "normalised_url" : "https://safebooru.org/index.php?id=2753608&page=post&s=view",
+  "url_file_statuses" : [
     {
-      "status": 2,
-      "hash": "20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c",
-      "note": "url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check)."
+      "status" : 2,
+      "hash" : "20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c",
+      "note" : "url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check)."
     }
   ]
 }
@@ -732,11 +732,11 @@ Response:
 :   Some JSON describing what the client thinks of the URL.
 ```json title="Example response"
 {
-  "normalised_url": "https://8ch.net/tv/res/1846574.html",
-  "url_type": 4,
-  "url_type_string": "watchable url",
-  "match_name": "8chan thread",
-  "can_parse": true
+  "normalised_url" : "https://8ch.net/tv/res/1846574.html",
+  "url_type" : 4,
+  "url_type_string" : "watchable url",
+  "match_name" : "8chan thread",
+  "can_parse" : true
 }
 ```
 
@@ -786,17 +786,17 @@ filterable_tags works like the tags parsed by a hydrus downloader. It is just a 
 
 ```json title="Example request body"
 {
-  "url": "https://8ch.net/tv/res/1846574.html",
-  "destination_page_name": "kino zone",
-  "service_names_to_additional_tags": {
-    "my tags": ["as seen on /tv/"]
+  "url" : "https://8ch.net/tv/res/1846574.html",
+  "destination_page_name" : "kino zone",
+  "service_names_to_additional_tags" : {
+    "my tags" : ["as seen on /tv/"]
   }
 }
 ```
 ```json title="Example request body"
 {
-  "url": "https://safebooru.org/index.php?page=post&s=view&id=3195917",
-  "filterable_tags": [
+  "url" : "https://safebooru.org/index.php?page=post&s=view&id=3195917",
+  "filterable_tags" : [
     "1girl",
     "artist name",
     "creator:azto dio",
@@ -835,8 +835,8 @@ Response:
 :   Some JSON with info on the URL added.
 ```json title="Example response"
 {
-  "human_result_text": "\"https://8ch.net/tv/res/1846574.html\" URL added successfully.",
-  "normalised_url": "https://8ch.net/tv/res/1846574.html"
+  "human_result_text" : "\"https://8ch.net/tv/res/1846574.html\" URL added successfully.",
+  "normalised_url" : "https://8ch.net/tv/res/1846574.html"
 }
 ```
 
@@ -868,8 +868,8 @@ Arguments (in JSON):
     All of these are optional, but you obviously need to have at least one of `url` arguments and one of the `hash` arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
 ```json title="Example request body"
 {
-  "url_to_add": "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
-  "hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+  "url_to_add" : "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
+  "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
 }
 ```
         
@@ -899,11 +899,11 @@ Arguments (in percent-encoded JSON):
 Existing notes will be overwritten.
 ```json title="Example request body"
 {
-  "notes": {
-      "note name": "content of note",
-      "another note": "asdf"
+  "notes" : {
+      "note name" : "content of note",
+      "another note" : "asdf"
   },
-  "hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+  "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
 }
 ```
 
@@ -929,8 +929,8 @@ Arguments (in percent-encoded JSON):
 
 ```json title="Example request body"
 {
-  "note_names": ["note name", "another note"],
-  "hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+  "note_names" : ["note name", "another note"],
+  "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
 }
 ```
 
@@ -962,7 +962,7 @@ Response:
 :   A JSON Object listing all the cookies for that domain in \[ name, value, domain, path, expires \] format.
 ```json title="Example response"
 {
-	"cookies": [
+	"cookies" : [
 		["__cfduid", "f1bef65041e54e93110a883360bc7e71", ".gelbooru.com", "/", 1596223327],
 		["pass_hash", "0b0833b797f108e340b315bc5463c324", "gelbooru.com", "/", 1585855361],
 		["user_id", "123456", "gelbooru.com", "/", 1585855361]
@@ -991,7 +991,7 @@ Arguments (in JSON):
 
 ```json title="Example request body"
 {
-  "cookies": [
+  "cookies" : [
     ["PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719],
     ["tag_filter", "1", ".somesite.com", "/", 1627327719]
   ]
@@ -1019,7 +1019,7 @@ Arguments (in JSON):
 
 ```json title="Example request body"
 {
-  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
+  "user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
 }
 ```
 
@@ -1045,41 +1045,41 @@ Response:
 :   A JSON Object of the top-level page 'notebook' (page of pages) detailing its basic information and current sub-pages. Page of pages beneath it will list their own sub-page lists.
 ```json title="Example response"
 {
-  "pages": {
-    "name": "top pages notebook",
-    "page_key": "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
-    "page_type": 10,
-    "selected": true,
-    "pages": [
+  "pages" : {
+    "name" : "top pages notebook",
+    "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
+    "page_type" : 10,
+    "selected" : true,
+    "pages" : [
       {
-        "name": "files",
-        "page_key": "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
-        "page_type": 6,
-        "selected": false
+        "name" : "files",
+        "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
+        "page_type" : 6,
+        "selected" : false
       },
       {
-        "name": "thread watcher",
-        "page_key": "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
-        "page_type": 9,
-        "selected": false
+        "name" : "thread watcher",
+        "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
+        "page_type" : 9,
+        "selected" : false
       },
       {
-        "name": "pages",
-        "page_key": "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
-        "page_type": 10,
-        "selected": true,
-        "pages": [
+        "name" : "pages",
+        "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
+        "page_type" : 10,
+        "selected" : true,
+        "pages" : [
           {
-            "name": "urls",
-            "page_key": "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
-            "page_type": 7,
-            "selected": true
+            "name" : "urls",
+            "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
+            "page_type" : 7,
+            "selected" : true
           },
           {
-            "name": "files",
-            "page_key": "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
-            "page_type": 6,
-            "selected": false
+            "name" : "files",
+            "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
+            "page_type" : 6,
+            "selected" : false
           }
         ]
       }
@@ -1129,66 +1129,66 @@ Response description
 :   A JSON Object of the page's information. At present, this mostly means downloader information.
 ```json title="Example response with simple = true"
 {
-  "page_info": {
-    "name": "threads",
-    "page_key": "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
-    "page_type": 3,
-    "management": {
-      "multiple_watcher_import": {
-        "watcher_imports": [
+  "page_info" : {
+    "name" : "threads",
+    "page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
+    "page_type" : 3,
+    "management" : {
+      "multiple_watcher_import" : {
+        "watcher_imports" : [
           {
-            "url": "https://someimageboard.net/m/123456",
-            "watcher_key": "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85",
-            "created": 1566164269,
-            "last_check_time": 1566164272,
-            "next_check_time": 1566174272,
-            "files_paused": false,
-            "checking_paused": false,
-            "checking_status": 0,
-            "subject": "gundam pictures",
-            "imports": {
-              "status": "4 successful (2 already in db)",
-              "simple_status": "4",
-              "total_processed": 4,
-              "total_to_process": 4
+            "url" : "https://someimageboard.net/m/123456",
+            "watcher_key" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85",
+            "created" : 1566164269,
+            "last_check_time" : 1566164272,
+            "next_check_time" : 1566174272,
+            "files_paused" : false,
+            "checking_paused" : false,
+            "checking_status" : 0,
+            "subject" : "gundam pictures",
+            "imports" : {
+              "status" : "4 successful (2 already in db)",
+              "simple_status" : "4",
+              "total_processed" : 4,
+              "total_to_process" : 4
             },
-            "gallery_log": {
-              "status": "1 successful",
-              "simple_status": "1",
-              "total_processed": 1,
-              "total_to_process": 1
+            "gallery_log" : {
+              "status" : "1 successful",
+              "simple_status" : "1",
+              "total_processed" : 1,
+              "total_to_process" : 1
             }
           },
           {
-            "url": "https://someimageboard.net/a/1234",
-            "watcher_key": "6bc17555b76da5bde2dcceedc382cf7d23281aee6477c41b643cd144ec168510",
-            "created": 1566063125,
-            "last_check_time": 1566063133,
-            "next_check_time": 1566104272,
-            "files_paused": false,
-            "checking_paused": true,
-            "checking_status": 1,
-            "subject": "anime pictures",
-            "imports": {
-              "status": "124 successful (22 already in db), 2 previously deleted",
-              "simple_status": "124",
-              "total_processed": 124,
-              "total_to_process": 124
+            "url" : "https://someimageboard.net/a/1234",
+            "watcher_key" : "6bc17555b76da5bde2dcceedc382cf7d23281aee6477c41b643cd144ec168510",
+            "created" : 1566063125,
+            "last_check_time" : 1566063133,
+            "next_check_time" : 1566104272,
+            "files_paused" : false,
+            "checking_paused" : true,
+            "checking_status" : 1,
+            "subject" : "anime pictures",
+            "imports" : {
+              "status" : "124 successful (22 already in db), 2 previously deleted",
+              "simple_status" : "124",
+              "total_processed" : 124,
+              "total_to_process" : 124
             },
-            "gallery_log": {
-              "status": "3 successful",
-              "simple_status": "3",
-              "total_processed": 3,
-              "total_to_process": 3
+            "gallery_log" : {
+              "status" : "3 successful",
+              "simple_status" : "3",
+              "total_processed" : 3,
+              "total_to_process" : 3
             }
           }
         ]
       },
-      "highlight": "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85"
+      "highlight" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85"
     }
   },
-  "media": {
-    "num_files": 4
+  "media" : {
+    "num_files" : 4
   }
 }
 ```
@@ -1221,8 +1221,8 @@ You need to use either file_ids or hashes. The files they refer to will be appen
 
 ```json title="Example request body"
 {
-  "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
-  "file_ids": [123, 124, 125]
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
+  "file_ids" : [123, 124, 125]
 }
 ```
 
@@ -1248,7 +1248,7 @@ The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_p
 
 ```json title="Example request body"
 {
-  "page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
 }
 ```
 
@@ -1428,17 +1428,17 @@ Response:
 :   The full list of numerical file ids that match the search.
 ```json title="Example response"
 {
-	"file_ids": [125462, 4852415, 123, 591415]
+	"file_ids" : [125462, 4852415, 123, 591415]
 }
 ```
 ```json title="Example response with return_hashes=true"
 {
-  "hashes": [
+  "hashes" : [
     "1b04c4df7accd5a61c5d02b36658295686b0abfebdc863110e7d7249bba3f9ad",
     "fe416723c731d679aa4d20e9fd36727f4a38cd0ac6d035431f0f452fad54563f",
     "b53505929c502848375fbc4dab2f40ad4ae649d34ef72802319a348f81b52bad"
   ],
-  "file_ids": [125462, 4852415, 123]
+  "file_ids" : [125462, 4852415, 123]
 }
 ```
 
@@ -1467,8 +1467,9 @@ Arguments (in percent-encoded JSON):
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
-    *   `hide_service_names_tags`: true or false (optional, defaulting to false)
     *   `include_notes`: true or false (optional, defaulting to false)
+    *   `hide_service_keys_tags`: **Will be set default false and deprecated soon!** true or false (optional, defaulting to false)
+    *   `hide_service_names_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
 
 You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
 
@@ -1490,111 +1491,151 @@ Response:
 :   A list of JSON Objects that store a variety of file metadata.
 ```json title="Example response"
 {
-  "metadata": [
+  "metadata" : [
     {
-      "file_id": 123,
-      "hash": "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
-      "size": 63405,
-      "mime": "image/jpeg",
-      "ext": ".jpg",
-      "width": 640,
-      "height": 480,
-      "duration": null,
-      "time_modified": null,
-      "file_services": {
-        "current": {},
-        "deleted": {}
+      "file_id" : 123,
+      "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
+      "size" : 63405,
+      "mime" : "image/jpeg",
+      "ext" : ".jpg",
+      "width" : 640,
+      "height" : 480,
+      "thumbnail_width" : 200,
+      "thumbnail_height" : 150,
+      "duration" : null,
+      "time_modified" : null,
+      "time_modified_details" : {},
+      "file_services" : {
+        "current" : {},
+        "deleted" : {}
       },
-      "ipfs_multihashes": {},
-      "has_audio": false,
-      "num_frames": null,
-      "num_words": null,
-      "is_inbox": true,
-      "is_local": true,
-      "is_trashed": false,
-      "known_urls": [],
-      "service_names_to_statuses_to_tags": {},
-      "service_keys_to_statuses_to_tags": {},
-      "service_names_to_statuses_to_display_tags": {},
-      "service_keys_to_statuses_to_display_tags": {}
+      "ipfs_multihashes" : {},
+      "has_audio" : false,
+      "num_frames" : null,
+      "num_words" : null,
+      "is_inbox" : false,
+      "is_local" : false,
+      "is_trashed" : false,
+      "is_deleted" : false,
+      "has_exif" : true,
+      "has_human_readable_embedded_metadata" : true,
+      "has_icc_profile" : true,
+      "known_urls" : [],
+      "service_keys_to_statuses_to_tags" : {},
+      "service_keys_to_statuses_to_display_tags" : {},
+      "tags" : {
+        "6c6f63616c2074616773" : {
+          "name" : "local tags",
+          "type" : 5,
+          "type_pretty" : "local tag service",
+          "storage_tags" : {},
+          "display_tags" : {}
+        },
+        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
+          "name" : "public tag repo",
+          "type" : 1,
+          "type_pretty" : "hydrus tag repository",
+          "storage_tags" : {},
+          "display_tags" : {}
+        }
+      }
     },
     {
-      "file_id": 4567,
-      "hash": "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
-      "size": 199713,
-      "mime": "video/webm",
-      "ext": ".webm",
-      "width": 1920,
-      "height": 1080,
-      "duration": 4040,
-      "time_modified": 1624055647,
-      "file_services": {
-        "current": {
-          "616c6c206c6f63616c2066696c6573": {
+      "file_id" : 4567,
+      "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
+      "size" : 199713,
+      "mime" : "video/webm",
+      "ext" : ".webm",
+      "width" : 1920,
+      "height" : 1080,
+      "thumbnail_width" : 200,
+      "thumbnail_height" : 113,
+      "duration" : 4040,
+      "time_modified" : 1604055647,
+      "time_modified_details" : {
+        "local" : 1641044491,
+        "gelbooru.com" : 1604055647
+      },
+      "file_services" : {
+        "current" : {
+          "616c6c206c6f63616c2066696c6573" : {
             "time_imported" : 1641044491
+          },
+          "cb072cffbd0340b67aec39e1953c074e7430c2ac831f8e78fb5dfbda6ec8dcbd" : {
+            "time_imported" : 1641204220
           }
         },
-        "deleted": {
-          "6c6f63616c2066696c6573": {
-            "time_deleted": 1641204274,
-            "time_imported": 1641044491
+        "deleted" : {
+          "6c6f63616c2066696c6573" : {
+            "time_deleted" : 1641204274,
+            "time_imported" : 1641044491
           }
         }
       },
-      "ipfs_multihashes": {
+      "ipfs_multihashes" : {
         "55af93e0deabd08ce15ffb2b164b06d1254daab5a18d145e56fa98f71ddb6f11" : "QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb"
       },
-      "has_audio": true,
-      "num_frames": 102,
-      "num_words": null,
-      "is_inbox": false,
-      "is_local": true,
-      "is_trashed": false,
-      "known_urls": [
+      "has_audio" : true,
+      "num_frames" : 102,
+      "num_words" : null,
+      "is_inbox" : false,
+      "is_local" : true,
+      "is_trashed" : false,
+      "is_deleted" : false,
+      "has_exif" : false,
+      "has_human_readable_embedded_metadata" : false,
+      "has_icc_profile" : false,
+      "known_urls" : [
         "https://gelbooru.com/index.php?page=post&s=view&id=4841557",
         "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
         "http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
       ],
-      "service_names_to_statuses_to_tags": {
-        "my tags": {
-          "0": ["favourites"],
-          "2": ["process this later"]
+      "service_keys_to_statuses_to_tags" : {
+        "6c6f63616c2074616773" : {
+          "0" : ["samus favourites"],
+          "2" : ["process this later"]
         },
-        "my tag repository": {
-          "0": ["blonde_hair", "blue_eyes", "looking_at_viewer"],
-          "1": ["bodysuit"]
+        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
+          "0" : ["blonde_hair", "blue_eyes", "looking_at_viewer"],
+          "1" : ["bodysuit"]
         }
       },
-      "service_keys_to_statuses_to_tags": {
-        "6c6f63616c2074616773": {
-          "0": ["favourites"],
-          "2": ["process this later"]
+      "service_keys_to_statuses_to_display_tags" : {
+        "6c6f63616c2074616773" : {
+          "0" : ["samus favourites", "favourites"],
+          "2" : ["process this later"]
         },
-        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4": {
-          "0": ["blonde_hair", "blue_eyes", "looking_at_viewer"],
-          "1": ["bodysuit"]
+        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
+          "0" : ["blonde hair", "blue_eyes", "looking at viewer"],
+          "1" : ["bodysuit", "clothing"]
         }
       },
-      "service_names_to_statuses_to_display_tags": {
-        "my tags": {
-          "0": ["favourites"],
-          "2": ["process this later", "processing"]
+      "tags" : {
+        "6c6f63616c2074616773" : {
+          "name" : "local tags",
+          "type" : 5,
+          "type_pretty" : "local tag service",
+          "storage_tags" : {
+            "0" : ["samus favourites"],
+            "2" : ["process this later"]
+          },
+          "display_tags" : {
+            "0" : ["samus favourites", "favourites"],
+            "2" : ["process this later"]
+          }
         },
-        "my tag repository": {
-          "0": ["blonde hair", "blue eyes", "looking at viewer"],
-          "1": ["bodysuit", "clothing"]
-        }
-      },
-      "service_keys_to_statuses_to_display_tags": {
-        "6c6f63616c2074616773": {
-          "0": ["favourites"],
-          "2": ["process this later", "processing"
-          ]
-        },
-        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4": {
-          "0": ["blonde hair", "blue eyes", "looking at viewer"],
-          "1": ["bodysuit", "clothing"
-          ]
+        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
+          "name" : "public tag repo",
+          "type" : 1,
+          "type_pretty" : "hydrus tag repository",
+          "storage_tags" : {
+            "0" : ["blonde_hair", "blue_eyes", "looking_at_viewer"],
+            "1" : ["bodysuit"]
+          },
+          "display_tags" : {
+            "0" : ["blonde hair", "blue_eyes", "looking at viewer"],
+            "1" : ["bodysuit", "clothing"]
+          }
         }
       }
     }
@@ -1603,79 +1644,95 @@ Response:
 ```
 ```json title="And one where only_return_identifiers is true"
 {
-  "metadata": [
+  "metadata" : [
     {
-      "file_id": 123,
-      "hash": "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2"
+      "file_id" : 123,
+      "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2"
     },
     {
-      "file_id": 4567,
-      "hash": "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82"
+      "file_id" : 4567,
+      "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82"
     }
   ]
 }
 ```
 ```json title="And where only_return_basic_information is true"
 {
-  "metadata": [
+  "metadata" : [
     {
-      "file_id": 123,
-      "hash": "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
-      "size": 63405,
-      "mime": "image/jpeg",
-      "ext": ".jpg",
-      "width": 640,
-      "height": 480,
-      "duration": null,
-      "has_audio": false,
-      "num_frames": null,
-      "num_words": null,
+      "file_id" : 123,
+      "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
+      "size" : 63405,
+      "mime" : "image/jpeg",
+      "ext" : ".jpg",
+      "width" : 640,
+      "height" : 480,
+      "duration" : null,
+      "has_audio" : false,
+      "num_frames" : null,
+      "num_words" : null,
     },
     {
-      "file_id": 4567,
-      "hash": "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
-      "size": 199713,
-      "mime": "video/webm",
-      "ext": ".webm",
-      "width": 1920,
-      "height": 1080,
-      "duration": 4040,
-      "has_audio": true,
-      "num_frames": 102,
-      "num_words": null,
+      "file_id" : 4567,
+      "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
+      "size" : 199713,
+      "mime" : "video/webm",
+      "ext" : ".webm",
+      "width" : 1920,
+      "height" : 1080,
+      "duration" : 4040,
+      "has_audio" : true,
+      "num_frames" : 102,
+      "num_words" : null,
     }
   ]
 }
 ```
 
+#### basics
+
 Size is in bytes. Duration is in milliseconds, and may be an int or a float.
+
+`is_trashed` means if the file is currently in the trash but available on the hard disk. `is_deleted` means currently either in the trash or completely deleted from disk.
 
 `file_services` stores which file services the file is <i>current</i>ly in and _deleted_ from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be `null`, if they are unknown (e.g. a `time_deleted` for the file deleted before this information was tracked). The `time_modified` can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.
 
 `ipfs_multihashes` stores the ipfs service key to any known multihash for the file. 
 
-The `service_names_to_statuses_to_tags and service_keys_to_statuses_to_tags` structures are similar to the `/add_tags/add_tags` scheme, excepting that the status numbers are:
+The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
+
+#### tags
+
+The 'tags' structures are undergoing transition. Previously, this was a mess of different Objects in different domains, all `service_xxx_to_xxx_tags`, but they are being transitioned to the combined `tags` Object.
+
+`hide_service_names_tags` is deprecated and will be deleted soon. When set to `false`, it shows the old `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects. The new `tags` structure now shows the service name--migrate to this asap.
+
+`hide_service_keys_tags` will soon be set to default `false` and deprecated in the same way. Move to `tags` please!
+
+The `tags` structures are similar to the [/add_tags/add_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
 
 *   0 - current
 *   1 - pending
 *   2 - deleted
 *   3 - petitioned
 
-The tag structure is duplicated for both `name` and `key`. The use of `name` is an increasingly legacy issue--a hack when the Client API was young--and 'service\_names\_to...' lookups are likely to be deleted in future in favour of `service_key`. I recommend you move to service key when you can. To learn more about service names and keys on a client, use the [/get_services](#get_services) call (and cache the response--it doesn't change much!).
-
 !!! note
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-While `service_XXX_to_statuses_to_tags` represent the actual tags stored on the database for a file, the <code>service_XXX_to_statuses_to_<i>display</i>_tags</code> structures reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, start with `service_keys_to_statuses_to_tags`. If you want to render to the user, use `service_keys_to_statuses_to_displayed_tags`.
+To learn more about service names and keys on a client, use the [/get_services](#get_services) call.
+
+While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
+
+#### parameters
 
 If you ask with hashes rather than file_ids, hydrus will, by default, only return results when it has seen those hashes before. This is to stop the client making thousands of new file_id records in its database if you perform a scanning operation. If you ask about a hash the client has never encountered before--for which there is no file_id--you will get this style of result:
 
 ```json title="Missing file_id example"
 {
-    "metadata": [
+    "metadata" : [
         {
-            "file_id": null,
-            "hash": "766da61f81323629f982bc1b71b5c1f9bba3f3ed61caf99906f7f26881c3ae93"
+            "file_id" : null,
+            "hash" : "766da61f81323629f982bc1b71b5c1f9bba3f3ed61caf99906f7f26881c3ae93"
         }
     ]
 }
@@ -1687,25 +1744,23 @@ If you ask about any file_ids that do not exist, you'll get 404.
 
 If you set `only_return_basic_information=true`, this will be much faster for first-time requests than the full metadata result, but it will be slower for repeat requests. The full metadata object is cached after first fetch, the limited file info object is not.
 
-If you add `hide_service_names_tags=true`, the `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects will not be included. Use this to save data/CPU on large queries.
-
 If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
 
 ```json title="For example"
 "detailed_known_urls" : [
   {
-    "normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
-    "url_type": 0,
-    "url_type_string": "post url",
-    "match_name": "gelbooru file page",
-    "can_parse": true
+    "normalised_url" : "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
+    "url_type" : 0,
+    "url_type_string" : "post url",
+    "match_name" : "gelbooru file page",
+    "can_parse" : true
   },
   {
-    "normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
-    "url_type": 5,
-    "url_type_string": "unknown url",
-    "match_name": "unknown url",
-    "can_parse": false
+    "normalised_url" : "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+    "url_type" : 5,
+    "url_type_string" : "unknown url",
+    "match_name" : "unknown url",
+    "can_parse" : false
   }
 ]
 ```
@@ -1810,18 +1865,18 @@ Arguments: None
 
 ```json title="Example response"
 {
-  "boned_stats": {
-    "num_inbox": 8356,
-    "num_archive": 229,
-    "num_deleted": 7010,
-    "size_inbox": 7052596762,
-    "size_archive": 262911007,
-    "size_deleted": 13742290193,
-    "earliest_import_time": 1451408539,
-    "total_viewtime": [3280, 41621, 2932, 83021],
-    "total_alternate_files": 265,
-    "total_duplicate_files": 125,
-    "total_potential_pairs": 3252
+  "boned_stats" : {
+    "num_inbox" : 8356,
+    "num_archive" : 229,
+    "num_deleted" : 7010,
+    "size_inbox" : 7052596762,
+    "size_archive" : 262911007,
+    "size_deleted" : 13742290193,
+    "earliest_import_time" : 1451408539,
+    "total_viewtime" : [3280, 41621, 2932, 83021],
+    "total_alternate_files" : 265,
+    "total_duplicate_files" : 125,
+    "total_potential_pairs" : 3252
   }
 }
 ```

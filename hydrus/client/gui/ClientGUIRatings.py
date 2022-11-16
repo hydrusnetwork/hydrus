@@ -201,6 +201,8 @@ def GetStars( service_key, rating_state, rating ):
 
 class RatingLike( QW.QWidget ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, service_key ):
         
         QW.QWidget.__init__( self, parent )
@@ -234,20 +236,29 @@ class RatingLike( QW.QWidget ):
         
         self._UpdateTooltip()
         
+        self.valueChanged.emit()
+        
     
     def _UpdateTooltip( self ):
         
-        text = HG.client_controller.services_manager.GetName( self._service_key )
-        
-        try:
+        if self.isEnabled():
             
-            service = HG.client_controller.services_manager.GetService( self._service_key )
+            text = HG.client_controller.services_manager.GetName( self._service_key )
             
-            tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateToString( self._rating_state ) )
+            try:
+                
+                service = HG.client_controller.services_manager.GetService( self._service_key )
+                
+                tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateToString( self._rating_state ) )
+                
+            except HydrusExceptions.DataMissing:
+                
+                tt = 'service missing'
+                
             
-        except HydrusExceptions.DataMissing:
+        else:
             
-            tt = 'service missing'
+            tt = ''
             
         
         self.setToolTip( tt )
@@ -280,6 +291,18 @@ class RatingLike( QW.QWidget ):
         return self._service_key
         
     
+    def setEnabled( self, value: bool ):
+        
+        QW.QWidget.setEnabled( self, value )
+        
+        self._dirty = True
+        
+        self.update()
+        
+        self._UpdateTooltip()
+        
+    
+
 class RatingLikeDialog( RatingLike ):
     
     def _Draw( self, painter ):
@@ -288,14 +311,24 @@ class RatingLikeDialog( RatingLike ):
         
         painter.eraseRect( painter.viewport() )
         
-        ( pen_colour, brush_colour ) = GetPenAndBrushColours( self._service_key, self._rating_state )
-        
-        DrawLike( painter, 0, 0, self._service_key, self._rating_state )
+        if self.isEnabled():
+            
+            DrawLike( painter, 0, 0, self._service_key, self._rating_state )
+            
+        else:
+            
+            DrawLike( painter, 0, 0, self._service_key, ClientRatings.NULL )
+            
         
         self._dirty = False
         
     
     def EventLeftDown( self, event ):
+        
+        if not self.isEnabled():
+            
+            return
+            
         
         if self._rating_state == ClientRatings.LIKE: self._SetRating( ClientRatings.NULL )
         else: self._SetRating( ClientRatings.LIKE )
@@ -306,6 +339,11 @@ class RatingLikeDialog( RatingLike ):
         
     
     def EventRightDown( self, event ):
+        
+        if not self.isEnabled():
+            
+            return
+            
         
         if self._rating_state == ClientRatings.DISLIKE: self._SetRating( ClientRatings.NULL )
         else: self._SetRating( ClientRatings.DISLIKE )
@@ -325,6 +363,8 @@ class RatingLikeDialog( RatingLike ):
         
     
 class RatingNumerical( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, service_key ):
         
@@ -360,6 +400,8 @@ class RatingNumerical( QW.QWidget ):
         self._rating = 0.0
         
         self._UpdateTooltip()
+        
+        self.valueChanged.emit()
         
     
     def _Draw( self, painter ):
@@ -425,26 +467,40 @@ class RatingNumerical( QW.QWidget ):
             self._UpdateTooltip()
             
         
+        self.valueChanged.emit()
+        
     
     def _UpdateTooltip( self ):
         
-        text = HG.client_controller.services_manager.GetName( self._service_key )
-        
-        try:
+        if self.isEnabled():
             
-            service = HG.client_controller.services_manager.GetService( self._service_key )
+            text = HG.client_controller.services_manager.GetName( self._service_key )
             
-            tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
+            try:
+                
+                service = HG.client_controller.services_manager.GetService( self._service_key )
+                
+                tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
+                
+            except HydrusExceptions.DataMissing:
+                
+                tt = 'service missing'
+                
             
-        except HydrusExceptions.DataMissing:
+        else:
             
-            tt = 'service missing'
+            tt = ''
             
         
         self.setToolTip( tt )
         
     
     def EventLeftDown( self, event ):
+        
+        if not self.isEnabled():
+            
+            return
+            
         
         ( rating_state, rating ) = self._GetRatingStateAndRatingFromClickEvent( event )
         
@@ -459,6 +515,11 @@ class RatingNumerical( QW.QWidget ):
         
     
     def EventRightDown( self, event ):
+        
+        if not self.isEnabled():
+            
+            return
+            
         
         self._ClearRating()
         
@@ -491,6 +552,17 @@ class RatingNumerical( QW.QWidget ):
         self._Draw( painter )
         
     
+    def setEnabled( self, value: bool ):
+        
+        QW.QWidget.setEnabled( self, value )
+        
+        self._dirty = True
+        
+        self.update()
+        
+        self._UpdateTooltip()
+        
+    
 class RatingNumericalDialog( RatingNumerical ):
     
     def _ClearRating( self ):
@@ -510,7 +582,14 @@ class RatingNumericalDialog( RatingNumerical ):
         
         painter.eraseRect( painter.viewport() )
         
-        DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+        if self.isEnabled():
+            
+            DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            
+        else:
+            
+            DrawNumerical( painter, 0, 0, self._service_key, ClientRatings.NULL, 0.0 )
+            
         
         self._dirty = False
         

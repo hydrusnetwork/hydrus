@@ -52,7 +52,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
+        self._original_options = dict( HC.options )
+        
         self._new_options = HG.client_controller.new_options
+        self._original_new_options = self._new_options.Duplicate()
         
         self._listbook = ClientGUICommon.ListBook( self )
         
@@ -4126,6 +4129,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.WriteSynchronous( 'save_options', HC.options )
             
             HG.client_controller.WriteSynchronous( 'serialisable', self._new_options )
+            
+            # we do this to convert tuples to lists and so on
+            test_new_options = self._new_options.Duplicate()
+            
+            if test_new_options.GetMediaViewOptions() != self._original_new_options.GetMediaViewOptions():
+                
+                HG.client_controller.pub( 'clear_image_tile_cache' )
+                
+            
+            res_changed = HC.options[ 'thumbnail_dimensions' ] != self._original_options[ 'thumbnail_dimensions' ]
+            type_changed = test_new_options.GetInteger( 'thumbnail_scale_type' ) != self._original_new_options.GetInteger( 'thumbnail_scale_type' )
+            
+            if res_changed or type_changed:
+                
+                HG.client_controller.pub( 'reset_thumbnail_cache' )
+                
             
         except:
             

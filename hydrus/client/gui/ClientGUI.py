@@ -5778,7 +5778,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                     for item in r.json()[ 'metadata' ]:
                         
-                        hash_ids_to_hashes_and_tag_info[ item[ 'file_id' ] ] = ( item[ 'hash' ], item[ 'service_names_to_statuses_to_tags' ] )
+                        hash_ids_to_hashes_and_tag_info[ item[ 'file_id' ] ] = ( item[ 'hash' ], item[ 'tags' ] )
                         
                     
                     return hash_ids_to_hashes_and_tag_info
@@ -5803,7 +5803,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 samus_tag_info = hash_ids_to_hashes_and_tag_info[ samus_hash_id ][1]
                 
-                if samus_test_tag not in samus_tag_info[ local_tag_service_name ][ str( HC.CONTENT_STATUS_CURRENT ) ]:
+                if samus_test_tag not in samus_tag_info[ local_tag_service.GetServiceKey().hex() ][ 'storage_tags' ][ str( HC.CONTENT_STATUS_CURRENT ) ]:
                     
                     raise Exception( 'Did not have the tag!' )
                     

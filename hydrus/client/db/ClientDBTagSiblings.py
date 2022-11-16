@@ -391,7 +391,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return sibling_tag_ids
         
     
-    def GetChainsMembersFromIdealsTables( self, display_type, tag_service_id, ideal_tag_ids_table_name, results_table_name ) -> typing.Set[ int ]:
+    def GetChainsMembersFromIdealsTables( self, display_type, tag_service_id, ideal_tag_ids_table_name, results_table_name ):
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
         

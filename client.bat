@@ -9,6 +9,13 @@ IF NOT EXIST "venv\" (
 
 CALL venv\Scripts\activate.bat
 
+IF ERRORLEVEL 1 (
+	
+	SET /P gumpf=The venv failed to activate, stopping now!
+	EXIT /B 1
+	
+)
+
 REM You can copy this file to 'client-user.bat' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
 REM Just tack new params on like this:
 REM start "" "pythonw" client.pyw -d="E:\hydrus"
