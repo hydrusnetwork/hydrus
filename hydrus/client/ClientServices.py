@@ -3415,6 +3415,14 @@ class ServicesManager( object ):
             
         
     
+    def GetServiceKeysToNames( self ):
+        
+        with self._lock:
+            
+            return { service_key : service.GetName() for ( service_key, service ) in self._keys_to_services.items() }
+            
+        
+    
     def GetServiceType( self, service_key: bytes ):
         
         with self._lock:

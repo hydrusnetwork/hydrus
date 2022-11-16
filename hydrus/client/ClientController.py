@@ -1595,7 +1595,7 @@ class Controller( HydrusController.HydrusController ):
         
         ClientGUICore.GUICore()
         
-        if HC.PLATFORM_WINDOWS:
+        if HC.PLATFORM_WINDOWS and HC.RUNNING_FROM_SOURCE:
             
             try:
                 

@@ -15,6 +15,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
@@ -619,7 +620,7 @@ class TestClientAPI( unittest.TestCase ):
         response = connection.getresponse()
         
         data = response.read()
-        print( data )
+        
         self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Access-Control-Allow-Methods' ), 'GET' )
@@ -2945,246 +2946,285 @@ class TestClientAPI( unittest.TestCase ):
         
         # test file metadata
         
-        for hide_service_names_tags in ( False, True ):
+        api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
+        
+        metadata = []
+        
+        for ( file_id, hash ) in file_ids_to_hashes.items():
             
-            api_permissions = set_up_permissions[ 'search_green_files' ]
+            metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
             
-            access_key_hex = api_permissions.GetAccessKey().hex()
+            metadata.append( metadata_row )
             
-            headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        expected_identifier_result = { 'metadata' : metadata }
+        
+        media_results = []
+        file_info_managers = []
+        
+        urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
+        
+        sorted_urls = sorted( urls )
+        
+        random_file_service_hex_current = HydrusData.GenerateKey()
+        random_file_service_hex_deleted = HydrusData.GenerateKey()
+        
+        current_import_timestamp = 500
+        ipfs_import_timestamp = 123456
+        deleted_import_timestamp = 300
+        deleted_deleted_timestamp = 450
+        file_modified_timestamp = 20
+        
+        done_a_multihash = False
+        
+        for ( file_id, hash ) in file_ids_to_hashes.items():
             
-            file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
+            size = random.randint( 8192, 20 * 1048576 )
+            mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+            width = random.randint( 200, 4096 )
+            height = random.randint( 200, 4096 )
+            duration = random.choice( [ 220, 16.66667, None ] )
+            has_audio = random.choice( [ True, False ] )
             
-            metadata = []
+            file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
             
-            for ( file_id, hash ) in file_ids_to_hashes.items():
-                
-                metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
-                
-                metadata.append( metadata_row )
-                
+            file_info_manager.has_exif = True
+            file_info_manager.has_icc_profile = True
             
-            expected_identifier_result = { 'metadata' : metadata }
+            file_info_managers.append( file_info_manager )
             
-            media_results = []
-            file_info_managers = []
+            service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+            service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
             
-            urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
+            service_keys_to_filenames = {}
             
-            sorted_urls = sorted( urls )
+            current_to_timestamps = { random_file_service_hex_current : current_import_timestamp }
             
-            random_file_service_hex_current = HydrusData.GenerateKey()
-            random_file_service_hex_deleted = HydrusData.GenerateKey()
-            
-            current_import_timestamp = 500
-            ipfs_import_timestamp = 123456
-            deleted_import_timestamp = 300
-            deleted_deleted_timestamp = 450
-            file_modified_timestamp = 20
-            
-            done_a_multihash = False
-            
-            for ( file_id, hash ) in file_ids_to_hashes.items():
+            if not done_a_multihash:
                 
-                size = random.randint( 8192, 20 * 1048576 )
-                mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
-                width = random.randint( 200, 4096 )
-                height = random.randint( 200, 4096 )
-                duration = random.choice( [ 220, 16.66667, None ] )
-                has_audio = random.choice( [ True, False ] )
+                done_a_multihash = True
                 
-                file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+                current_to_timestamps[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp
                 
-                file_info_managers.append( file_info_manager )
-                
-                service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
-                service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
-                
-                service_keys_to_filenames = {}
-                
-                current_to_timestamps = { random_file_service_hex_current : current_import_timestamp }
-                
-                if not done_a_multihash:
-                    
-                    done_a_multihash = True
-                    
-                    current_to_timestamps[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp
-                    
-                    service_keys_to_filenames[ HG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
-                    
-                
-                tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
-                
-                timestamp_manager = ClientMediaManagers.TimestampManager()
-                
-                timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
-                
-                locations_manager = ClientMediaManagers.LocationsManager(
-                    current_to_timestamps,
-                    { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) },
-                    set(),
-                    set(),
-                    inbox = False,
-                    urls = urls,
-                    service_keys_to_filenames = service_keys_to_filenames,
-                    timestamp_manager = timestamp_manager
-                )
-                ratings_manager = ClientMediaManagers.RatingsManager( {} )
-                notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
-                file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
-                
-                media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
-                
-                media_results.append( media_result )
+                service_keys_to_filenames[ HG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
                 
             
-            hide_service_names_tags_metadata = []
-            metadata = []
-            detailed_known_urls_metadata = []
-            with_notes_metadata = []
-            only_return_basic_information_metadata = []
+            tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
             
-            services_manager = HG.client_controller.services_manager
+            timestamp_manager = ClientMediaManagers.TimestampManager()
             
-            service_keys_to_names = {}
+            timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
             
-            for media_result in media_results:
+            locations_manager = ClientMediaManagers.LocationsManager(
+                current_to_timestamps,
+                { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) },
+                set(),
+                set(),
+                inbox = False,
+                urls = urls,
+                service_keys_to_filenames = service_keys_to_filenames,
+                timestamp_manager = timestamp_manager
+            )
+            ratings_manager = ClientMediaManagers.RatingsManager( {} )
+            notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+            
+            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+            
+            media_results.append( media_result )
+            
+        
+        metadata = []
+        detailed_known_urls_metadata = []
+        with_notes_metadata = []
+        only_return_basic_information_metadata = []
+        
+        services_manager = HG.client_controller.services_manager
+        
+        service_keys_to_names = {}
+        
+        for media_result in media_results:
+            
+            file_info_manager = media_result.GetFileInfoManager()
+            
+            metadata_row = {
+                'file_id' : file_info_manager.hash_id,
+                'hash' : file_info_manager.hash.hex(),
+                'size' : file_info_manager.size,
+                'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
+                'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
+                'width' : file_info_manager.width,
+                'height' : file_info_manager.height,
+                'duration' : file_info_manager.duration,
+                'has_audio' : file_info_manager.has_audio,
+                'num_frames' : file_info_manager.num_frames,
+                'num_words' : file_info_manager.num_words
+            }
+            
+            only_return_basic_information_metadata.append( dict( metadata_row ) )
+            
+            if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                file_info_manager = media_result.GetFileInfoManager()
+                bounding_dimensions = HG.test_controller.options[ 'thumbnail_dimensions' ]
                 
-                metadata_row = {
-                    'file_id' : file_info_manager.hash_id,
-                    'hash' : file_info_manager.hash.hex(),
-                    'size' : file_info_manager.size,
-                    'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
-                    'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
-                    'width' : file_info_manager.width,
-                    'height' : file_info_manager.height,
-                    'duration' : file_info_manager.duration,
-                    'has_audio' : file_info_manager.has_audio,
-                    'num_frames' : file_info_manager.num_frames,
-                    'num_words' : file_info_manager.num_words
-                }
+                thumbnail_scale_type = HG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
                 
-                only_return_basic_information_metadata.append( dict( metadata_row ) )
+                ( clip_rect, ( thumbnail_expected_width, thumbnail_expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type )
                 
-                metadata_row.update( {
-                    'file_services' : {
-                        'current' : {
-                            random_file_service_hex_current.hex() : {
-                                'time_imported' : current_import_timestamp
-                            }
-                        },
-                        'deleted' : {
-                            random_file_service_hex_deleted.hex() : {
-                                'time_deleted' : deleted_deleted_timestamp,
-                                'time_imported' : deleted_import_timestamp
-                            }
+                metadata_row[ 'thumbnail_width' ] = thumbnail_expected_width
+                metadata_row[ 'thumbnail_height' ] = thumbnail_expected_height
+                
+            
+            metadata_row.update( {
+                'file_services' : {
+                    'current' : {
+                        random_file_service_hex_current.hex() : {
+                            'time_imported' : current_import_timestamp
                         }
                     },
-                    'ipfs_multihashes' : {},
-                    'time_modified' : file_modified_timestamp,
-                    'is_inbox' : False,
-                    'is_local' : False,
-                    'is_trashed' : False,
-                    'known_urls' : list( sorted_urls )
-                } )
+                    'deleted' : {
+                        random_file_service_hex_deleted.hex() : {
+                            'time_deleted' : deleted_deleted_timestamp,
+                            'time_imported' : deleted_import_timestamp
+                        }
+                    }
+                },
+                'ipfs_multihashes' : {},
+                'time_modified' : file_modified_timestamp,
+                'time_modified_details' : {
+                    'local' : file_modified_timestamp
+                },
+                'is_inbox' : False,
+                'is_local' : False,
+                'is_trashed' : False,
+                'is_deleted' : False,
+                'has_exif' : True,
+                'has_human_readable_embedded_metadata' : False,
+                'has_icc_profile' : True,
+                'known_urls' : list( sorted_urls )
+            } )
+            
+            locations_manager = media_result.GetLocationsManager()
+            
+            if len( locations_manager.GetServiceFilenames() ) > 0:
                 
-                locations_manager = media_result.GetLocationsManager()
-                
-                if len( locations_manager.GetServiceFilenames() ) > 0:
+                for ( i_s_k, multihash ) in locations_manager.GetServiceFilenames().items():
                     
-                    for ( i_s_k, multihash ) in locations_manager.GetServiceFilenames().items():
-                        
-                        metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = { 'time_imported' : ipfs_import_timestamp }
-                        
-                        metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
-                        
+                    metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = { 'time_imported' : ipfs_import_timestamp }
                     
-                
-                tags_manager = media_result.GetTagsManager()
-                
-                service_names_to_statuses_to_tags = {}
-                api_service_keys_to_statuses_to_tags = {}
-                
-                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-                
-                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                    metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
                     
-                    if service_key not in service_keys_to_names:
-                        
-                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                        
-                    
-                    s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
-                    
-                    if len( s ) > 0:
-                        
-                        service_name = service_keys_to_names[ service_key ]
-                        
-                        service_names_to_statuses_to_tags[ service_name ] = s
-                        api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
-                        
-                    
-                
-                metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
-                
-                service_names_to_statuses_to_display_tags = {}
-                service_keys_to_statuses_to_display_tags = {}
-                
-                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
-                
-                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    if service_key not in service_keys_to_names:
-                        
-                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                        
-                    
-                    s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
-                    
-                    if len( s ) > 0:
-                        
-                        service_name = service_keys_to_names[ service_key ]
-                        
-                        service_names_to_statuses_to_display_tags[ service_name ] = s
-                        service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
-                        
-                    
-                
-                metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
-                
-                hide_service_names_tags_metadata.append( metadata_row )
-                
-                metadata_row = dict( metadata_row )
-                
-                metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
-                metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_display_tags
-                
-                metadata.append( metadata_row )
-                
-                detailed_known_urls_metadata_row = dict( metadata_row )
-                
-                detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
-                    {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
-                    {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
-                ]
-                
-                detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
-                
-                with_notes_metadata_row = dict( metadata_row )
-                
-                with_notes_metadata_row[ 'notes' ] = media_result.GetNotesManager().GetNamesToNotes()
-                
-                with_notes_metadata.append( with_notes_metadata_row )
                 
             
-            expected_hide_service_names_tags_metadata_result = { 'metadata' : hide_service_names_tags_metadata }
-            expected_metadata_result = { 'metadata' : metadata }
-            expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
-            expected_notes_metadata_result = { 'metadata' : with_notes_metadata }
-            expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata }
+            tags_manager = media_result.GetTagsManager()
             
+            tags_dict = {}
+            
+            real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+            service_keys_to_types = { service.GetServiceKey() : service.GetServiceType() for service in services_manager.GetServices() }
+            service_keys_to_names = services_manager.GetServiceKeysToNames()
+            
+            for tag_service_key in real_tag_service_keys:
+                
+                storage_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                
+                storage_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in storage_statuses_to_tags.items() if len( tags ) > 0 }
+                
+                display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+                
+                display_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in display_statuses_to_tags.items() if len( tags ) > 0 }
+                
+                tags_dict_object = {
+                    'name' : service_keys_to_names[ tag_service_key ],
+                    'type' : service_keys_to_types[ tag_service_key ],
+                    'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ tag_service_key ] ],
+                    'storage_tags' : storage_tags_json_serialisable,
+                    'display_tags' : display_tags_json_serialisable
+                }
+                
+                tags_dict[ tag_service_key.hex() ] = tags_dict_object
+                
+            
+            metadata_row[ 'tags' ] = tags_dict
+            
+            # old stuff start
+            
+            api_service_keys_to_statuses_to_tags = {}
+            
+            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
+            
+            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                
+                if service_key not in service_keys_to_names:
+                    
+                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                    
+                
+                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                
+                if len( s ) > 0:
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
+                    
+                
+            
+            metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
+            
+            service_keys_to_statuses_to_display_tags = {}
+            
+            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
+            
+            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                
+                if service_key not in service_keys_to_names:
+                    
+                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                    
+                
+                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
+                
+                if len( s ) > 0:
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
+                    
+                
+            
+            metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
+            
+            # old stuff end
+            
+            metadata.append( metadata_row )
+            
+            detailed_known_urls_metadata_row = dict( metadata_row )
+            
+            detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
+                {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
+                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
+            ]
+            
+            detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )
+            
+            with_notes_metadata_row = dict( metadata_row )
+            
+            with_notes_metadata_row[ 'notes' ] = media_result.GetNotesManager().GetNamesToNotes()
+            
+            with_notes_metadata.append( with_notes_metadata_row )
+            
+        
+        expected_metadata_result = { 'metadata' : metadata }
+        expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
+        expected_notes_metadata_result = { 'metadata' : with_notes_metadata }
+        expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata }
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
@@ -3287,7 +3327,17 @@ class TestClientAPI( unittest.TestCase ):
             
         '''
         
-        self.assertEqual( d, expected_metadata_result )
+        self.maxDiff = None
+        
+        for ( row_a, row_b ) in zip( d[ 'metadata' ], expected_metadata_result[ 'metadata' ] ):
+            
+            self.assertEqual( set( row_a.keys() ), set( row_b.keys() ) )
+            
+            for key in list( row_a.keys() ):
+                
+                self.assertEqual( row_a[ key ], row_b[ key ] )
+                
+            
         
         # now from hashes
         
@@ -3362,24 +3412,6 @@ class TestClientAPI( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( response.status, 400 )
-        
-        # hide service names to tags
-        
-        path = '/get_files/file_metadata?hashes={}&hide_service_names_tags=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
-        
-        connection.request( 'GET', path, headers = headers )
-        
-        response = connection.getresponse()
-        
-        data = response.read()
-        
-        text = str( data, 'utf-8' )
-        
-        self.assertEqual( response.status, 200 )
-        
-        d = json.loads( text )
-        
-        self.assertEqual( d, expected_hide_service_names_tags_metadata_result )
         
         # metadata from hashes with detailed url info
         

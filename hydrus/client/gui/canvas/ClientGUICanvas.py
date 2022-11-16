@@ -26,6 +26,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
 from hydrus.client.gui import ClientGUIMediaControls
+from hydrus.client.gui import ClientGUIMediaMenus
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -949,6 +950,18 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
                 self._media_container.ZoomSwitchCanvasMax()
                 
+            elif action == CAC.SIMPLE_ZOOM_100:
+                
+                self._media_container.Zoom100()
+                
+            elif action == CAC.SIMPLE_ZOOM_CANVAS:
+                
+                self._media_container.ZoomCanvas()
+                
+            elif action == CAC.SIMPLE_ZOOM_DEFAULT:
+                
+                self._media_container.ZoomDefault()
+                
             elif action == CAC.SIMPLE_ZOOM_MAX:
                 
                 self._media_container.ZoomMax()
@@ -1182,11 +1195,11 @@ class CanvasPanel( Canvas ):
         
         menu = QW.QMenu()
         
+        new_options = HG.client_controller.new_options
+        
+        advanced_mode = new_options.GetBoolean( 'advanced_mode' )
+        
         if self._current_media is not None:
-            
-            new_options = HG.client_controller.new_options
-            
-            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
             
             services = HG.client_controller.services_manager.GetServices()
             
@@ -1198,18 +1211,15 @@ class CanvasPanel( Canvas ):
             
             #
             
-            info_lines = self._current_media.GetPrettyInfoLines()
+            info_lines = list( self._current_media.GetPrettyInfoLines() )
             
-            top_line = info_lines.pop(0)
+            top_line = info_lines.pop( 0 )
             
             info_menu = QW.QMenu( menu )
             
-            for line in info_lines:
-                
-                ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
-                
+            ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
-            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             
@@ -1278,11 +1288,11 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
-            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
+            ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
             open_menu = QW.QMenu( menu )
             
@@ -1768,7 +1778,7 @@ class CanvasWithDetails( Canvas ):
     
     def _GetInfoString( self ):
         
-        lines = self._current_media.GetPrettyInfoLines( only_interesting_lines = True )
+        lines = [ line for line in self._current_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
         
         lines.insert( 1, ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) )
         
@@ -4056,16 +4066,13 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             info_lines = self._current_media.GetPrettyInfoLines()
             
-            top_line = info_lines.pop(0)
+            top_line = info_lines.pop( 0 )
             
             info_menu = QW.QMenu( menu )
             
-            for line in info_lines:
-                
-                ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
-                
+            ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
-            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             
@@ -4183,7 +4190,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
-            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
+            ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -4191,9 +4198,9 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             multiple_selected = False
             
-            ClientGUIMedia.AddLocalFilesMoveAddToMenu( self, menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+            ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
             
-            ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
             open_menu = QW.QMenu( menu )
             

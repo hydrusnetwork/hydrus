@@ -356,8 +356,6 @@ class Animation( QW.QWidget ):
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
-        self._left_down_event = None
-        
         self._something_valid_has_been_drawn = False
         self._playthrough_count = 0
         
@@ -729,7 +727,7 @@ class Animation( QW.QWidget ):
         self._stop_for_slideshow = value
         
     
-    def SetMedia( self, media, start_paused = False ):
+    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = False ):
         
         if media == self._media:
             
@@ -738,23 +736,12 @@ class Animation( QW.QWidget ):
         
         self._media = media
         
-        self._left_down_event = None
-        
         self._ClearCanvasBitmap()
         
         self._something_valid_has_been_drawn = False
         self._playthrough_count = 0
         
         self._stop_for_slideshow = False
-        
-        if self._media is not None:
-            
-            self._num_frames = self._media.GetNumFrames()
-            
-        else:
-            
-            self._num_frames = 1
-            
         
         self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
@@ -773,9 +760,13 @@ class Animation( QW.QWidget ):
         
         if self._media is None:
             
+            self._num_frames = 1
+            
             HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
         else:
+            
+            self._num_frames = self._media.GetNumFrames()
             
             HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
@@ -1326,6 +1317,7 @@ class MediaContainer( QW.QWidget ):
         self._start_paused = False
         self._start_with_embed = False
         
+        self._default_zoom = 1.0
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
         
@@ -1588,7 +1580,12 @@ class MediaContainer( QW.QWidget ):
     
     def _TryToChangeZoom( self, new_zoom, zoom_center_type_override = None ):
         
-        if self._media is None:
+        if not self.IsZoomable():
+            
+            return
+            
+        
+        if new_zoom == self._current_zoom:
             
             return
             
@@ -2301,6 +2298,21 @@ class MediaContainer( QW.QWidget ):
         self._SetZoom( current_zoom )
         
     
+    def Zoom100( self ):
+        
+        self._TryToChangeZoom( 1.0 )
+        
+    
+    def ZoomCanvas( self ):
+        
+        self._TryToChangeZoom( self._canvas_zoom )
+        
+    
+    def ZoomDefault( self ):
+        
+        self._TryToChangeZoom( self._default_zoom )
+        
+    
     def ZoomMax( self ):
         
         if not self.IsZoomable():
@@ -2391,9 +2403,9 @@ class MediaContainer( QW.QWidget ):
         canvas_size = self.parentWidget().size()
         my_dpr = self.devicePixelRatio()
         
-        ( current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, self._show_action )
+        ( self._default_zoom, self._canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, self._show_action )
         
-        self._SetZoom( current_zoom )
+        self._SetZoom( self._default_zoom )
         
     
     def ZoomSwitch( self, zoom_center_type_override = None ):

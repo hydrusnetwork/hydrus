@@ -298,11 +298,12 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        info = {}
-        info[ 'name' ] = 'name'
-        info[ 'text' ] = 'text'
-        info[ 'timeout' ] = 0
-        info[ 'hashes' ] = hashes
+        info = {
+            'name' : 'name',
+            'text' : 'text',
+            'timeout' : 0,
+            'hashes' : hashes
+        }
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
         

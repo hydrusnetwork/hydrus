@@ -30,6 +30,7 @@ from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
+from hydrus.client.gui import ClientGUIMediaMenus
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
@@ -44,298 +45,6 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
-def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
-    
-    # TODO: I am hesitating making this async since we'll have duplicate relations available in the MediaResult soon enough
-    # it would be great to have it in the Canvas though, hence the refactoring. needs a bit more reworking for that, but a good step forward
-    
-    multiple_selected = num_selected > 1
-    
-    duplicates_menu = QW.QMenu( menu )
-    
-    focused_hash = focus_singleton.GetHash()
-    
-    combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-    
-    if HG.client_controller.DBCurrentlyDoingJob():
-        
-        file_duplicate_info = {}
-        all_local_files_file_duplicate_info = {}
-        
-    else:
-        
-        file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', location_context, focused_hash )
-        
-        if location_context.current_service_keys.isdisjoint( HG.client_controller.services_manager.GetServiceKeys( HC.SPECIFIC_LOCAL_FILE_SERVICES ) ):
-            
-            all_local_files_file_duplicate_info = {}
-            
-        else:
-            
-            all_local_files_file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
-            
-        
-    
-    focus_is_in_duplicate_group = False
-    focus_is_in_alternate_group = False
-    focus_has_fps = False
-    focus_has_potentials = False
-    focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
-    
-    if len( file_duplicate_info ) == 0:
-        
-        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch file\'s duplicates (db currently locked)' )
-        
-    else:
-        
-        view_duplicate_relations_jobs = []
-        
-        if len( file_duplicate_info[ 'counts' ] ) > 0:
-            
-            view_duplicate_relations_jobs.append( ( location_context, file_duplicate_info ) )
-            
-        
-        if len( all_local_files_file_duplicate_info ) > 0 and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
-            
-            view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
-            
-        
-        for ( job_location_context, job_duplicate_info ) in view_duplicate_relations_jobs:
-            
-            file_duplicate_types_to_counts = job_duplicate_info[ 'counts' ]
-            
-            duplicates_view_menu = QW.QMenu( duplicates_menu )
-            
-            if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
-                
-                if job_duplicate_info[ 'is_king' ]:
-                    
-                    ClientGUIMenus.AppendMenuLabel( duplicates_view_menu, 'this is the best quality file of its group' )
-                    
-                else:
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
-                    
-                
-                ClientGUIMenus.AppendSeparator( duplicates_view_menu )
-                
-            
-            for duplicate_type in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ):
-                
-                if duplicate_type in file_duplicate_types_to_counts:
-                    
-                    count = file_duplicate_types_to_counts[ duplicate_type ]
-                    
-                    if count > 0:
-                        
-                        label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
-                        
-                        ClientGUIMenus.AppendMenuItem( duplicates_view_menu, label, 'Show these duplicates in a new page.', ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
-                        
-                        if duplicate_type == HC.DUPLICATE_MEMBER:
-                            
-                            focus_is_in_duplicate_group = True
-                            
-                        elif duplicate_type == HC.DUPLICATE_ALTERNATE:
-                            
-                            focus_is_in_alternate_group = True
-                            
-                        elif duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
-                            
-                            focus_has_fps = True
-                            
-                        elif duplicate_type == HC.DUPLICATE_POTENTIAL:
-                            
-                            focus_has_potentials = True
-                            
-                        
-                    
-                
-            
-            label = 'view this file\'s relations'
-            
-            if job_location_context is combined_local_location_context:
-                
-                label = '{} ({})'.format( label, HG.client_controller.services_manager.GetName( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-                
-            
-            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, label )
-            
-        
-    
-    focus_is_definitely_king = len( file_duplicate_info ) > 0 and file_duplicate_info[ 'is_king' ]
-    
-    dissolution_actions_available = focus_can_be_searched or focus_is_in_duplicate_group or focus_is_in_alternate_group or focus_has_fps
-    
-    single_action_available = dissolution_actions_available or not focus_is_definitely_king
-    
-    if multiple_selected or single_action_available:
-        
-        duplicates_action_submenu = QW.QMenu( duplicates_menu )
-        
-        if len( file_duplicate_info ) == 0:
-            
-            ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
-            
-        else:
-            
-            if not focus_is_definitely_king:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
-                
-            
-        
-        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-        
-        if multiple_selected:
-            
-            label = 'set this file as better than the ' + HydrusData.ToHumanInt( num_selected - 1 ) + ' other selected'
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
-            
-            num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
-            
-            num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
-            
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
-            
-            if collections_selected:
-                
-                ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
-                
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-            
-            duplicates_edit_action_submenu = QW.QMenu( duplicates_action_submenu )
-            
-            for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[duplicate_type], 'Edit what happens when you set this status.', EditDuplicateActionOptions, win, duplicate_type )
-                
-            
-            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', EditDuplicateActionOptions, win, HC.DUPLICATE_ALTERNATE )
-                
-            
-            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
-            
-        
-        if dissolution_actions_available:
-            
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-            
-            duplicates_single_dissolution_menu = QW.QMenu( duplicates_action_submenu )
-            
-            if focus_can_be_searched:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
-                
-            
-            if focus_has_potentials:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
-                
-            
-            if focus_is_in_duplicate_group:
-                
-                if not focus_is_definitely_king:
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
-                
-            
-            if focus_is_in_alternate_group:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
-                
-            
-            if focus_has_fps:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
-                
-            
-            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
-            
-        
-        if multiple_selected:
-            
-            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                duplicates_multiple_dissolution_menu = QW.QMenu( duplicates_action_submenu )
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
-                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
-                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
-                ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
-                
-                ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for all selected' )
-                
-            
-        
-        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
-        
-    
-    if len( duplicates_menu.actions() ) == 0:
-        
-        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'no file relationships or actions available for this file at present' )
-        
-    
-    ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'file relationships' )
-    
-
-def EditDuplicateActionOptions( win: QW.QWidget, duplicate_type: int ):
-    
-    new_options = HG.client_controller.new_options
-    
-    duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-    
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'edit duplicate merge options' ) as dlg:
-        
-        panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
-        
-        dlg.SetPanel( panel )
-        
-        if dlg.exec() == QW.QDialog.Accepted:
-            
-            duplicate_action_options = panel.GetValue()
-            
-            new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
-            
-        
-    
-
-def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, hash, duplicate_type ):
-    
-    # TODO: this can be replaced by a call to the MediaResult when it holds these hashes
-    hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
-    
-    if hashes is not None and len( hashes ) > 0:
-        
-        HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
-        
-    
 class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.ApplicationCommandProcessorMixin ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool )
@@ -817,7 +526,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 ( selected_media, ) = self._selected_media
                 
-                s += selected_files_string + ' selected, ' + ', '.join( selected_media.GetPrettyInfoLines( only_interesting_lines = True ) )
+                pretty_info_lines = [ line for line in selected_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
+                
+                s += '{} selected, {}'.format( selected_files_string, ', '.join( pretty_info_lines ) )
                 
             else: # 23 files - 5 selected, selection_info
                 
@@ -833,12 +544,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                     
                 else:
                     
-                    inbox_phrase = HydrusData.ToHumanInt( num_inbox ) + ' in inbox and ' + HydrusData.ToHumanInt( num_selected - num_inbox ) + ' archived, '
+                    inbox_phrase = '{} in inbox and {} archived, '.format( HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_selected - num_inbox ) )
                     
                 
                 pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
                 
-                s += selected_files_string + ' selected, ' + inbox_phrase + 'totalling ' + pretty_total_size
+                s += '{} selected, {}totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
                 
             
         
@@ -3821,6 +3532,8 @@ class MediaPanelThumbnails( MediaPanel ):
         num_inbox = self.GetNumInbox()
         num_archive = self.GetNumArchive()
         
+        multiple_selected = num_selected > 1
+        
         media_has_inbox = num_inbox > 0
         media_has_archive = num_archive > 0
         
@@ -3831,8 +3544,6 @@ class MediaPanelThumbnails( MediaPanel ):
             focus_singleton = self._GetFocusSingleton()
             
             # variables
-            
-            multiple_selected = num_selected > 1
             
             collections_selected = True in ( media.IsCollection() for media in self._selected_media )
             
@@ -4053,88 +3764,85 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                pretty_info_lines = focus_singleton.GetPrettyInfoLines()
+                pretty_info_lines = list( focus_singleton.GetPrettyInfoLines() )
                 
                 top_line = pretty_info_lines.pop( 0 )
                 
                 selection_info_menu_label = top_line
                 
-                for line in pretty_info_lines:
-                    
-                    ClientGUIMenus.AppendMenuLabel( selection_info_menu, line, line )
-                    
+                ClientGUIMediaMenus.AddPrettyInfoLines( selection_info_menu, pretty_info_lines )
                 
             
-            ClientGUIMedia.AddFileViewingStatsMenu( selection_info_menu, self._selected_media )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( selection_info_menu, self._selected_media )
             
             if len( disparate_current_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_file_service_keys, 'some uploaded to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_file_service_keys, 'some uploaded to' )
                 
             
             if multiple_selected and len( common_current_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_file_service_keys, 'selected uploaded to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_file_service_keys, 'selected uploaded to' )
                 
             
             if len( disparate_pending_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_file_service_keys, 'some pending to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_file_service_keys, 'some pending to' )
                 
             
             if len( common_pending_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_file_service_keys, 'pending to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_file_service_keys, 'pending to' )
                 
             
             if len( disparate_petitioned_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned for removal from' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned for removal from' )
                 
             
             if len( common_petitioned_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned for removal from' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned for removal from' )
                 
             
             if len( disparate_deleted_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_deleted_file_service_keys, 'some deleted from' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_deleted_file_service_keys, 'some deleted from' )
                 
             
             if len( common_deleted_file_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_deleted_file_service_keys, 'deleted from' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_deleted_file_service_keys, 'deleted from' )
                 
             
             if len( disparate_current_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_ipfs_service_keys, 'some pinned to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_ipfs_service_keys, 'some pinned to' )
                 
             
             if multiple_selected and len( common_current_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_ipfs_service_keys, 'selected pinned to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_ipfs_service_keys, 'selected pinned to' )
                 
             
             if len( disparate_pending_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
                 
             
             if len( common_pending_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_ipfs_service_keys, 'to be pinned to' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_ipfs_service_keys, 'to be pinned to' )
                 
             
             if len( disparate_petitioned_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
                 
             
             if len( common_petitioned_ipfs_service_keys ) > 0:
                 
-                ClientGUIMedia.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
+                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
                 
             
             
@@ -4238,9 +3946,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage notes for the focused file.', self._ManageNotes )
             
-            ClientGUIMedia.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
+            ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
             
-            AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
+            ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
             regen_menu = QW.QMenu( manage_menu )
             
@@ -4297,7 +4005,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len_interesting_local_service_keys > 0:
                 
-                ClientGUIMedia.AddLocalFilesMoveAddToMenu( self, files_parent_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, files_parent_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
                 
             
             if len_interesting_remote_service_keys > 0:
@@ -4316,57 +4024,57 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( uploadable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
                     
                 
                 if len( pending_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
                     
                 
                 if len( petitionable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
                     
                 
                 if len( petitioned_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
                     
                 
                 if len( deletable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
                     
                 
                 if len( modifyable_file_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
                     
                 
                 if len( pinnable_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
                     
                 
                 if len( pending_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
                     
                 
                 if len( unpinnable_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
                     
                 
                 if len( petitioned_ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
                     
                 
                 if multiple_selected and len( ipfs_service_keys ) > 0:
                     
-                    ClientGUIMedia.AddServiceKeysToMenu( remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
+                    ClientGUIMediaMenus.AddServiceKeysToMenu( remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
                     
                 
                 ClientGUIMenus.AppendMenu( files_parent_menu, remote_action_menu, 'remote services' )
@@ -4374,7 +4082,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
             
             #
             

@@ -7,6 +7,64 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 50](https://github.com/hydrusnetwork/hydrus/releases/tag/v506)
+
+### misc
+
+* the thumbnail/media viewer's right-click menu now shows all known modified dates for a file (under the top row submenu). any file downloaded in the past few months should have some extra ones, and you can see how the aggregate number is the reasonable minimum of what you have
+* added media viewer shortcut actions for 'zoom: 100/canvas fit/default'
+* like with the recent system:time update, the system:rating dialog now has nicer labels for the different numerical operators, saying 'more than' instead of '>' and so on
+* also on system:rating, the the 'rated' and 'not rated' choices are now folded into the main radio buttons. to say 'is rated in some way', select 'has rating.' to say 'not rated', set 'is' and make the rating blank. to not search that rating, select 'do not search'. I've wired up the click events here a little, too, to flip from 'do not search' to 'is' when you click and so on
+* to make it a little easier to get to, the 'view this file's relationships' submenu is bumped up a level, and the parent 'file relationships' menu is moved above the viewing stats row
+* thanks to a user, the install_dir/static dir now has an example hydrus.desktop file for Linux users. feel free to play around with it. the user taught me how this stuff works, so I'm going to try to integrate it into my setup scripts in the near future
+* I think I fixed a bug where on rare occasion the client would take 30 seconds to close while waiting on a random daemon like 'sleep check'
+* I undid last week's Windows auto-darkmode detection in a hotfix. thanks to the users who quickly notified me that this wasn't working well enough IRL. it is now opt-in, using launch parameter `--win_qt_darkmode_test`, and it applies darkmode 1 rather than 2. if there are no problems with this, then I will make 1 default and 2 opt-in, so let me know how it goes
+* the new Windows taskbar grouping identifier now only applies to the source version of the program. if you pinned the built exe to the taskbar, it was not grouping on that pin (issues #1273, #1271)
+* added a custom popup message if a subscription query comes up DEAD on the first sync. it was previously firing off the 'didn't find anything on first sync' error by accident
+* when you ok the manage options dialog, if you didn't change the thumbnail size, the thumbnail grids across the program no longer purge and regen
+* when you ok the manage options dialog, if you changed the media view options, the image tile cache now clears itself
+* when you ok the manage options dialog, if the set mpv.conf content hasn't changed, mpv is no longer told to reload it
+
+### sidecar paths
+
+* sidecars get more options regarding their file paths. it is all collected in a new 'sidecar filename' box in the normal metadata routing UI, either for sidecar importers or exporters
+* first off, a checkbox now allows you to remove the source media file's extension from the sidecar. with 'my_image.jpg', this would change the default sidecar path from 'my_image.jpg.txt' to 'my_image.txt'. I've heard the the new AI/ML artist .txt outputters use this!
+* secondly, an ADVANCED String Converter button lets you go bananas and convert the sidecar path to whatever you need using regexes or whatever
+* and lastly, it now has live test/result UI so you can put in an example media path and see what the sidecar will be. this thing is populated with sensible defaults and updates the string converter button's internal example text if you change things
+* I added some unit tests for these new features
+
+### client api
+
+* the `/get_files/file_metadata` call has several expansions: 
+* a new `tags` structure shows all a file's tags in a neater, combined way. it can do everything the 'service_blah_to_blah_tags' structures do while still giving all information efficiently. please migrate to using this structure within the next eight weeks
+* `hide_service_names_tags` is now default True and deprecated. if you are still using it, please move off it; I will remove it in four weeks
+* added `hide_service_keys_tags` to do similar. it is default False for now, but I will make it True in four weeks and then delete it four weeks later just like `names`
+* the `time_modified` value is now the aggregated modified timestamp, not the local file modified timestamp
+* the new `time_modified_details` value is an Object of domain : timestamp for all known modified timestamps, by domain
+* added `thumbnail_width` and `thumbnail_height` for files that have proper thumbnails. they are a reliable prediction, but not a promise
+* added `is_deleted`, which refers to whether the file is either in the trash or has been fully deleted from the client
+* added `has_exif`, `has_human_readable_embedded_metadata` and `has_icc_profile` to the metadata Object
+* the unit tests have been updated to test these changes
+* the help has been updated to reflect these changes. also fixed up some little 'you wouldn't actually get that' issues in the mega 'file_metadata' response example
+* the client api version is now 35
+
+### running from source
+
+* if the venv activation fails in the setup script or launch script, they now stop there with an error message on all platforms
+* linux and macOS setup scripts now look to use 'python3' for initial venv setup, falling back to 'python' if that does not exist
+* updated the build scripts to always use 'python -m pip' instead of 'pip' or 'pip3' directly. this stops some weirder environments getting confused about which pip to use
+* updated the running from source help with several clarifications and little fixes and notes users have contributed
+
+### cleanup
+
+* refactored some menu templating functions from the cluttered ClientGUIMedia and ClientGUIResults to the new ClientGUIMediaMenus
+* for the new expanded modified dates stuff, cleaned up how the media 'pretty info lines' are sent to a menu
+* replaced a crash-prone emergency-error-handling dialog hook in the database migration rebalance routine with a simple popup message
+* cleaned up some bad type hints and other linter warnings
+* cleaned up some canvas zoom code
+* fixed another 'duplicates' unit test that would on rare occasion fail due to a too-specific test
+* removed a no-longer needed token declaration from the github build script that was raising a warning
+
 ## [Version 505](https://github.com/hydrusnetwork/hydrus/releases/tag/v505)
 
 ### exif update
@@ -411,39 +469,3 @@ _almost all the changes this week are only important to server admins and janito
 * refactored ClientGUIParsing to its own 'parsing' module and split everything into four less tangled files
 * cleaned up a bunch of taglist text presentation code, mostly simplicity and clarity in prep for future updates
 * updated the checker options button to use a Qt signal instead of a callable
-
-## [Version 496](https://github.com/hydrusnetwork/hydrus/releases/tag/v496)
-
-### note import options
-* the client now has a system to set default note import options. it works exactly the same as default tag import options and shares the same UI, now named _network->downloaders->manage default import options_. you now set tag and/or note import options for a particular domain. I don't think you'll have to touch the note defaults until this system is really going and we learn more about what we want. I have made the initial defaults get all notes with some simple conflict resolution that won't discard any data
-* all url pages, watchers, watcher pages, gallery queries, gallery downloader pages, and subscriptions now have a note import options. by default, they are 'default'
-* the edit subscription dialog now has a button to set note import options _en masse_
-* all the behind the scenes stuff that connects and powers these systems is done. note parsing now works! advanced users, especially downloader makers, are encouraged to play around with this for real. the remaining hurdle is still multiline parsing support
-* notes now have a cleaning system before they are saved. to start with this week, they are now trimmed of leading or trailing whitespace or newlines
-
-### Qt6
-* the media viewer now draws correctly on UI scaled displays. If you are at >100% UI scale, it will now render images beautifully, using all available pixels, and state the correct zoom percentage. you look at a 4k image on a 4k screen, you now see 4k, no matter the UI scale. previously it was rendering at 100% UI scale coordinates and being nearest-neighbour scaled up
-* after several sad hours banging my head against font metrics, I finally discovered the magic flag needed and have improved the font quality of the thumbnail banners when you boot the client with only 100% UI scale monitors. should be anti-aliased now, although if you have a semi-transparent banner colour it may look slightly jank for reasons I still need to investigate.
-* I fixed the 'don't process the click that activates a media viewer into the shortcuts system' hook for Qt6 (and still working on Qt5). it is a little smarter now, too
-
-### misc
-* the new import options button is now an arrow-menu button. the secret right-click menu is no longer hidden. I also did some behind the scenes stuff to make it so all these arrow buttons spawn their menus on your cursor when you click, rather than hanging off the bottom-left corner of the button proper
-* rating stars of all shapes are now anti-aliased
-* greatly improved the shape of the 'star' rating star
-* moved the 'checker options' button on watcher highlight panels down a bit. maybe it'll get integrated into other import options one day--I am still thinking about it
-* archive/delete filters will not present 'delete from hard disk' as a final choice if the current domain is 'all local files'. I thought I fixed this a couple weeks ago, but there was a legacy issue
-* fixed some real jank logic when setting the tag domain in autocomplete dropdown widgets. this got messed up a little with recent updates to file and tag domain searching. I reworked the signal path and fixed some weird update bugs and situations where you could seemingly set 'all known files'/'all known tags'
-
-### boring code cleanup
-* refactored all zoom code from the media viewer canvas to the media viewer container. the canvas no longer manages zoom numbers or container size
-* refactored all container-position-tracking code from the media viewer canvas to the media viewer container and cleaned it
-* updated the media viewer container to recognise UI scaling and adapt the stated zoom to reflect the raw pixels on screen, not the device independent coordinate system
-* updated the native animation widget to recognise UI scaling, adapt its underlying renderer resolution appropriately, and draw that super-resolution frame to the canvas
-* updated the static image widget to recognise UI scaling, adapt its tile coordinate system and resolution appropriately, and scatter the ethereal powder of the cleansed ancients across the QPainter in order to stitch the arbitrarily zoomed super-resolution tiles together on a sub-pixel canvas with no visible seams
-* the animation and static image widgets also recognise changes in the current UI scale--if the current monitor changes or you move across monitors with differing UI scale
-* updated some old pubsub update calls in the canvas code to Qt signals
-* cleaned up some old const definitions in canvas code
-* refactored and simplified some test methods related to the canvas container and media show actions
-* cleaned up some old painter code and hacks to simpler alternatives
-* cleaned a tangle of file/tag domain update code in the autocomplete dropdowns
-* cleaned up some options getting/setting methods in the downloaders

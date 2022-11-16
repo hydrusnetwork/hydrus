@@ -377,6 +377,11 @@ class TimestampManager( object ):
         return self._GetTimestamp( domain )
         
     
+    def GetDomainModifiedTimestamps( self ) -> typing.Dict[ str, int ]:
+        
+        return { domain : timestamp for ( domain, timestamp ) in self._domains_to_timestamps.items() if isinstance( domain, str ) }
+        
+    
     def GetFileModifiedTimestamp( self ) -> typing.Optional[ int ]:
         
         return self._GetTimestamp( self.DOMAIN_FILE_MODIFIED )
@@ -1531,7 +1536,14 @@ class TagsManager( object ):
             
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            return service_keys_to_statuses_to_tags[ service_key ]
+            if service_key in service_keys_to_statuses_to_tags:
+                
+                return service_keys_to_statuses_to_tags[ service_key ]
+                
+            else:
+                
+                return collections.defaultdict( set )
+                
             
         
     

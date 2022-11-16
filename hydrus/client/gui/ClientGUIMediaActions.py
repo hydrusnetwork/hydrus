@@ -1,6 +1,5 @@
 import collections
 import itertools
-import time
 import typing
 
 from qtpy import QtWidgets as QW

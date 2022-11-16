@@ -145,6 +145,9 @@ SIMPLE_OPEN_COMMAND_PALETTE = 137
 SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_MAX_ZOOM = 138
 SIMPLE_SWITCH_BETWEEN_CANVAS_AND_MAX_ZOOM = 139
 SIMPLE_ZOOM_MAX = 140
+SIMPLE_ZOOM_CANVAS = 141
+SIMPLE_ZOOM_100 = 142
+SIMPLE_ZOOM_DEFAULT = 143
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -247,6 +250,9 @@ simple_enum_to_str_lookup = {
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM : 'zoom: switch between 100% and canvas fit',
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_MAX_ZOOM : 'zoom: switch between 100% and max zoom',
     SIMPLE_SWITCH_BETWEEN_CANVAS_AND_MAX_ZOOM : 'zoom: switch between canvas fit and max zoom',
+    SIMPLE_ZOOM_100 : 'zoom: 100%',
+    SIMPLE_ZOOM_CANVAS : 'zoom: canvas fit',
+    SIMPLE_ZOOM_DEFAULT : 'zoom: default',
     SIMPLE_ZOOM_MAX : 'zoom: max',
     SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW : 'switch between fullscreen borderless and regular framed window',
     SIMPLE_SYNCHRONISED_WAIT_SWITCH : 'switch between searching a page immediately on new tags and waiting',

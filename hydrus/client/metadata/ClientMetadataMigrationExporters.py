@@ -10,6 +10,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientStrings
 from hydrus.client.metadata import ClientMetadataMigrationCore
 
 class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNode ):
@@ -40,9 +41,9 @@ class SingleFileMetadataExporterMedia( SingleFileMetadataExporter ):
 
 class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetadataMigrationCore.SidecarNode ):
     
-    def __init__( self, suffix: str ):
+    def __init__( self, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
         
-        ClientMetadataMigrationCore.SidecarNode.__init__( self, suffix )
+        ClientMetadataMigrationCore.SidecarNode.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
         SingleFileMetadataExporter.__init__( self )
         
     
@@ -235,17 +236,27 @@ class SingleFileMetadataExporterJSON( HydrusSerialisable.SerialisableBase, Singl
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_JSON
     SERIALISABLE_NAME = 'Metadata Single File Exporter JSON'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, suffix = None, nested_object_names = None ):
+    def __init__( self, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None, nested_object_names = None ):
+        
+        if remove_actual_filename_ext is None:
+            
+            remove_actual_filename_ext = False
+            
         
         if suffix is None:
             
             suffix = ''
             
         
+        if filename_string_converter is None:
+            
+            filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.json' )
+            
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterSidecar.__init__( self, suffix )
+        SingleFileMetadataExporterSidecar.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
         
         if nested_object_names is None:
             
@@ -257,12 +268,33 @@ class SingleFileMetadataExporterJSON( HydrusSerialisable.SerialisableBase, Singl
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._suffix, self._nested_object_names )
+        serialisable_filename_string_converter = self._filename_string_converter.GetSerialisableTuple()
+        
+        return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._nested_object_names )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._suffix, self._nested_object_names ) = serialisable_info
+        ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._nested_object_names ) = serialisable_info
+        
+        self._filename_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_string_converter )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( suffix, nested_object_names ) = old_serialisable_info
+            
+            remove_actual_filename_ext = False
+            filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.json' )
+            
+            serialisable_filename_string_converter = filename_string_converter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( remove_actual_filename_ext, suffix, serialisable_filename_string_converter, nested_object_names )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
@@ -272,7 +304,7 @@ class SingleFileMetadataExporterJSON( HydrusSerialisable.SerialisableBase, Singl
             return
             
         
-        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._suffix, 'json' )
+        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'json' )
         
         if len( self._nested_object_names ) > 0:
             
@@ -363,27 +395,58 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_TXT
     SERIALISABLE_NAME = 'Metadata Single File Exporter TXT'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, suffix = None ):
+    def __init__( self, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None ):
+        
+        if remove_actual_filename_ext is None:
+            
+            remove_actual_filename_ext = False
+            
         
         if suffix is None:
             
             suffix = ''
             
         
+        if filename_string_converter is None:
+            
+            filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.txt' )
+            
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterSidecar.__init__( self, suffix )
+        SingleFileMetadataExporterSidecar.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
         
     
     def _GetSerialisableInfo( self ):
         
-        return self._suffix
+        serialisable_filename_string_converter = self._filename_string_converter.GetSerialisableTuple()
+        
+        return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        self._suffix = serialisable_info
+        ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter ) = serialisable_info
+        
+        self._filename_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_string_converter )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            suffix = old_serialisable_info
+            
+            remove_actual_filename_ext = False
+            filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.txt' )
+            
+            serialisable_filename_string_converter = filename_string_converter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( remove_actual_filename_ext, suffix, serialisable_filename_string_converter )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
@@ -393,7 +456,7 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
             return
             
         
-        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._suffix, 'txt' )
+        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' )
         
         with open( path, 'w', encoding = 'utf-8' ) as f:
             

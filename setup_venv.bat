@@ -39,7 +39,7 @@ goto :parse_fail
 :question_qt
 
 ECHO:
-ECHO If you are on Windows 7, choose 5.
+ECHO If you are on Windows ^<=8.1, choose 5.
 SET /P qt=Do you want Qt(5) or Qt(6)? 
 
 IF "%qt%" == "5" goto :question_mpv
@@ -74,26 +74,33 @@ python -m venv venv
 
 CALL venv\Scripts\activate.bat
 
+IF ERRORLEVEL 1 (
+	
+	SET /P gumpf=The venv failed to activate, stopping now!
+	EXIT /B 1
+	
+)
+
 python -m pip install --upgrade pip
 
-pip3 install --upgrade wheel
+python -m pip install --upgrade wheel
 
 IF "%install_type%" == "s" (
 	
-	pip3 install -r requirements.txt
+	python -m pip install -r requirements.txt
 	
 ) ELSE (
 	
-	pip3 install -r static\requirements\advanced\requirements_core.txt
+	python -m pip install -r static\requirements\advanced\requirements_core.txt
 	
-	IF "%qt%" == "5" pip3 install -r static\requirements\advanced\requirements_qt5.txt
-	IF "%qt%" == "6" pip3 install -r static\requirements\advanced\requirements_qt6.txt
+	IF "%qt%" == "5" python -m pip install -r static\requirements\advanced\requirements_qt5.txt
+	IF "%qt%" == "6" python -m pip install -r static\requirements\advanced\requirements_qt6.txt
 	
-	IF "%mpv%" == "o" pip3 install -r static\requirements\advanced\requirements_old_mpv.txt
-	IF "%mpv%" == "n" pip3 install -r static\requirements\advanced\requirements_new_mpv.txt
+	IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_old_mpv.txt
+	IF "%mpv%" == "n" python -m pip install -r static\requirements\advanced\requirements_new_mpv.txt
 	
-	IF "%opencv%" == "o" pip3 install -r static\requirements\advanced\requirements_old_opencv.txt
-	IF "%opencv%" == "n" pip3 install -r static\requirements\advanced\requirements_new_opencv.txt
+	IF "%opencv%" == "o" python -m pip install -r static\requirements\advanced\requirements_old_opencv.txt
+	IF "%opencv%" == "n" python -m pip install -r static\requirements\advanced\requirements_new_opencv.txt
 	
 )
 

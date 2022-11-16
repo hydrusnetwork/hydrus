@@ -16,6 +16,7 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.metadata import ClientGUIMetadataMigrationCommon
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 
@@ -95,15 +96,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._suffix_panel = QW.QWidget( self )
-        
-        self._suffix = QW.QLineEdit( self )
-        tt = 'If you set this to "tags", the exported filename will be (file filename).tags.ext, where ext is .txt/.json/.xml etc... . Leave blank to just export to (file filename).ext.'
-        self._suffix.setToolTip( tt )
-        
-        hbox = ClientGUICommon.WrapInText( self._suffix, self._suffix_panel, 'filename suffix: ' )
-        
-        self._suffix_panel.setLayout( hbox )
+        self._sidecar_panel = ClientGUIMetadataMigrationCommon.EditSidecarDetailsPanel( self )
         
         #
         
@@ -113,7 +106,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._service_selection_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sidecar_help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._nested_object_names_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._suffix_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._sidecar_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 1 )
         
@@ -157,6 +150,17 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # it is nice to preserve old values as we flip from one type to another. more pleasant that making the user cancel and re-open
         
+        if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
+            
+            remove_actual_filename_ext = self._sidecar_panel.GetRemoveActualFilenameExt()
+            suffix = self._sidecar_panel.GetSuffix()
+            filename_string_converter = self._sidecar_panel.GetFilenameStringConverter()
+            
+            exporter.SetRemoveActualFilenameExt( remove_actual_filename_ext )
+            exporter.SetSuffix( suffix )
+            exporter.SetFilenameStringConverter( filename_string_converter )
+            
+        
         if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
             
             exporter.SetServiceKey( self._service_key )
@@ -167,11 +171,9 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT ):
             
-            exporter.SetSuffix( self._suffix.text() )
+            pass
             
         elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ):
-            
-            exporter.SetSuffix( self._suffix.text() )
             
             exporter.SetNestedObjectNames( self._nested_object_names_list.GetData() )
             
@@ -219,17 +221,21 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT:
             
-            suffix = self._suffix.text()
+            remove_actual_filename_ext = self._sidecar_panel.GetRemoveActualFilenameExt()
+            suffix = self._sidecar_panel.GetSuffix()
+            filename_string_converter = self._sidecar_panel.GetFilenameStringConverter()
             
-            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( suffix = suffix )
+            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( remove_actual_filename_ext = remove_actual_filename_ext, suffix = suffix, filename_string_converter = filename_string_converter )
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON:
             
-            suffix = self._suffix.text()
+            remove_actual_filename_ext = self._sidecar_panel.GetRemoveActualFilenameExt()
+            suffix = self._sidecar_panel.GetSuffix()
+            filename_string_converter = self._sidecar_panel.GetFilenameStringConverter()
             
             nested_object_names = self._nested_object_names_list.GetData()
             
-            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( suffix = suffix, nested_object_names = nested_object_names )
+            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( remove_actual_filename_ext = remove_actual_filename_ext, suffix = suffix, filename_string_converter = filename_string_converter, nested_object_names = nested_object_names )
             
         else:
             
@@ -262,7 +268,22 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._service_selection_panel.setVisible( False )
         self._sidecar_help_button.setVisible( False )
         self._nested_object_names_panel.setVisible( False )
-        self._suffix_panel.setVisible( False )
+        self._sidecar_panel.setVisible( False )
+        
+        if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
+            
+            self._sidecar_help_button.setVisible( True )
+            
+            remove_actual_filename_ext = exporter.GetRemoveActualFilenameExt()
+            suffix = exporter.GetSuffix()
+            filename_string_converter = exporter.GetFilenameStringConverter()
+            
+            self._sidecar_panel.SetRemoveActualFilenameExt( remove_actual_filename_ext )
+            self._sidecar_panel.SetSuffix( suffix )
+            self._sidecar_panel.SetFilenameStringConverter( filename_string_converter )
+            
+            self._sidecar_panel.setVisible( True )
+            
         
         if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
             
@@ -276,26 +297,23 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pass
             
-        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT ):
             
-            self._sidecar_help_button.setVisible( True )
+            self._sidecar_panel.SetSidecarExt( 'txt' )
+            self._sidecar_panel.SetExampleInput( '01234564789abcdef.jpg' )
             
-            suffix = exporter.GetSuffix()
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ):
             
-            self._suffix.setText( suffix )
+            self._sidecar_panel.SetSidecarExt( 'json' )
+            self._sidecar_panel.SetExampleInput( '01234564789abcdef.jpg' )
             
-            self._suffix_panel.setVisible( True )
+            nested_object_names = exporter.GetNestedObjectNames()
             
-            if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ):
-                
-                nested_object_names = exporter.GetNestedObjectNames()
-                
-                self._nested_object_names_list.Clear()
-                
-                self._nested_object_names_list.AddDatas( nested_object_names )
-                
-                self._nested_object_names_panel.setVisible( True )
-                
+            self._nested_object_names_list.Clear()
+            
+            self._nested_object_names_list.AddDatas( nested_object_names )
+            
+            self._nested_object_names_panel.setVisible( True )
             
         else:
             

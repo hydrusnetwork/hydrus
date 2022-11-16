@@ -33,6 +33,59 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_506"><a href="#version_506">version 506</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>the thumbnail/media viewer's right-click menu now shows all known modified dates for a file (under the top row submenu). any file downloaded in the past few months should have some extra ones, and you can see how the aggregate number is the reasonable minimum of what you have</li>
+					<li>added media viewer shortcut actions for 'zoom: 100/canvas fit/default'</li>
+					<li>like with the recent system:time update, the system:rating dialog now has nicer labels for the different numerical operators, saying 'more than' instead of '>' and so on</li>
+					<li>also on system:rating, the the 'rated' and 'not rated' choices are now folded into the main radio buttons. to say 'is rated in some way', select 'has rating.' to say 'not rated', set 'is' and make the rating blank. to not search that rating, select 'do not search'. I've wired up the click events here a little, too, to flip from 'do not search' to 'is' when you click and so on</li>
+					<li>to make it a little easier to get to, the 'view this file's relationships' submenu is bumped up a level, and the parent 'file relationships' menu is moved above the viewing stats row</li>
+					<li>thanks to a user, the install_dir/static dir now has an example hydrus.desktop file for Linux users. feel free to play around with it. the user taught me how this stuff works, so I'm going to try to integrate it into my setup scripts in the near future</li>
+					<li>I think I fixed a bug where on rare occasion the client would take 30 seconds to close while waiting on a random daemon like 'sleep check'</li>
+					<li>I undid last week's Windows auto-darkmode detection in a hotfix. thanks to the users who quickly notified me that this wasn't working well enough IRL. it is now opt-in, using launch parameter `--win_qt_darkmode_test`, and it applies darkmode 1 rather than 2. if there are no problems with this, then I will make 1 default and 2 opt-in, so let me know how it goes</li>
+					<li>the new Windows taskbar grouping identifier now only applies to the source version of the program. if you pinned the built exe to the taskbar, it was not grouping on that pin (issues #1273, #1271)</li>
+					<li>added a custom popup message if a subscription query comes up DEAD on the first sync. it was previously firing off the 'didn't find anything on first sync' error by accident</li>
+					<li>when you ok the manage options dialog, if you didn't change the thumbnail size, the thumbnail grids across the program no longer purge and regen</li>
+					<li>when you ok the manage options dialog, if you changed the media view options, the image tile cache now clears itself</li>
+					<li>when you ok the manage options dialog, if the set mpv.conf content hasn't changed, mpv is no longer told to reload it</li>
+					<li>.</li>
+					<li>sidecar paths:</li>
+					<li>sidecars get more options regarding their file paths. it is all collected in a new 'sidecar filename' box in the normal metadata routing UI, either for sidecar importers or exporters</li>
+					<li>first off, a checkbox now allows you to remove the source media file's extension from the sidecar. with 'my_image.jpg', this would change the default sidecar path from 'my_image.jpg.txt' to 'my_image.txt'. I've heard the the new AI/ML artist .txt outputters use this!</li>
+					<li>secondly, an ADVANCED String Converter button lets you go bananas and convert the sidecar path to whatever you need using regexes or whatever</li>
+					<li>and lastly, it now has live test/result UI so you can put in an example media path and see what the sidecar will be. this thing is populated with sensible defaults and updates the string converter button's internal example text if you change things</li>
+					<li>I added some unit tests for these new features</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the `/get_files/file_metadata` call has several expansions: </li>
+					<li>a new `tags` structure shows all a file's tags in a neater, combined way. it can do everything the 'service_blah_to_blah_tags' structures do while still giving all information efficiently. please migrate to using this structure within the next eight weeks</li>
+					<li>`hide_service_names_tags` is now default True and deprecated. if you are still using it, please move off it; I will remove it in four weeks</li>
+					<li>added `hide_service_keys_tags` to do similar. it is default False for now, but I will make it True in four weeks and then delete it four weeks later just like `names`</li>
+					<li>the `time_modified` value is now the aggregated modified timestamp, not the local file modified timestamp</li>
+					<li>the new `time_modified_details` value is an Object of domain : timestamp for all known modified timestamps, by domain</li>
+					<li>added `thumbnail_width` and `thumbnail_height` for files that have proper thumbnails. they are a reliable prediction, but not a promise</li>
+					<li>added `is_deleted`, which refers to whether the file is either in the trash or has been fully deleted from the client</li>
+					<li>added `has_exif`, `has_human_readable_embedded_metadata` and `has_icc_profile` to the metadata Object</li>
+					<li>the unit tests have been updated to test these changes</li>
+					<li>the help has been updated to reflect these changes. also fixed up some little 'you wouldn't actually get that' issues in the mega 'file_metadata' response example</li>
+					<li>the client api version is now 35</li>
+					<li>.</li>
+					<li>running from source:</li>
+					<li>if the venv activation fails in the setup script or launch script, they now stop there with an error message on all platforms</li>
+					<li>linux and macOS setup scripts now look to use 'python3' for initial venv setup, falling back to 'python' if that does not exist</li>
+					<li>updated the build scripts to always use 'python -m pip' instead of 'pip' or 'pip3' directly. this stops some weirder environments getting confused about which pip to use</li>
+					<li>updated the running from source help with several clarifications and little fixes and notes users have contributed</li>
+					<li>.</li>
+					<li>cleanup:</li>
+					<li>refactored some menu templating functions from the cluttered ClientGUIMedia and ClientGUIResults to the new ClientGUIMediaMenus</li>
+					<li>for the new expanded modified dates stuff, cleaned up how the media 'pretty info lines' are sent to a menu</li>
+					<li>replaced a crash-prone emergency-error-handling dialog hook in the database migration rebalance routine with a simple popup message</li>
+					<li>cleaned up some bad type hints and other linter warnings</li>
+					<li>cleaned up some canvas zoom code</li>
+					<li>fixed another 'duplicates' unit test that would on rare occasion fail due to a too-specific test</li>
+					<li>removed a no-longer needed token declaration from the github build script that was raising a warning</li>
+				</ul>
 				<li><h3 id="version_505"><a href="#version_505">version 505</a></h3></li>
 				<ul>
 					<li>exif update:</li>

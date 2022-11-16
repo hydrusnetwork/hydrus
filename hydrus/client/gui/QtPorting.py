@@ -1686,8 +1686,8 @@ class RadioBox( QW.QFrame ):
     
     radioBoxChanged = QC.Signal()
     
-    def __init__( self, parent = None, choices = [], vertical = False ):
-    
+    def __init__( self, parent, choices, vertical = False ):
+        
         QW.QFrame.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
@@ -1796,8 +1796,8 @@ class DataRadioBox( QW.QFrame ):
     
     radioBoxChanged = QC.Signal()
     
-    def __init__( self, parent = None, choice_tuples = [], vertical = False ):
-    
+    def __init__( self, parent, choice_tuples, vertical = False ):
+        
         QW.QFrame.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )

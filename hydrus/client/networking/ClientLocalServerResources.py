@@ -25,6 +25,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
@@ -57,7 +58,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason', 'tag_display_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -2347,7 +2348,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         
         only_return_identifiers = request.parsed_request_args.GetValue( 'only_return_identifiers', bool, default_value = False )
         only_return_basic_information = request.parsed_request_args.GetValue( 'only_return_basic_information', bool, default_value = False )
-        hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
+        hide_service_names_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = True )
+        hide_service_keys_tags = request.parsed_request_args.GetValue( 'hide_service_names_tags', bool, default_value = False )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
         create_new_file_ids = request.parsed_request_args.GetValue( 'create_new_file_ids', bool, default_value = False )
@@ -2466,27 +2468,48 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
             services_manager = HG.client_controller.services_manager
             
+            real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+            service_keys_to_types = { service.GetServiceKey() : service.GetServiceType() for service in services_manager.GetServices() }
+            service_keys_to_names = services_manager.GetServiceKeysToNames()
+            
             ipfs_service_keys = services_manager.GetServiceKeys( ( HC.IPFS, ) )
             
-            service_keys_to_names = {}
+            thumbnail_bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            
+            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
             
             for media_result in media_results:
                 
                 file_info_manager = media_result.GetFileInfoManager()
                 
+                mime = file_info_manager.mime
+                width = file_info_manager.width
+                height = file_info_manager.height
+                
                 metadata_row = {
                     'file_id' : file_info_manager.hash_id,
                     'hash' : file_info_manager.hash.hex(),
                     'size' : file_info_manager.size,
-                    'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
-                    'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
-                    'width' : file_info_manager.width,
-                    'height' : file_info_manager.height,
+                    'mime' : HC.mime_mimetype_string_lookup[ mime ],
+                    'ext' : HC.mime_ext_lookup[ mime ],
+                    'width' : width,
+                    'height' : height,
                     'duration' : file_info_manager.duration,
                     'num_frames' : file_info_manager.num_frames,
                     'num_words' : file_info_manager.num_words,
                     'has_audio' : file_info_manager.has_audio
                 }
+                
+                if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
+                    
+                    if width is not None and height is not None and width > 0 and height > 0:
+                        
+                        ( clip_rect, ( expected_thumbnail_width, expected_thumbnail_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type )
+                        
+                        metadata_row[ 'thumbnail_width' ] = expected_thumbnail_width
+                        metadata_row[ 'thumbnail_height' ] = expected_thumbnail_height
+                        
+                    
                 
                 if include_notes:
                     
@@ -2522,11 +2545,29 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     }
                     
                 
-                metadata_row[ 'time_modified' ] = locations_manager.GetTimestampManager().GetFileModifiedTimestamp()
+                timestamp_manager = locations_manager.GetTimestampManager()
+                
+                metadata_row[ 'time_modified' ] = timestamp_manager.GetAggregateModifiedTimestamp()
+                
+                time_modified_details = timestamp_manager.GetDomainModifiedTimestamps()
+                
+                local_modified = timestamp_manager.GetFileModifiedTimestamp()
+                
+                if local_modified is not None:
+                    
+                    time_modified_details[ 'local' ] = local_modified
+                    
+                
+                metadata_row[ 'time_modified_details' ] = time_modified_details
                 
                 metadata_row[ 'is_inbox' ] = locations_manager.inbox
                 metadata_row[ 'is_local' ] = locations_manager.IsLocal()
                 metadata_row[ 'is_trashed' ] = locations_manager.IsTrashed()
+                metadata_row[ 'is_deleted' ] = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in locations_manager.GetDeleted() or locations_manager.IsTrashed()
+                
+                metadata_row[ 'has_exif' ] = file_info_manager.has_exif
+                metadata_row[ 'has_human_readable_embedded_metadata' ] = file_info_manager.has_human_readable_embedded_metadata
+                metadata_row[ 'has_icc_profile' ] = file_info_manager.has_icc_profile
                 
                 known_urls = sorted( locations_manager.GetURLs() )
                 
@@ -2566,17 +2607,39 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 tags_manager = media_result.GetTagsManager()
                 
+                tags_dict = {}
+                
+                for tag_service_key in real_tag_service_keys:
+                    
+                    storage_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                    
+                    storage_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in storage_statuses_to_tags.items() if len( tags ) > 0 }
+                    
+                    display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+                    
+                    display_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in display_statuses_to_tags.items() if len( tags ) > 0 }
+                    
+                    tags_dict_object = {
+                        'name' : service_keys_to_names[ tag_service_key ],
+                        'type' : service_keys_to_types[ tag_service_key ],
+                        'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ tag_service_key ] ],
+                        'storage_tags' : storage_tags_json_serialisable,
+                        'display_tags' : display_tags_json_serialisable
+                    }
+                    
+                    tags_dict[ tag_service_key.hex() ] = tags_dict_object
+                    
+                
+                metadata_row[ 'tags' ] = tags_dict
+                
+                # Old stuff starts here
+                
                 service_names_to_statuses_to_tags = {}
                 api_service_keys_to_statuses_to_tags = {}
                 
                 service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
                 
                 for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    if service_key not in service_keys_to_names:
-                        
-                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                        
                     
                     statuses_to_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                     
@@ -2595,7 +2658,10 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
                     
                 
-                metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
+                if not hide_service_keys_tags:
+                    
+                    metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
+                    
                 
                 #
                 
@@ -2605,11 +2671,6 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
                 
                 for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                    
-                    if service_key not in service_keys_to_names:
-                        
-                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                        
                     
                     statuses_to_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
                     
@@ -2628,7 +2689,12 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     metadata_row[ 'service_names_to_statuses_to_display_tags' ] = service_names_to_statuses_to_tags
                     
                 
-                metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = api_service_keys_to_statuses_to_tags
+                if not hide_service_keys_tags:
+                    
+                    metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = api_service_keys_to_statuses_to_tags
+                    
+                
+                # old stuff ends here
                 
                 #
                 
