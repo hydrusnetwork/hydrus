@@ -1,3 +1,4 @@
+import collections
 import itertools
 import os
 import random
@@ -1573,21 +1574,76 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
         
         pair_info = []
         
-        for ( first_media, second_media ) in media_pairs:
+        # there's an issue here in that one decision will affect the next. if we say 'copy tags both sides' and say A > B & C, then B's tags, merged with A, should soon merge with C
+        # therefore, we need to update the media objects as we go here, which means we need duplicates to force content updates on
+        # this is a little hacky, so maybe a big rewrite here would be nice
+        
+        # There's a second issue, wew, in that in order to propagate C back to B, we need to do the whole thing twice! wow!
+        # some service_key_to_content_updates preservation gubbins is needed as a result
+        
+        hashes_to_duplicated_media = {}
+        hash_pairs_to_list_of_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        for is_first_run in ( True, False ):
             
-            first_hash = first_media.GetHash()
-            second_hash = second_media.GetHash()
-            
-            if duplicate_action_options is None:
+            for ( first_media, second_media ) in media_pairs:
                 
-                list_of_service_keys_to_content_updates = []
+                first_hash = first_media.GetHash()
+                second_hash = second_media.GetHash()
                 
-            else:
+                if first_hash not in hashes_to_duplicated_media:
+                    
+                    hashes_to_duplicated_media[ first_hash ] = first_media.Duplicate()
+                    
                 
-                list_of_service_keys_to_content_updates = [ duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason ) ]
+                first_duplicated_media = hashes_to_duplicated_media[ first_hash ]
                 
-            
-            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+                if second_hash not in hashes_to_duplicated_media:
+                    
+                    hashes_to_duplicated_media[ second_hash ] = second_media.Duplicate()
+                    
+                
+                second_duplicated_media = hashes_to_duplicated_media[ second_hash ]
+                
+                list_of_service_keys_to_content_updates = hash_pairs_to_list_of_service_keys_to_content_updates[ ( first_hash, second_hash ) ]
+                
+                if duplicate_action_options is not None:
+                    
+                    do_not_do_deletes = is_first_run
+                    
+                    # so the important part of this mess is here. we send the duplicated media, which is keeping up with content updates, to the method here
+                    # original 'first_media' is not changed, and won't be until the database Write clears and publishes everything
+                    list_of_service_keys_to_content_updates.append( duplicate_action_options.ProcessPairIntoContentUpdates( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
+                    
+                
+                for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                    
+                    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                        
+                        for content_update in content_updates:
+                            
+                            hashes = content_update.GetHashes()
+                            
+                            if first_hash in hashes:
+                                
+                                first_duplicated_media.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                                
+                            
+                            if second_hash in hashes:
+                                
+                                second_duplicated_media.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                                
+                            
+                        
+                    
+                
+                if is_first_run:
+                    
+                    continue
+                    
+                
+                pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+                
             
         
         if len( pair_info ) > 0:

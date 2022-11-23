@@ -1,7 +1,10 @@
 #!/bin/bash
 
+pushd "$(dirname "$0")"
+
 if [ ! -d "venv" ]; then
 	echo "You need to set up a venv! Check the running from source help for more info!"
+	popd
 	exit 1
 fi
 
@@ -21,3 +24,5 @@ mkdocs build -d help
 deactivate
 
 echo "Done!"
+
+popd

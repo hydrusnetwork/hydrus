@@ -211,11 +211,7 @@ def ParseHydrusNetworkGETArgs( requests_args ):
     
     args = ParseTwistedRequestGETArgs( requests_args, INT_PARAMS, BYTE_PARAMS, STRING_PARAMS, JSON_PARAMS, JSON_BYTE_LIST_PARAMS )
     
-    if 'subject_account_key' in args:
-        
-        args[ 'subject_identifier' ] = HydrusNetwork.AccountIdentifier( account_key = args[ 'subject_account_key' ] )
-        
-    elif 'subject_hash' in args:
+    if 'subject_hash' in args: # or parent/sib stuff in args
         
         hash = args[ 'subject_hash' ]
         
@@ -229,6 +225,8 @@ def ParseHydrusNetworkGETArgs( requests_args ):
             
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ hash ] )
             
+        
+        # TODO: add siblings and parents here
         
         args[ 'subject_identifier' ] = HydrusNetwork.AccountIdentifier( content = content )
         
@@ -422,7 +420,7 @@ class ParsedRequestArguments( dict ):
         raise HydrusExceptions.BadRequestException( 'It looks like the parameter "{}" was missing!'.format( key ) )
         
     
-    def GetValue( self, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None ):
+    def GetValue( self, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None, none_on_missing = False ):
         
         # not None because in JSON sometimes people put 'null' to mean 'did not enter this optional parameter'
         if key in self and self[ key ] is not None:
@@ -485,7 +483,7 @@ class ParsedRequestArguments( dict ):
             
         else:
             
-            if default_value is None:
+            if default_value is None and not none_on_missing:
                 
                 raise HydrusExceptions.BadRequestException( 'The required parameter "{}" was missing!'.format( key ) )
                 

@@ -44,6 +44,8 @@ class TestClientAPI( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
+        cls.maxDiff = None
+        
         cls._client_api = ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' )
         cls._client_api_cors = ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' )
         
@@ -293,7 +295,7 @@ class TestClientAPI( unittest.TestCase ):
                 search_tag_filter = HydrusTags.TagFilter()
                 
                 search_tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
-                search_tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
+                search_tag_filter.SetRule( ' :', HC.FILTER_BLACKLIST )
                 search_tag_filter.SetRule( 'green', HC.FILTER_WHITELIST )
                 
                 api_permissions.SetSearchTagFilter( search_tag_filter )
@@ -346,13 +348,13 @@ class TestClientAPI( unittest.TestCase ):
             
             for request_type in ( 'header', 'get' ):
                 
-                if request_type == 'header':
+                if request_type == 'header' :
                     
                     headers = { key_name : key_hex }
                     
                     connection.request( 'GET', '/verify_access_key', headers = headers )
                     
-                elif request_type == 'get':
+                elif request_type == 'get' :
                     
                     connection.request( 'GET', '/verify_access_key?{}={}'.format( key_name, key_hex ) )
                     
@@ -634,60 +636,89 @@ class TestClientAPI( unittest.TestCase ):
         should_break = { set_up_permissions[ 'add_urls' ], set_up_permissions[ 'manage_cookies' ] }
         
         expected_answer = {
-            'local_tags': [
+            'local_tags' : [
                 {
-                    'name': 'my tags',
-                    'service_key': '6c6f63616c2074616773'
+                    'name' : 'my tags',
+                    'service_key' : '6c6f63616c2074616773',
+                    'type': 5,
+                    'type_pretty': 'local tag service'
                 }
             ],
-            'tag_repositories': [
+            'tag_repositories' : [
                 {
-                    'name': 'example tag repo',
-                    'service_key': HG.test_controller.example_tag_repo_service_key.hex()
+                    'name' : 'example tag repo',
+                    'service_key' : HG.test_controller.example_tag_repo_service_key.hex(),
+                    'type': 0,
+                    'type_pretty': 'hydrus tag repository'
                 }
             ],
-            'local_files': [
+            'local_files' : [
                 {
-                    'name': 'my files',
-                    'service_key': '6c6f63616c2066696c6573'
+                    'name' : 'my files',
+                    'service_key' : '6c6f63616c2066696c6573',
+                    'type': 2,
+                    'type_pretty': 'local file domain'
                 }
             ],
-            'local_updates': [
+            'local_updates' : [
                 {
-                    'name': 'repository updates',
-                    'service_key': '7265706f7369746f72792075706461746573'
+                    'name' : 'repository updates',
+                    'service_key' : '7265706f7369746f72792075706461746573',
+                    'type': 20,
+                    'type_pretty': 'local update file domain'
                 }
             ],
-            'file_repositories': [
+            'file_repositories' : [
+                {
+                    'name': 'example file repo 1',
+                    'service_key': HG.test_controller.example_file_repo_service_key_1.hex(),
+                    'type': 1,
+                    'type_pretty': 'hydrus file repository'},
+                {
+                    'name': 'example file repo 2',
+                    'service_key': HG.test_controller.example_file_repo_service_key_2.hex(),
+                    'type': 1,
+                    'type_pretty': 'hydrus file repository'
+                }
             ],
-            'all_local_files': [
+            'all_local_files' : [
                 { 
-                    'name': 'all local files',
-                    'service_key': '616c6c206c6f63616c2066696c6573'
+                    'name' : 'all local files',
+                    'service_key' : '616c6c206c6f63616c2066696c6573',
+                    'type' : 15,
+                    'type_pretty' : 'virtual combined local file service'
                 }
             ],
-            'all_local_media': [
+            'all_local_media' : [
                 {
-                    'name': 'all my files',
-                    'service_key': '616c6c206c6f63616c206d65646961'
+                    'name' : 'all my files',
+                    'service_key' : '616c6c206c6f63616c206d65646961',
+                    'type': 21,
+                    'type_pretty': 'virtual combined local media service'
                 }
             ],
-            'all_known_files': [
+            'all_known_files' : [
                 {
-                    'name': 'all known files',
-                    'service_key': '616c6c206b6e6f776e2066696c6573'
+                    'name' : 'all known files',
+                    'service_key' : '616c6c206b6e6f776e2066696c6573',
+                    'type' : 11,
+                    'type_pretty' : 'virtual combined file service'
                 }
             ],
-            'all_known_tags': [
+            'all_known_tags' : [
                 {
-                    'name': 'all known tags',
-                    'service_key': '616c6c206b6e6f776e2074616773'
+                    'name' : 'all known tags',
+                    'service_key' : '616c6c206b6e6f776e2074616773',
+                    'type' : 10,
+                    'type_pretty' : 'virtual combined tag service'
                 }
             ],
-            'trash': [
+            'trash' : [
                 {
-                    'name': 'trash',
-                    'service_key': '7472617368'
+                    'name' : 'trash',
+                    'service_key' : '7472617368',
+                    'type': 14,
+                    'type_pretty': 'local trash file domain'
                 }
             ]
         }
@@ -2972,8 +3003,8 @@ class TestClientAPI( unittest.TestCase ):
         
         sorted_urls = sorted( urls )
         
-        random_file_service_hex_current = HydrusData.GenerateKey()
-        random_file_service_hex_deleted = HydrusData.GenerateKey()
+        random_file_service_hex_current = HG.test_controller.example_file_repo_service_key_1
+        random_file_service_hex_deleted = HG.test_controller.example_file_repo_service_key_2
         
         current_import_timestamp = 500
         ipfs_import_timestamp = 123456
@@ -3085,13 +3116,19 @@ class TestClientAPI( unittest.TestCase ):
                 'file_services' : {
                     'current' : {
                         random_file_service_hex_current.hex() : {
-                            'time_imported' : current_import_timestamp
+                            'time_imported' : current_import_timestamp,
+                            'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_current ),
+                            'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ),
+                            'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ) ]
                         }
                     },
                     'deleted' : {
                         random_file_service_hex_deleted.hex() : {
                             'time_deleted' : deleted_deleted_timestamp,
-                            'time_imported' : deleted_import_timestamp
+                            'time_imported' : deleted_import_timestamp,
+                            'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_deleted ),
+                            'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ),
+                            'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ) ]
                         }
                     }
                 },
@@ -3116,7 +3153,12 @@ class TestClientAPI( unittest.TestCase ):
                 
                 for ( i_s_k, multihash ) in locations_manager.GetServiceFilenames().items():
                     
-                    metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = { 'time_imported' : ipfs_import_timestamp }
+                    metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = {
+                        'time_imported' : ipfs_import_timestamp,
+                        'name' : HG.test_controller.services_manager.GetName( i_s_k ),
+                        'type' : HG.test_controller.services_manager.GetServiceType( i_s_k ),
+                        'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( i_s_k ) ]
+                    }
                     
                     metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
                     
@@ -3126,11 +3168,11 @@ class TestClientAPI( unittest.TestCase ):
             
             tags_dict = {}
             
-            real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+            tag_service_keys = services_manager.GetServiceKeys( HC.ALL_TAG_SERVICES )
             service_keys_to_types = { service.GetServiceKey() : service.GetServiceType() for service in services_manager.GetServices() }
             service_keys_to_names = services_manager.GetServiceKeysToNames()
             
-            for tag_service_key in real_tag_service_keys:
+            for tag_service_key in tag_service_keys:
                 
                 storage_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                 
@@ -3208,8 +3250,8 @@ class TestClientAPI( unittest.TestCase ):
             detailed_known_urls_metadata_row = dict( metadata_row )
             
             detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
-                {'normalised_url': 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type': 0, 'url_type_string': 'post url', 'match_name': 'gelbooru file page', 'can_parse': True},
-                {'normalised_url': 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type': 5, 'url_type_string': 'unknown url', 'match_name': 'unknown url', 'can_parse': False, 'cannot_parse_reason' : 'unknown url class'}
+                {'normalised_url' : 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type' : 0, 'url_type_string' : 'post url', 'match_name' : 'gelbooru file page', 'can_parse' : True},
+                {'normalised_url' : 'https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type' : 5, 'url_type_string' : 'unknown url', 'match_name' : 'unknown url', 'can_parse' : False, 'cannot_parse_reason' : 'unknown url class'}
             ]
             
             detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )

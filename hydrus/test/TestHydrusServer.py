@@ -214,17 +214,17 @@ class TestServer( unittest.TestCase ):
         self.assertEqual( response[ 'ip' ], ip )
         self.assertEqual( response[ 'timestamp' ], timestamp )
         
-        # account from hash
+        # account key from file
         
-        subject_content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = hash )
+        test_hash = HydrusData.GenerateKey()
         
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = subject_content )
+        HG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
         
-        HG.test_controller.SetRead( 'account', self._account )
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( test_hash, ) )
         
-        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        response = service.Request( HC.GET, 'account_key_from_content', { 'subject_content' : content } )
         
-        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
+        self.assertEqual( repr( response[ 'subject_account_key' ] ), repr( self._account.GetAccountKey() ) )
         
         # thumbnail
         
@@ -517,33 +517,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'account', self._account )
         
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( account_key = self._account.GetAccountKey() )
-        
-        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
-        
-        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
-        
-        # account from file
-        
-        HG.test_controller.SetRead( 'account_from_content', self._account )
-        
-        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( HydrusData.GenerateKey(), ) )
-        
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
-        
-        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
-        
-        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
-        
-        # account from mapping
-        
-        HG.test_controller.SetRead( 'account_from_content', self._account )
-        
-        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( 'hello', HydrusData.GenerateKey() ) )
-        
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
-        
-        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
+        response = service.Request( HC.GET, 'other_account', { 'subject_account_key' : self._account.GetAccountKey() } )
         
         self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
         
@@ -553,33 +527,9 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'account_info', account_info )
         
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( account_key = HydrusData.GenerateKey() )
-        
-        response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
+        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey() } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
-        
-        #
-        
-        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( HydrusData.GenerateKey(), ) )
-        
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
-        
-        with self.assertRaises( HydrusExceptions.BadRequestException ):
-            
-            # can only do it with an account id
-            response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
-            
-        
-        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( 'hello', HydrusData.GenerateKey() ) )
-        
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = content )
-        
-        with self.assertRaises( HydrusExceptions.BadRequestException ):
-            
-            # can only do it with an account id
-            response = service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_account_identifier } )
-            
         
         # account_types
         
@@ -661,20 +611,18 @@ class TestServer( unittest.TestCase ):
     
     def _test_tag_repo( self, service ):
         
-        # account from tag
+        # account from mapping
         
         test_tag = 'character:samus aran'
         test_hash = HydrusData.GenerateKey()
         
-        subject_content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( test_tag, test_hash ) )
+        HG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
         
-        subject_account_identifier = HydrusNetwork.AccountIdentifier( content = subject_content )
+        content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( test_tag, test_hash ) )
         
-        HG.test_controller.SetRead( 'account', self._account )
+        response = service.Request( HC.GET, 'account_key_from_content', { 'subject_content' : content } )
         
-        response = service.Request( HC.GET, 'other_account', { 'subject_identifier' : subject_account_identifier } )
-        
-        self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
+        self.assertEqual( repr( response[ 'subject_account_key' ] ), repr( self._account.GetAccountKey() ) )
         
     
     def test_repository_file( self ):

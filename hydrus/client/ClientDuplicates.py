@@ -359,7 +359,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive_action, self._sync_urls_action )
         
     
-    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, file_deletion_reason = None ):
+    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ):
         
         if file_deletion_reason is None:
             
@@ -590,6 +590,11 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
         
         for media in deletee_media:
+            
+            if do_not_do_deletes:
+                
+                continue
+                
             
             if media.HasDeleteLocked():
                 

@@ -4266,9 +4266,14 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._last_petition_type_fetched = None
         
+        self._last_fetched_subject_account_key = None
+        
         #
         
         self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
+        
+        self._petition_account_key = QW.QLineEdit( self._petitions_info_panel )
+        self._petition_account_key.setPlaceholderText( 'account id filter' )
         
         self._refresh_num_petitions_button = ClientGUICommon.BetterButton( self._petitions_info_panel, 'refresh counts', self._FetchNumPetitions )
         
@@ -4364,6 +4369,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         #
         
+        self._petitions_info_panel.Add( self._petition_account_key, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petitions_info_panel.Add( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for hbox in content_type_hboxes:
@@ -4418,6 +4424,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._contents_add.rightClicked.connect( self.EventAddRowRightClick )
         self._contents_delete.rightClicked.connect( self.EventDeleteRowRightClick )
         
+        self._petition_account_key.textChanged.connect( self._UpdateAccountKey )
+        
+        self._UpdateAccountKey()
         self._DrawCurrentPetition()
         
     
@@ -4565,23 +4574,35 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawNumPetitions( self ):
         
-        for ( content_type, status, count ) in self._num_petition_info:
+        if self._num_petition_info is None:
             
-            petition_type = ( content_type, status )
+            for ( petition_type, ( st, button ) ) in self._petition_types_to_controls.items():
+                
+                st.setText( '0 petitions' )
+                
+                button.setEnabled( False )
+                
             
-            if petition_type in self._petition_types_to_controls:
+        else:
+            
+            for ( content_type, status, count ) in self._num_petition_info:
                 
-                ( st, button ) = self._petition_types_to_controls[ petition_type ]
+                petition_type = ( content_type, status )
                 
-                st.setText( HydrusData.ToHumanInt( count )+' petitions' )
-                
-                if count > 0:
+                if petition_type in self._petition_types_to_controls:
                     
-                    button.setEnabled( True )
+                    ( st, button ) = self._petition_types_to_controls[ petition_type ]
                     
-                else:
+                    st.setText( HydrusData.ToHumanInt( count )+' petitions' )
                     
-                    button.setEnabled( False )
+                    if count > 0:
+                        
+                        button.setEnabled( True )
+                        
+                    else:
+                        
+                        button.setEnabled( False )
+                        
                     
                 
             
@@ -4623,7 +4644,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _FetchNumPetitions( self ):
         
-        def do_it( service ):
+        def do_it( service, subject_account_key = None ):
             
             def qt_draw( n_p_i ):
                 
@@ -4654,7 +4675,25 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             try:
                 
-                response = service.Request( HC.GET, 'num_petitions' )
+                if subject_account_key is None:
+                    
+                    response = service.Request( HC.GET, 'num_petitions' )
+                    
+                else:
+                    
+                    try:
+                        
+                        response = service.Request( HC.GET, 'num_petitions', { 'subject_account_key' : subject_account_key } )
+                        
+                    except HydrusExceptions.NotFoundException:
+                        
+                        HydrusData.ShowText( 'That account id was not found!' )
+                        
+                        QP.CallAfter( qt_draw, None )
+                        
+                        return
+                        
+                    
                 
                 num_petition_info = response[ 'num_petitions' ]
                 
@@ -4668,7 +4707,11 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._refresh_num_petitions_button.setText( 'Fetching\u2026' )
         
-        self._controller.CallToThread( do_it, self._service )
+        subject_account_key = self._GetSubjectAccountKey()
+        
+        self._last_fetched_subject_account_key = subject_account_key
+        
+        self._controller.CallToThread( do_it, self._service, subject_account_key )
         
     
     def _FetchPetition( self, content_type, status ):
@@ -4699,16 +4742,33 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
             button.setEnabled( True )
-            button.setText( 'fetch '+HC.content_status_string_lookup[status]+' '+HC.content_type_string_lookup[content_type]+' petition' )
+            button.setText( 'fetch {} {} petition'.format( HC.content_status_string_lookup[ status ], HC.content_type_string_lookup[ content_type ] ) )
             
         
-        def do_it( service ):
+        def do_it( service, subject_account_key = None ):
             
             try:
                 
-                response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
+                if subject_account_key is None:
+                    
+                    response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
+                    
+                else:
+                    
+                    response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status, 'subject_account_key' : subject_account_key } )
+                    
                 
                 QP.CallAfter( qt_setpet, response['petition'] )
+                
+            except HydrusExceptions.NotFoundException:
+                
+                job_key = ClientThreading.JobKey()
+                
+                job_key.SetVariable( 'popup_text_1', 'Hey, the server did not have a petition after all. Please hit refresh counts.' )
+                
+                job_key.Delete( 5 )
+                
+                HG.client_controller.pub( 'message', job_key )
                 
             finally:
                 
@@ -4728,7 +4788,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         button.setEnabled( False )
         button.setText( 'Fetching\u2026' )
         
-        self._controller.CallToThread( do_it, self._service )
+        subject_account_key = self._GetSubjectAccountKey()
+        
+        self._controller.CallToThread( do_it, self._service, subject_account_key )
         
     
     def _FlipSelected( self ):
@@ -4770,6 +4832,34 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
         return contents_and_checks
+        
+    
+    def _GetSubjectAccountKey( self ):
+        
+        account_key_hex = self._petition_account_key.text()
+        
+        if len( account_key_hex ) == 0:
+            
+            return None
+            
+        else:
+            
+            try:
+                
+                account_key_bytes = bytes.fromhex( account_key_hex )
+                
+                if len( account_key_bytes ) != 32:
+                    
+                    raise Exception()
+                    
+                
+                return account_key_bytes
+                
+            except Exception as e:
+                
+                return None
+                
+            
         
     
     def _SetContentsAndChecks( self, action, contents_and_checks, sort_type ):
@@ -4869,6 +4959,50 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._SetContentsAndChecks( action, contents_and_checks, sort_type )
             
+        
+    
+    def _UpdateAccountKey( self ):
+        
+        account_key_hex = self._petition_account_key.text()
+        
+        if len( account_key_hex ) == 0:
+            
+            valid = True
+            
+        else:
+            
+            try:
+                
+                account_key_bytes = bytes.fromhex( account_key_hex )
+                
+                if len( account_key_bytes ) != 32:
+                    
+                    raise Exception()
+                    
+                
+                valid = True
+                
+            except Exception as e:
+                
+                valid = False
+                
+            
+        
+        if valid:
+            
+            self._petition_account_key.setObjectName( 'HydrusValid' )
+            
+            if self._GetSubjectAccountKey() != self._last_fetched_subject_account_key:
+                
+                self._FetchNumPetitions()
+                
+            
+        else:
+            
+            self._petition_account_key.setObjectName( 'HydrusInvalid' )
+            
+        
+        self._petition_account_key.style().polish( self._petition_account_key )
         
     
     def ContentsAddDoubleClick( self, item ):

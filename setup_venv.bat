@@ -1,9 +1,14 @@
 @ECHO off
 
+pushd "%~dp0"
+
 where /q python
 IF ERRORLEVEL 1 (
 	
 	SET /P gumpf=You do not seem to have python installed. Please check the 'running from source' help.
+	
+	popd
+	
 	EXIT /B 1
 	
 )
@@ -77,6 +82,9 @@ CALL venv\Scripts\activate.bat
 IF ERRORLEVEL 1 (
 	
 	SET /P gumpf=The venv failed to activate, stopping now!
+	
+	popd
+	
 	EXIT /B 1
 	
 )
@@ -107,9 +115,15 @@ IF "%install_type%" == "s" (
 CALL venv\Scripts\deactivate.bat
 
 SET /P done=Done!
+
+popd
+
 EXIT /B 0
 
 :parse_fail
 
 SET /P done=Sorry, did not understand that input!
+
+popd
+
 EXIT /B 1

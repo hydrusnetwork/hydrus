@@ -60,6 +60,8 @@ class StaticSystemPredicateButton( QW.QWidget ):
         QP.AddToLayout( hbox, self._predicates_button, flag )
         QP.AddToLayout( hbox, self._remove_button, CC.FLAGS_CENTER )
         
+        self.setFocusProxy( self._predicates_button )
+        
         self.setLayout( hbox )
         
     

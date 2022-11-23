@@ -33,6 +33,42 @@
 		<div class="content">
 			<h3 id="changelog"><a href="#changelog">changelog</a></h3>
 			<ul>
+				<li><h3 id="version_507"><a href="#version_507">version 507</a></h3></li>
+				<ul>
+					<li>misc:</li>
+					<li>fixed an issue where you could set 'all known tags' in the media-tag exporter box in the sidecars system</li>
+					<li>if a media-tag exporter in the sidecars system is set to an invalid (missing) tag service, the dialog now protests when you try to OK it. also, when you boot into this dialog, it will now moan about the invalid service. also, new media-tag exporters will always start with a valid local tag service.</li>
+					<li>Qt import error states are handled better. when the client boots, the various 'could not find Qt' errors at different qtpy and QtCore import stages are now handled separately. the Qt selected by qtpy, if any, is reported, as is the state of QT_API and whether hydrus thought it was importable. it seems like there have been a couple of users caught by something like system-wide QT_API env variables here, which this should reveal better in boot-crash logs from now on</li>
+					<li>all the new setup scripts in the base directory now push their location as the new CWD when they start, and they pop back to your original when they exit. you should be able to call them from anywhere now!</li>
+					<li>I've written a 'setup_desktop.sh' install script for Linux users to 'install' a hydrus.desktop file for the current install location to your applications directory. thanks to the user who made the original hydrus.desktop file for the help here</li>
+					<li>I fixed the focus when you open a 'edit predicate' panel that only has buttons, like 'has audio'/'no audio'. top button should have focus again, so you can hit enter quick</li>
+					<li>added updated link to hydownloader on the client api page</li>
+					<li>.</li>
+					<li>dupes apply better to groups of thumbs:</li>
+					<li>tl;dr: when the user sets a 'copy both ways' duplicate file status on more than two thumbnails, the duplicate metadata merge options are applied better now</li>
+					<li>advanced explanation: previously, all merge updates were calculated before applying the updates, so when applied to a group of interconnected relationships, the nodes that were not directly connected to each other were not syncing data. now, all merge updates are calculated and applied to each pair in turn, and then the whole batch is repeated once more, ensuring two-way transitivity. for instance, if you are set to copy tags in both directions and set 'A is the best' of three files 'ABC', and B has tag 'x' and C has 'y', then previously A would get 'x' and 'y', but B would not get 'y' and C would not get 'x'. now, A gets 'x' before the AC merge is calculated, so A and C get x, and then the whole operation is repeated, so when AB is re-calculated, B now gets 'y' from the updated A. same thing if you set to archive if either file is archived--now that archived status will propagate across the whole group in one action</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the new 'tags' structure in `/get_files/file_metadata` now has the 'all known tags' service's tags</li>
+					<li>the 'file_services' structure in `/get_files/file_metadata` now states service name, type, and pretty type, like 'tags'</li>
+					<li>`/get_services` now says the service `type` and `type_pretty`, like 'tags'. `/get_services` may be reformatted to a service_key key'd Object at some point, since it uses an old custom human-readable service type as Object key atm and I'd rather we move to the same labels and references for everything, but we'll see</li>
+					<li>updated the client api help with more example result data for the above changes (and other stuff like 'all my files')</li>
+					<li>updated the client api unit tests to deal with the above changes</li>
+					<li>client api version is now 36</li>
+					<li>.</li>
+					<li>server/janitor improvements:</li>
+					<li>I recommend server admins update their servers this week! everything old still works, but jannies who update have new abilities that won't work until you update</li>
+					<li>the petition processing page now has an 'account id' text field. paste an account id in there, and you'll get the petition counts just for that account! the petitions requested will also only be for that account!</li>
+					<li>if you get a 404 on a 'get petition' call (either due to another janitor clearing the last, or from a server count cache miscount), it no longer throws an error. instead, a popup appears for five seconds saying 'hey, there wasn't one after all, please hit refresh counts'</li>
+					<li>.</li>
+					<li>boring server improvements:</li>
+					<li>refactored the account-fetching routine a little. some behind the scenes account identifier code, which determines an account from a mapping or file record, is now cleaner and more cleanly separated from the 'fetch account from account key' calls. account key is the master account identifier henceforth, and any content lookups will look up the account key and then do normal account lookup after. I will clean this further in the near future</li>
+					<li>a new server call looks up the account key from a content object explicitly; this will get more use in future</li>
+					<li>all the 'get number of x' server calls now support 'get number of x made by y' for account-specific counting. these numbers aren't cached, but should be fairly quick for janitorial purposes</li>
+					<li>same deal for petitions, the server can now fetch petitions by a particular user, if any</li>
+					<li>added/updated unit tests for these changes</li>
+					<li>general server code cleanup</li>
+				</ul>
 				<li><h3 id="version_506"><a href="#version_506">version 506</a></h3></li>
 				<ul>
 					<li>misc:</li>

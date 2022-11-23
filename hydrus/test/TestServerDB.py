@@ -144,9 +144,9 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'account_from_content', self._tag_service_key, mapping_content )
+        result = self._read( 'account_key_from_content', self._tag_service_key, mapping_content )
         
-        self.assertEqual( result.GetAccountKey(), self._tag_service_regular_account.GetAccountKey() )
+        self.assertEqual( result, self._tag_service_regular_account.GetAccountKey() )
         
     
     def _test_account_modification( self ):

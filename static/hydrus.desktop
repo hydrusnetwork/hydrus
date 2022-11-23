@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=Hydrus Client
-Comment=Danbooru-like image tagging and searching system for the desktop
+Comment=Booru-like media management application
 Exec=hydrus-client
 Icon=/usr/lib/hydrus/static/hydrus_non-transparent.png
 Terminal=false

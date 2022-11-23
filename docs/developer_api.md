@@ -225,65 +225,94 @@ Response:
   "local_tags" : [
     {
       "name" : "my tags",
-      "service_key" : "6c6f63616c2074616773"
+      "service_key" : "6c6f63616c2074616773",
+      "type" : 5,
+      "type_pretty" : "local tag service"
     },
     {
       "name" : "filenames",
-      "service_key" : "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b"
+      "service_key" : "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b",
+      "type" : 5,
+      "type_pretty" : "local tag service"
     }
   ],
   "tag_repositories" : [
     {
       "name" : "PTR",
-      "service_key" : "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9"
+      "service_key" : "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9",
+      "type" : 0,
+      "type_pretty" : "hydrus tag repository"
+    }
+  ],
+  "file_repositories" : [
+    {
+      "name" : "kamehameha central",
+      "service_key" : "89295dc26dae3ea7d395a1746a8fe2cb836b9472b97db48024bd05587f32ab0b",
+      "type" : 1,
+      "type_pretty" : "hydrus file repository"
     }
   ],
   "local_files" : [
     {
       "name" : "my files",
-      "service_key" : "6c6f63616c2066696c6573"
-    }
-  ],
-  "local_updates" : [
-    {
-      "name" : "repository updates",
-      "service_key" : "7265706f7369746f72792075706461746573"
-    }
-  ],
-  "file_repositories" : [],
-  "all_local_files" : [
-    {
-      "name" : "all local files",
-      "service_key" : "616c6c206c6f63616c2066696c6573"
+      "service_key" : "6c6f63616c2066696c6573",
+      "type" : 2,
+      "type_pretty" : "local file domain"
     }
   ],
   "all_local_media" : [
     {
       "name" : "all my files",
-      "service_key" : "616c6c206c6f63616c206d65646961"
-    }
-  ],
-  "all_known_files" : [
-    {
-      "name" : "all known files",
-      "service_key" : "616c6c206b6e6f776e2066696c6573"
-    }
-  ],
-  "all_known_tags" : [
-    {
-      "name" : "all known tags",
-      "service_key" : "616c6c206b6e6f776e2074616773"
+      "service_key" : "616c6c206c6f63616c206d65646961",
+      "type" : 21,
+      "type_pretty" : "virtual combined local media service"
     }
   ],
   "trash" : [
     {
       "name" : "trash",
-      "service_key" : "7472617368"
+      "service_key" : "7472617368",
+      "type" : 14,
+      "type_pretty" : "local trash file domain"
+    }
+  ],
+  "local_updates" : [
+    {
+      "name" : "repository updates",
+      "service_key" : "7265706f7369746f72792075706461746573",
+      "type" : 20,
+      "type_pretty" : "local update file domain"
+    }
+  ],
+  "all_local_files" : [
+    {
+      "name" : "all local files",
+      "service_key" : "616c6c206c6f63616c2066696c6573",
+      "type" : 15,
+      "type_pretty" : "virtual combined local file service"
+    }
+  ],
+  "all_known_files" : [
+    {
+      "name" : "all known files",
+      "service_key" : "616c6c206b6e6f776e2066696c6573",
+      "type" : 11,
+      "type_pretty" : "virtual combined file service"
+    }
+  ],
+  "all_known_tags" : [
+    {
+      "name" : "all known tags",
+      "service_key" : "616c6c206b6e6f776e2074616773",
+      "type" : 10,
+      "type_pretty" : "virtual combined tag service"
     }
   ]
 }
 ```  
-    These services may be referred to in various metadata responses or required in request parameters (e.g. where to add tag mappings). Note that a user can rename their services. Much of this Client API uses this renameable 'service name' as service identifier, but I may start using service key, which is non-mutable ID specific to each client. The hardcoded services have shorter service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-made stuff will have 64-character hex.
+    These services may be referred to in various metadata responses or required in request parameters (e.g. where to add tag mappings). Note that a user can rename their services. The older parts of the Client API use the renameable 'service name' as service identifier, but wish to move away from this. Please use the hex 'service_key', which is a non-mutable ID specific to each client. The hardcoded services have shorter service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-made stuff will have 64-character hex.
+    
+    Now that I state `type` and `type_pretty` here, I may rearrange this call, probably to make the `service_key` the Object key, rather than the arbitrary 'all_known_tags' strings.
     
 
 ## Adding Files
@@ -1537,6 +1566,13 @@ Response:
           "type_pretty" : "hydrus tag repository",
           "storage_tags" : {},
           "display_tags" : {}
+        },
+        "616c6c206b6e6f776e2074616773" : {
+          "name" : "all known tags",
+          "type" : 10,
+          "type_pretty" : "virtual combined tag service",
+          "storage_tags" : {},
+          "display_tags" : {}
         }
       }
     },
@@ -1559,14 +1595,29 @@ Response:
       "file_services" : {
         "current" : {
           "616c6c206c6f63616c2066696c6573" : {
+            "name" : "all local files",
+            "type" : 15,
+            "type_pretty" : "virtual combined local file service",
+            "time_imported" : 1641044491
+          },
+          "616c6c206c6f63616c2066696c6573" : {
+            "name" : "all my files",
+            "type" : 21,
+            "type_pretty" : "virtual combined local media service",
             "time_imported" : 1641044491
           },
           "cb072cffbd0340b67aec39e1953c074e7430c2ac831f8e78fb5dfbda6ec8dcbd" : {
+            "name" : "cool space babes",
+            "type" : 2,
+            "type_pretty" : "local file domain",
             "time_imported" : 1641204220
           }
         },
         "deleted" : {
           "6c6f63616c2066696c6573" : {
+            "name" : "my files",
+            "type" : 2,
+            "type_pretty" : "local file domain",
             "time_deleted" : 1641204274,
             "time_imported" : 1641044491
           }
@@ -1598,6 +1649,10 @@ Response:
         "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
           "0" : ["blonde_hair", "blue_eyes", "looking_at_viewer"],
           "1" : ["bodysuit"]
+        },
+        "616c6c206b6e6f776e2074616773" : {
+          "0" : ["samus favourites", "blonde_hair", "blue_eyes", "looking_at_viewer"],
+          "1" : ["bodysuit"]
         }
       },
       "service_keys_to_statuses_to_display_tags" : {
@@ -1607,6 +1662,10 @@ Response:
         },
         "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
           "0" : ["blonde hair", "blue_eyes", "looking at viewer"],
+          "1" : ["bodysuit", "clothing"]
+        },
+        "616c6c206b6e6f776e2074616773" : {
+          "0" : ["samus favourites", "favourites", "blonde hair", "blue_eyes", "looking at viewer"],
           "1" : ["bodysuit", "clothing"]
         }
       },
@@ -1634,6 +1693,19 @@ Response:
           },
           "display_tags" : {
             "0" : ["blonde hair", "blue_eyes", "looking at viewer"],
+            "1" : ["bodysuit", "clothing"]
+          }
+        },
+        "616c6c206b6e6f776e2074616773" : {
+          "name" : "all known tags",
+          "type" : 10,
+          "type_pretty" : "virtual combined tag service",
+          "storage_tags" : {
+            "0" : ["samus favourites", "blonde_hair", "blue_eyes", "looking_at_viewer"],
+            "1" : ["bodysuit"]
+          },
+          "display_tags" : {
+            "0" : ["samus favourites", "favourites", "blonde hair", "blue_eyes", "looking at viewer"],
             "1" : ["bodysuit", "clothing"]
           }
         }

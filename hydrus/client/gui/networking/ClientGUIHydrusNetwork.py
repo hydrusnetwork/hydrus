@@ -617,6 +617,8 @@ class ReviewAccountsPanel( QW.QWidget ):
     
     def _RefreshAccounts( self ):
         
+        # TODO: so, rework this guy, and modifyaccounts parent, to not hold account_identifiers, but account_keys. have an async lookup convert contents to account keys before launching this guy
+        
         account_identifiers = self._account_identifiers
         service = self._service
         
@@ -646,18 +648,18 @@ class ReviewAccountsPanel( QW.QWidget ):
                     
                     account = result[ 'account' ]
                     
-                    account_key = account.GetAccountKey()
+                    subject_account_key = account.GetAccountKey()
                     
-                    if account_key in account_keys_to_accounts:
+                    if subject_account_key in account_keys_to_accounts:
                         
                         continue
                         
                     
-                    account_keys_to_accounts[ account_key ] = account
+                    account_keys_to_accounts[ subject_account_key ] = account
                     
                     try:
                         
-                        response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = account_key ) } )
+                        response = self._service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key } )
                         
                     except Exception as e:
                         
@@ -668,7 +670,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                     
                     account_string = str( response[ 'account_info' ] )
                     
-                    account_keys_to_account_info[ account_key ] = account_string
+                    account_keys_to_account_info[ subject_account_key ] = account_string
                     
                 
             
@@ -806,6 +808,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         self._RefreshAccounts()
         
     
+
 class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, subject_identifiers: typing.Collection[ HydrusNetwork.AccountIdentifier ]  ):
@@ -1011,7 +1014,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for subject_account_key in subject_account_keys:
                 
-                service.Request( HC.POST, 'modify_account_account_type', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = subject_account_key ), 'account_type_key' : account_type_key } )
+                service.Request( HC.POST, 'modify_account_account_type', { 'subject_account_key' : subject_account_key, 'account_type_key' : account_type_key } )
                 
             
             return 1
@@ -1089,7 +1092,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for subject_account_key in subject_account_keys:
                 
-                service.Request( HC.POST, 'modify_account_ban', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = subject_account_key ), 'reason' : reason, 'expires' : expires } )
+                service.Request( HC.POST, 'modify_account_ban', { 'subject_account_key' : subject_account_key, 'reason' : reason, 'expires' : expires } )
                 
             
             return 1
@@ -1124,7 +1127,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for ( subject_account_key, new_expires ) in subject_account_keys_and_new_expires:
                 
-                service.Request( HC.POST, 'modify_account_expires', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = subject_account_key ), 'expires' : new_expires } )
+                service.Request( HC.POST, 'modify_account_expires', { 'subject_account_key' : subject_account_key, 'expires' : new_expires } )
                 
             
             return 1
@@ -1181,7 +1184,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for subject_account_key in subject_account_keys:
                 
-                service.Request( HC.POST, 'modify_account_set_message', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = subject_account_key ), 'message': message } )
+                service.Request( HC.POST, 'modify_account_set_message', { 'subject_account_key' : subject_account_key, 'message': message } )
                 
             
             return 1
@@ -1229,7 +1232,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for subject_account_key in subject_account_keys:
                 
-                service.Request( HC.POST, 'modify_account_unban', { 'subject_identifier' : HydrusNetwork.AccountIdentifier( account_key = subject_account_key ) } )
+                service.Request( HC.POST, 'modify_account_unban', { 'subject_account_key' : subject_account_key } )
                 
             
             return 1
