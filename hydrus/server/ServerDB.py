@@ -94,9 +94,9 @@ class DB( HydrusDB.HydrusDB ):
         self._read_commands_to_methods = {
             'access_key' : self._GetAccessKey,
             'account' : self._GetAccountFromAccountKey,
-            'account_from_content' : self._GetAccountFromContent,
             'account_info' : self._GetAccountInfo,
             'account_key_from_access_key' : self._GetAccountKeyFromAccessKey,
+            'account_key_from_content' : self._GetAccountKeyFromContent,
             'account_types' : self._GetAccountTypes,
             'auto_create_account_types' : self._GetAutoCreateAccountTypes,
             'auto_create_registration_key' : self._GetAutoCreateRegistrationKey,
@@ -672,7 +672,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         
     
-    def _GetAccountFromContent( self, service_key, content ):
+    def _GetAccountKeyFromContent( self, service_key, content ):
         
         service_id = self._GetServiceId( service_key )
         service_type = self._GetServiceType( service_id )
@@ -765,9 +765,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( account_id, ) = result
         
-        account = self._GetAccount( service_id, account_id )
+        account_key = self._GetAccountKeyFromAccountId( account_id )
         
-        return account
+        return account_key
         
     
     def _GetAccountFromAccountKey( self, service_key, account_key ):
@@ -834,7 +834,7 @@ class DB( HydrusDB.HydrusDB ):
         return account_key
         
     
-    def _GetAccountId( self, account_key ):
+    def _GetAccountId( self, account_key: bytes ) -> int:
         
         result = self._Execute( 'SELECT account_id FROM accounts WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
         
@@ -2688,11 +2688,18 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryGetFilePetition( self, service_id ):
+    def _RepositoryGetFilePetition( self, service_id, account_id = None ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 100;' ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_files_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_files_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -2742,11 +2749,18 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RepositoryGetMappingPetition( self, service_id ):
+    def _RepositoryGetMappingPetition( self, service_id, account_id = None ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 100;' ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_mappings_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_mappings_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -2908,7 +2922,7 @@ class DB( HydrusDB.HydrusDB ):
         return master_tag_id
         
     
-    def _RepositoryGetNumPetitions( self, service_key, account ):
+    def _RepositoryGetNumPetitions( self, service_key, account, subject_account_key = None ):
         
         service_id = self._GetServiceId( service_key )
         
@@ -2940,100 +2954,139 @@ class DB( HydrusDB.HydrusDB ):
         
         final_petition_count_info = []
         
-        for ( content_type, content_status, info_type ) in petition_count_info:
+        if subject_account_key is None:
             
-            result = self._Execute( 'SELECT info FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
-            
-            if result is None:
-                
-                self._RepositoryRegenerateServiceInfoSpecific( service_id, ( info_type, ) )
+            for ( content_type, content_status, info_type ) in petition_count_info:
                 
                 result = self._Execute( 'SELECT info FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
                 
-
-            ( count, ) = result
+                if result is None:
+                    
+                    self._RepositoryRegenerateServiceInfoSpecific( service_id, ( info_type, ) )
+                    
+                    result = self._Execute( 'SELECT info FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
+                    
+                
+                ( count, ) = result
+                
+                final_petition_count_info.append( ( content_type, content_status, count ) )
+                
             
-            final_petition_count_info.append( ( content_type, content_status, count ) )
+        else:
+            
+            try:
+                
+                subject_account_id = self._GetAccountId( subject_account_key )
+                
+            except HydrusExceptions.InsufficientCredentialsException:
+                
+                raise HydrusExceptions.NotFoundException( 'That subject account id was not found on this service!' )
+                
+            
+            for ( content_type, content_status, info_type ) in petition_count_info:
+                
+                count = self._RepositoryGetServiceInfoSpecificForAccount( service_id, info_type, subject_account_id )
+                
+                final_petition_count_info.append( ( content_type, content_status, count ) )
+                
             
         
         return final_petition_count_info
         
     
-    def _RepositoryGetPetition( self, service_key, account, content_type, status ):
+    def _RepositoryGetPetition( self, service_key, account, content_type, status, subject_account_key = None ):
+        
+        # TODO: update this guy to take reason too, for (account key, reason) tuple lookups
         
         service_id = self._GetServiceId( service_key )
         
         try:
             
+            if subject_account_key is None:
+                
+                subject_account_id = None
+                
+            else:
+                
+                subject_account_id = self._GetAccountId( subject_account_key )
+                
+            
             if content_type == HC.CONTENT_TYPE_FILES:
                 
-                petition = self._RepositoryGetFilePetition( service_id )
+                petition = self._RepositoryGetFilePetition( service_id, account_id = subject_account_id )
                 
             elif content_type == HC.CONTENT_TYPE_MAPPINGS:
                 
-                petition = self._RepositoryGetMappingPetition( service_id )
+                petition = self._RepositoryGetMappingPetition( service_id, account_id = subject_account_id )
                 
             elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
                 
                 if status == HC.CONTENT_STATUS_PENDING:
                     
-                    petition = self._RepositoryGetTagParentPend( service_id )
+                    petition = self._RepositoryGetTagParentPend( service_id, account_id = subject_account_id )
                     
                 else:
                     
-                    petition = self._RepositoryGetTagParentPetition( service_id )
+                    petition = self._RepositoryGetTagParentPetition( service_id, account_id = subject_account_id )
                     
                 
             elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
                 
                 if status == HC.CONTENT_STATUS_PENDING:
                     
-                    petition = self._RepositoryGetTagSiblingPend( service_id )
+                    petition = self._RepositoryGetTagSiblingPend( service_id, account_id = subject_account_id )
                     
                 else:
                     
-                    petition = self._RepositoryGetTagSiblingPetition( service_id )
+                    petition = self._RepositoryGetTagSiblingPetition( service_id, account_id = subject_account_id )
                     
+                
+            else:
+                
+                raise HydrusExceptions.BadRequestException( 'Unknown content type!' )
                 
             
         except HydrusExceptions.NotFoundException:
             
-            info_type = None
-            
-            if content_type == HC.CONTENT_TYPE_FILES:
+            if subject_account_key is None:
                 
-                info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS
+                info_type = None
                 
-            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS
-                
-            elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
-                
-                if status == HC.CONTENT_STATUS_PENDING:
+                if content_type == HC.CONTENT_TYPE_FILES:
                     
-                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS
                     
-                else:
+                elif content_type == HC.CONTENT_TYPE_MAPPINGS:
                     
-                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS
+                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS
+                    
+                elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+                    
+                    if status == HC.CONTENT_STATUS_PENDING:
+                        
+                        info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS
+                        
+                    else:
+                        
+                        info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS
+                        
+                    
+                elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                    
+                    if status == HC.CONTENT_STATUS_PENDING:
+                        
+                        info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS
+                        
+                    else:
+                        
+                        info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS
+                        
                     
                 
-            elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
-                
-                if status == HC.CONTENT_STATUS_PENDING:
+                if info_type is not None:
                     
-                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS
+                    self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
                     
-                else:
-                    
-                    info_type = HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS
-                    
-                
-            
-            if info_type is not None:
-                
-                self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, info_type ) ).fetchone()
                 
             
             raise
@@ -3106,6 +3159,120 @@ class DB( HydrusDB.HydrusDB ):
         return service_hash_ids
         
     
+    def _RepositoryGetServiceInfoSpecificForAccount( self, service_id: int, info_type: int, account_id: int ):
+        
+        service_name = self._GetServiceName( service_id )
+        
+        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+        
+        if info_type == HC.SERVICE_INFO_NUM_FILES:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( deleted_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_ADD_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( pending_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( petitioned_files_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( deleted_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_ADD_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT master_tag_id, reason_id FROM {} WHERE account_id = ? );'.format( pending_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_MAPPING_DELETE_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, reason_id FROM {} WHERE account_id = ? );'.format( petitioned_mappings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_TAG_SIBLINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_DELETED_TAG_SIBLINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( deleted_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? EXCEPT SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ), ( account_id, account_id ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_DELETE_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_TAG_PARENTS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_DELETED_TAG_PARENTS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( deleted_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_ADD_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? EXCEPT SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ), ( account_id, account_id ) ).fetchone()
+            
+        elif info_type == HC.SERVICE_INFO_NUM_ACTIONABLE_PARENT_DELETE_PETITIONS:
+            
+            ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT reason_id FROM {} WHERE account_id = ? );'.format( petitioned_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+        else:
+            
+            raise Exception( 'Was asked to generate account-specific service info for an unsupported type: {}'.format( info_type ) )
+            
+        
+        return info
+        
+    
     def _RepositoryGetServiceTagId( self, service_id, master_tag_id, timestamp ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
@@ -3130,11 +3297,18 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryGetTagParentPend( self, service_id ):
+    def _RepositoryGetTagParentPend( self, service_id, account_id = None ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ) ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE account_id = ? AND 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -3171,11 +3345,18 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
         
     
-    def _RepositoryGetTagParentPetition( self, service_id ):
+    def _RepositoryGetTagParentPetition( self, service_id, account_id = None ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_parents_table_name + ' LIMIT 100;' ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_tag_parents_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_tag_parents_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -3242,11 +3423,18 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPend( self, service_id ):
+    def _RepositoryGetTagSiblingPend( self, service_id, account_id = None ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE account_id = ? AND 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -3283,11 +3471,18 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPetition( self, service_id ):
+    def _RepositoryGetTagSiblingPetition( self, service_id, account_id = None ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_siblings_table_name + ' LIMIT 100;' ).fetchall()
+        if account_id is None:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_tag_siblings_table_name ) ).fetchall()
+            
+        else:
+            
+            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchall()
+            
         
         if len( result ) == 0:
             
@@ -3306,7 +3501,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        pairs = self._Execute( 'SELECT bad_service_tag_id, good_service_tag_id FROM ' + petitioned_tag_siblings_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ? AND reason_id = ?;'.format( petitioned_tag_siblings_table_name ), ( petitioner_account_id, reason_id ) ).fetchall()
         
         contents = []
         

@@ -55,7 +55,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._allowed_exporter_classes = allowed_exporter_classes
         
         self._current_exporter_class = type( exporter )
-        self._service_key = CC.COMBINED_TAG_SERVICE_KEY
+        self._service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         
         #
         
@@ -213,6 +213,15 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags:
             
+            try:
+                
+                HG.client_controller.services_manager.GetName( self._service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                raise HydrusExceptions.VetoException( 'Sorry, your exporter needs a valid tag service! The selected one is missing!' )
+                
+            
             exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key = self._service_key )
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs:
@@ -247,7 +256,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SelectService( self ):
         
-        service_key = ClientGUIDialogsQuick.SelectServiceKey( service_types = HC.ALL_TAG_SERVICES, unallowed = [ self._service_key ] )
+        service_key = ClientGUIDialogsQuick.SelectServiceKey( service_types = HC.REAL_TAG_SERVICES, unallowed = [ self._service_key ] )
         
         if service_key is None:
             
@@ -292,6 +301,13 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._UpdateServiceKeyButtonLabel()
             
             self._service_selection_panel.setVisible( True )
+            
+            if not HG.client_controller.services_manager.ServiceExists( self._service_key ):
+                
+                message = 'Hey, the tag service for your exporter does not seem to exist! Maybe it was deleted. Please select a new one that does.'
+                
+                QW.QMessageBox.warning( self, 'Warning', message )
+                
             
         elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
             

@@ -228,6 +228,8 @@ class Controller( object ):
         
         self._param_read_responses = {}
         
+        self.example_file_repo_service_key_1 = HydrusData.GenerateKey()
+        self.example_file_repo_service_key_2 = HydrusData.GenerateKey()
         self.example_tag_repo_service_key = HydrusData.GenerateKey()
         self.example_ipfs_service_key = HydrusData.GenerateKey()
         
@@ -241,6 +243,8 @@ class Controller( object ):
         services.append( ClientServices.GenerateService( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ) )
         services.append( ClientServices.GenerateService( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
         services.append( ClientServices.GenerateService( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'my tags' ) )
+        services.append( ClientServices.GenerateService( self.example_file_repo_service_key_1, HC.FILE_REPOSITORY, 'example file repo 1' ) )
+        services.append( ClientServices.GenerateService( self.example_file_repo_service_key_2, HC.FILE_REPOSITORY, 'example file repo 2' ) )
         services.append( ClientServices.GenerateService( self.example_tag_repo_service_key, HC.TAG_REPOSITORY, 'example tag repo' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, 'all known tags' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ) )

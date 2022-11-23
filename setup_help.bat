@@ -1,8 +1,13 @@
 @ECHO off
 
+pushd "%~dp0"
+
 IF NOT EXIST "venv\" (
 
 	SET /P gumpf=You need to set up a venv! Check the running from source help for more info!
+	
+	popd
+	
 	EXIT /B 1
 	
 )
@@ -30,3 +35,5 @@ mkdocs build -d help
 CALL venv\Scripts\deactivate.bat
 
 SET /P done=Done!
+
+popd

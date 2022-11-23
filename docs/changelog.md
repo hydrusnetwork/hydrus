@@ -7,7 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
-## [Version 50](https://github.com/hydrusnetwork/hydrus/releases/tag/v506)
+## [Version 507](https://github.com/hydrusnetwork/hydrus/releases/tag/v506)
+
+### misc
+
+* fixed an issue where you could set 'all known tags' in the media-tag exporter box in the sidecars system
+* if a media-tag exporter in the sidecars system is set to an invalid (missing) tag service, the dialog now protests when you try to OK it. also, when you boot into this dialog, it will now moan about the invalid service. also, new media-tag exporters will always start with a valid local tag service.
+* Qt import error states are handled better. when the client boots, the various 'could not find Qt' errors at different qtpy and QtCore import stages are now handled separately. the Qt selected by qtpy, if any, is reported, as is the state of QT_API and whether hydrus thought it was importable. it seems like there have been a couple of users caught by something like system-wide QT_API env variables here, which this should reveal better in boot-crash logs from now on
+* all the new setup scripts in the base directory now push their location as the new CWD when they start, and they pop back to your original when they exit. you should be able to call them from anywhere now!
+* I've written a 'setup_desktop.sh' install script for Linux users to 'install' a hydrus.desktop file for the current install location to your applications directory. thanks to the user who made the original hydrus.desktop file for the help here
+* I fixed the focus when you open a 'edit predicate' panel that only has buttons, like 'has audio'/'no audio'. top button should have focus again, so you can hit enter quick
+* added updated link to hydownloader on the client api page
+
+### dupes apply better to groups of thumbs
+
+* tl;dr: when the user sets a 'copy both ways' duplicate file status on more than two thumbnails, the duplicate metadata merge options are applied better now
+* advanced explanation: previously, all merge updates were calculated before applying the updates, so when applied to a group of interconnected relationships, the nodes that were not directly connected to each other were not syncing data. now, all merge updates are calculated and applied to each pair in turn, and then the whole batch is repeated once more, ensuring two-way transitivity. for instance, if you are set to copy tags in both directions and set 'A is the best' of three files 'ABC', and B has tag 'x' and C has 'y', then previously A would get 'x' and 'y', but B would not get 'y' and C would not get 'x'. now, A gets 'x' before the AC merge is calculated, so A and C get x, and then the whole operation is repeated, so when AB is re-calculated, B now gets 'y' from the updated A. same thing if you set to archive if either file is archived--now that archived status will propagate across the whole group in one action
+
+### client api
+
+* the new 'tags' structure in `/get_files/file_metadata` now has the 'all known tags' service's tags
+* the 'file_services' structure in `/get_files/file_metadata` now states service name, type, and pretty type, like 'tags'
+* `/get_services` now says the service `type` and `type_pretty`, like 'tags'. `/get_services` may be reformatted to a service_key key'd Object at some point, since it uses an old custom human-readable service type as Object key atm and I'd rather we move to the same labels and references for everything, but we'll see
+* updated the client api help with more example result data for the above changes (and other stuff like 'all my files')
+* updated the client api unit tests to deal with the above changes
+* client api version is now 36
+
+### server/janitor improvements
+
+* I recommend server admins update their servers this week! everything old still works, but jannies who update have new abilities that won't work until you update
+* the petition processing page now has an 'account id' text field. paste an account id in there, and you'll get the petition counts just for that account! the petitions requested will also only be for that account!
+* if you get a 404 on a 'get petition' call (either due to another janitor clearing the last, or from a server count cache miscount), it no longer throws an error. instead, a popup appears for five seconds saying 'hey, there wasn't one after all, please hit refresh counts'
+
+### boring server improvements
+
+* refactored the account-fetching routine a little. some behind the scenes account identifier code, which determines an account from a mapping or file record, is now cleaner and more cleanly separated from the 'fetch account from account key' calls. account key is the master account identifier henceforth, and any content lookups will look up the account key and then do normal account lookup after. I will clean this further in the near future
+* a new server call looks up the account key from a content object explicitly; this will get more use in future
+* all the 'get number of x' server calls now support 'get number of x made by y' for account-specific counting. these numbers aren't cached, but should be fairly quick for janitorial purposes
+* same deal for petitions, the server can now fetch petitions by a particular user, if any
+* added/updated unit tests for these changes
+* general server code cleanup
+
+## [Version 506](https://github.com/hydrusnetwork/hydrus/releases/tag/v506)
 
 ### misc
 
@@ -433,39 +474,3 @@ _almost all the changes this week are only important to server admins and janito
 * to match the new change in the server, in the client, tag and rating services now store their 'num_files' service info count as the new 'num_file_hashes'. existing numbers will be converted over during update
 * fixed a probably ten year old bug where 'num pending/petitioned files' had the same enum as 'num pending/petitioned mappings'. never noticed, since no service has done both those things
 * if the upload pending process fails due to an unusual permission error or similar, the pending menu should now recover and update itself (previously it stayed greyed out)
-
-## [Version 497](https://github.com/hydrusnetwork/hydrus/releases/tag/v497)
-
-### misc
-* I bulked out the 'star' rating shape a bit more, since the new pentragram, while it looked better than my old 'by-eye' star, was a bit thin. if you prefer the pentagram, this is now selectable as a new shape type under manage services
-* the Windows installer is now Qt6 exclusively. there are no special update instructions, it should all just work™
-* the 'manage tag siblings/parents' dialogs now have explicit delete buttons, which should make mass-deletes a little easier to do. some of the background code is cleaned up too, and the 'add' button is moved up to the main button row
-* you can now hide all sibling and/or parent text-suffix 'decorators' in the manage tags and autocomplete dropdown taglists, with four new checkboxes under _options->tags_. the right-click menus of these lists let you temporarily show/hide too, just like 'hide/show parent rows'
-* when you change the namespace sort in the options, the existing collect-by dropdowns now update instantly (previously, existing pages needed a client restart to see any changes)
-* I updated how the media viewer 'note' hover window lays out and does its 'how tall should I be?' estimate. it fits better, being exactly just tall enough in more cases, but it still seems to have trouble with multiple notes that include wrapping text
-* added a link to the new flatpak release (easy Linux running-from-source setup) that a user made to the install help
-* fixed an issue with the new 'default' file import options when you right-click a watcher/gallery download--the 'show files' menu now correctly adapts to you having a default file import options
-* if you are set to elide page tab names, then all pages will tooltip their names on mouseover
-* new clients now start with (ctrl+page up/down) as 'move page selection left/right'
-
-### client api
-* the Client API routine that fetches file statuses for a given URL no longer double-checks 'already in db' results against your actual file system. this check is more appropriate to an actual working import process, so it now defaults off in the Client API
-* if you want to do this check because you are searching for missing files, you can turn it back on with the new 'doublecheck_file_system' parameter.
-* the client api help has been updated to reference this
-* the client api's Server header is now "client api/32 (497)". NOT "client api/17". it was stating the hydrus network version erroneously. it now states client api version and software version. if you are able to parse this header, it makes '/api_version' request superfluous
-* the client api version is now 32
-
-### multiline parsing
-* the parser now supports limited multiline parsing. the main changes are hardcoded: the formulae beneath note content parsers and those that do subsidiary page parser splitting no longer remove newlines when they parse. all the parsing UI and the test panels and so on are now aware of this and set flags in all the right places, and parsed notes are now washed through the new trimming/cleaning method, and everything _seems_ to basically work. the main remaining problems is the complicated string processing UI has mixed single/multi-line testing support. some looks great, most gets coerced to single-line just for the previewed test results
-* as an example, the default hentai foundry downloader now grabs the artist description as a multi-line note
-* the parsing sub-system that extracts cohesive strings from complex html blocks now inserts newlines at 'p' and 'br' tags
-* trying to parse clean multiline notes still caused several formatting issues this week, so I have updated the automatic note-washing routine to standardise hydrus notes in several new ways that I hope will not be too disruptive to manually written notes:
-* the note washing routine now coerces all newline characters to 'backslash-n', regardless of platform
-* the note washing routine now trims each line, so no leading or trailing whitespace anywhere. I am open to changing this in future, maybe for handwritten notes where you really want an indent somewhere, but parsing from complex nested html tags is making a heap of weird extra whitespace, for which this is a clean solution
-* the note washing routine now trims newline gaps that are greater than two-newlines. you can split paragraphs by one empty line, but no more
-* there may be other issues figuring out cleanly formatted strings from nested html tags--so give it a go and let me know what you think. maybe p and br blocks should always make two newlines, so we have separated paragraphs, maybe I need to parse more blocks, like h1 and friends. any specific example html blocks would also be helpful
-
-### cleanup
-* refactored ClientGUIParsing to its own 'parsing' module and split everything into four less tangled files
-* cleaned up a bunch of taglist text presentation code, mostly simplicity and clarity in prep for future updates
-* updated the checker options button to use a Qt signal instead of a callable

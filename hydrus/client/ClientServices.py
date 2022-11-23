@@ -23,7 +23,6 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
-from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
@@ -3356,7 +3355,7 @@ class ServicesManager( object ):
         
         self._keys_to_services[ CC.TEST_SERVICE_KEY ] = GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
         
-        key = lambda s: s.GetName()
+        key = lambda s: s.GetName().lower()
         
         self._services_sorted = sorted( services, key = key )
         
@@ -3379,6 +3378,13 @@ class ServicesManager( object ):
             
             return filtered_service_keys
             
+        
+    
+    def GetDefaultLocalTagService( self ) -> Service:
+        
+        # I can replace this with 'default_local_location_context' kind of thing at some point, but for now we'll merge in here
+        
+        return self.GetServices( ( HC.LOCAL_TAG, ) )[0]
         
     
     def GetLocalMediaFileServices( self ):
@@ -3457,7 +3463,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServices( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ):
+    def GetServices( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ) -> typing.List[ Service ]:
         
         with self._lock:
             

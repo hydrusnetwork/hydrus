@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pushd "$(dirname "$0")"
+
 py_command=python3
 
 type -P $py_command
@@ -54,6 +56,7 @@ elif [ $install_type = "a" ]; then
 		:
 	else
 		echo "Sorry, did not understand that input!"
+		popd
 		exit 1
 	fi
 	
@@ -67,10 +70,12 @@ elif [ $install_type = "a" ]; then
 		:
 	else
 		echo "Sorry, did not understand that input!"
+		popd
 		exit 1
 	fi
 else
 	echo "Sorry, did not understand that input!"
+	popd
 	exit 1
 fi
 
@@ -81,6 +86,7 @@ source venv/bin/activate
 
 if [ $? -ne 0 ]; then
     echo "The venv failed to activate, stopping now!"
+	popd
 	exit 1
 fi
 
@@ -115,3 +121,5 @@ fi
 deactivate
 
 echo "Done!"
+
+popd

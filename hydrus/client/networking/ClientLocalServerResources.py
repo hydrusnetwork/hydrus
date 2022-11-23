@@ -1272,7 +1272,21 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             
             services = HG.client_controller.services_manager.GetServices( service_types )
             
-            body_dict[ name ] = [ { 'name' : service.GetName(), 'service_key' : service.GetServiceKey().hex() } for service in services ]
+            services_list = []
+            
+            for service in services:
+                
+                service_dict = {
+                    'name' : service.GetName(),
+                    'type' : service.GetServiceType(),
+                    'type_pretty' : HC.service_string_lookup[ service.GetServiceType() ],
+                    'service_key' : service.GetServiceKey().hex()
+                }
+                
+                services_list.append( service_dict )
+                
+            
+            body_dict[ name ] = services_list
             
         
         body = Dumps( body_dict, request.preferred_mime )
@@ -2468,7 +2482,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
             services_manager = HG.client_controller.services_manager
             
-            real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+            tag_service_keys = services_manager.GetServiceKeys( HC.ALL_TAG_SERVICES )
             service_keys_to_types = { service.GetServiceKey() : service.GetServiceType() for service in services_manager.GetServices() }
             service_keys_to_names = services_manager.GetServiceKeysToNames()
             
@@ -2529,6 +2543,9 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     timestamp = locations_manager.GetCurrentTimestamp( file_service_key )
                     
                     metadata_row[ 'file_services' ][ 'current' ][ file_service_key.hex() ] = {
+                        'name' : service_keys_to_names[ file_service_key ],
+                        'type' : service_keys_to_types[ file_service_key ],
+                        'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ file_service_key ] ],
                         'time_imported' : timestamp
                     }
                     
@@ -2540,6 +2557,9 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     ( timestamp, original_timestamp ) = locations_manager.GetDeletedTimestamps( file_service_key )
                     
                     metadata_row[ 'file_services' ][ 'deleted' ][ file_service_key.hex() ] = {
+                        'name' : service_keys_to_names[ file_service_key ],
+                        'type' : service_keys_to_types[ file_service_key ],
+                        'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ file_service_key ] ],
                         'time_deleted' : timestamp,
                         'time_imported' : original_timestamp
                     }
@@ -2609,7 +2629,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 tags_dict = {}
                 
-                for tag_service_key in real_tag_service_keys:
+                for tag_service_key in tag_service_keys:
                     
                     storage_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     

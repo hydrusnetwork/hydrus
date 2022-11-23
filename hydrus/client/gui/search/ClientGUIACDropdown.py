@@ -1466,7 +1466,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         if location_context.IsAllKnownFiles() and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            top_local_tag_service_key = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_TAG, ) ) )[0]
+            top_local_tag_service_key = HG.client_controller.services_manager.GetDefaultLocalTagService().GetServiceKey()
             
             self._SetTagService( top_local_tag_service_key )
             
