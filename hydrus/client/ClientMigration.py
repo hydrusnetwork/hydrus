@@ -459,14 +459,14 @@ class MigrationSourceHTA( MigrationSource ):
             
             for ( hash, tags ) in data:
                 
-                result = self._controller.Read( 'file_hashes', ( hash, ), source_hash_type, desired_hash_type )
+                source_to_desired = self._controller.Read( 'file_hashes', ( hash, ), source_hash_type, desired_hash_type )
                 
-                if len( result ) == 0:
+                if len( source_to_desired ) == 0:
                     
                     continue
                     
                 
-                desired_hash = result[0]
+                desired_hash = list( source_to_desired.values() )[0]
                 
                 fixed_data.append( ( desired_hash, tags ) )
                 

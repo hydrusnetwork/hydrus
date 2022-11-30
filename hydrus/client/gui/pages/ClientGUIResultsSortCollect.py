@@ -513,6 +513,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.setMinimumWidth( asc_width )
         
         self._UpdateSortTypeLabel()
+        self._UpdateButtonsVisible()
         self._UpdateAscDescLabelsAndDefault()
         
         #
@@ -547,7 +548,7 @@ class MediaSortControl( QW.QWidget ):
         
         self._sort_tag_display_type_button.valueChanged.connect( self.EventTagDisplayTypeChoice )
         self._sort_order_choice.valueChanged.connect( self.EventSortAscChoice )
-        self._tag_context_button.valueChanged.connect( self._TagContextChanged )
+        self._tag_context_button.valueChanged.connect( self.EventTagContextChanged )
         
     
     def _BroadcastSort( self ):
@@ -738,19 +739,13 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type = sort_type
         
         self._UpdateSortTypeLabel()
+        self._UpdateButtonsVisible()
         self._UpdateAscDescLabelsAndDefault()
         
     
     def _SetSortTypeFromUser( self, sort_type ):
         
         self._SetSortType( sort_type )
-        
-        self._UserChoseASort()
-        
-        self._BroadcastSort()
-        
-    
-    def _TagContextChanged( self, tag_context: ClientSearch.TagContext ):
         
         self._UserChoseASort()
         
@@ -772,6 +767,8 @@ class MediaSortControl( QW.QWidget ):
                 ( desc_str, CC.SORT_DESC )
             ]
             
+            # if there are no changes to asc/desc texts, then we'll keep the previous value
+            
             if choice_tuples != self._sort_order_choice.GetChoiceTuples():
                 
                 self._sort_order_choice.SetChoiceTuples( choice_tuples )
@@ -779,11 +776,12 @@ class MediaSortControl( QW.QWidget ):
                 self._sort_order_choice.SetValue( default_sort_order )
                 
             
-            # if there are no changes to asc/desc texts, then we'll keep the previous value
+            self._sort_order_choice.setVisible( True )
             
         else:
             
-            self._sort_order_choice.SetChoiceTuples( [] )
+            self._sort_order_choice.setVisible( False )
+            #self._sort_order_choice.SetChoiceTuples( [] )
             
         
         self._sort_order_choice.blockSignals( False )
@@ -791,7 +789,13 @@ class MediaSortControl( QW.QWidget ):
     
     def _UpdateButtonsVisible( self ):
         
-        self._tag_context_button.setVisible( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
+        ( sort_metatype, sort_data ) = self._sort_type
+        
+        show_tag_button = sort_metatype == 'namespaces' and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        self._tag_context_button.setVisible( show_tag_button )
+        
+        self._sort_tag_display_type_button.setVisible( show_tag_button )
         
     
     def _UpdateSortTypeLabel( self ):
@@ -827,8 +831,6 @@ class MediaSortControl( QW.QWidget ):
                 self._sort_tag_display_type_button.blockSignals( False )
                 
             
-        
-        self._sort_tag_display_type_button.setVisible( show_tdt )
         
     
     def _UserChoseASort( self ):
@@ -871,9 +873,14 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def EventTagDisplayTypeChoice( self ):
+    def EventTagContextChanged( self, tag_context: ClientSearch.TagContext ):
         
-        tag_display_type = self._sort_tag_display_type_button.GetValue()
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
+        
+    
+    def EventTagDisplayTypeChoice( self ):
         
         ( sort_metatype, sort_data ) = self._sort_type
         
@@ -881,9 +888,11 @@ class MediaSortControl( QW.QWidget ):
             
             ( namespaces, current_tag_display_type ) = sort_data
             
+            tag_display_type = self._sort_tag_display_type_button.GetValue()
+            
             sort_data = ( namespaces, tag_display_type )
             
-            self._sort_type = ( sort_metatype, sort_data )
+            self._SetSortType( ( sort_metatype, sort_data ) )
             
             self._UserChoseASort()
             
@@ -909,8 +918,6 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.SetValue( media_sort.sort_order )
         
         self._tag_context_button.SetValue( media_sort.tag_context )
-        
-        self._UpdateButtonsVisible()
         
     
     def wheelEvent( self, event ):

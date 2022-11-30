@@ -22,6 +22,7 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaActions
@@ -907,6 +908,128 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
                 
                 self._media_container.PausePlay()
+                
+            elif action == CAC.SIMPLE_SHOW_DUPLICATES:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    duplicate_type = command.GetSimpleData()
+                    
+                    ClientGUIMedia.ShowDuplicatesInNewPage( self._location_context, hash, duplicate_type )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES:
+                
+                # TODO: when media knows dupe relationships, all these lads here need a media scan for the existence of alternate groups or whatever
+                # no duplicate group->don't start the process
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    
                 
             elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
                 
@@ -2421,7 +2544,29 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             index_string = HydrusData.ConvertValueRangeToPrettyString( progress, total )
             
-            num_decisions_string = '{} decisions'.format( HydrusData.ToHumanInt( self._GetNumCommittableDecisions() ) )
+            num_committable = self._GetNumCommittableDecisions()
+            num_deletable = self._GetNumCommittableDeletes()
+            
+            components = []
+            
+            if num_committable > 0:
+                
+                components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                
+            
+            if num_deletable > 0:
+                
+                components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                
+            
+            if len( components ) == 0:
+                
+                num_decisions_string = 'no decisions yet'
+                
+            else:
+                
+                num_decisions_string = ', '.join( components )
+                
             
             return '{} - {} - {}'.format( current_media_label, index_string, num_decisions_string )
             
@@ -2435,6 +2580,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     def _GetNumCommittableDecisions( self ):
         
         return len( [ 1 for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
+        
+    
+    def _GetNumCommittableDeletes( self ):
+        
+        return len( [ 1 for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is None and len( list_of_service_keys_to_content_updates ) > 0 ] )
         
     
     def _GetNumRemainingDecisions( self ):
@@ -2761,10 +2911,23 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             if num_remaining == 0:
                 
                 num_committable = self._GetNumCommittableDecisions()
+                num_deletable = self._GetNumCommittableDeletes()
                 
-                if num_committable > 0:
+                if num_committable + num_deletable > 0:
                     
-                    label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
+                    components = []
+                    
+                    if num_committable > 0:
+                        
+                        components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                        
+                    
+                    if num_deletable > 0:
+                        
+                        components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                        
+                    
+                    label = 'commit {} and continue?'.format( ' and '.join( components ) )
                     
                     result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
                     
@@ -3033,10 +3196,23 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     def TryToDoPreClose( self ):
         
         num_committable = self._GetNumCommittableDecisions()
+        num_deletable = self._GetNumCommittableDeletes()
         
-        if num_committable > 0:
+        if num_committable + num_deletable > 0:
             
-            label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions?'
+            components = []
+            
+            if num_committable > 0:
+                
+                components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                
+            
+            if num_deletable > 0:
+                
+                components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                
+            
+            label = 'commit {}?'.format( ' and '.join( components ) )
             
             ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
             

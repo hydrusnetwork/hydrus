@@ -15,6 +15,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 from hydrus.core.networking import HydrusNATPunch
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
@@ -1053,7 +1054,12 @@ class ServiceRestricted( ServiceRemote ):
     
     def _SetNewServiceOptions( self, service_options ):
         
-        self._service_options = service_options
+        self._service_options.update( service_options )
+        
+    
+    def _SetNewTagFilter( self, tag_filter: HydrusTags.TagFilter ):
+        
+        self._service_options[ 'tag_filter' ] = tag_filter
         
     
     def CanSyncAccount( self, including_external_communication = True ):
@@ -1308,15 +1314,11 @@ class ServiceRestricted( ServiceRemote ):
                     
                     self._DealWithFundamentalNetworkError()
                     
-                elif isinstance( e, HydrusExceptions.NotFoundException ):
-                    
-                    self._DelayFutureRequests( 'got an unexpected 404', SHORT_DELAY_PERIOD )
-                    
                 elif isinstance( e, HydrusExceptions.BandwidthException ):
                     
                     self._DelayFutureRequests( 'service has exceeded bandwidth', ACCOUNT_SYNC_PERIOD )
                     
-                else:
+                elif isinstance( e, HydrusExceptions.ServerException ):
                     
                     self._DelayFutureRequests( str( e ) )
                     
@@ -1419,6 +1421,46 @@ class ServiceRestricted( ServiceRemote ):
                 except HydrusExceptions.SerialisationException:
                     
                     pass
+                    
+                
+                if self._service_type == HC.TAG_REPOSITORY:
+                    
+                    try:
+                        
+                        tag_filter_response = self.Request( HC.GET, 'tag_filter' )
+                        
+                        with self._lock:
+                            
+                            tag_filter = tag_filter_response[ 'tag_filter' ]
+                            
+                            if 'tag_filter' in self._service_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                                
+                                old_tag_filter = self._service_options[ 'tag_filter' ]
+                                
+                                if old_tag_filter != tag_filter:
+                                    
+                                    try:
+                                        
+                                        summary = tag_filter.GetChangesSummaryText( old_tag_filter )
+                                        
+                                        message = 'The tag filter for "{}" just changed! Changes are:{}{}'.format( self._name, os.linesep * 2, summary )
+                                        
+                                        HydrusData.ShowText( message )
+                                        
+                                    except:
+                                        
+                                        pass
+                                        
+                                    
+                                
+                            
+                            self._SetNewTagFilter( tag_filter )
+                            
+                        
+                    except Exception: # any exception, screw it
+                        
+                        pass
+                        
                     
                 
             except ( HydrusExceptions.CancelledException, HydrusExceptions.NetworkException ) as e:
@@ -2342,6 +2384,33 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+    def GetTagFilter( self ) -> HydrusTags.TagFilter:
+        
+        with self._lock:
+            
+            if self._service_type != HC.TAG_REPOSITORY:
+                
+                raise Exception( 'This is not a tag repository! It does not have a tag filter!' )
+                
+            
+            if 'tag_filter' in self._service_options:
+                
+                tag_filter = self._service_options[ 'tag_filter' ]
+                
+                if not isinstance( tag_filter, HydrusTags.TagFilter ):
+                    
+                    raise HydrusExceptions.DataMissing( 'This service has a bad tag filter! Try refreshing your account!' )
+                    
+                
+                return tag_filter
+                
+            else:
+                
+                raise HydrusExceptions.DataMissing( 'This service does not seem to have a tag filter! Try refreshing your account!' )
+                
+            
+        
+    
     def GetUpdateHashes( self ):
         
         with self._lock:
@@ -2535,6 +2604,19 @@ class ServiceRepository( ServiceRestricted ):
         HG.client_controller.pub( 'important_dirt_to_clean' )
         
         HG.client_controller.Write( 'reset_repository', self )
+        
+    
+    def SetTagFilter( self, tag_filter: HydrusTags.TagFilter ):
+        
+        with self._lock:
+            
+            if self._service_type != HC.TAG_REPOSITORY:
+                
+                raise Exception( 'This is not a tag repository! It does not have a tag filter!' )
+                
+            
+            self._service_options[ 'tag_filter' ] = tag_filter
+            
         
     
     def SyncRemote( self, stop_time = None ):

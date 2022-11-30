@@ -1020,6 +1020,22 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._alphabetise_get_parameters.setToolTip( tt )
         
+        self._no_more_path_components_than_this = QW.QCheckBox( self._options_panel )
+        
+        tt = 'Normally, hydrus will match a URL that has a longer path than is defined here. site.com/index/123456/cool-pic-by-artist will match a URL class that looks for site.com/index/123456, and it will remove that extra cruft on normalisation.'
+        tt += os.linesep * 2
+        tt += 'Checking this turns that behaviour off. It will only match if the given URL satisfies all defined path component tests, and no more. If you have multiple URL Classes matching on different levels of a tree, and hydrus is having difficulty matching them up in the right order (neighbouring Gallery/Post URLs can do this), try this.'
+        
+        self._no_more_path_components_than_this.setToolTip( tt )
+        
+        self._no_more_parameters_than_this = QW.QCheckBox( self._options_panel )
+        
+        tt = 'Normally, hydrus will match a URL that has more parameters than is defined here. site.com/index?p=123456&orig_tags=skirt will match a URL class that looks for site.com/index?p=123456. Post URLs will remove that extra cruft on normalisation.'
+        tt += os.linesep * 2
+        tt += 'Checking this turns that behaviour off. It will only match if the given URL satisfies all defined parameter tests, and no more. If you have multiple URL Classes matching on the same base URL path but with different query params, and hydrus is having difficulty matching them up in the right order (neighbouring Gallery/Post URLs can do this), try this.'
+        
+        self._no_more_parameters_than_this.setToolTip( tt )
+        
         self._can_produce_multiple_files = QW.QCheckBox( self._options_panel )
         
         tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
@@ -1144,6 +1160,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._should_be_associated_with_files.setChecked( should_be_associated_with_files )
         self._keep_fragment.setChecked( keep_fragment )
         
+        self._no_more_path_components_than_this.setChecked( url_class.NoMorePathComponentsThanThis() )
+        self._no_more_parameters_than_this.setChecked( url_class.NoMoreParametersThanThis() )
+        
         self._path_components.AddDatas( path_components )
         
         self._parameters.AddDatas( list( parameters.items() ) )
@@ -1241,6 +1260,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'if matching by subdomain, keep it when normalising?: ', self._keep_matched_subdomains ) )
         rows.append( ( 'alphabetise GET parameters when normalising?: ', self._alphabetise_get_parameters ) )
+        rows.append( ( 'do not allow any extra path components?: ', self._no_more_path_components_than_this ) )
+        rows.append( ( 'do not allow any extra parameters?: ', self._no_more_parameters_than_this ) )
         rows.append( ( 'keep fragment when normalising?: ', self._keep_fragment ) )
         rows.append( ( 'post page can produce multiple files?: ', self._can_produce_multiple_files ) )
         rows.append( ( 'associate a \'known url\' with resulting files?: ', self._should_be_associated_with_files ) )
@@ -1283,6 +1304,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preferred_scheme.currentIndexChanged.connect( self._UpdateControls )
         self._netloc.textChanged.connect( self._UpdateControls )
         self._alphabetise_get_parameters.clicked.connect( self._UpdateControls )
+        self._no_more_path_components_than_this.clicked.connect( self._UpdateControls )
+        self._no_more_parameters_than_this.clicked.connect( self._UpdateControls )
         self._match_subdomains.clicked.connect( self._UpdateControls )
         self._keep_matched_subdomains.clicked.connect( self._UpdateControls )
         self._keep_fragment.clicked.connect( self._UpdateControls )
@@ -1638,6 +1661,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             should_be_associated_with_files,
             keep_fragment
         )
+        
+        no_more = self._no_more_path_components_than_this.isChecked()
+        
+        url_class.SetNoMorePathComponentsThanThis( no_more )
+        
+        no_more = self._no_more_parameters_than_this.isChecked()
+        
+        url_class.SetNoMoreParametersThanThis( no_more )
         
         return url_class
         

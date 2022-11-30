@@ -8,7 +8,7 @@ If you are working with users who also understand the downloader system, you can
 
 But if you want to share conveniently, and with users who are not familiar with the different downloader objects, you can package everything into a single easy-import png as per [here](adding_new_downloaders.md).
 
-The dialog to use is _network->downloader definitions->export downloaders_:
+The dialog to use is _network->downloader components->export downloaders_:
 
 ![](images/downloader_export_panel.png)
 

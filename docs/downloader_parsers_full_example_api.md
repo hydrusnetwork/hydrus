@@ -10,7 +10,7 @@ Some sites offer API calls for their pages. Depending on complexity and quality 
 
 We convert the original Post URL, [https://www.artstation.com/artwork/mQLe1](https://www.artstation.com/artwork/mQLe1) to [https://www.artstation.com/projects/mQLe1.json](https://www.artstation.com/projects/mQLe1.json). Note that Artstation Post URLs can produce multiple files, and that the API url should not be associated with those final files.
 
-So, when the client encounters an 'artstation file page' URL, it will generate the equivalent 'artstation file page json api' URL and use that for downloading and parsing. If you would like to review your API links, check out _network->downloader definitions->manage url class links->api links_. Using Example URLs, it will figure out which URL Classes link to others and ensure you are mapping parsers only to the final link in the chain--there should be several already in there by default.
+So, when the client encounters an 'artstation file page' URL, it will generate the equivalent 'artstation file page json api' URL and use that for downloading and parsing. If you would like to review your API links, check out _network->downloader components->manage url class links->api links_. Using Example URLs, it will figure out which URL Classes link to others and ensure you are mapping parsers only to the final link in the chain--there should be several already in there by default.
 
 Now lets look at the JSON. Loading clean JSON in a browser should present you with a nicer view:
 

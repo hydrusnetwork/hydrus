@@ -37,8 +37,8 @@ def GenerateDefaultServiceDictionary( service_type ):
             update_period = 100000
             
             dictionary[ 'service_options' ][ 'update_period' ] = update_period
+            dictionary[ 'service_options' ][ 'nullification_period' ] = 90 * 86400
             
-            dictionary[ 'nullification_period' ] = 90 * 86400
             dictionary[ 'next_nullification_update_index' ] = 0
             
             metadata = Metadata()
@@ -1201,6 +1201,33 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         self._actions_to_contents_and_reasons[ action ].append( ( content, reason ) )
         
     
+    def ApplyTagFilterToPendingMappings( self, tag_filter: HydrusTags.TagFilter ):
+        
+        if HC.CONTENT_UPDATE_PEND in self._actions_to_contents_and_reasons:
+            
+            contents_and_reasons = self._actions_to_contents_and_reasons[ HC.CONTENT_UPDATE_PEND ]
+            
+            new_contents_and_reasons = []
+            
+            for ( content, reason ) in contents_and_reasons:
+                
+                if content.GetContentType() == HC.CONTENT_TYPE_MAPPINGS:
+                    
+                    ( tag, hashes ) = content.GetContentData()
+                    
+                    if not tag_filter.TagOK( tag ):
+                        
+                        continue
+                        
+                    
+                
+                new_contents_and_reasons.append( ( content, reason ) )
+                
+            
+            self._actions_to_contents_and_reasons[ HC.CONTENT_UPDATE_PEND ] = new_contents_and_reasons
+            
+        
+    
     def GetClientsideContentUpdates( self ):
         
         content_updates = []
@@ -1238,7 +1265,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         
         hashes = set()
         
-        for contents_and_reasons in list(self._actions_to_contents_and_reasons.values()):
+        for contents_and_reasons in self._actions_to_contents_and_reasons.values():
             
             for ( content, reason ) in contents_and_reasons:
                 
@@ -2675,22 +2702,6 @@ class ServerServiceRestricted( ServerService ):
             
         
     
-    def GetServiceOptions( self ):
-        
-        with self._lock:
-            
-            return self._service_options
-            
-        
-    
-    def SetServiceOptions( self, service_options: HydrusSerialisable.SerialisableDictionary ):
-        
-        with self._lock:
-            
-            self._service_options = service_options
-            
-        
-    
 class ServerServiceRepository( ServerServiceRestricted ):
     
     def _GetSerialisableDictionary( self ):
@@ -2712,9 +2723,20 @@ class ServerServiceRepository( ServerServiceRestricted ):
             self._service_options[ 'update_period' ] = 100000
             
         
+        if 'nullification_period' in dictionary:
+            
+            default_nullification_period = dictionary[ 'nullification_period' ]
+            
+            del dictionary[ 'nullification_period' ]
+            
+        else:
+            
+            default_nullification_period = 90 * 86400
+            
+        
         if 'nullification_period' not in self._service_options:
             
-            self._service_options[ 'nullification_period' ] = 90 * 86400
+            self._service_options[ 'nullification_period' ] = default_nullification_period
             
         
         if 'next_nullification_update_index' not in dictionary:
@@ -2873,8 +2895,8 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             self._SetDirty()
             
-            HG.server_controller.pub( 'notify_new_nullification' )
-            
+        
+        HG.server_controller.pub( 'notify_new_nullification' )
         
     
     def SetUpdatePeriod( self, update_period: int ):
@@ -2887,8 +2909,8 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             self._SetDirty()
             
-            HG.server_controller.pub( 'notify_new_repo_sync' )
-            
+        
+        HG.server_controller.pub( 'notify_new_repo_sync' )
         
     
     def Sync( self ):
@@ -2968,6 +2990,25 @@ class ServerServiceRepositoryTag( ServerServiceRepository ):
             
         
     
+    def GetTagFilter( self ) -> HydrusTags.TagFilter:
+        
+        with self._lock:
+            
+            return self._service_options[ 'tag_filter' ]
+            
+        
+    
+    def SetTagFilter( self, tag_filter: HydrusTags.TagFilter ):
+        
+        with self._lock:
+            
+            self._service_options[ 'tag_filter' ] = tag_filter
+            
+            self._SetDirty()
+            
+        
+    
+
 class ServerServiceRepositoryFile( ServerServiceRepository ):
     
     def _GetSerialisableDictionary( self ):

@@ -683,11 +683,6 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 break
                 
             
-            if path.endswith( '.txt' ):
-                
-                continue
-                
-            
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_HDD, path )
             
             if not self._file_seed_cache.HasFileSeed( file_seed ):

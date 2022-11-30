@@ -26,7 +26,7 @@ These are all the 'first page' of the results if you type or click-through to th
 
 ## actually doing it { id="doing_it" }
 
-Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Let's look at the ui under _network->downloader definitions->manage gugs_:
+Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Let's look at the ui under _network->downloader components->manage gugs_:
 
 ![](images/downloader_edit_gug_panel.png)
 

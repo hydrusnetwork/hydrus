@@ -92,5 +92,12 @@ class HydrusServiceRepositoryFile( HydrusServiceRepository ):
     
 class HydrusServiceRepositoryTag( HydrusServiceRepository ):
     
-    pass
+    def _InitRoot( self ):
+        
+        root = HydrusServiceRepository._InitRoot( self )
+        
+        root.putChild( b'tag_filter', ServerServerResources.HydrusResourceRestrictedTagFilter( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        
+        return root
+        
     

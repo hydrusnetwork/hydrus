@@ -33,7 +33,9 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         num_hashes = len( sha256_hashes )
         num_remote_sha256_hashes = len( [ itertools.chain.from_iterable( ( media.GetHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL, ordered = True ) for media in medias ) ) ] )
         
-        desired_hashes = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
+        source_to_desired = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
+        
+        desired_hashes = [ source_to_desired[ source_hash ] for source_hash in sha256_hashes if source_hash in source_to_desired ]
         
         num_missing = num_hashes - len( desired_hashes )
         
@@ -361,9 +363,10 @@ def OpenMediaURLClassURLs( medias, url_class ):
 def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, hash, duplicate_type ):
     
     # TODO: this can be replaced by a call to the MediaResult when it holds these hashes
+    # don't forget to return itself in position 0!
     hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
     
-    if hashes is not None and len( hashes ) > 0:
+    if hashes is not None and len( hashes ) > 1:
         
         HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         

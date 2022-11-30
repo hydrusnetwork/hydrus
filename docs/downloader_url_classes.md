@@ -40,9 +40,9 @@ As far as we are concerned, a URL string has four parts:
 *   **Scheme:** `http` or `https`
 *   **Location/Domain:** `safebooru.org` or `i.4cdn.org` or `cdn002.somebooru.net`
 *   **Path Components:** `index.php` or `tesla/res/7518.json` or `pictures/user/daruak/page/2` or `art/Commission-animation-Elsa-and-Anna-541820782`
-*   **Query Parameters:** `page=post&s=list&tags=yorha_no._2_type_b&pid=40` or `page=post&s=view&id=2429668`
+*   **Parameters:** `page=post&s=list&tags=yorha_no._2_type_b&pid=40` or `page=post&s=view&id=2429668`
 
-So, let's look at the 'edit url class' panel, which is found under _network->manage url classes_:
+So, let's look at the 'edit url class' panel, which is found under _network->downloader components->manage url classes_:
 
 ![](images/downloader_edit_url_class_panel.png)
 
@@ -79,9 +79,9 @@ Path Components
 :   
     TBIB just uses a single "index.php" on the root directory, so the path is not complicated. Were it longer (like "gallery/cgi/index.php", we would add more ("gallery" and "cgi"), and since the path of a URL has a strict order, we would need to arrange the items in the listbox there so they were sorted correctly.
     
-Query Parameters
+Parameters
 :   
-    TBIB's index.php takes many query parameters to render different page types. Note that the Post URL uses "s=view", while TBIB Gallery URLs use "s=list". In any case, for a Post URL, "id", "page", and "s" are necessary and sufficient.
+    TBIB's index.php takes many parameters to render different page types. Note that the Post URL uses "s=view", while TBIB Gallery URLs use "s=list". In any case, for a Post URL, "id", "page", and "s" are necessary and sufficient.
     
 
 ## string matches { id="string_matches" }
@@ -96,7 +96,7 @@ Don't go overboard with this stuff, though--most sites do not have super-fine di
 
 ## how do they match, exactly? { id="match_details" }
 
-This URL Class will be assigned to any URL that matches the location, path, and query. Missing path compontent or query parameters in the URL will invalidate the match but additonal ones will not!
+This URL Class will be assigned to any URL that matches the location, path, and query. Missing path component or parameters in the URL will invalidate the match but additonal ones will not!
 
 For instance, given:
 
@@ -125,7 +125,7 @@ And:
 
 Both URL A and B will match, URL C will not
 
-If multiple URL Classes match a URL, the client will try to assign the most 'complicated' one, with the most path components and then query parameters.
+If multiple URL Classes match a URL, the client will try to assign the most 'complicated' one, with the most path components and then parameters.
 
 Given two example URLs and URL Classes:
 
@@ -160,7 +160,7 @@ Since we are in the business of storing and comparing URLs, we want to 'normalis
 
 Note that in e621's case (and for many other sites!), that text after the id is purely decoration. It can change when the file's tags change, so if we want to compare today's URLs with those we saw a month ago, we'd rather just be without it.
 
-On normalisation, all URLs will get the preferred http/https switch, and their query parameters will be alphabetised. File and Post URLs will also cull out any surplus path or query components. This wouldn't affect our TBIB example above, but it will clip the e621 example down to that 'bare' id URL, and it will take any surplus 'lang=en' or 'browser=netscape_24.11' garbage off the query text as well. URLs that are not associated and saved and compared (i.e. normal Gallery and Watchable URLs) are not culled of unmatched path components or query parameters, which can sometimes be useful if you want to match (and keep intact) gallery URLs that might or might not include an important 'sort=desc' type of parameter.
+On normalisation, all URLs will get the preferred http/https switch, and their parameters will be alphabetised. File and Post URLs will also cull out any surplus path or query components. This wouldn't affect our TBIB example above, but it will clip the e621 example down to that 'bare' id URL, and it will take any surplus 'lang=en' or 'browser=netscape_24.11' garbage off the query text as well. URLs that are not associated and saved and compared (i.e. normal Gallery and Watchable URLs) are not culled of unmatched path components or query parameters, which can sometimes be useful if you want to match (and keep intact) gallery URLs that might or might not include an important 'sort=desc' type of parameter.
 
 Since File and Post URLs will do this culling, be careful that you not leave out anything important in your rules. Make sure what you have is both necessary (nothing can be removed and still keep it valid) and sufficient (no more needs to be added to make it valid). It is a good idea to try pasting the 'normalised' version of the example URL into your browser, just to check it still works.
 
@@ -184,11 +184,11 @@ What happened to 'page=1' and '/page/1'? Adding those '1' values in works fine! 
 
 ![](images/downloader_edit_url_class_panel_default.png)
 
-After you set a path component or query parameter String Match, you will be asked for an optional 'default' value. You won't want to set one most of the time, but for Gallery URLs, it can be hugely useful--see how the normalisation process automatically fills in the missing path component with the default! There are plenty of examples in the default Gallery URLs of this, so check them out. Most sites use page indices starting at '1', but Gelbooru-style imageboards use 'pid=0' file index (and often move forward 42, so the next pages will be 'pid=42', 'pid=84', and so on, although others use deltas of 20 or 40).
+After you set a path component or parameter String Match, you will be asked for an optional 'default' value. You won't want to set one most of the time, but for Gallery URLs, it can be hugely useful--see how the normalisation process automatically fills in the missing path component with the default! There are plenty of examples in the default Gallery URLs of this, so check them out. Most sites use page indices starting at '1', but Gelbooru-style imageboards use 'pid=0' file index (and often move forward 42, so the next pages will be 'pid=42', 'pid=84', and so on, although others use deltas of 20 or 40).
 
 ## can we predict the next gallery page? { id="next_gallery_page_prediction" }
 
-Now we can harmonise gallery urls to a single format, we can predict the next gallery page! If, say, the third path component or 'page' query parameter is always a number referring to page, you can select this under the 'next gallery page' section and set the delta to change it by. The 'next gallery page url' section will be automatically filled in. This value will be consulted if the parser cannot find a 'next gallery page url' from the page content.
+Now we can harmonise gallery urls to a single format, we can predict the next gallery page! If, say, the third path component or 'page' parameter is always a number referring to page, you can select this under the 'next gallery page' section and set the delta to change it by. The 'next gallery page url' section will be automatically filled in. This value will be consulted if the parser cannot find a 'next gallery page url' from the page content.
 
 It is neat to set this up, but I only recommend it if you actually cannot reliably parse a next gallery page url from the HTML later in the process. It is neater to have searches stop naturally because the parser said 'no more gallery pages' than to have hydrus always one page beyond and end every single search on an uglier 'No results found' or 404 result.
 

@@ -43,7 +43,7 @@ So, please let me know:
 *   The type of hard drive you are running hydrus from. (e.g. "A 2TB 7200rpm drive that is 20% full. I regularly defrag it.")
 *   Any _profiles_ you have collected.
 
-You can generate a profile by hitting _help->debug->profile mode_, which tells the client to generate profile information for almost all of its behind the scenes jobs. This can be spammy, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).
+You can generate a profile by hitting _help->debug->profiling->profile mode_, which tells the client to generate profile information for almost all of its behind the scenes jobs. This can be spammy, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).
 
 Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then check your database folder (most likely _install_dir/db_) for a new 'client profile - DATE.log' file. This file will be filled with several sets of tables with timing information. Please send that whole file to me, or if it is too large, cut what seems important. It should not contain any personal information, but feel free to look through it.
 

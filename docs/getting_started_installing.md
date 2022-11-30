@@ -28,6 +28,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         * [Chocolatey](https://community.chocolatey.org/packages/hydrus-network)
         * [Scoop](https://github.com/ScoopInstaller/Scoop) (`hydrus-network` in the 'Extras' bucket)    
         * Winget. The command is `winget install --id=HydrusNetwork.HydrusNetwork  -e --location "\PATH\TO\INSTALL\HERE"`, which can, if you know what you are doing, be `winget install --id=HydrusNetwork.HydrusNetwork  -e --location ".\"`, maybe rolled into a batch file.
+        * [User guide for Anaconda](https://gist.github.com/jufogu/b78509695c6c65cdb2866a56fb14a820)
 
 === "macOS"
 

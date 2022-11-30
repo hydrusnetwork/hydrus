@@ -1,77 +1,67 @@
 import os
+import traceback
 
 # If not explicitly set, prefer PySide instead of PyQt, which is the qtpy default
 # It is critical that this runs on startup *before* anything is imported from qtpy.
 
-def get_qt_api_str_status():
+def get_qt_library_str_status():
+    
+    infos = []
     
     try:
         
-        if 'QT_API' in os.environ:
-            
-            qt_api = os.environ[ 'QT_API' ]
-            
-            import_status = 'imported ok'
-            
-            if qt_api == 'pyqt5':
-                
-                try:
-                    
-                    import PyQt5
-                    
-                except ImportError as e:
-                    
-                    import_status = 'did not import ok: {}'.format( e )
-                    
-                
-            elif qt_api == 'pyside2':
-                
-                try:
-                    
-                    import PySide2
-                    
-                except ImportError as e:
-                    
-                    import_status = 'did not import ok: {}'.format( e )
-                    
-                
-            elif qt_api == 'pyqt6':
-                
-                try:
-                    
-                    import PyQt6
-                    
-                except ImportError as e:
-                    
-                    import_status = 'did not import ok: {}'.format( e )
-                    
-                
-            elif qt_api == 'pyside6':
-                
-                try:
-                    
-                    import PySide6
-                    
-                except ImportError as e:
-                    
-                    import_status = 'did not import ok: {}'.format( e )
-                    
-                
-            
-            return 'QT_API: {}, {}'.format( qt_api, import_status )
-            
-        else:
-            
-            return 'No QT_API set.'
-            
+        import PyQt5
+        
+        infos.append( 'PyQt5 imported ok' )
         
     except Exception as e:
         
-        return 'Unable to get QT_API info: {}'.format( e )
+        infos.append( 'PyQt5 did not import ok:\n{}'.format( traceback.format_exc() ) )
         
     
+    try:
+        
+        import PySide2
+        
+        infos.append( 'PySide2 imported ok' )
+        
+    except Exception as e:
+        
+        infos.append( 'PySide2 did not import ok:\n{}'.format( traceback.format_exc() ) )
+        
+    
+    try:
+        
+        import PyQt6
+        
+        infos.append( 'PyQt6 imported ok' )
+        
+    except Exception as e:
+        
+        infos.append( 'PyQt6 did not import ok:\n{}'.format( traceback.format_exc() ) )
+        
+    
+    try:
+        
+        import PySide6
+        
+        infos.append( 'PySide6 imported ok' )
+        
+    except Exception as e:
+        
+        infos.append( 'PySide6 did not import ok:\n{}'.format( traceback.format_exc() ) )
+        
+    
+    return '\n'.join( infos )
+    
 
-if 'QT_API' not in os.environ:
+if 'QT_API' in os.environ:
+    
+    QT_API_INITIAL_VALUE = os.environ[ 'QT_API' ]
+    
+else:
+    
+    QT_API_INITIAL_VALUE = None
     
     try:
         
@@ -94,6 +84,36 @@ if 'QT_API' not in os.environ:
         
     
 
+def get_qt_api_str_status():
+    
+    try:
+        
+        if QT_API_INITIAL_VALUE is None:
+            
+            initial_qt = 'QT_API was initially not set.'
+            
+        else:
+            
+            initial_qt = 'QT_API was initially "{}".'.format( QT_API_INITIAL_VALUE )
+            
+        
+        if 'QT_API' in os.environ:
+            
+            current_qt = 'Current QT_API is "{}".'.format( os.environ[ 'QT_API' ] )
+            
+        else:
+            
+            current_qt = 'Currently QT_API is not set.'
+            
+        
+        return '{} {}'.format( initial_qt, current_qt )
+        
+    except Exception as e:
+        
+        return 'Unable to get QT_API info: {}'.format( traceback.format_exc() )
+        
+    
+
 #
 
 try:
@@ -102,15 +122,19 @@ try:
     
 except ModuleNotFoundError as e:
     
-    qt_str = get_qt_api_str_status()
+    message = 'Either the qtpy module was not found, or qtpy could not find a Qt to use!'
     
-    message = 'Either the qtpy module was not found, or qtpy could not find a Qt to use! Error was: {}'.format(
-        e
-    )
-    message += os.linesep * 2
-    message += 'Are you sure you installed and activated your venv correctly? Check the \'running from source\' section of the help if you are confused! Here is info on QT_API: {}'.format(
-        qt_str
-    )
+    message += '\n' * 2
+    
+    message += 'Are you sure you installed and activated your venv correctly? Check the \'running from source\' section of the help if you are confused!'
+    
+    message += '\n' * 2
+    
+    message += 'Here is info on QT_API:\n{}'.format( get_qt_api_str_status() )
+    
+    message += '\n' * 2
+    
+    message += 'Here is info on your available Qt Libraries:\n{}'.format( get_qt_library_str_status() )
     
     raise Exception( message )
     
@@ -123,11 +147,11 @@ try:
     
 except ModuleNotFoundError as e:
     
-    message = 'One of the Qt modules could not be loaded! Error was: {}'.format(
-        e
+    message = 'One of the Qt modules could not be loaded! Error was:\n{}'.format(
+        traceback.format_exc()
     )
     
-    message += os.linesep * 2
+    message += '\n' * 2
     
     try:
         
@@ -143,13 +167,15 @@ except ModuleNotFoundError as e:
         message += 'qtpy had problems saying which module it had selected!'
         
     
-    qt_str = get_qt_api_str_status()
+    message += '\n' * 2
     
-    message += ' Here is info on QT_API: {}'.format(
-        qt_str
-    )
+    message += 'Here is info on QT_API:\n{}'.format( get_qt_api_str_status() )
     
-    message += os.linesep * 2
+    message += '\n' * 2
+    
+    message += 'Here is info on your available Qt Libraries:\n{}'.format( get_qt_library_str_status() )
+    
+    message += '\n' * 2
     
     message += 'If you are running from a built release, please let hydev know!'
     

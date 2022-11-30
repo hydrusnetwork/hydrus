@@ -418,6 +418,16 @@ class SimpleSubPanel( QW.QWidget ):
             self._simple_actions.addItem( display_string, data )
             
         
+        #
+        
+        self._duplicates_type_panel = QW.QWidget( self )
+        
+        choices = [ ( HC.duplicate_type_string_lookup[ t ], t ) for t in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
+        
+        self._duplicate_type = ClientGUICommon.BetterRadioBox( self._duplicates_type_panel, choices = choices )
+        
+        #
+        
         self._seek_panel = QW.QWidget( self )
         
         choices = [
@@ -439,14 +449,21 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._duplicates_type_panel.setLayout( vbox )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._seek_duration_s, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._seek_panel, label = 's' ), CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._seek_duration_ms, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._seek_panel, label = 'ms' ), CC.FLAGS_CENTER )
-        hbox.addStretch( 1 )
         
         self._seek_panel.setLayout( hbox )
         
@@ -455,6 +472,7 @@ class SimpleSubPanel( QW.QWidget ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._duplicates_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
@@ -468,6 +486,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         action = self._simple_actions.GetValue()
         
+        self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         
     
@@ -481,7 +500,13 @@ class SimpleSubPanel( QW.QWidget ):
             
         else:
             
-            if action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+            if action == CAC.SIMPLE_SHOW_DUPLICATES:
+                
+                duplicate_type = self._duplicate_type.GetValue()
+                
+                simple_data = duplicate_type
+                
+            elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
                 
                 direction = self._seek_direction.GetValue()
                 
@@ -505,7 +530,13 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._simple_actions.SetValue( action )
         
-        if action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+        if action == CAC.SIMPLE_SHOW_DUPLICATES:
+            
+            duplicate_type = command.GetSimpleData()
+            
+            self._duplicate_type.SetValue( duplicate_type )
+            
+        elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
             
             ( direction, ms ) = command.GetSimpleData()
             
