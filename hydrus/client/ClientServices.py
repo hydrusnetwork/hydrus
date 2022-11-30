@@ -1298,10 +1298,6 @@ class ServiceRestricted( ServiceRemote ):
             
             with self._lock:
                 
-                if isinstance( e, HydrusExceptions.NotFoundException ):
-                    
-                    self._DelayFutureRequests( 'got an unexpected 404', SHORT_DELAY_PERIOD )
-                    
                 if isinstance( e, HydrusExceptions.ServerBusyException ):
                     
                     self._DelayFutureRequests( 'server was busy', 5 * 60 )
