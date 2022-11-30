@@ -1152,7 +1152,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.addItem( 'use the default tag import options at the time of import', True )
         self._use_default_dropdown.addItem( 'set custom tag import options just for this importer', False )
         
-        tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default tag import options") for the appropriate tag import options at the time of import.'
+        tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default import options") for the appropriate tag import options at the time of import.'
         tt += os.linesep * 2
         tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
         tt += os.linesep * 2
@@ -1408,7 +1408,7 @@ You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my
 
 ---
 
-Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default tag import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
+Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
         
         QW.QMessageBox.information( self, 'Information', message )
         

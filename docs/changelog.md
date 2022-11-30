@@ -7,7 +7,47 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
-## [Version 507](https://github.com/hydrusnetwork/hydrus/releases/tag/v506)
+## [Version 508](https://github.com/hydrusnetwork/hydrus/releases/tag/v508)
+
+### misc
+
+* added a shortcut action to the 'media' set for 'file relationships: show x', where x is duplicates, potential duplicates, alternates, or false positives, just like the action buried in the thumbnail right-click menu. this actually works in both thumbs and the canvas.
+* fixed file deletes not getting processed in the duplicate filter when there were no normal duplicate actions committed in a batch. sorry for the trouble here--duplicate decisions and deletes are now counted and reported in the confirmation dialogs as separate numbers
+* as an experiment, the duplicate filter now says (+50%, -33%) percentage differences in the file size comparison statement. while the numbers here are correct, I'm not sure if this is helpful or awkward. maybe it should be phrased differently--let me know
+* url classes get two new checkboxes this week: 'do not allow any extra path components/parameters', which will stop a match if the testee URL is 'longer' than the url class's definition. this should help with some difficult 'path-nested URLs aren't matching to the right URL Class' problems
+* when you import hard drive files manually or in an import folder, files with .txt, .json, or .xml suffixes are now ignored in the file scanning phase. when hydrus eventually supports text files and arbitrary files, the solution will be nicer here, but this patch makes the new sidecar system nicer to work with in the meantime without, I hope, causing too much other fuss
+* the 'tags' button in the advanced-mode 'sort files' control now hides/shows based on the sort type. also, the asc/desc button now hides/shows when it is invalid (filetype, hash, random), rather than disable/enable. there was a bit more signals-cleanup behind the scenes here too
+* updated the 'could not set up qtpy/QtCore' error handling yet again to try to figure out this macOS App boot problem some users are getting. the error handling now says what the initial QT_API env variable was and tries to import every possible Qt and prints the whole error for each. hopefully we'll now see why PySide6 is not loading
+* cleaned up the 'old changelog' page. all the '.' separators are replaced with proper header tags and I rejiggered some of the ul and li elements to interleave better. its favicon is also fixed. btw if you want to edit 500-odd elements at a time in a 2MB document, PyCharm is mostly great. multi-hundred simultaneous edit hung for about five minutes per character, but multiline regex Find and Replace was instant
+* added a link to a user-written guide for running Hydrus on Windows in Anaconda to the 'installing' help
+* fixed some old/invalid dialog locations in the 'how to build a downloader' help
+
+### client api
+
+* a new `/get_files/file_hashes` command lets you look up any of the sha256, md5, sha1, sha512 hashes that hydrus knows about using any of the other hashes. if you have a bunch of md5 and want to figure out if you have them, or if you want to get the md5s of your files and run them against an external check, this is now possible
+* added help and unit tests for this new command
+* added a service enum to the `/get_services` Client API help
+* client api version is now 37
+* as a side thing, I rejiggered the 'what non-sha256 hash do these sha256 hashes have?' test here. it now returns a mapping, allowing for more efficient mass lookups, and it no longer creates new sha256 records for novel hashes. feel free to spam this on new sha256 hashes if you like
+
+### interesting serverside
+
+* the tag repository now manages a tag filter. admins with 'modify options' permission can alter it under the new menu command _services->administrate services->tag repo->edit tag filter_.
+* any time new tags are pended to the tag repository, they are now washed through the tag filter. any that don't pass are silently discarded
+* normal users will regularly fetch the tag filter as long as their client is relatively new. they can review it under a new read-only Tag Filter panel from _review services_. if their client is super old (or the server), account sync and the UI should fail gracefully
+* if you are in advanced mode and your client account-syncs and discovers the tag filter has changed, it will make a popup with a summary of the changes. I am not sure how spammy/annoying this will be, so let me know if you'd rather turn them off or auto-hide after two hours or something
+* future updates will have more feedback on _manage tags_ dialog and similar, just to let you know there and then if an entered tag is not wanted. also, admins who change the tag filter will be able to retroactively remove tags that apply to the filter, not just stop new ones. I'd also like some sibling hard-replace to go along with this, so we don't accidentalyl remove tags that are otherwise sibling'd to be good--we'll see
+* the hydrus server won't bug out so much at unusual errors now. previously, I ingrained that any error during any request would kick off automatic delays, but I have rejiggered it a bit so this mostly just happens during automatic work like update downloading
+
+### boring serverside
+
+* added get/set and similar to the tag repo's until-now-untouched tag filter
+* wrote a nice helper method that splays two tag filters into their added/changed/deleted rules and another that can present that in human-readable format. it prints to the server log whenever a human changes the tag filter, and will be used in future retroactive syncing
+* cleaned up how the service options are delivered to the client. previously, there would have been a version desync pain if I had ever updated the tag filter internal version. now, the service options delivered to the client are limited to python primitives, atm just update period and nullification period, and tag filter and other complex objects will have their own get calls and fail in quiet isolation
+* I fixed some borked nullification period initialisation serverside
+* whenever a tag filter describes itself, if either black or whitelist have more than 12 rules, it now summarises rather than listing every single one
+
+## [Version 507](https://github.com/hydrusnetwork/hydrus/releases/tag/v507)
 
 ### misc
 
@@ -442,35 +482,3 @@ title: Changelog
 * fixed a weird menu creation bug involving a QStandardItem appearing in the menu actions
 * fixed a similar weird QStandardItem bug in the media viewer canvas code
 * fixed an error that could appear on force-emptied pages that receive sort signals
-
-## [Version 498](https://github.com/hydrusnetwork/hydrus/releases/tag/v498)
-
-_almost all the changes this week are only important to server admins and janitors. regular users can skip updating this week_
-
-## overview
-* the server has important database and network updates this week. if your server has a lot of content, it has to count it all up, so it will take a short while to update. the petition protocol has also changed, so older clients will not be able to fetch new servers' petitions without an error. I think newer clients will be able to fetch older servers' ones, but it may be iffy
-* I considered whether I should update the network protocol version number, which would (politely) force all users to update, but as this causes inconvenience every time I do it, and I expect to do more incremental updates here in coming weeks, and since this only affects admins and janitors, I decided to not. we are going to be in awkward flux for a little bit, so please make sure you update privileged clients and servers at roughly the same time
-
-## server petition workflow
-* the server now maintains an ongoing fast count of its various repository metadata, such as 'number of mappings' and 'number of petitions of type x'. when you fetch petition counts, no longer will it count live and max out at 1,000, it'll give you good full numbers every time, and real fast
-* you can see the current numbers from the new 'service info' button on review services, which only appears in advanced mode. any user with an account key can see these numbers, which include number of petitions in the queue. I can make this more private if you like, but for now I think it is good if advanced users can see them all
-* in the petition processing page, sibling and parent petitions will now include both delete and add rows if the account and reason are the same. I'm aiming to get better 'full' coverage of a replace petition, so you can see and approve/deny both the add and the remove parts in one go. for fetching, these combined petitions count as 'delete' petitions, and won't appear in the 'add' petition queue
-* when users encounter an automatic conflict resolution in the manage siblings dialog, those auto-petitioned pairs are now assigned the same reason as the original conflicting pended pairs. they _should_ show up together in the new petition processing UI
-* as part of this, sibling and parent petitions are no longer filtered by namespace. you will see everything with that same account and reason in one go. let's try it out, and if it is too much, I will add filters clientside or something. since we are now starting to see add and remove together, we'll want to at least have the option to see everything
-
-## boring server stuff
-* the petition object is updated to handle multiple actions per petition, and the clientside petition UI is updated appropriately
-* the server tracks 'actionable' petition counts as separate to the number of raw petition rows. some of this was happening before, but the logic is improved, including clever counting of the new petitions that include both add and delete rows
-* for when my count-update logic inevitably fails, there is now a 'regen service info' entry in the 'administrate services' menu for all repositories. numbers generated will be printed to server log
-* some unusual repo upload logic is cleaned up, e.g. if a user with 'create permission' uploads a sibling or parent, any pending rows for that content will now be properly cleared)
-* fixed a stupid swap logical bug where janitors who could only moderate siblings (and not parents) were only being given parent numbers and vice versa
-* all server services now respond to /busy check. it requires no authentication and just returns 1 or 0 depending on the current lock state
-* fixed a bug where tag siblings or parents that were denied would still make a new definition record for the child/bad tag
-* with all the fine number changes, fleshed out the server unit tests with more examples of submitting and altering content and then checking for numbers afterwards. now checked are: file add, file admin delete, mapping add, mapping admin delete, mapping petition, mapping petition approve+deny, parent add, parent admin delete, parent pend, parent pend approve+deny, parent petition, parent petition approve+deny
-* significant refactoring of the tail end of server content update pipeline. more things now go through logic-harmonised update methods that ensure count is reliable
-* did some misc server db and constant enum code cleanup
-
-## misc
-* to match the new change in the server, in the client, tag and rating services now store their 'num_files' service info count as the new 'num_file_hashes'. existing numbers will be converted over during update
-* fixed a probably ten year old bug where 'num pending/petitioned files' had the same enum as 'num pending/petitioned mappings'. never noticed, since no service has done both those things
-* if the upload pending process fails due to an unusual permission error or similar, the pending menu should now recover and update itself (previously it stayed greyed out)

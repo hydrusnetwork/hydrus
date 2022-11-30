@@ -2010,6 +2010,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 self._CopyHashesToClipboard( 'sha512' )
                 
+            elif action == CAC.SIMPLE_SHOW_DUPLICATES:
+                
+                if self._HasFocusSingleton():
+                    
+                    media = self._GetFocusSingleton()
+                    
+                    hash = media.GetHash()
+                    
+                    duplicate_type = command.GetSimpleData()
+                    
+                    ClientGUIMedia.ShowDuplicatesInNewPage( self._location_context, hash, duplicate_type )
+                    
+                
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES:
                 
                 if self._HasFocusSingleton():

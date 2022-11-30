@@ -314,6 +314,27 @@ Response:
     
     Now that I state `type` and `type_pretty` here, I may rearrange this call, probably to make the `service_key` the Object key, rather than the arbitrary 'all_known_tags' strings.
     
+    You won't see all these, and you'll only ever need some, but `type` is:
+    
+    * 0 - tag repository
+    * 1 - file repository
+    * 2 - a local file domain like 'my files'
+    * 5 - a local tag domain like 'my tags'
+    * 6 - a 'numerical' rating service with several stars
+    * 7 - a 'like/dislike' rating service with on/off status
+    * 10 - all known tags -- a union of all the tag services
+    * 11 - all known files -- a union of all the file services and files that appear in tag services
+    * 12 - the local booru -- you can ignore this
+    * 13 - IPFS
+    * 14 - trash
+    * 15 - all local files -- all files on hard disk ('all my files' + updates + trash) 
+    * 17 - file notes
+    * 18 - Client API
+    * 19 - all deleted files -- you can ignore this
+    * 20 - local updates -- a file domain to store repository update files in
+    * 21 - all my files -- union of all local file domains
+    * 99 - server administration
+    
 
 ## Adding Files
 
@@ -925,7 +946,7 @@ Arguments (in percent-encoded JSON):
 *   `hash`: (selective, an SHA256 hash for the file in 64 characters of hexadecimal)
 *   `file_id`: (selective, the integer numerical identifier for the file)
 
-Existing notes will be overwritten.
+Existing notes will be overwritten. If the file has extra notes you do not specify, they are untouched.
 ```json title="Example request body"
 {
   "notes" : {
@@ -1476,6 +1497,38 @@ Response:
     File ids are internal and specific to an individual client. For a client, a file with hash H always has the same file id N, but two clients will have different ideas about which N goes with which H. IDs are a bit faster to retrieve than hashes and search with _en masse_, which is why they are exposed here.
 
     This search does **not** apply the implicit limit that most clients set to all searches (usually 10,000), so if you do system:everything on a client with millions of files, expect to get boshed. Even with a system:limit included, complicated queries with large result sets may take several seconds to respond. Just like the client itself.
+
+### **GET `/get_files/file_hashes`** { id="get_files_file_hashes" }
+
+_Lookup file hashes from other hashes._
+
+Restricted access: 
+:   YES. Search for Files permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+    *   `hash`: (selective, a hexadecimal hash)
+    *   `hashes`: (selective, a list of hexadecimal hashes)
+    *   `source_hash_type`: [sha256|md5|sha1|sha512] (optional, defaulting to sha256)
+    *   `desired_hash_type`: [sha256|md5|sha1|sha512]
+
+If you have some MD5 hashes and want to see what their SHA256 are, or _vice versa_, this is the place. Hydrus records the non-SHA256 hashes for every file it has ever imported. This data is not removed on file deletion.
+
+``` title="Example request"
+/get_files/file_hashes?hash=ec5c5a4d7da4be154597e283f0b6663c&source_hash_type=md5&desired_hash_type=sha256
+```
+
+Response:
+:   A mapping Object of the successful lookups. Where no matching hash is found, no entry will be made (therefore, if none of your source hashes have matches on the client, this will return an empty `hashes` Object).
+```json title="Example response"
+{
+  "hashes" : {
+    "ec5c5a4d7da4be154597e283f0b6663c" : "2a0174970defa6f147f2eabba829c5b05aba1f1aea8b978611a07b7bb9cf9399"
+  }
+}
+```
 
 ### **GET `/get_files/file_metadata`** { id="get_files_file_metadata" }
 

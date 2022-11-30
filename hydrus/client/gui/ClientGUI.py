@@ -2929,6 +2929,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'change anonymisation period', 'Change the account history nullification period for this service.', self._ManageServiceOptionsNullificationPeriod, service_key )
                         
+                        if service_type == HC.TAG_REPOSITORY:
+                            
+                            ClientGUIMenus.AppendMenuItem( submenu, 'edit tag filter', 'Change the tag filter for this service.', self._ManageServiceOptionsTagFilter, service_key )
+                            
+                        
                         ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'maintenance: regen service info', 'Add, edit, and delete this server\'s services.', self._ServerMaintenanceRegenServiceInfo, service_key )
@@ -4443,6 +4448,67 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                     job_key.Finish()
                     
+                    job_key.Delete( 5 )
+                    
+                    service.SetAccountRefreshDueNow()
+                    
+                
+                def errback_ui_cleanup_callable():
+                    
+                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    
+                    job_key.Finish()
+                    
+                
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                
+                job.start()
+                
+            
+        
+    
+    def _ManageServiceOptionsTagFilter( self, service_key ):
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        tag_filter = service.GetTagFilter()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag repository tag filter' ) as dlg:
+            
+            namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+            
+            message = 'The repository will apply this to all new pending tags that are uploaded to it. Anything that does not pass is silently discarded.'
+            
+            panel = ClientGUITags.EditTagFilterPanel( dlg, tag_filter, message = message, namespaces = namespaces )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                tag_filter = panel.GetValue()
+                
+                job_key = ClientThreading.JobKey()
+                
+                job_key.SetStatusTitle( 'setting tag filter' )
+                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                
+                self._controller.pub( 'message', job_key )
+                
+                def work_callable():
+                    
+                    service.Request( HC.POST, 'tag_filter', { 'tag_filter' : tag_filter } )
+                    
+                    return 1
+                    
+                
+                def publish_callable( gumpf ):
+                    
+                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    
+                    job_key.Finish()
+                    
+                    job_key.Delete( 5 )
+                    
                     service.SetAccountRefreshDueNow()
                     
                 
@@ -4510,6 +4576,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     job_key.SetVariable( 'popup_text_1', 'done!' )
                     
                     job_key.Finish()
+                    
+                    job_key.Delete( 5 )
                     
                     service.DoAFullMetadataResync()
                     

@@ -129,15 +129,17 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return hash
         
     
-    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ) -> typing.Collection[ bytes ]:
+    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ) -> typing.Dict[ bytes, bytes ]:
         
         if given_hash_type == 'sha256':
             
-            hash_ids = self.GetHashIds( given_hashes )
+            hashes_we_have = [ hash for hash in given_hashes if self.HasHash( hash ) ]
+            
+            hash_ids_to_source_hashes = self.GetHashIdsToHashes( hashes = hashes_we_have )
             
         else:
             
-            hash_ids = []
+            hash_ids_to_source_hashes = {}
             
             for given_hash in given_hashes:
                 
@@ -152,21 +154,26 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                     
                     ( hash_id, ) = result
                     
-                    hash_ids.append( hash_id )
+                    hash_ids_to_source_hashes[ hash_id ] = given_hash
                     
                 
             
         
         if desired_hash_type == 'sha256':
             
-            desired_hashes = self.GetHashes( hash_ids )
+            hash_ids_to_desired_hashes = self.GetHashIdsToHashes( hash_ids = set( hash_ids_to_source_hashes.keys() ) )
             
         else:
             
-            desired_hashes = [ desired_hash for ( desired_hash, ) in self._Execute( 'SELECT {} FROM local_hashes WHERE hash_id IN {};'.format( desired_hash_type, HydrusData.SplayListForDB( hash_ids ) ) ) ]
+            with self._MakeTemporaryIntegerTable( set( hash_ids_to_source_hashes.keys() ), 'hash_id' ) as temp_table_name:
+                
+                hash_ids_to_desired_hashes = { hash_id : desired_hash for ( hash_id, desired_hash ) in self._Execute( 'SELECT hash_id, {} FROM {} CROSS JOIN local_hashes USING ( hash_id );'.format( desired_hash_type, temp_table_name ) ) }
+                
             
         
-        return desired_hashes
+        source_to_desired = { hash_ids_to_source_hashes[ hash_id ] : hash_ids_to_desired_hashes[ hash_id ] for hash_id in list( hash_ids_to_desired_hashes.keys() ) }
+        
+        return source_to_desired
         
     
     def GetHash( self, hash_id ) -> bytes:

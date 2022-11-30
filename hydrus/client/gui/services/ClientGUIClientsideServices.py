@@ -31,6 +31,7 @@ from hydrus.client.gui import ClientGUIPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIStringControls
+from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -2628,6 +2629,9 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._metadata_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
+        self._tag_filter_button = ClientGUICommon.BetterButton( self._network_panel, 'tag filter', self._ReviewTagFilter )
+        self._tag_filter_button.setEnabled( False )
+        
         self._download_progress = ClientGUICommon.TextAndGauge( self._network_panel )
         
         self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self._network_panel, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
@@ -2701,6 +2705,11 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             self._reset_processing_button.hide()
             
         
+        if not self._service.GetServiceType() == HC.TAG_REPOSITORY:
+            
+            self._tag_filter_button.hide()
+            
+        
         self._network_panel.Add( self._repo_options_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._network_panel.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._network_panel.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2709,6 +2718,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._service_info_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._tag_filter_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._reset_downloading_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -3031,6 +3041,25 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._repo_options_st.setText( ', '.join( repo_options_text_components ) )
         
+        if self._service.GetServiceType() == HC.TAG_REPOSITORY:
+            
+            try:
+                
+                tag_filter = self._service.GetTagFilter()
+                
+                self._tag_filter_button.setEnabled( True )
+                
+                tt = 'See which tags this repository accepts. Summary:{}{}'.format( os.linesep * 2, tag_filter.ToPermittedString() )
+                
+                self._tag_filter_button.setToolTip( tt )
+                
+            except HydrusExceptions.DataMissing:
+                
+                self._tag_filter_button.setEnabled( False )
+                self._tag_filter_button.setToolTip( 'Do not have a tag filter for this repository. Try refreshing your account, or, if your client is old, update it.' )
+                
+            
+        
         self._metadata_st.setText( self._service.GetNextUpdateDueString() )
         
         HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
@@ -3144,6 +3173,28 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             HG.client_controller.CallToThread( do_it, self._service, self._my_updater, content_types )
             
+        
+    
+    def _ReviewTagFilter( self ):
+        
+        try:
+            
+            tag_filter = self._service.GetTagFilter()
+            
+        except HydrusExceptions.DataMissing:
+            
+            return
+            
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review tag filter' )
+        
+        message = 'The Tag Repository applies this to all new pending tag mapping uploads. If you upload a mapping that this filter denies, it will be silently discarded serverside. Siblings and parents are not affected.'
+        
+        namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+        
+        panel = ClientGUITags.EditTagFilterPanel( frame, tag_filter, namespaces = namespaces, message = message, read_only = True )
+        
+        frame.SetPanel( panel )
         
     
     def _SelectContentTypes( self ):

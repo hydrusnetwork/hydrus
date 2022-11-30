@@ -107,7 +107,7 @@ It is important to note that while subscriptions can have multiple queries (even
 
 ### Setting up subscriptions
 
-Here's the dialog, which is under _network->downloaders->manage subscriptions_:
+Here's the dialog, which is under _network->manage subscriptions_:
 
 ![](images/subscriptions_edit_subscriptions.png)
 
@@ -156,7 +156,7 @@ Again: the real problem with downloading is not finding new things, it is keepin
 
 ## Logins
 
-The client now supports a flexible (but slightly prototype and ugly) login system. It can handle simple sites and is as [completely user-customisable as the downloader system](downloader_login.md). The client starts with multiple login scripts by default, which you can review under _network->downloaders->manage logins_:
+The client now supports a flexible (but slightly prototype and ugly) login system. It can handle simple sites and is as [completely user-customisable as the downloader system](downloader_login.md). The client starts with multiple login scripts by default, which you can review under _network->logins->manage logins_:
 
 ![](images/manage_logins.png)
 

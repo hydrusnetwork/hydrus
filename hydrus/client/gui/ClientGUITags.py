@@ -637,24 +637,19 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     TEST_RESULT_DEFAULT = 'Enter a tag here to test if it passes the current filter:'
     TEST_RESULT_BLACKLIST_DEFAULT = 'Enter a tag here to test if it passes the blacklist (siblings tested, unnamespaced rules match namespaced tags):'
     
-    def __init__( self, parent, tag_filter, only_show_blacklist = False, namespaces = None, message = None ):
+    def __init__( self, parent, tag_filter, only_show_blacklist = False, namespaces = None, message = None, read_only = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._only_show_blacklist = only_show_blacklist
         self._namespaces = namespaces
+        self._read_only = read_only
         
         self._wildcard_replacements = {}
         
         self._wildcard_replacements[ '*' ] = ''
         self._wildcard_replacements[ '*:' ] = ':'
         self._wildcard_replacements[ '*:*' ] = ':'
-        
-        #
-        
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
-        
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
@@ -716,7 +711,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        if not self._read_only:
+            
+            help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+            
+            help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+            
+            QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+            
         
         if message is not None:
             
@@ -728,6 +730,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         hbox = QP.HBoxLayout()
+        
+        if self._read_only:
+            
+            self._import_favourite.hide()
+            self._load_favourite.hide()
+            
         
         QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1094,7 +1102,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         blacklist_panel = ClientGUICommon.StaticBox( advanced_panel, 'exclude these' )
         
-        self._advanced_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel )
+        self._advanced_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel, read_only = self._read_only )
         
         self._advanced_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
         
@@ -1106,7 +1114,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         whitelist_panel = ClientGUICommon.StaticBox( advanced_panel, 'except for these' )
         
-        self._advanced_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel )
+        self._advanced_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel, read_only = self._read_only )
         
         self._advanced_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
         
@@ -1114,6 +1122,18 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'delete', self._AdvancedDeleteWhitelist )
         
         #
+        
+        if self._read_only:
+            
+            self._advanced_blacklist_input.hide()
+            add_blacklist_button.hide()
+            delete_blacklist_button.hide()
+            blacklist_everything_button.hide()
+            
+            self._advanced_whitelist_input.hide()
+            self._advanced_add_whitelist_button.hide()
+            delete_whitelist_button.hide()
+            
         
         button_hbox = QP.HBoxLayout()
         
@@ -1173,11 +1193,19 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_blacklist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel )
+        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel, read_only = self._read_only )
         
         self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
         
         #
+        
+        if self._read_only:
+            
+            self._simple_blacklist_global_checkboxes.setEnabled( False )
+            self._simple_blacklist_namespace_checkboxes.setEnabled( False )
+            
+            self._simple_blacklist_input.hide()
+            
         
         left_vbox = QP.VBoxLayout()
         
@@ -1232,11 +1260,20 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_whitelist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel )
+        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel, read_only = self._read_only )
         
         self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
         
         #
+        
+        if self._read_only:
+            
+            self._simple_whitelist_global_checkboxes.setEnabled( False )
+            self._simple_whitelist_namespace_checkboxes.setEnabled( False )
+            
+            self._simple_whitelist_input.hide()
+            
+        
         
         left_vbox = QP.VBoxLayout()
         

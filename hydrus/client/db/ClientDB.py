@@ -3347,7 +3347,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    matching_sha256_hashes = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    
+                    matching_sha256_hashes = list( source_to_desired.values() )
                     
                 
                 specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )
@@ -3781,7 +3783,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    matching_sha256_hashes = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    
+                    matching_sha256_hashes = list( source_to_desired.values() )
                     
                 
                 specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )

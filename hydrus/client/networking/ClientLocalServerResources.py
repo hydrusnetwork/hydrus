@@ -57,7 +57,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
-CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason', 'tag_display_type' }
+CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
@@ -2350,6 +2350,64 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
             
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedGetFilesFileHashes( HydrusResourceClientAPIRestrictedGetFiles ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        supported_hash_types = ( 'sha256', 'md5', 'sha1', 'sha512' )
+        
+        source_hash_type = request.parsed_request_args.GetValue( 'source_hash_type', str, default_value = 'sha256' )
+        
+        if source_hash_type not in supported_hash_types:
+            
+            raise HydrusExceptions.BadRequestException( 'I do not support that hash type!' )
+            
+        
+        desired_hash_type = request.parsed_request_args.GetValue( 'desired_hash_type', str )
+        
+        if desired_hash_type not in supported_hash_types:
+            
+            raise HydrusExceptions.BadRequestException( 'I do not support that hash type!' )
+            
+        
+        source_hashes = set()
+        
+        if 'hash' in request.parsed_request_args:
+            
+            request_hash = request.parsed_request_args.GetValue( 'hash', bytes )
+            
+            source_hashes.add( request_hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            request_hashes = request.parsed_request_args.GetValue( 'hashes', list, expected_list_type = bytes )
+            
+            source_hashes.update( request_hashes )
+            
+        
+        if len( source_hashes ) == 0:
+            
+            raise HydrusExceptions.BadRequestException( 'You have to specify a hash to look up!' )
+            
+        
+        CheckHashLength( source_hashes, hash_type = source_hash_type )
+        
+        source_to_desired = HG.client_controller.Read( 'file_hashes', source_hashes, source_hash_type, desired_hash_type )
+        
+        encoded_source_to_desired = { source_hash.hex() : desired_hash.hex() for ( source_hash, desired_hash ) in source_to_desired.items() }
+        
+        body_dict = {
+            'hashes' : encoded_source_to_desired
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         

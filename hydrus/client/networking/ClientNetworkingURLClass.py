@@ -72,7 +72,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 11
+    SERIALISABLE_VERSION = 12
     
     def __init__(
         self,
@@ -156,6 +156,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._match_subdomains = False
         self._keep_matched_subdomains = False
         self._alphabetise_get_parameters = True
+        self._no_more_path_components_than_this = False
+        self._no_more_parameters_than_this = False
         self._can_produce_multiple_files = False
         self._should_be_associated_with_files = True
         self._keep_fragment = False
@@ -296,7 +298,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         serialisable_referral_url_converter = self._referral_url_converter.GetSerialisableTuple()
         
-        booleans = ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
+        booleans = ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._no_more_path_components_than_this, self._no_more_parameters_than_this, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment )
         
         return (
             serialisable_url_class_key,
@@ -341,7 +343,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             self._example_url
             ) = serialisable_info
         
-        ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
+        ( self._match_subdomains, self._keep_matched_subdomains, self._alphabetise_get_parameters, self._no_more_path_components_than_this, self._no_more_parameters_than_this, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
         
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
@@ -512,6 +514,58 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             )
             
             return ( 11, new_serialisable_info )
+            
+        
+        if version == 11:
+            
+            (
+                serialisable_url_class_key,
+                url_type,
+                preferred_scheme,
+                netloc,
+                booleans,
+                serialisable_path_components,
+                serialisable_parameters,
+                has_single_value_parameters,
+                serialisable_single_value_parameters_match,
+                serialisable_header_overrides,
+                serialisable_api_lookup_converter,
+                send_referral_url,
+                serialisable_referrel_url_converter,
+                gallery_index_type,
+                gallery_index_identifier,
+                gallery_index_delta,
+                example_url
+            ) = old_serialisable_info
+            
+            ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment ) = booleans
+            
+            no_more_path_components_than_this = False
+            no_more_parameters_than_this = False
+            
+            booleans = ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, no_more_path_components_than_this, no_more_parameters_than_this, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+            
+            new_serialisable_info = (
+                serialisable_url_class_key,
+                url_type,
+                preferred_scheme,
+                netloc,
+                booleans,
+                serialisable_path_components,
+                serialisable_parameters,
+                has_single_value_parameters,
+                serialisable_single_value_parameters_match,
+                serialisable_header_overrides,
+                serialisable_api_lookup_converter,
+                send_referral_url,
+                serialisable_referrel_url_converter,
+                gallery_index_type,
+                gallery_index_identifier,
+                gallery_index_delta,
+                example_url
+            )
+            
+            return ( 12, new_serialisable_info )
             
         
     
@@ -824,6 +878,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return r.geturl()
         
     
+    def NoMorePathComponentsThanThis( self ) -> bool:
+        
+        return self._no_more_path_components_than_this
+        
+    
+    def NoMoreParametersThanThis( self ) -> bool:
+        
+        return self._no_more_parameters_than_this
+        
+    
     def RefersToOneFile( self ):
         
         is_a_direct_file_page = self._url_type == HC.URL_TYPE_FILE
@@ -851,6 +915,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     def SetExampleURL( self, example_url ):
         
         self._example_url = example_url
+        
+    
+    def SetNoMorePathComponentsThanThis( self, no_more: bool ):
+        
+        self._no_more_path_components_than_this = no_more
+        
+    
+    def SetNoMoreParametersThanThis( self, no_more: bool ):
+        
+        self._no_more_parameters_than_this = no_more
         
     
     def SetSingleValueParameterData( self, has_single_value_parameters: bool, single_value_parameters_string_match: ClientStrings.StringMatch ):
@@ -910,6 +984,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         url_path_components = url_path.split( '/' )
         
+        if len( url_path_components ) > len( self._path_components ) and self._no_more_path_components_than_this:
+            
+            raise HydrusExceptions.URLClassException( '"{}" has {} path components, but I will not allow more than my defined {}!'.format( url_path, len( url_path_components ), len( self._path_components ) ) )
+            
+        
         for ( index, ( string_match, default ) ) in enumerate( self._path_components ):
             
             if len( url_path_components ) > index:
@@ -942,6 +1021,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( url_parameters, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( p.query )
         
+        if len( url_parameters ) > len( self._parameters ) and self._no_more_parameters_than_this:
+            
+            raise HydrusExceptions.URLClassException( '"{}" has {} parameters, but I will not allow more than my defined {}!'.format( url_path, len( url_parameters ), len( self._parameters ) ) )
+            
+        
         for ( key, ( string_match, default ) ) in self._parameters.items():
             
             if key not in url_parameters:
@@ -966,6 +1050,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 raise HydrusExceptions.URLClassException( str( e ) )
                 
+            
+        
+        if len( single_value_parameters ) > 0 and not self._has_single_value_parameters and self._no_more_parameters_than_this:
+            
+            raise HydrusExceptions.URLClassException( '"{}" has unexpected single-value parameters, but I am set not to allow any unexpected parameters!'.format( url_path ) )
             
         
         if self._has_single_value_parameters:

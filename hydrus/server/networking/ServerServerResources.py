@@ -1,4 +1,5 @@
 import http.cookies
+import os
 import threading
 import time
 
@@ -8,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
@@ -366,7 +368,22 @@ class HydrusResourceRestrictedOptions( HydrusResourceRestricted ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        service_options = self._service.GetServiceOptions()
+        # originally I feched and dumped the serialisabledict here straight from the service
+        # buuuut, of course if I update the tag filter object version, we can't just spit that out to the network and expect old clients to be ok
+        # so now this is just 'get the primitives' request, and it comes back as a straight up JSON dict
+        # anything serialisable can be its own request and can have separate deserialisation error handling
+        
+        if self._service.GetServiceType() in HC.REPOSITORIES:
+            
+            service_options = {
+                'update_period' : self._service.GetUpdatePeriod(),
+                'nullification_period' : self._service.GetNullificationPeriod()
+            }
+            
+        else:
+            
+            service_options = {}
+            
         
         body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'service_options' : service_options } )
         
@@ -375,6 +392,7 @@ class HydrusResourceRestrictedOptions( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedOptionsModify( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -382,6 +400,7 @@ class HydrusResourceRestrictedOptionsModify( HydrusResourceRestricted ):
         request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE )
         
     
+
 class HydrusResourceRestrictedOptionsModifyNullificationPeriod( HydrusResourceRestrictedOptionsModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -405,7 +424,7 @@ class HydrusResourceRestrictedOptionsModifyNullificationPeriod( HydrusResourceRe
             self._service.SetNullificationPeriod( nullification_period )
             
             HydrusData.Print(
-                'Account {} changed the anonymisation period to from "{}" to "{}".'.format(
+                'Account {} changed the anonymisation period from "{}" to "{}".'.format(
                     request.hydrus_account.GetAccountKey().hex(),
                     HydrusData.TimeDeltaToPrettyTimeDelta( old_nullification_period ),
                     HydrusData.TimeDeltaToPrettyTimeDelta( nullification_period )
@@ -418,6 +437,7 @@ class HydrusResourceRestrictedOptionsModifyNullificationPeriod( HydrusResourceRe
         return response_context
         
     
+
 class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestrictedOptionsModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -441,7 +461,7 @@ class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestricte
             self._service.SetUpdatePeriod( update_period )
             
             HydrusData.Print(
-                'Account {} changed the update period to from "{}" to "{}".'.format(
+                'Account {} changed the update period from "{}" to "{}".'.format(
                     request.hydrus_account.GetAccountKey().hex(),
                     HydrusData.TimeDeltaToPrettyTimeDelta( old_update_period ),
                     HydrusData.TimeDeltaToPrettyTimeDelta( update_period )
@@ -454,6 +474,7 @@ class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestricte
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModify( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1158,6 +1179,75 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
         return response_context
         
     
+
+class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
+    
+    def _checkAccount( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if request.IsPOST():
+            
+            return HydrusResourceRestricted._checkAccount( self, request )
+            
+        else:
+            
+            # you can always fetch the tag filter
+            
+            return request
+            
+        
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if request.IsPOST():
+            
+            request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE )
+            
+        else:
+            
+            # you can always fetch the tag filter
+            
+            pass
+            
+        
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        tag_filter = self._service.GetTagFilter()
+        
+        body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'tag_filter' : tag_filter } )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        tag_filter = request.parsed_request_args[ 'tag_filter' ]
+        
+        old_tag_filter = self._service.GetTagFilter()
+        
+        if old_tag_filter != tag_filter:
+            
+            self._service.SetTagFilter( tag_filter )
+            
+            summary_text = tag_filter.GetChangesSummaryText( old_tag_filter )
+            
+            HydrusData.Print(
+                'Account {} changed the tag filter. Rule changes are:{}{}.'.format(
+                    request.hydrus_account.GetAccountKey().hex(),
+                    os.linesep,
+                    summary_text
+                )
+            )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1195,6 +1285,11 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         client_to_server_update = request.parsed_request_args[ 'client_to_server_update' ]
+        
+        if isinstance( self._service, HydrusNetwork.ServerServiceRepositoryTag ):
+            
+            client_to_server_update.ApplyTagFilterToPendingMappings( self._service.GetTagFilter() )
+            
         
         timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
         

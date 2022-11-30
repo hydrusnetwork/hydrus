@@ -3208,14 +3208,16 @@ class ListBoxTagsFilter( ListBoxTags ):
     
     tagsRemoved = QC.Signal( list )
     
-    def __init__( self, parent ):
+    def __init__( self, parent, read_only = False ):
         
         ListBoxTags.__init__( self, parent )
+        
+        self._read_only = read_only
         
     
     def _Activate( self, ctrl_down, shift_down ) -> bool:
         
-        if len( self._selected_terms ) > 0:
+        if len( self._selected_terms ) > 0 and not self._read_only:
             
             tag_slices = [ term.GetTagSlice() for term in self._selected_terms ]
             

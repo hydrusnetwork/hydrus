@@ -6,11 +6,11 @@ title: Introduction and Statement of Principles
 
 ## this help { id="this_help" }
 
-Click the links on the left to go through the getting started guide. Please at least skim every page in turn, as it will introduce you to the main systems in the client. There is a lot, so you do not have to do it all in one go.
+Click the links on the left to go through the getting started guide. Subheadings are on the right. Larger sections are up top. Please at least skim every page in the getting started section, as this will introduce you to the main systems in the client. There is a lot, so you do not have to do it all in one go.
 
 The section on installing, updating, and **backing up** is very important.
 
-This help is available locally in every release. Open `install_dir/help/index.html`.
+This help is available locally in every release. Hit `help->help and getting started guide` in the client, or open `install_dir/help/index.html`.
 
 ## on having too many files { id="files" }
 

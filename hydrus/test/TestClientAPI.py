@@ -2973,6 +2973,44 @@ class TestClientAPI( unittest.TestCase ):
             
         
     
+    def _test_file_hashes( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        md5_hash = bytes.fromhex( 'ec5c5a4d7da4be154597e283f0b6663c' )
+        sha256_hash = bytes.fromhex( '2a0174970defa6f147f2eabba829c5b05aba1f1aea8b978611a07b7bb9cf9399' )
+        
+        source_to_dest = { md5_hash : sha256_hash }
+        
+        HG.test_controller.SetRead( 'file_hashes', source_to_dest )
+        
+        path = '/get_files/file_hashes?source_hash_type=md5&desired_hash_type=sha256&hash={}'.format( md5_hash.hex() )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = {
+            'hashes' : {
+                md5_hash.hex() : sha256_hash.hex()
+            }
+        }
+        
+        self.assertEqual( d, expected_answer )
+        
+    
     def _test_file_metadata( self, connection, set_up_permissions ):
         
         # test file metadata
@@ -3916,6 +3954,7 @@ class TestClientAPI( unittest.TestCase ):
             
         
         self._test_search_files_predicate_parsing( connection, set_up_permissions )
+        self._test_file_hashes( connection, set_up_permissions )
         self._test_file_metadata( connection, set_up_permissions )
         self._test_get_files( connection, set_up_permissions )
         self._test_permission_failures( connection, set_up_permissions )

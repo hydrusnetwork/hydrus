@@ -193,12 +193,25 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
+        if s_size > c_size:
+            
+            sign = '+'
+            percentage_difference = ( s_size / c_size ) - 1.0
+            
+        else:
+            
+            sign = ''
+            percentage_difference = ( s_size / c_size ) - 1.0
+            
+        
+        percentage_different_string = ' ({}{})'.format( sign, HydrusData.ConvertFloatToPercentage( percentage_difference ) )
+        
         if is_a_pixel_dupe:
             
             score = 0
             
         
-        statement = '{} {} {}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ) )
+        statement = '{} {} {}{}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ), percentage_different_string )
         
         statements_and_scores[ 'filesize' ]  = ( statement, score )
         

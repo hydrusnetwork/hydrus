@@ -2949,7 +2949,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                source_to_desired = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                
+                other_hash = list( source_to_desired.values() )[0]
                 
                 return other_hash
                 
