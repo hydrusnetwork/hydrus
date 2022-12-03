@@ -67,182 +67,10 @@ jobs:
           if-no-files-found: error
           retention-days: 2
 
-  build-ubuntu:
-    runs-on: ubuntu-20.04
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          path: hydrus
-      -
-        name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-          architecture: x64
-      -
-        name: APT Install
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libmpv1
-      -
-        name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
-      -
-        name: Build docs to /help
-        run: mkdocs build -d help
-        working-directory: hydrus
-      #- name: Cache Qt
-      #  id: cache-qt
-      #  uses: actions/cache@v1
-      #  with:
-      #    path: Qt
-      #    key: ${{ runner.os }}-QtCache
-      #-
-      #  name: Install Qt
-      #  uses: jurplel/install-qt-action@v2
-      #  with:
-      #    install-deps: true
-      #    setup-python: 'false'
-      #    modules: qtcharts qtwidgets qtgui qtcore
-      #    cached: ${{ steps.cache-qt.outputs.cache-hit }}
-      -
-        name: Build Hydrus
-        run: |
-          cp hydrus/static/build_files/linux/client.spec client.spec
-          cp hydrus/static/build_files/linux/server.spec server.spec
-          pyinstaller server.spec
-          pyinstaller client.spec
-      -
-        name: Remove Chonk
-        run: |
-            find dist/client/ -type f -name "*.pyc" -delete
-            while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
-      -
-        name: Remove Surplus File
-        run: |
-          rm -f dist/client/libxkbcommon.so*
-      -
-        name: Set Permissions
-        run: |
-            sudo chown --recursive 1000:1000 dist/client
-            sudo find dist/client -type d -exec chmod 0755 {} \;
-            sudo chmod +x dist/client/client dist/client/server dist/client/bin/swfrender_linux
-      -
-        name: Compress Client
-        run: |
-            mv dist/client "dist/Hydrus Network"
-            tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
-      -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Ubuntu-Extract
-          path: Ubuntu-Extract.tar.gz
-          if-no-files-found: error
-          retention-days: 2
-
-  build-windows:
-    runs-on: windows-2019
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          path: hydrus
-      -
-        name: Setup FFMPEG
-        uses: FedericoCarboni/setup-ffmpeg@v1.1.0
-        id: setup_ffmpeg
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-          architecture: x64
-      -
-        name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/windows/requirements.txt
-      - 
-        name: Build docs to /help
-        run: mkdocs build -d help
-        working-directory: hydrus
-      #-
-      #  name: Cache Qt
-      #  id: cache_qt
-      #  uses: actions/cache@v1
-      #  with:
-      #    path: ../Qt
-      #    key: ${{ runner.os }}-QtCache
-      #-
-      #  name: Install Qt
-      #  uses: jurplel/install-qt-action@v2
-      #  with:
-      #    install-deps: true
-      #    setup-python: 'false'
-      #    modules: qtcharts qtwidgets qtgui qtcore
-      #    cached: ${{ steps.cache_qt.outputs.cache-hit }}
-      -
-        name: Download mpv-dev
-        uses: carlosperate/download-file-action@v1.1.1
-        id: download_mpv
-        with:
-            file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z'
-            file-name: 'mpv-dev-x86_64.7z'
-            location: '.'
-      -
-        name: Process mpv-dev
-        run: |
-          7z x ${{ steps.download_mpv.outputs.file-path }}
-          move mpv-2.dll hydrus\
-      -
-        name: Build Hydrus
-        run: |
-          move ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} hydrus\bin\
-          move hydrus\static\build_files\windows\sqlite3.dll hydrus\
-          move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
-          move hydrus\static\build_files\windows\client-win.spec client-win.spec
-          move hydrus\static\build_files\windows\server-win.spec server-win.spec
-          pyinstaller server-win.spec
-          pyinstaller client-win.spec
-          dir -r
-      -
-        # yo pretty sure we'll need to install this manually once we are on windows server 2022
-        # https://github.com/actions/virtual-environments/issues/4856
-        name: InnoSetup
-        run: |
-          move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
-          ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }}
-      -
-        name: Compress Client
-        run: |
-          cd .\dist
-          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
-          cd ..
-      -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Install
-          path: dist\HydrusInstaller.exe
-          if-no-files-found: error
-          retention-days: 2
-      -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Extract
-          path: Windows-Extract.zip
-          if-no-files-found: error
-          retention-days: 2
-
   create-release:
     name: Upload to Release
     runs-on: ubuntu-20.04
-    needs: [build-windows, build-ubuntu, build-macos]
+    needs: [build-macos]
     steps:
       - 
         name: Checkout Code
@@ -260,9 +88,6 @@ jobs:
         name: Rename Files
         run: |
           mkdir ubuntu windows
-          mv Windows-Install/HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-          mv Ubuntu-Extract/Ubuntu-Extract.tar.gz Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
           mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
       - 
         name: Upload Files
@@ -270,7 +95,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-            Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-            Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
             Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
