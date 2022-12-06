@@ -61,7 +61,12 @@ if 'QT_API' in os.environ:
     
 else:
     
-    # qtpy is supposed to navigate this, but frozen macOS might be having trouble with it
+    from hydrus.core import HydrusConstants as HC
+    
+    if HC.RUNNING_FROM_MACOS_APP:
+        
+        os.environ[ 'FORCE_QT_API' ] = '1'
+        
     
     QT_API_INITIAL_VALUE = None
     
@@ -144,7 +149,9 @@ def get_qt_api_str_status():
             current_qt = 'Currently QT_API is not set.'
             
         
-        return '{} {}'.format( initial_qt, current_qt )
+        forced_qt = 'FORCE_QT_API is ON.' if 'FORCE_QT_API' in os.environ else 'FORCE_QT_API is not set.'
+        
+        return '{} {} {}'.format( initial_qt, current_qt, forced_qt )
         
     except Exception as e:
         
