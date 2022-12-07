@@ -10713,6 +10713,40 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 508:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.RenameGUG( 'twitter syndication collection lookup', 'twitter collection lookup' )
+                domain_manager.RenameGUG( 'twitter syndication likes lookup', 'twitter likes lookup' )
+                domain_manager.RenameGUG( 'twitter syndication list lookup', 'twitter list lookup' )
+                domain_manager.RenameGUG( 'twitter syndication profile lookup', 'twitter profile lookup' )
+                domain_manager.RenameGUG( 'twitter syndication profile lookup (with replies)', 'twitter profile lookup (with replies)' )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

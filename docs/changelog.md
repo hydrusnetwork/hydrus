@@ -7,6 +7,50 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 509](https://github.com/hydrusnetwork/hydrus/releases/tag/v509)
+
+### misc
+
+* added an option 'mouse wheel can "scroll" through menu buttons' to _options->gui_. this turns off the behaviour where a mouse wheel event over, for instance, the file sort asc/desc button, will change the button's value rather than scrolling the underlying panel. if you found this annoying, you can finally turn it off!
+* fixed an annoying 'save service' bug that some users saw last week with the introduction of serverside Tag Filters. some users had an old datatype in their service data storage--a legacy issue--but the system now coerces all datatypes and direct sub-objects to a saveable format on load or update
+* the tag washing system now collapses more types of whitespace character to `space`. mostly this means tab is now converted to space, but some unicode stuff goes too
+* the hangul filler character `\u3164` is no longer permitted as a namespace or subtag. it can be in longer tags, but isn't allowed on its own (where it appears to be a blank space). (hydev saw one in the wild, probably from some cheeky post title)
+* let me know if you run across a newly invalid tag already in your system and the UI goes bananas--ideally hydrus should now catch this and either fix itself or report with a polite note, but let's see. if things go crazy, run _database->check and repair->fix invaliid tags_
+* improved some image transparency detection and slicing logic. it is more accurate and saves more memory now. also, the system that saves thumbnails will more reliably use jpegs when it doesn't need png's transparency
+* fixed some PSD thumbs showing a fully transparent transparency layer
+* fixed a bug where you could enter capital letters into the namespace colour list in 'tag presentation' options panel
+* the default twitter downloaders are all renamed to remove the confusing and technical 'syndication' label
+* 'speedcopy' is now an optional supported library. a couple users have suggested this to make network copies on Windows and Linux much faster. I'd like some advanced users who run from source to try adding it to their venvs, and we'll see how it works out IRL in different situations (you can see if it is loaded under _help->about_)
+* if you run from source, the 'advanced' setup route now offers a (t)est Qt install, which sets PySide6 6.4.1 (up from 6.3.21). feel free to try it out--it works well for me, but I want to test it more before trying to roll it to the releases
+* in a side thing, thanks to the user who walked me through setting up signed commits to github with my own PGP key. you can see my new key in the contacts help page, id 76249F053212133C, and I am now committing with it. I'm not very familiar with the sheer mechanics of this tech, so bear with me, but I'm pretty sure I can sign or encrypt something if ever needed
+
+### macOS build fix
+
+* since v505, many macOS users were unable to boot the built app. it has taken multiple rounds of back and forth with users, but we figured it out. (looks like pyoxidizer updating from 0.22.0 to 0.23.0 simply broke qtpy/Qt bindings, so we force a rollback this week)
+* also, the macOS app moves from PySide6 to PyQt6 this week. they are basically the same, but PyQt6 packages into a 258MB dmg, less than half the 548MB PySide6 one!
+* let me know if the macOS app gives any more trouble. otherwise, to the people who helped out here, thank you very much for the help!
+
+### mostly boring tag filter panel
+
+* removed the 'add' buttons; added 'delete' buttons to the simple whitelist and blacklist panels; added 'block everything' to simple blacklist panel
+* the panel now talks about the special sibling and namespace rules when you edit an explicit blacklist-mode-only filter (the tag import options blacklist works this way)
+* the 'you didn't need to add that exception' text and 'filter is too complicated for this panel' texts now show/hide rather than waste empty space
+* some of the simple-advanced interactions are better, but there's still some logical bork here. mostly stuff like when you hit the 'unnamespace' checkbox in the whitelist panel, it gets needlessly added to the 'except' column in the advanced, rather than just removed from the advanced 'exclude'. I'll fix this up in the near future
+* the two namespace checkbox lists are now sized more appropriately
+* the white/blacklist panels disable more simply and reliably
+
+### boring cleanup
+
+* the confusing 'view this file's duplicates' menu label, which was an artifact of an old submenu label, is removed. if the duplicate menu wants to present the 'view' commands for two locations, it'll title with the respective location, otherwise the commands speak for themselves, no label
+* some old 'check(er) timings' nomenclature is renamed to 'checker options' across the board
+* the hydrus serialisable dictionary now washes any nested lists or dicts to hydrus serialised equivalents, which should stop situations like the save service bug in future
+* the hydrus serialisable list can now handle a mix of hydrus serialisables and python primitives. it also washes its lists or dicts to serialisable equivalents
+* improved the data-stability of some image channel slicing
+* fixed some PIL fallback thumbnail generation, and improved its 'has transparency' png/jpeg decision-making
+* fixed the main thumbnail loader being confused at times about which thumbnail mime to load with. the check I have added is ultra-fast on data we are loading anyway, so we shouldn't notice a difference, but if you get slow thumb loads, let me know
+* fixed the media container embed buttons using the file mime rather than the thumb mime when loading thumbnails (again causing transparency issues)
+* fixed more generally bad mime handling in the thumbnail generation routine that could have caused more unusual transparency handling for clip, psd, or flash files
+
 ## [Version 508](https://github.com/hydrusnetwork/hydrus/releases/tag/v508)
 
 ### misc
@@ -445,40 +489,3 @@ title: Changelog
 * refactored the file service pathing db code (this does directory structures and multihashes for ipfs) to a new module
 * refactored some tag display, tag filtering, and tag autocomplete calls down to appropriate db modules
 * refactored and extended some tag sibling database methods and names to clarify whether they were working with ids or strings
-
-## [Version 499](https://github.com/hydrusnetwork/hydrus/releases/tag/v499)
-
-### mpv
-* updated the mpv version for Windows. this is more complicated than it sounds and has been fraught with difficulty at times, so I do not try it often, but the situation seems to be much better now. today we are updating about twelve months. I may be imagining it, but things seem a bit smoother. a variety of weird file support should be better--an old transparent apng that I know crashed older mpv no longer causes a crash--and there's some acceleration now for very new CPU chipsets. I've also insisted on precise seeking (rather than keyframe seeking, which some users may have defaulted to). mpv-1.dll is now mpv-2.dll
-* I don't have an easy Linux testbed any more, so I would be interested in a Linux 'running from source' user trying out a similar update and letting me know how it goes. try getting the latest libmpv1 and then update python-mpv to 1.0.1 on pip. your 'mpv api version' in _help->about_ should now be 2.0. this new python-mpv seems to have several compatibility improvements, which is what has plagued us before here
-* mpv on macOS is still a frustrating question mark, but if this works on Linux, it may open another door. who knows, maybe the new version doesn't crash instantly on load
-
-### search change for potential duplicates
-* this is subtle and complicated, so if you are a casual user of duplicates, don't worry about it. duplicates page = better now
-* for those who are more invested in dupes, I have altered the main potential duplicate search query. when the filter prepares some potential dupes to compare, or you load up some random thumbs in the page, or simply when the duplicates processing page presents counts, this all now only tests kings. previously, it could compare any member of a duplicate group to any other, and it would nominate kings as group representatives, but this lead to some odd situations where if you said 'must be pixel dupes', you could get two low quality pixel dupes offering their better king(s) up for actual comparison, giving you a comparison that was not a pixel dupe. same for the general searching of potentials, where if you search for 'bad quality', any bad quality file you set as a dupe but didn't delete could get matched (including in 'both match' mode), and offer a 'nicer' king as tribute that didn't have the tag. now, it only searches kings. kings match searches, and it is those kings that must match pixel dupe rules. this also means that kings will always be available on the current file domain, and no fallback king-nomination-from-filtered-members routine is needed any more
-* the knock-on effect here is minimal, but in general all database work in the duplicate filter should be a little faster, and some of your numbers may be a few counts smaller, typically after discounting weird edge case split-up duplicate groups that aren't real/common enough to really worry about. if you use a waterfall of multiple local file services to process your files, you might see significantly smaller counts due to kings not always being in the same file domain as their bad members, so you may want to try 'all my files' or just see how it goes--might be far less confusing, now you are only given unambiguous kings. anyway, in general, I think no big differences here for most users except better precision in searching!
-* but let me know how you get on IRL!
-
-### misc
-* thank's to a user's hard work, the default twitter downloader gets some upgrades this week: you can now download from twitter lists, a twitter user's likes, and twitter collections (which are curated lists of tweets). the downloaders still get a lot of 'ignored' results for text-only tweets, and you still have to be logged in to get nsfw, but this adds some neat tools to the toolbox
-* thanks to a user, the Client API now reports brief caching information and should boost Hydrus Companion performance (issue #605)
-* the simple shortcut list in the edit shortcut action dialog now no longer shows any duplicates (such as 'close media viewer' in the dupes window)
-* added a new default reason for tag petitions, 'clearing mass-pasted junk'. 'not applicable' is now 'not applicable/incorrect'
-* in the petition processing page, the content boxes now specifically say ADD or DELETE to reinforce what you are doing and to differentiate the two boxes when you have a pixel petition
-* in the petition processing page, the content boxes now grow and shrink in height, up to a max of 20 rows, depending on how much stuff is in them. I _think_ I have pixel perfect heights here, so let me know if yours are wrong!
-* the 'service info' rows in review services are now presented in nicer order
-* updated the header/title formatting across the help documentation. when you search for a page title, it should now show up in results (e.g. you type 'running from source', you get that nicely at the top, not a confusing sub-header of that article). the section links are also all now capitalised
-* misc refactoring
-
-### bunch of fixes
-* fixed a weird and possible crash-inducing scrolling bug in the tag list some users had in Qt6
-* fixed a typo error in file lookup scripts from when I added multi-line support to the parsing system (issue #1221)
-* fixed some bad labels in 'speed and memory' that talked about 'MB' when the widget allowed setting different units. also, I updated the 'video buffer' option on that page to a full 'bytes value' widget too (issue #1223)
-* the 'bytes value' widget, where you can set '100 MB' and similar, now gives the 'unit' dropdown a little more minimum width. it was getting a little thin on some styles and not showing the full text in the dropdown menu (issue #1222)
-* fixed a bug in similar-shape-search-tree-rebalancing maintenance in the rare case that the queue of branches in need of regeneration become out of sync with the main tree (issue #1219)
-* fixed a bug in archive/delete filter where clicks that were making actions would start borked drag-and-drop panning states if you dragged before releasing the click. it would cause warped media movement if you then clicked on hover window greyspace
-* fixed the 'this was a cloudflare problem' scanner for the new 1.2.64 version of cloudscraper
-* updated the popupmanager's positioning update code to use a nicer event filter and gave its position calculation code a quick pass. it might fix some popup toaster position bugs, not sure
-* fixed a weird menu creation bug involving a QStandardItem appearing in the menu actions
-* fixed a similar weird QStandardItem bug in the media viewer canvas code
-* fixed an error that could appear on force-emptied pages that receive sort signals

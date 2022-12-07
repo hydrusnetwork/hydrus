@@ -61,21 +61,64 @@ if 'QT_API' in os.environ:
     
 else:
     
+    from hydrus.core import HydrusConstants as HC
+    
+    if HC.RUNNING_FROM_MACOS_APP:
+        
+        os.environ[ 'FORCE_QT_API' ] = '1'
+        
+    
     QT_API_INITIAL_VALUE = None
     
-    try:
+    if 'QT_API' not in os.environ:
         
-        import PySide6 # Qt6
+        try:
+            
+            import PySide6 # Qt6
+            
+            os.environ[ 'QT_API' ] = 'pyside6'
+            
+        except ImportError as e:
+            
+            pass
+            
         
-        os.environ[ 'QT_API' ] = 'pyside6'
+    
+    if 'QT_API' not in os.environ:
         
-    except ImportError as e:
+        try:
+            
+            import PyQt6 # Qt6
+            
+            os.environ[ 'QT_API' ] = 'pyqt6'
+            
+        except ImportError as e:
+            
+            pass
+            
+        
+    
+    if 'QT_API' not in os.environ:
         
         try:
             
             import PySide2 # Qt5
             
             os.environ[ 'QT_API' ] = 'pyside2'
+            
+        except ImportError as e:
+            
+            pass
+            
+        
+    
+    if 'QT_API' not in os.environ:
+        
+        try:
+            
+            import PyQt5 # Qt5
+            
+            os.environ[ 'QT_API' ] = 'pyqt5'
             
         except ImportError as e:
             
@@ -106,7 +149,9 @@ def get_qt_api_str_status():
             current_qt = 'Currently QT_API is not set.'
             
         
-        return '{} {}'.format( initial_qt, current_qt )
+        forced_qt = 'FORCE_QT_API is ON.' if 'FORCE_QT_API' in os.environ else 'FORCE_QT_API is not set.'
+        
+        return '{} {} {}'.format( initial_qt, current_qt, forced_qt )
         
     except Exception as e:
         
@@ -173,7 +218,7 @@ except ModuleNotFoundError as e:
     
     message += '\n' * 2
     
-    message += 'Here is info on your available Qt Libraries:\n{}'.format( get_qt_library_str_status() )
+    message += 'Here is info on your available Qt Libraries:\n\n{}'.format( get_qt_library_str_status() )
     
     message += '\n' * 2
     

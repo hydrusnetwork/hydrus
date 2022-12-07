@@ -2682,7 +2682,7 @@ class ServerServiceRestricted( ServerService ):
             dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
             
         
-        self._service_options = dictionary[ 'service_options' ]
+        self._service_options = HydrusSerialisable.SerialisableDictionary( dictionary[ 'service_options' ] )
         
         if 'server_message' not in self._service_options:
             

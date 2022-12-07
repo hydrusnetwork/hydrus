@@ -8,6 +8,8 @@ I welcome all your bug reports, questions, ideas, and comments. It is always int
 
 You can contact me by email, twitter, discord, or the release threads on 8chan or Endchan--I do not mind which. Please know that I have difficulty with social media, and while I try to reply to all messages, it sometimes takes me a while to catch up.
 
+If you need it, [here's](assets/hydev_key/Hydrus%20Network%20Developer_76249F053212133C_public.asc) my public GPG key.
+
 The [Github Issue Tracker](https://github.com/hydrusnetwork/hydrus/issues) was turned off for some time, as it did not fit my workflow and I could not keep up, but it is now running again, managed by a team of volunteer users. Please feel free to submit feature requests there if you are comfortable with Github. I am not socially active on Github, please do not ping me there.
 
 I am on the discord on Saturday afternoon, USA time, if you would like to talk live, and briefly on Wednesday after I put the release out. If that is not a good time for you, please leave me a DM and I will get to you when I can. There are also plenty of other hydrus users who idle who can help with support questions.

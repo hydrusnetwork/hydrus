@@ -348,6 +348,17 @@ class SerialisableDictionary( SerialisableBase, dict ):
         
         for ( key, value ) in self.items():
             
+            # after being caught out on a recursive legacy thing here, we now coerce. I'm 99.7% confident it can't hurt
+            # careful not to do it through for SerialisableBase--don't want to coerce a SerialisableBytesDict to a SerialisableDict
+            if isinstance( value, list ) and not isinstance( value, SerialisableBase ):
+                
+                value = SerialisableList( value )
+                
+            elif isinstance( value, dict ) and not isinstance( value, SerialisableBase ):
+                
+                value = SerialisableDictionary( value )
+                
+            
             if isinstance( key, SerialisableBase ):
                 
                 serialisable_key = key.GetSerialisableTuple()
@@ -551,7 +562,7 @@ class SerialisableList( SerialisableBase, list ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_LIST
     SERIALISABLE_NAME = 'Serialisable List'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, *args, **kwargs ):
         
@@ -561,34 +572,90 @@ class SerialisableList( SerialisableBase, list ):
     
     def _GetSerialisableInfo( self ):
         
-        return [ obj.GetSerialisableTuple() for obj in self ]
+        serialisable_list_result = []
+        
+        for obj in self:
+            
+            # after being caught out on a recursive legacy thing here, we now coerce. I'm 99.7% confident it can't hurt
+            # careful not to do it through for SerialisableBase--don't want to coerce a SerialisableBytesDict to a SerialisableDict
+            if isinstance( obj, list ) and not isinstance( obj, SerialisableBase ):
+                
+                obj = SerialisableList( obj )
+                
+            elif isinstance( obj, dict ) and not isinstance( obj, SerialisableBase ):
+                
+                obj = SerialisableDictionary( obj )
+                
+            
+            if isinstance( obj, SerialisableBase ):
+                
+                is_serialised = True
+                
+                obj_data = obj.GetSerialisableTuple()
+                
+            else:
+                
+                is_serialised = False
+                
+                obj_data = obj
+                
+            
+            serialisable_list_result.append( ( is_serialised, obj_data ) )
+            
+        
+        return serialisable_list_result
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         have_shown_load_error = False
         
-        for obj_tuple in serialisable_info:
+        for ( is_serialised, obj_data ) in serialisable_info:
             
-            try:
+            if is_serialised:
                 
-                obj = CreateFromSerialisableTuple( obj_tuple )
+                obj_tuple = obj_data
                 
-            except HydrusExceptions.SerialisationException as e:
-                
-                if not have_shown_load_error:
+                try:
                     
-                    HydrusData.ShowText( 'An object in a list could not load. It has been discarded from the list. More may also have failed to load, but to stop error spam, they will go silently. Your client may be running on code versions behind its database. Depending on the severity of this error, you may need to rollback to a previous backup. If you have no backup, you may want to kill your hydrus process now to stop the cleansed list being saved back to the db.' )
-                    HydrusData.ShowException( e )
+                    obj = CreateFromSerialisableTuple( obj_tuple )
                     
-                    have_shown_load_error = True
+                except HydrusExceptions.SerialisationException as e:
+                    
+                    if not have_shown_load_error:
+                        
+                        HydrusData.ShowText( 'An object in a list could not load. It has been discarded from the list. More may also have failed to load, but to stop error spam, they will go silently. Your client may be running on code versions behind its database. Depending on the severity of this error, you may need to rollback to a previous backup. If you have no backup, you may want to kill your hydrus process now to stop the cleansed list being saved back to the db.' )
+                        HydrusData.ShowException( e )
+                        
+                        have_shown_load_error = True
+                        
+                    
+                    continue
                     
                 
-                continue
+            else:
+                
+                obj = obj_data
                 
             
             self.append( obj )
             
         
     
+
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            serialised_objects = old_serialisable_info
+            
+            is_serialised = True
+            
+            new_serialisable_info = [ ( is_serialised, serialised_object ) for serialised_object in serialised_objects ]
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_LIST ] = SerialisableList

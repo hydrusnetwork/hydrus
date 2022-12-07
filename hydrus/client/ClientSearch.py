@@ -152,7 +152,7 @@ def ConvertSubtagToSearchable( subtag ):
     
     subtag = subtag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
-    subtag = HydrusText.re_multiple_spaces.sub( ' ', subtag )
+    subtag = HydrusText.re_one_or_more_whitespace.sub( ' ', subtag )
     
     subtag = subtag.strip()
     

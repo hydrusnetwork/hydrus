@@ -193,7 +193,10 @@ class Service( object ):
         self._LoadFromDictionary( dictionary )
         
     
-    def __hash__( self ): return self._service_key.__hash__()
+    def __hash__( self ):
+        
+        return self._service_key.__hash__()
+        
     
     def _CheckFunctional( self ):
         
@@ -1018,7 +1021,7 @@ class ServiceRestricted( ServiceRemote ):
         dictionary[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( self._account )
         dictionary[ 'next_account_sync' ] = self._next_account_sync
         dictionary[ 'network_sync_paused' ] = self._network_sync_paused
-        dictionary[ 'service_options' ] = self._service_options
+        dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary( self._service_options )
         
         return dictionary
         
@@ -1049,17 +1052,17 @@ class ServiceRestricted( ServiceRemote ):
             dictionary[ 'service_options' ] = HydrusSerialisable.SerialisableDictionary()
             
         
-        self._service_options = dictionary[ 'service_options' ]
-        
-    
-    def _SetNewServiceOptions( self, service_options ):
-        
-        self._service_options.update( service_options )
+        self._service_options = HydrusSerialisable.SerialisableDictionary( dictionary[ 'service_options' ] )
         
     
     def _SetNewTagFilter( self, tag_filter: HydrusTags.TagFilter ):
         
         self._service_options[ 'tag_filter' ] = tag_filter
+        
+    
+    def _UpdateServiceOptions( self, service_options ):
+        
+        self._service_options.update( service_options )
         
     
     def CanSyncAccount( self, including_external_communication = True ):
@@ -1415,7 +1418,7 @@ class ServiceRestricted( ServiceRemote ):
                         
                         service_options = options_response[ 'service_options' ]
                         
-                        self._SetNewServiceOptions( service_options )
+                        self._UpdateServiceOptions( service_options )
                         
                     
                 except HydrusExceptions.SerialisationException:
@@ -1651,18 +1654,6 @@ class ServiceRepository( ServiceRestricted ):
             
             HG.client_controller.PrintProfile( popup_message )
             
-        
-    
-    def _SetNewServiceOptions( self, service_options ):
-        
-        if 'update_period' in service_options and 'update_period' in self._service_options and service_options[ 'update_period' ] != self._service_options[ 'update_period' ]:
-            
-            update_period = service_options[ 'update_period' ]
-            
-            self._metadata.CalculateNewNextUpdateDue( update_period )
-            
-        
-        ServiceRestricted._SetNewServiceOptions( self, service_options )
         
     
     def _SyncDownloadMetadata( self ):
@@ -2280,6 +2271,18 @@ class ServiceRepository( ServiceRestricted ):
             job_key.Finish()
             job_key.Delete( 3 )
             
+        
+    
+    def _UpdateServiceOptions( self, service_options ):
+        
+        if 'update_period' in service_options and 'update_period' in self._service_options and service_options[ 'update_period' ] != self._service_options[ 'update_period' ]:
+            
+            update_period = service_options[ 'update_period' ]
+            
+            self._metadata.CalculateNewNextUpdateDue( update_period )
+            
+        
+        ServiceRestricted._UpdateServiceOptions( self, service_options )
         
     
     def CanDoIdleShutdownWork( self ):

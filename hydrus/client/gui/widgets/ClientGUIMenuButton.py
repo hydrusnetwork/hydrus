@@ -4,7 +4,7 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
@@ -229,7 +229,9 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def wheelEvent( self, event ):
         
-        if self._value_index is not None:
+        can_do_it = HG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' )
+        
+        if self._value_index is not None and can_do_it:
             
             if event.angleDelta().y() > 0:
                 

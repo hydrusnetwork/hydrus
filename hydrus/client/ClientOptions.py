@@ -268,6 +268,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'start_note_editing_at_end' ] = True
         
+        self._dictionary[ 'booleans' ][ 'menu_choice_buttons_can_mouse_scroll' ] = True
+        
         self._dictionary[ 'booleans' ][ 'focus_preview_on_ctrl_click' ] = False
         self._dictionary[ 'booleans' ][ 'focus_preview_on_ctrl_click_only_static' ] = False
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click' ] = False

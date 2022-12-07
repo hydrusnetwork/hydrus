@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
@@ -2664,11 +2665,11 @@ class EmbedButton( QW.QWidget ):
         
         if needs_thumb:
             
-            mime = self._media.GetMime()
-            
             thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
-            self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetQtPixmap()
+            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+            
+            self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
             
             self.update()
             
@@ -2692,11 +2693,11 @@ class OpenExternallyPanel( QW.QWidget ):
         
         if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
-            mime = self._media.GetMime()
-            
             thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
-            qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetQtPixmap()
+            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+            
+            qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
             
             thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, qt_pixmap )
             

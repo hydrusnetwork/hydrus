@@ -304,7 +304,7 @@ def LoadFromNumPyImage( numpy_image: numpy.array ):
             
             if depth != 1:
                 
-                numpy_image = numpy_image[:,:,0] # let's fetch one channel. if the png is a perfect RGB conversion of the original (or, let's say, a Firefox bmp export), this actually works
+                numpy_image = numpy_image[:,:,0].copy() # let's fetch one channel. if the png is a perfect RGB conversion of the original (or, let's say, a Firefox bmp export), this actually works
                 
             
         
