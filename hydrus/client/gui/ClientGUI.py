@@ -26,6 +26,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
@@ -755,6 +756,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
         library_versions.append( ( 'pyopenssl present:', str( HydrusEncryption.OPENSSL_OK ) ) )
+        library_versions.append( ( 'speedcopy present:', str( HydrusFileHandling.SPEEDCOPY_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
         library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
         library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )

@@ -591,10 +591,22 @@ def HasVideoStream( path ) -> bool:
     
     return ParseFFMPEGHasVideo( lines )
     
-def RenderImageToPNGPath( path, temp_png_path ):
+def RenderImageToImagePath( path, temp_image_path ):
+    
+    # this should auto-convert if you give it .png or .jpg
+    # I noticed that ffmpeg got confused about alpha channels with PSDs, gave fully opaque alpha over an otherwise perfectly acceptable catgirl image, so we'll do jpeg for PSD from now on
     
     # -y to overwrite the temp path
-    cmd = [ FFMPEG_PATH, '-y', "-i", path, temp_png_path ]
+    
+    if temp_image_path.endswith( '.jpeg' ):
+        
+        # '-q:v 1' does high quality
+        cmd = [ FFMPEG_PATH, '-y', "-i", path, "-q:v", "1", temp_image_path ]
+        
+    else:
+        
+        cmd = [ FFMPEG_PATH, '-y', "-i", path, temp_image_path ]
+        
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     

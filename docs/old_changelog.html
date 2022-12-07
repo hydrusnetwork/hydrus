@@ -34,6 +34,45 @@
         <div class="content">
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
+                <li>
+                    <h2 id="version_509"><a href="#version_509">version 509</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>added an option 'mouse wheel can "scroll" through menu buttons' to _options->gui_. this turns off the behaviour where a mouse wheel event over, for instance, the file sort asc/desc button, will change the button's value rather than scrolling the underlying panel. if you found this annoying, you can finally turn it off!</li>
+                        <li>fixed an annoying 'save service' bug that some users saw last week with the introduction of serverside Tag Filters. some users had an old datatype in their service data storage--a legacy issue--but the system now coerces all datatypes and direct sub-objects to a saveable format on load or update</li>
+                        <li>the tag washing system now collapses more types of whitespace character to `space`. mostly this means tab is now converted to space, but some unicode stuff goes too</li>
+                        <li>the hangul filler character `\u3164` is no longer permitted as a namespace or subtag. it can be in longer tags, but isn't allowed on its own (where it appears to be a blank space). (hydev saw one in the wild, probably from some cheeky post title)</li>
+                        <li>let me know if you run across a newly invalid tag already in your system and the UI goes bananas--ideally hydrus should now catch this and either fix itself or report with a polite note, but let's see. if things go crazy, run _database->check and repair->fix invaliid tags_</li>
+                        <li>improved some image transparency detection and slicing logic. it is more accurate and saves more memory now. also, the system that saves thumbnails will more reliably use jpegs when it doesn't need png's transparency</li>
+                        <li>fixed some PSD thumbs showing a fully transparent transparency layer</li>
+                        <li>fixed a bug where you could enter capital letters into the namespace colour list in 'tag presentation' options panel</li>
+                        <li>the default twitter downloaders are all renamed to remove the confusing and technical 'syndication' label</li>
+                        <li>'speedcopy' is now an optional supported library. a couple users have suggested this to make network copies on Windows and Linux much faster. I'd like some advanced users who run from source to try adding it to their venvs, and we'll see how it works out IRL in different situations (you can see if it is loaded under _help->about_)</li>
+                        <li>if you run from source, the 'advanced' setup route now offers a (t)est Qt install, which sets PySide6 6.4.1 (up from 6.3.21). feel free to try it out--it works well for me, but I want to test it more before trying to roll it to the releases</li>
+                        <li>in a side thing, thanks to the user who walked me through setting up signed commits to github with my own PGP key. you can see my new key in the contacts help page, id 76249F053212133C, and I am now committing with it. I'm not very familiar with the sheer mechanics of this tech, so bear with me, but I'm pretty sure I can sign or encrypt something if ever needed</li>
+                        <li><h3>macOS build fix</h3></li>
+                        <li>since v505, many macOS users were unable to boot the built app. it has taken multiple rounds of back and forth with users, but we figured it out. (looks like pyoxidizer updating from 0.22.0 to 0.23.0 simply broke qtpy/Qt bindings, so we force a rollback this week)</li>
+                        <li>also, the macOS app moves from PySide6 to PyQt6 this week. they are basically the same, but PyQt6 packages into a 258MB dmg, less than half the 548MB PySide6 one!</li>
+                        <li>let me know if the macOS app gives any more trouble. otherwise, to the people who helped out here, thank you very much for the help!</li>
+                        <li><h3>mostly boring tag filter panel</h3></li>
+                        <li>removed the 'add' buttons; added 'delete' buttons to the simple whitelist and blacklist panels; added 'block everything' to simple blacklist panel</li>
+                        <li>the panel now talks about the special sibling and namespace rules when you edit an explicit blacklist-mode-only filter (the tag import options blacklist works this way)</li>
+                        <li>the 'you didn't need to add that exception' text and 'filter is too complicated for this panel' texts now show/hide rather than waste empty space</li>
+                        <li>some of the simple-advanced interactions are better, but there's still some logical bork here. mostly stuff like when you hit the 'unnamespace' checkbox in the whitelist panel, it gets needlessly added to the 'except' column in the advanced, rather than just removed from the advanced 'exclude'. I'll fix this up in the near future</li>
+                        <li>the two namespace checkbox lists are now sized more appropriately</li>
+                        <li>the white/blacklist panels disable more simply and reliably</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>the confusing 'view this file's duplicates' menu label, which was an artifact of an old submenu label, is removed. if the duplicate menu wants to present the 'view' commands for two locations, it'll title with the respective location, otherwise the commands speak for themselves, no label</li>
+                        <li>some old 'check(er) timings' nomenclature is renamed to 'checker options' across the board</li>
+                        <li>the hydrus serialisable dictionary now washes any nested lists or dicts to hydrus serialised equivalents, which should stop situations like the save service bug in future</li>
+                        <li>the hydrus serialisable list can now handle a mix of hydrus serialisables and python primitives. it also washes its lists or dicts to serialisable equivalents</li>
+                        <li>improved the data-stability of some image channel slicing</li>
+                        <li>fixed some PIL fallback thumbnail generation, and improved its 'has transparency' png/jpeg decision-making</li>
+                        <li>fixed the main thumbnail loader being confused at times about which thumbnail mime to load with. the check I have added is ultra-fast on data we are loading anyway, so we shouldn't notice a difference, but if you get slow thumb loads, let me know</li>
+                        <li>fixed the media container embed buttons using the file mime rather than the thumb mime when loading thumbnails (again causing transparency issues)</li>
+                        <li>fixed more generally bad mime handling in the thumbnail generation routine that could have caused more unusual transparency handling for clip, psd, or flash files</li>
+                    </ul>
+                </li>
 				<li>
 					<h2 id="version_508"><a href="#version_508">version 508</a></h2>
 					<ul>

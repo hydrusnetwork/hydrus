@@ -23,14 +23,15 @@ jobs:
         with:
           python-version: 3.9
       -
-        name: Install mkdocs-material
-        run: python3 -m pip install mkdocs-material
-      -
         name: Build docs to /help
-        run: mkdocs build -d help
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade wheel
+          python3 -m pip install mkdocs-material
+          mkdocs build -d help
       -
         name: Install PyOxidizer
-        run: python3 -m pip install pyoxidizer
+        run: python3 -m pip install pyoxidizer==0.22.0
       -
         name: Build Hydrus
         run: |

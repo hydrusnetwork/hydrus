@@ -345,12 +345,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
         
     
-    if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
-        
-        convert = cv2.COLOR_RGBA2RGB
-        
-        numpy_image = cv2.cvtColor( numpy_image, convert )
-        
+    numpy_image = StripOutAnyOpaqueAlphaChannel( numpy_image )
     
     return numpy_image
     
@@ -441,7 +436,7 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
         
         try:
             
-            thumbnail_bytes = GenerateThumbnailBytesNumPy( thumbnail_numpy_image, mime )
+            thumbnail_bytes = GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
             
             return thumbnail_bytes
             
@@ -460,24 +455,19 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
     
-    thumbnail_bytes = GenerateThumbnailBytesPIL( pil_image, mime )
+    thumbnail_bytes = GenerateThumbnailBytesPIL( thumbnail_pil_image )
     
     return thumbnail_bytes
     
-def GenerateThumbnailBytesNumPy( numpy_image, mime ) -> bytes:
+def GenerateThumbnailBytesNumPy( numpy_image ) -> bytes:
     
     ( im_height, im_width, depth ) = numpy_image.shape
     
+    numpy_image = StripOutAnyOpaqueAlphaChannel( numpy_image )
+    
     if depth == 4:
         
-        if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
-            
-            convert = cv2.COLOR_RGBA2BGR
-            
-        else:
-            
-            convert = cv2.COLOR_RGBA2BGRA
-            
+        convert = cv2.COLOR_RGBA2BGRA
         
     else:
         
@@ -514,11 +504,11 @@ def GenerateThumbnailBytesNumPy( numpy_image, mime ) -> bytes:
         raise HydrusExceptions.CantRenderWithCVException( 'Thumb failed to encode!' )
         
     
-def GenerateThumbnailBytesPIL( pil_image: PILImage.Image, mime ) -> bytes:
+def GenerateThumbnailBytesPIL( pil_image: PILImage.Image ) -> bytes:
     
     f = io.BytesIO()
     
-    if mime == HC.IMAGE_PNG or pil_image.mode == 'RGBA':
+    if PILImageHasAlpha( pil_image ):
         
         pil_image.save( f, 'PNG' )
         
@@ -1122,7 +1112,7 @@ def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
         # if the alpha channel is all opaque, there is no use storing that info in our pixel hash
         # opaque means 255
         
-        alpha_channel = numpy_image[:,:,3]
+        alpha_channel = numpy_image[:,:,3].copy()
         
         if ( alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all():
             
@@ -1233,4 +1223,20 @@ def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
         
     
     return pil_image
+    
+
+def StripOutAnyOpaqueAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
+    
+    if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
+        
+        numpy_image = numpy_image[:,:,:3].copy()
+        
+        # old way, which doesn't actually remove the channel lmao lmao lmao
+        '''
+        convert = cv2.COLOR_RGBA2RGB
+        
+        numpy_image = cv2.cvtColor( numpy_image, convert )
+        '''
+    
+    return numpy_image
     

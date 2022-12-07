@@ -967,7 +967,7 @@ class HydrusBitmap( object ):
         
         if isinstance( data, memoryview ) and not data.c_contiguous:
             
-            data = data.copy()
+            data = data.tobytes() # this _should_ work and is an emergency relief
             
         
         if self._compressed:

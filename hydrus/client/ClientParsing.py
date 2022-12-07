@@ -708,6 +708,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         if collapse_newlines:
             
+            # maybe should use HydrusText.DeserialiseNewlinedTexts, but that might change/break some existing parsers with the strip() trim
             raw_texts = [ HydrusText.RemoveNewlines( raw_text ) for raw_text in raw_texts ]
             
         

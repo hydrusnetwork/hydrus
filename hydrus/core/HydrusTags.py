@@ -307,21 +307,28 @@ def SplitTag( tag ):
         return ( '', tag )
         
     
+
 NULL_CHARACTER = '\x00'
+HANGUL_FILLER_CHARACTER = '\u3164'
 
 def StripTextOfGumpf( t ):
     
-    t = HydrusText.re_newlines.sub( '', t )
-    
-    t = HydrusText.re_multiple_spaces.sub( ' ', t )
+    t = HydrusText.re_one_or_more_whitespace.sub( ' ', t )
     
     t = t.strip()
     
-    t = HydrusText.re_leading_space_or_garbage.sub( '', t )
+    t = HydrusText.re_leading_garbage.sub( '', t )
+    
+    t = t.strip()
     
     if NULL_CHARACTER in t:
         
         t = t.replace( NULL_CHARACTER, '' )
+        
+    
+    if t == HANGUL_FILLER_CHARACTER:
+        
+        t = ''
         
     
     return t

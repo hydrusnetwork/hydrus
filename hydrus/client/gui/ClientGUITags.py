@@ -697,6 +697,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._redundant_st = ClientGUICommon.BetterStaticText( self, '', ellipsize_end = True )
+        self._redundant_st.setVisible( False )
         
         self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', ellipsize_end = True )
         
@@ -751,6 +752,17 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_text_vbox = QP.VBoxLayout()
         
+        if self._only_show_blacklist:
+            
+            message = 'This is a fixed blacklist. It will apply rules against all test tag siblings and apply unnamespaced rules to namespaced test tags.'
+            
+            st = ClientGUICommon.BetterStaticText( self, message )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( test_text_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         QP.AddToLayout( test_text_vbox, self._test_result_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
@@ -799,13 +811,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-    def _AdvancedAddBlacklistButton( self ):
-        
-        tag_slice = self._advanced_blacklist_input.GetValue()
-        
-        self._AdvancedAddBlacklist( tag_slice )
-        
-    
     def _AdvancedAddBlacklistMultiple( self, tag_slices ):
         
         for tag_slice in tag_slices:
@@ -839,13 +844,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-    def _AdvancedAddWhitelistButton( self ):
-        
-        tag_slice = self._advanced_whitelist_input.GetValue()
-        
-        self._AdvancedAddWhitelist( tag_slice )
-        
-    
     def _AdvancedAddWhitelistMultiple( self, tag_slices ):
         
         for tag_slice in tag_slices:
@@ -865,7 +863,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-    def _AdvancedDeleteBlacklist( self ):
+    def _AdvancedDeleteBlacklistButton( self ):
         
         selected_tag_slices = self._advanced_blacklist.GetSelectedTagSlices()
         
@@ -882,7 +880,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
-    def _AdvancedDeleteWhitelist( self ):
+    def _AdvancedDeleteWhitelistButton( self ):
         
         selected_tag_slices = self._advanced_whitelist.GetSelectedTagSlices()
         
@@ -1100,68 +1098,62 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        blacklist_panel = ClientGUICommon.StaticBox( advanced_panel, 'exclude these' )
+        self._advanced_blacklist_panel = ClientGUICommon.StaticBox( advanced_panel, 'exclude these' )
         
-        self._advanced_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel, read_only = self._read_only )
+        self._advanced_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( self._advanced_blacklist_panel, read_only = self._read_only )
         
-        self._advanced_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
+        self._advanced_blacklist_input = ClientGUIControls.TextAndPasteCtrl( self._advanced_blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
         
-        add_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'add', self._AdvancedAddBlacklistButton )
-        delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'delete', self._AdvancedDeleteBlacklist )
-        blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
+        delete_blacklist_button = ClientGUICommon.BetterButton( self._advanced_blacklist_panel, 'delete', self._AdvancedDeleteBlacklistButton )
+        blacklist_everything_button = ClientGUICommon.BetterButton( self._advanced_blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
         
         #
         
-        whitelist_panel = ClientGUICommon.StaticBox( advanced_panel, 'except for these' )
+        self._advanced_whitelist_panel = ClientGUICommon.StaticBox( advanced_panel, 'except for these' )
         
-        self._advanced_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel, read_only = self._read_only )
+        self._advanced_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( self._advanced_whitelist_panel, read_only = self._read_only )
         
-        self._advanced_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
+        self._advanced_whitelist_input = ClientGUIControls.TextAndPasteCtrl( self._advanced_whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
         
-        self._advanced_add_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'add', self._AdvancedAddWhitelistButton )
-        delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'delete', self._AdvancedDeleteWhitelist )
+        delete_whitelist_button = ClientGUICommon.BetterButton( self._advanced_whitelist_panel, 'delete', self._AdvancedDeleteWhitelistButton )
         
         #
         
         if self._read_only:
             
             self._advanced_blacklist_input.hide()
-            add_blacklist_button.hide()
             delete_blacklist_button.hide()
             blacklist_everything_button.hide()
             
             self._advanced_whitelist_input.hide()
-            self._advanced_add_whitelist_button.hide()
             delete_whitelist_button.hide()
             
         
         button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox, self._advanced_blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( button_hbox, add_blacklist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, delete_blacklist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, blacklist_everything_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        blacklist_panel.Add( self._advanced_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        blacklist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._advanced_blacklist_panel.Add( self._advanced_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._advanced_blacklist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox, self._advanced_whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( button_hbox, self._advanced_add_whitelist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, delete_whitelist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        whitelist_panel.Add( self._advanced_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._advanced_whitelist_panel.Add( self._advanced_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._advanced_whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._advanced_blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._advanced_whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         advanced_panel.setLayout( hbox )
         
@@ -1175,11 +1167,16 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_panel )
+        self._simple_blacklist_error_st.setVisible( False )
         
         self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
+
+        ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_blacklist_global_checkboxes, ( 20, 3 ) )
+        
+        self._simple_blacklist_global_checkboxes.setFixedHeight( h )
         
         self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
         
@@ -1197,6 +1194,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
         
+        delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'remove', self._SimpleDeleteBlacklistButton )
+        blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
+        
         #
         
         if self._read_only:
@@ -1206,17 +1206,25 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._simple_blacklist_input.hide()
             
+            delete_blacklist_button.hide()
+            blacklist_everything_button.hide()
+            
         
         left_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( left_vbox, self._simple_blacklist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.addStretch( 1 )
-        QP.AddToLayout( left_vbox, self._simple_blacklist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_blacklist_namespace_checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._simple_blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, delete_blacklist_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, blacklist_everything_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         right_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( right_vbox, self._simple_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( right_vbox, self._simple_blacklist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( right_vbox, button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         main_hbox = QP.HBoxLayout()
         
@@ -1242,11 +1250,16 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_panel )
+        self._simple_whitelist_error_st.setVisible( False )
         
         self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
+        
+        ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_whitelist_global_checkboxes, ( 20, 3 ) )
+        
+        self._simple_whitelist_global_checkboxes.setFixedHeight( h )
         
         self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
         
@@ -1264,6 +1277,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
         
+        delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'remove', self._SimpleDeleteWhitelistButton )
+        
         #
         
         if self._read_only:
@@ -1272,19 +1287,23 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_whitelist_namespace_checkboxes.setEnabled( False )
             
             self._simple_whitelist_input.hide()
+            delete_whitelist_button.hide()
             
-        
         
         left_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( left_vbox, self._simple_whitelist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.addStretch( 1 )
-        QP.AddToLayout( left_vbox, self._simple_whitelist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_whitelist_namespace_checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._simple_whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, delete_whitelist_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         right_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( right_vbox, self._simple_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( right_vbox, self._simple_whitelist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( right_vbox, button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         main_hbox = QP.HBoxLayout()
         
@@ -1386,17 +1405,16 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ShowRedundantError( self, text ):
         
+        self._redundant_st.setVisible( True )
+        
         self._redundant_st.setText( text )
         
-        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, 'clear redundant error', self._redundant_st.setText, '' )
+        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, 'clear redundant error', self._redundant_st.setVisible, False )
         
     
     def _SimpleAddBlacklistMultiple( self, tag_slices ):
         
-        for tag_slice in tag_slices:
-            
-            self._AdvancedAddBlacklist( tag_slice )
-            
+        self._AdvancedAddBlacklistMultiple( tag_slices )
         
     
     def _SimpleAddWhitelistMultiple( self, tag_slices ):
@@ -1425,6 +1443,44 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     def _SimpleBlacklistReset( self ):
         
         pass
+        
+    
+    def _SimpleDeleteBlacklistButton( self ):
+        
+        selected_tag_slices = self._simple_blacklist.GetSelectedTagSlices()
+        
+        if len( selected_tag_slices ) > 0:
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._simple_blacklist.RemoveTagSlices( selected_tag_slices )
+                
+                self._simple_blacklist.tagsRemoved.emit( selected_tag_slices )
+                
+            
+        
+        self._UpdateStatus()
+        
+    
+    def _SimpleDeleteWhitelistButton( self ):
+        
+        selected_tag_slices = self._simple_whitelist.GetSelectedTagSlices()
+        
+        if len( selected_tag_slices ) > 0:
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == QW.QDialog.Accepted:
+                
+                self._simple_whitelist.RemoveTagSlices( selected_tag_slices )
+                
+                self._simple_whitelist.tagsRemoved.emit( selected_tag_slices )
+                
+            
+        
+        self._UpdateStatus()
         
     
     def _SimpleWhitelistRemoved( self, tag_slices ):
@@ -1457,15 +1513,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         ( whitelist_possible, blacklist_possible ) = self._GetWhiteBlacklistsPossible()
         
         whitelist_tag_slices = self._advanced_whitelist.GetTagSlices()
-        blacklist_tag_slices = self._advanced_blacklist.GetTagSlices()
+        
+        self._whitelist_panel.setEnabled( whitelist_possible )
+        
+        self._simple_whitelist_error_st.setVisible( not whitelist_possible )
         
         if whitelist_possible:
-            
-            self._simple_whitelist_error_st.clear()
-            
-            self._simple_whitelist.setEnabled( True )
-            self._simple_whitelist_global_checkboxes.setEnabled( True )
-            self._simple_whitelist_input.setEnabled( True )
             
             whitelist_tag_slices = set( whitelist_tag_slices )
             
@@ -1503,12 +1556,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            self._simple_whitelist_error_st.setText( 'The filter is currently more complicated than a simple whitelist, so cannot be shown here.' )
-            
-            self._simple_whitelist.setEnabled( False )
-            self._simple_whitelist_global_checkboxes.setEnabled( False )
-            self._simple_whitelist_namespace_checkboxes.setEnabled( False )
-            self._simple_whitelist_input.setEnabled( False )
+            self._simple_whitelist_error_st.setText( 'The filter is currently more complicated than a simple whitelist, so it cannot be shown here.' )
             
             self._simple_whitelist.SetTagSlices( '' )
             
@@ -1525,16 +1573,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        whitelist_tag_slices = self._advanced_whitelist.GetTagSlices()
         blacklist_tag_slices = self._advanced_blacklist.GetTagSlices()
         
+        self._blacklist_panel.setEnabled( blacklist_possible )
+        
+        self._simple_blacklist_error_st.setVisible( not blacklist_possible )
+        
         if blacklist_possible:
-            
-            self._simple_blacklist_error_st.clear()
-            
-            self._simple_blacklist.setEnabled( True )
-            self._simple_blacklist_global_checkboxes.setEnabled( True )
-            self._simple_blacklist_input.setEnabled( True )
             
             if self._CurrentlyBlocked( ':' ):
                 
@@ -1563,12 +1608,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            self._simple_blacklist_error_st.setText( 'The filter is currently more complicated than a simple blacklist, so cannot be shown here.' )
-            
-            self._simple_blacklist.setEnabled( False )
-            self._simple_blacklist_global_checkboxes.setEnabled( False )
-            self._simple_blacklist_namespace_checkboxes.setEnabled( False )
-            self._simple_blacklist_input.setEnabled( False )
+            self._simple_blacklist_error_st.setText( 'The filter is currently more complicated than a simple blacklist, so it cannot be shown here.' )
             
             self._simple_blacklist.SetTagSlices( '' )
             
@@ -1588,16 +1628,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         whitelist_tag_slices = self._advanced_whitelist.GetTagSlices()
         blacklist_tag_slices = self._advanced_blacklist.GetTagSlices()
         
-        if len( blacklist_tag_slices ) == 0:
-            
-            self._advanced_whitelist_input.setEnabled( False )
-            self._advanced_add_whitelist_button.setEnabled( False )
-            
-        else:
-            
-            self._advanced_whitelist_input.setEnabled( True )
-            self._advanced_add_whitelist_button.setEnabled( True )
-            
+        self._advanced_whitelist_input.setEnabled( len( blacklist_tag_slices ) > 0 )
         
         #
         
@@ -1658,9 +1689,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, test_tags )
                     
-                    for ( test_tag, siblings ) in tags_to_siblings.items():
+                    for test_tag_and_siblings in tags_to_siblings.values():
                         
-                        results.append( False not in ( tag_filter.TagOK( sibling_tag, apply_unnamespaced_rules_to_namespaced_tags = True ) for sibling_tag in siblings ) )
+                        results.append( False not in ( tag_filter.TagOK( t, apply_unnamespaced_rules_to_namespaced_tags = True ) for t in test_tag_and_siblings ) )
                         
                     
                     return results

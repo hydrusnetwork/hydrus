@@ -6,6 +6,7 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusData
@@ -652,16 +653,6 @@ class ThumbnailCache( object ):
         hash = display_media.GetHash()
         mime = display_media.GetMime()
         
-        thumbnail_mime = HC.IMAGE_JPEG
-        
-        # we don't actually know this, it comes down to detailed stuff, but since this is png vs jpeg it isn't a huge deal down in the guts of image loading
-        # only really matters with transparency, so anything that can be transparent we'll prime with a png thing
-        # ain't like I am encoding EXIF rotation in my jpeg thumbs
-        if mime in ( HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP ):
-            
-            thumbnail_mime = HC.IMAGE_PNG
-            
-        
         locations_manager = display_media.GetLocationsManager()
         
         try:
@@ -681,6 +672,8 @@ class ThumbnailCache( object ):
             
         
         try:
+            
+            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( path )
             
             numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
             
