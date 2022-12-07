@@ -30,7 +30,7 @@ jobs:
         run: mkdocs build -d help
       -
         name: Install PyOxidizer
-        run: python3 -m pip install pyoxidizer
+        run: python3 -m pip install pyoxidizer==0.22.0
       -
         name: Build Hydrus
         run: |
