@@ -35,6 +35,36 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_510"><a href="#version_510">version 510</a></h2>
+                    <ul>
+                        <li><h3>notes</h3></li>
+                        <li>duplicate metadata merge options now supports note merging. you can copy from worse to better or in both directions, with a couple extra conflict-resolution options that are a subset of note import options and have reasonable defaults.</li>
+                        <li>the default note merge options are to go from worse to better for 'set as better' and both directions for 'they are the same', renaming notes on conflicts. **your existing duplicate metadata merge options will receive these settings on update, so if you don't want this, update your settings from the duplicate filter page**</li>
+                        <li>the manage notes dialog gets copy and paste buttons. these will copy all the current notes and paste them to another instance of the panel, using the default (extend if possible, otherwise rename) conflict resolution rules</li>
+                        <li>if an automatic system like a parser gives a note text that already exists on the file, the Note Import Options now discards it in all cases, no matter the names involved. no more automatic dupes!</li>
+                        <li>ADVANCED: note import options (and related note add/merge operations that use it) now scan all prefix-matching note names for 'new note is already in file' and 'new note is an extension of a note already in file' tests. this improves a former fix to the 'successive parses of two sites with the same note name but different note text cause one of them to be dupe-added as (2), (3), (4), renames etc...' bug. the initial (1) rename will be scanned and recognised as 'already in file' and ignored or now extended as the settings say, just as if the desired name were hit. thanks to the reports here--I missed the logic the first time around</li>
+                        <li>it would be nice to have 'manage notes' for multiple files at once--this is still a future goal</li>
+                        <li><h3>notes client api</h3></li>
+                        <li>the `/add_notes/set_notes` now takes some new parameters if you want to apply the adapted Note Import Options merge logic rather than figure out renames and extensions yourself</li>
+                        <li>`/add_notes/set_notes` now returns the changes it made, which in the new mode may not be exactly what you instructed</li>
+                        <li>added unit tests and help to reflect the above</li>
+                        <li>client api version is now 38</li>
+                        <li><h3>misc</h3></li>
+                        <li>I fixed up how shift/ctrl/drag selection works on taglists. like with the recent thumbnail selection update, you can now 'undo' a shift-select with subsequent clicks or 'drag undo', and the list remembers what _was_ selected beforehand. ctrl-shift-select is also a more reliable 'deselect range'. both mouse drag selection and ctrl-drag selection use this logic, have fewer index bugs, and the ctrl-drag now chooses at the start whether this drag will be selection or deselection based on your initial click that started the drag. have a play with it--overall it just feels better now</li>
+                        <li>the 'file log' menu now shows a 'reverse' command, which reverses all the imports in the log. if you want to import from oldest to newest with a typical booru, just start your downloader with file imports paused (check the cog icon), and then allow the gallery search to fully populate the list as normaly. once done, hit this new reverse and then unpause the files, and you should be good</li>
+                        <li>any image files or thumbnails that are completely transparent and have a non-completely-black image now have their alpha channel stripped, just like files that are completely opaque. I believe the instances where this is a mistake outweigh the instances where it is legit, but let me know how we get on--maybe there are some weird mid-gif thumbs or something where this misfires. in the same thing, I reverted the 'psd thumbnails now have no transparency' change from last week. the issue where ffmpeg was sometimes being confused about psd layer masks from earlier should be fixed while letting legit transparency work correctly. the ultimate fix here will be to roll imagemagick into the program, which I am now planning and will start 'running from source' experiments with soon</li>
+                        <li>the three 'additional fixed time...' settings in _options->downloading_ now have a max value of 3600, for extreme situation testing</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>updated my serialisabledict/list objects again--they can now handle bytes objects in any position. I will slowly migrate my existing hardcoded bytes serialisation and the old serialisablebytesdict to these freshly flexible classes</li>
+                        <li>for clarity, across the code, renamed 'duplicate action options' to 'duplicate content merge options'</li>
+                        <li>refactored duplicate content merge options initialisation, clearing the stuffed init and totuple to nicer get/set</li>
+                        <li>broke apart how NoteImportOptions does its main note filtering for easier low-level access</li>
+                        <li>cleaned a ton of note import options code up. the logic here was not great, now it is a bit tidier</li>
+                        <li>undid whatever nonsense I was doing with taglist ctrl-drag-selection and cleaned up the main click and drag event handling along with its index calculation and 'what was clicked last time' record</li>
+                        <li>fixed numerous weird logical/position index issues with the taglist and clicking/dragging</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_509"><a href="#version_509">version 509</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

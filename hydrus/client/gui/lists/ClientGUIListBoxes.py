@@ -971,8 +971,11 @@ class ListBox( QW.QScrollArea ):
         self._total_positional_rows = 0
         
         self._last_hit_logical_index = None
-        self._last_drag_start_logical_index = None
-        self._drag_started = False
+        self._shift_click_start_logical_index = None
+        self._logical_indices_selected_this_shift_click = set()
+        self._logical_indices_deselected_this_shift_click = set()
+        self._in_drag = False
+        self._this_drag_is_a_deselection = False
         
         self._last_view_start = None
         
@@ -1154,22 +1157,9 @@ class ListBox( QW.QScrollArea ):
     
     def _GetLogicalIndexUnderMouse( self, mouse_event ):
         
-        y = mouse_event.position().toPoint().y()
+        positional_index = self._GetPositionalIndexUnderMouse( mouse_event )
         
-        if mouse_event.type() == QC.QEvent.MouseMove:
-            
-            visible_rect = QP.ScrollAreaVisibleRect( self )
-            
-            visible_rect_y = visible_rect.y()
-            
-            y += visible_rect_y
-            
-        
-        text_height = self.fontMetrics().height()
-        
-        positional_index = y // text_height
-        
-        if positional_index >= self._total_positional_rows:
+        if positional_index < 0 or positional_index >= self._total_positional_rows:
             
             return None
             
@@ -1211,6 +1201,26 @@ class ListBox( QW.QScrollArea ):
             
         
         return self._terms_to_positional_indices[ term ]
+        
+    
+    def _GetPositionalIndexUnderMouse( self, mouse_event ):
+        
+        y = mouse_event.position().toPoint().y()
+        
+        if mouse_event.type() == QC.QEvent.MouseMove:
+            
+            visible_rect = QP.ScrollAreaVisibleRect( self )
+            
+            visible_rect_y = visible_rect.y()
+            
+            y += visible_rect_y
+            
+        
+        text_height = self.fontMetrics().height()
+        
+        positional_index = y // text_height
+        
+        return positional_index
         
     
     def _GetPredicatesFromTerms( self, terms: typing.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
@@ -1320,11 +1330,11 @@ class ListBox( QW.QScrollArea ):
         self._Hit( shift, ctrl, logical_index )
         
 
-    def _Hit( self, shift, ctrl, logical_index, only_add = False ):
+    def _Hit( self, shift, ctrl, hit_logical_index ):
         
-        if logical_index is not None and ( logical_index < 0 or logical_index >= len( self._ordered_terms ) ):
+        if hit_logical_index is not None and ( hit_logical_index < 0 or hit_logical_index >= len( self._ordered_terms ) ):
             
-            logical_index = None
+            hit_logical_index = None
             
         
         to_select = set()
@@ -1332,73 +1342,108 @@ class ListBox( QW.QScrollArea ):
         
         deselect_all = False
         
+        if not shift:
+            
+            self._shift_click_start_logical_index = hit_logical_index # this can be None
+            self._logical_indices_selected_this_shift_click = set()
+            self._logical_indices_deselected_this_shift_click = set()
+            
+        
         if shift:
             
-            if logical_index is not None:
+            # if we started a shift click already, then assume the end of the list
+            # this lets us shift-click in whitespace and select to the end
+            # however don't initialise a shift-click this way
+            if hit_logical_index is None and self._shift_click_start_logical_index is not None:
+                
+                hit_logical_index = len( self ) - 1
+                
+            
+            if hit_logical_index is not None:
+                
+                if self._shift_click_start_logical_index is None or self._last_hit_logical_index is None:
+                    
+                    if self._last_hit_logical_index is None:
+                        
+                        # no obvious start point to initialise from (blind shift-click out of nowhere), so let's start right here with this click
+                        self._last_hit_logical_index = hit_logical_index
+                        
+                    
+                    self._shift_click_start_logical_index = self._last_hit_logical_index
+                    
                 
                 if ctrl:
                     
-                    if self._LogicalIndexIsSelected( logical_index ):
+                    if len( self._logical_indices_selected_this_shift_click ) > 0:
                         
-                        if self._last_hit_logical_index is not None:
-                            
-                            lower = min( logical_index, self._last_hit_logical_index )
-                            upper = max( logical_index, self._last_hit_logical_index )
-                            
-                            to_deselect = list( range( lower, upper + 1 ) )
-                            
-                        else:
-                            
-                            to_deselect.add( logical_index )
-                            
+                        self._shift_click_start_logical_index = self._last_hit_logical_index
+                        self._logical_indices_selected_this_shift_click = set()
                         
                     
                 else:
                     
-                    # we are now saying if you shift-click on something already selected, we'll make no changes, but we'll move focus ghost
-                    if not self._LogicalIndexIsSelected( logical_index ):
+                    if len( self._logical_indices_deselected_this_shift_click ) > 0:
                         
-                        if self._last_hit_logical_index is not None:
-                            
-                            lower = min( logical_index, self._last_hit_logical_index )
-                            upper = max( logical_index, self._last_hit_logical_index )
-                            
-                            to_select = list( range( lower, upper + 1 ) )
-                            
-                        else:
-                            
-                            to_select.add( logical_index )
-                            
+                        self._shift_click_start_logical_index = self._last_hit_logical_index
+                        self._logical_indices_deselected_this_shift_click = set()
                         
+                    
+                
+                min_index = min( self._shift_click_start_logical_index, hit_logical_index )
+                max_index = max( self._shift_click_start_logical_index, hit_logical_index )
+                
+                logical_indices_between_start_and_hit = list( range( min_index, max_index + 1 ) )
+                
+                if ctrl:
+                    
+                    # deselect mode, either drag or shift-click
+                    
+                    to_deselect = [ logical_index for logical_index in logical_indices_between_start_and_hit if self._LogicalIndexIsSelected( logical_index ) ]
+                    
+                    # any that were previously deselected but no longer in our shift range should be re-selected
+                    to_select = [ logical_index for logical_index in self._logical_indices_deselected_this_shift_click if logical_index not in logical_indices_between_start_and_hit ]
+                    
+                    self._logical_indices_deselected_this_shift_click.update( to_deselect )
+                    self._logical_indices_deselected_this_shift_click.difference_update( to_select )
+                    
+                else:
+                    
+                    to_select = [ logical_index for logical_index in logical_indices_between_start_and_hit if not self._LogicalIndexIsSelected( logical_index ) ]
+                    
+                    # any that were previously selected but no longer in our shift range should be deselected
+                    to_deselect = [ logical_index for logical_index in self._logical_indices_selected_this_shift_click if logical_index not in logical_indices_between_start_and_hit ]
+                    
+                    self._logical_indices_selected_this_shift_click.update( to_select )
+                    self._logical_indices_selected_this_shift_click.difference_update( to_deselect )
                     
                 
             
         elif ctrl:
             
-            if logical_index is not None:
+            if hit_logical_index is not None:
                 
-                if self._LogicalIndexIsSelected( logical_index ):
+                if self._LogicalIndexIsSelected( hit_logical_index ):
                     
-                    to_deselect.add( logical_index )
+                    to_deselect.add( hit_logical_index )
                     
                 else:
                     
-                    to_select.add( logical_index )
+                    to_select.add( hit_logical_index )
                     
                 
             
         else:
             
-            if logical_index is None:
+            if hit_logical_index is None:
                 
                 deselect_all = True
                 
             else:
                 
-                if not self._LogicalIndexIsSelected( logical_index ):
+                if not self._LogicalIndexIsSelected( hit_logical_index ):
                     
                     deselect_all = True
-                    to_select.add( logical_index )
+                    to_select.add( hit_logical_index )
                     
                 
             
@@ -1418,7 +1463,7 @@ class ListBox( QW.QScrollArea ):
             self._Deselect( index )
             
         
-        self._last_hit_logical_index = logical_index
+        self._last_hit_logical_index = hit_logical_index
         
         if self._last_hit_logical_index is not None:
             
@@ -1710,6 +1755,11 @@ class ListBox( QW.QScrollArea ):
         self._RegenTermsToIndices()
         
         self._last_hit_logical_index = None
+        self._shift_click_start_logical_index = None
+        self._logical_indices_selected_this_shift_click = set()
+        self._logical_indices_deselected_this_shift_click = set()
+        self._in_drag = False
+        self._this_drag_is_a_deselection = False
         
     
     def _Select( self, index ):
@@ -1877,8 +1927,7 @@ class ListBox( QW.QScrollArea ):
                 
             elif event.type() == QC.QEvent.MouseButtonRelease:
                 
-                self._last_drag_start_logical_index = None
-                self._drag_started = False
+                self._in_drag = False
                 
                 event.ignore()
                 
@@ -1916,25 +1965,36 @@ class ListBox( QW.QScrollArea ):
         
         if is_dragging:
             
-            logical_index = self._GetLogicalIndexUnderMouse( event )
+            positional_index = self._GetPositionalIndexUnderMouse( event )
             
-            if self._last_drag_start_logical_index is None:
+            # this causes lelmode as we cycle a 'None' hit position to the end of the list on a drag up
+            # therefore, just clip to 0
+            if positional_index < 0:
                 
-                self._last_drag_start_logical_index = logical_index
+                logical_index = 0
                 
-            elif logical_index != self._last_drag_start_logical_index:
+            else:
                 
-                ctrl = event.modifiers() & QC.Qt.ControlModifier
+                logical_index = self._GetLogicalIndexUnderMouse( event )
                 
-                if not self._drag_started:
+            
+            if not self._in_drag:
+                
+                self._in_drag = True
+                
+                if self._last_hit_logical_index is None:
                     
-                    self._Hit( True, ctrl, self._last_drag_start_logical_index )
+                    self._this_drag_is_a_deselection = False
                     
-                    self._drag_started = True
+                else:
+                    
+                    self._this_drag_is_a_deselection = not self._LogicalIndexIsSelected( self._last_hit_logical_index )
                     
                 
-                self._Hit( True, ctrl, logical_index )
-                
+            
+            ctrl = self._this_drag_is_a_deselection
+            
+            self._Hit( True, ctrl, logical_index )
             
         else:
             

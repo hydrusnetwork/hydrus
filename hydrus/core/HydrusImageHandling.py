@@ -345,7 +345,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
         
     
-    numpy_image = StripOutAnyOpaqueAlphaChannel( numpy_image )
+    numpy_image = StripOutAnyUselessAlphaChannel( numpy_image )
     
     return numpy_image
     
@@ -463,7 +463,7 @@ def GenerateThumbnailBytesNumPy( numpy_image ) -> bytes:
     
     ( im_height, im_width, depth ) = numpy_image.shape
     
-    numpy_image = StripOutAnyOpaqueAlphaChannel( numpy_image )
+    numpy_image = StripOutAnyUselessAlphaChannel( numpy_image )
     
     if depth == 4:
         
@@ -1097,11 +1097,22 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ) -> PILImage.Image:
     
     return pil_image
     
-def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasAllCellsTheSame( numpy_image: numpy.array, value: int ):
+    
+    # I looked around for ways to do this iteratively at the c++ level but didn't have huge luck.
+    # unless some magic is going on, the '==' actually creates the bool array
+    # its ok for now!
+    return numpy.all( numpy_image == value )
+    
+    # old way, which makes a third array:
+    # alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all()
+    
+
+def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.array ) -> bool:
     
     shape = numpy_image.shape
     
-    if len( shape ) == 2:
+    if len( shape ) <= 2:
         
         return False
         
@@ -1109,15 +1120,64 @@ def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
     if shape[2] == 4:
         
         # RGBA image
-        # if the alpha channel is all opaque, there is no use storing that info in our pixel hash
+        
+        alpha_channel = numpy_image[:,:,3].copy()
+        
+        if NumPyImageHasAllCellsTheSame( alpha_channel, 255 ): # all opaque
+            
+            return True
+            
+        
+        if NumPyImageHasAllCellsTheSame( alpha_channel, 0 ): # all transparent
+            
+            underlying_image_is_black = NumPyImageHasAllCellsTheSame( numpy_image, 0 )
+            
+            return not underlying_image_is_black
+            
+        
+    
+    return False
+    
+
+def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
+    
+    shape = numpy_image.shape
+    
+    if len( shape ) <= 2:
+        
+        return False
+        
+    
+    if shape[2] == 4:
+        
+        # RGBA image
         # opaque means 255
         
         alpha_channel = numpy_image[:,:,3].copy()
         
-        if ( alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all():
-            
-            return True
-            
+        return NumPyImageHasAllCellsTheSame( alpha_channel, 255 )
+        
+    
+    return False
+    
+
+def NumPyImageHasTransparentAlphaChannel( numpy_image: numpy.array ) -> bool:
+    
+    shape = numpy_image.shape
+    
+    if len( shape ) <= 2:
+        
+        return False
+        
+    
+    if shape[2] == 4:
+        
+        # RGBA image
+        # transparent means 0
+        
+        alpha_channel = numpy_image[:,:,3].copy()
+        
+        return NumPyImageHasAllCellsTheSame( alpha_channel, 0 )
         
     
     return False
@@ -1225,9 +1285,9 @@ def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
     return pil_image
     
 
-def StripOutAnyOpaqueAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
+def StripOutAnyUselessAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     
-    if NumPyImageHasOpaqueAlphaChannel( numpy_image ):
+    if NumPyImageHasUselessAlphaChannel( numpy_image ):
         
         numpy_image = numpy_image[:,:,:3].copy()
         

@@ -1475,15 +1475,51 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
             raise HydrusExceptions.BadRequestException( 'There was no file identifier or hash given!' )
             
         
-        notes = request.parsed_request_args.GetValue( 'notes', dict, expected_dict_types = ( str, str ) )
+        new_names_to_notes = request.parsed_request_args.GetValue( 'notes', dict, expected_dict_types = ( str, str ) )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in notes.items() ]
+        merge_cleverly = request.parsed_request_args.GetValue( 'merge_cleverly', bool, default_value = False )
         
-        service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+        if merge_cleverly:
+            
+            from hydrus.client.importing.options import NoteImportOptions
+            
+            extend_existing_note_if_possible = request.parsed_request_args.GetValue( 'extend_existing_note_if_possible', bool, default_value = True )
+            conflict_resolution = request.parsed_request_args.GetValue( 'conflict_resolution', int, default_value = NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+            
+            if conflict_resolution not in NoteImportOptions.note_import_conflict_str_lookup:
+                
+                raise HydrusExceptions.BadRequestException( 'The given conflict resolution type was not in the allowed range!' )
+                
+            
+            note_import_options = NoteImportOptions.NoteImportOptions()
+            
+            note_import_options.SetIsDefault( False )
+            note_import_options.SetExtendExistingNoteIfPossible( extend_existing_note_if_possible )
+            note_import_options.SetConflictResolution( conflict_resolution )
+            
+            media_result = HG.client_controller.Read( 'media_result', hash )
+            
+            existing_names_to_notes = media_result.GetNotesManager().GetNamesToNotes()
+            
+            new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, new_names_to_notes )
+            
         
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_names_to_notes.items() ]
         
-        response_context = HydrusServerResources.ResponseContext( 200 )
+        if len( content_updates ) > 0:
+            
+            service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+        body_dict = {}
+        
+        body_dict[ 'notes' ] = new_names_to_notes
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         

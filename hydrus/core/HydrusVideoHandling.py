@@ -593,12 +593,9 @@ def HasVideoStream( path ) -> bool:
     
 def RenderImageToImagePath( path, temp_image_path ):
     
-    # this should auto-convert if you give it .png or .jpg
-    # I noticed that ffmpeg got confused about alpha channels with PSDs, gave fully opaque alpha over an otherwise perfectly acceptable catgirl image, so we'll do jpeg for PSD from now on
-    
     # -y to overwrite the temp path
     
-    if temp_image_path.endswith( '.jpeg' ):
+    if temp_image_path.endswith( '.jpg' ):
         
         # '-q:v 1' does high quality
         cmd = [ FFMPEG_PATH, '-y', "-i", path, "-q:v", "1", temp_image_path ]

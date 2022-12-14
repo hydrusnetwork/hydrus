@@ -474,13 +474,14 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     isDefaultChanged = QC.Signal( bool )
     
-    def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, allow_default_selection: bool ):
+    def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, allow_default_selection: bool, simple_mode = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        self._allow_default_selection = allow_default_selection
+        self._simple_mode = simple_mode
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         
         #
         
@@ -569,9 +570,9 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         default_panel.Add( self._use_default_dropdown, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        if not allow_default_selection:
+        if not self._allow_default_selection:
             
-            default_panel.hide()
+            default_panel.setVisible( False )
             
         
         #
@@ -579,12 +580,37 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'get notes: ', self._get_notes ) )
-        rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
-        rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
-        rows.append( ( 'only allow these note names' + os.linesep + '(leave blank for \'get all\'): ', self._name_whitelist ) )
-        rows.append( ( 'rename these notes as they come in: ', self._names_to_name_overrides ) )
-        rows.append( ( 'rename spare note(s) to this: ', self._all_name_override ) )
+        if self._simple_mode:
+            
+            help_hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( help_hbox, help_button, CC.FLAGS_ON_RIGHT )
+            
+            help_button.setVisible( False )
+            
+            default_panel.setVisible( False )
+            self._load_default_options.setVisible( False )
+            
+            self._get_notes.setVisible( False )
+            self._name_whitelist.setVisible( False )
+            self._names_to_name_overrides.setVisible( False )
+            self._all_name_override.setVisible( False )
+            
+            rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
+            rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
+            
+            
+        else:
+            
+            rows.append( ( 'get notes: ', self._get_notes ) )
+            rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
+            rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
+            rows.append( ( 'only allow these note names' + os.linesep + '(leave blank for \'get all\'): ', self._name_whitelist ) )
+            rows.append( ( 'rename these notes as they come in: ', self._names_to_name_overrides ) )
+            rows.append( ( 'rename spare note(s) to this: ', self._all_name_override ) )
+            
+            help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+            
         
         gridbox = ClientGUICommon.WrapInGrid( self._specific_options_panel, rows )
         
@@ -707,11 +733,13 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_message = '''A \'note\' exists in hydrus as the pair of ( name, text ). A file can only have one note for each name. If a downloader provides some notes, normally they will simply be added to your files. The main tricky part comes when a new note conflicts with an existing one.
 
-If a new note coming in has exactly the same name and text, no change is made.
+If a new note coming in has exactly the same text as any note the file already has, no change is made.
 
-If a new note coming in has the same name but a different text, then two things can happen:
+If a new note coming in has the same name but different text, then two things can happen:
 
 1) If the new text is the same as the existing text but it has more appended (e.g. an artist comment that since had an extra paragraph added), then if you have \'extend existing notes\' checked, the new note will replace the existing one.
+
+- ADVANCED: Note this can also apply to 'name (1)' renames. If ( name, text ) comes in, and 'text' is an extension of 'name (1)' or 'name (3)', _that_ renamed note will be extended.
 
 2) If the new note is more complicated than an extension, or that checkbox is not checked, then the \'conflict\' action occurs. Think about what you want.
 
@@ -721,6 +749,11 @@ Beyond that, you can filter and rename notes. Check the tooltips for more info.'
         
     
     def _UpdateIsDefault( self ):
+        
+        if self._simple_mode or not self._allow_default_selection:
+            
+            return
+            
         
         is_default = self._use_default_dropdown.GetValue()
         

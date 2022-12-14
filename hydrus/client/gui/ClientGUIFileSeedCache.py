@@ -177,6 +177,18 @@ def RetryIgnored( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSe
     
     file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
     
+def ReverseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    message = 'Reverse this file log? Any outstanding imports will process in the opposite order.'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.Accepted:
+        
+        file_seed_cache.Reverse()
+        
+    
+
 def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, show = 'all' ):
     
     if show == 'all':
@@ -255,6 +267,10 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     ClientGUIMenus.AppendSeparator( menu )
     
     if len( file_seed_cache ) > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'reverse import order', 'Reverse the import list so outstanding imports process in the opposite order.', ReverseFileSeedCache, win, file_seed_cache )
+        
+        ClientGUIMenus.AppendSeparator( menu )
         
         submenu = QW.QMenu( menu )
         

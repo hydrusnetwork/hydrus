@@ -315,19 +315,49 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions(
-            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ],
-            rating_service_actions = [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ],
-            sync_archive_action = ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS,
-            sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY
-        )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions(
-            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ],
-            rating_service_actions = [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ],
-            sync_archive_action = ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS,
-            sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
-        )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = ClientDuplicates.DuplicateActionOptions()
+        duplicate_content_merge_options = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        duplicate_content_merge_options.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ] )
+        duplicate_content_merge_options.SetRatingServiceActions( [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ] )
+        duplicate_content_merge_options.SetSyncArchiveAction( ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
+        duplicate_content_merge_options.SetSyncURLsAction( HC.CONTENT_MERGE_ACTION_COPY )
+        duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_COPY )
+        
+        from hydrus.client.importing.options import NoteImportOptions
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        note_import_options.SetIsDefault( False )
+        note_import_options.SetGetNotes( True )
+        note_import_options.SetExtendExistingNoteIfPossible( True )
+        note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+        
+        duplicate_content_merge_options.SetSyncNoteImportOptions( note_import_options )
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = duplicate_content_merge_options
+        
+        duplicate_content_merge_options = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        duplicate_content_merge_options.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ), ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ] )
+        duplicate_content_merge_options.SetRatingServiceActions( [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
+        duplicate_content_merge_options.SetSyncArchiveAction( ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
+        duplicate_content_merge_options.SetSyncURLsAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        note_import_options.SetIsDefault( False )
+        note_import_options.SetGetNotes( True )
+        note_import_options.SetExtendExistingNoteIfPossible( True )
+        note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+        
+        duplicate_content_merge_options.SetSyncNoteImportOptions( note_import_options )
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = duplicate_content_merge_options
+        
+        duplicate_content_merge_options = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = duplicate_content_merge_options
         
         #
         
@@ -1110,7 +1140,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDuplicateActionOptions( self, duplicate_type ):
+    def GetDuplicateContentMergeOptions( self, duplicate_type ):
         
         with self._lock:
             
@@ -1120,7 +1150,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                return ClientDuplicates.DuplicateActionOptions()
+                return ClientDuplicates.DuplicateContentMergeOptions()
                 
             
         
@@ -1571,11 +1601,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDuplicateActionOptions( self, duplicate_type, duplicate_action_options ):
+    def SetDuplicateContentMergeOptions( self, duplicate_type, duplicate_content_merge_options ):
         
         with self._lock:
             
-            self._dictionary[ 'duplicate_action_options' ][ duplicate_type ] = duplicate_action_options
+            self._dictionary[ 'duplicate_action_options' ][ duplicate_type ] = duplicate_content_merge_options
             
         
     

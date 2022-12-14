@@ -1935,6 +1935,13 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( self._file_seeds )
         
     
+    def _FileSeedIndicesJustChanged( self ):
+        
+        self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
+        
+        self._SetStatusesToFileSeedsDirty()
+        
+    
     def _FixFileSeedsStatusPosition( self, file_seeds ):
         
         indices_and_file_seeds_affected = []
@@ -2130,9 +2137,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             self._file_seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
             
-            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
-            
-            self._SetStatusesToFileSeedsDirty()
+            self._FileSeedIndicesJustChanged()
             
         
     
@@ -2450,9 +2455,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     self._file_seeds.insert( index - 1, file_seed )
                     
                 
-                self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
-                
-                self._SetStatusesToFileSeedsDirty()
+                self._FileSeedIndicesJustChanged()
                 
             
         
@@ -2510,9 +2513,8 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             new_file_seeds.extend( self._file_seeds[-self.COMPACT_NUMBER:] )
             
             self._file_seeds = new_file_seeds
-            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
             
-            self._SetStatusesToFileSeedsDirty()
+            self._FileSeedIndicesJustChanged()
             
             self._SetStatusDirty()
             
@@ -2533,9 +2535,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     self._file_seeds.insert( index + 1, file_seed )
                     
                 
-                self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
-                
-                self._SetStatusesToFileSeedsDirty()
+                self._FileSeedIndicesJustChanged()
                 
             
         
@@ -2799,9 +2799,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 index += 1
                 
             
-            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
-            
-            self._SetStatusesToFileSeedsDirty()
+            self._FileSeedIndicesJustChanged()
             
             self._SetStatusDirty()
             
@@ -2836,9 +2834,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             self._file_seeds = HydrusSerialisable.SerialisableList( [ file_seed for file_seed in self._file_seeds if file_seed not in file_seeds_to_delete ] )
             
-            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
-            
-            self._SetStatusesToFileSeedsDirty()
+            self._FileSeedIndicesJustChanged()
             
             self._SetStatusDirty()
             
@@ -2902,6 +2898,18 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         self.NotifyFileSeedsUpdated( ignored_file_seeds )
+        
+    
+    def Reverse( self ):
+        
+        with self._lock:
+            
+            self._file_seeds.reverse()
+            
+            self._FileSeedIndicesJustChanged()
+            
+        
+        self.NotifyFileSeedsUpdated( list( self._file_seeds ) )
         
     
     def WorkToDo( self ):
