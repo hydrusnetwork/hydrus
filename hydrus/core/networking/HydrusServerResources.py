@@ -1224,7 +1224,6 @@ class ResponseContext( object ):
             raise Exception( 'Was given an incompatible object to respond with: ' + repr( body ) )
             
         
-        
         if cookies is None:
             
             cookies = []

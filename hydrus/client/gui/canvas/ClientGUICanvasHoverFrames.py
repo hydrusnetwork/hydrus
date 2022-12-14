@@ -1809,19 +1809,19 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         new_options = HG.client_controller.new_options
         
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateContentMergeOptionsPanel( dlg, duplicate_type, duplicate_content_merge_options )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                duplicate_action_options = panel.GetValue()
+                duplicate_content_merge_options = panel.GetValue()
                 
-                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+                new_options.SetDuplicateContentMergeOptions( duplicate_type, duplicate_content_merge_options )
                 
             
         

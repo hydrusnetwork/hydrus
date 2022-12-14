@@ -99,13 +99,13 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         
     elif mime == HC.APPLICATION_PSD:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.jpeg' )
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
         
         try:
             
             HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_JPEG, clip_rect = clip_rect )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
         except:
             

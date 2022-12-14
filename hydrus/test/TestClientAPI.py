@@ -1174,7 +1174,13 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
+        text = str( data, 'utf-8' )
+        
         self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], new_notes_dict )
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
@@ -1212,6 +1218,213 @@ class TestClientAPI( unittest.TestCase ):
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
+        # set notes with merge
+        
+        # setup
+        
+        file_id = 1
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash_hex = hash.hex()
+        
+        size = 100
+        mime = HC.IMAGE_PNG
+        width = 20
+        height = 20
+        duration = None
+        
+        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+        
+        service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+        service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
+        
+        tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
+        
+        locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() )
+        ratings_manager = ClientMediaManagers.RatingsManager( {} )
+        notes_manager = ClientMediaManagers.NotesManager( { 'abc' : '123' } )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        
+        from hydrus.client.importing.options import NoteImportOptions
+        
+        # extend
+        
+        HG.test_controller.SetRead( 'media_result', media_result )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'abc' : '1234' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict, 'merge_cleverly' : True, 'extend_existing_note_if_possible' : True, 'conflict_resolution' : NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], new_notes_dict )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '1234' ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # no extend (rename)
+        
+        HG.test_controller.SetRead( 'media_result', media_result )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'abc' : '1234' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict, 'merge_cleverly' : True, 'extend_existing_note_if_possible' : False, 'conflict_resolution' : NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], { 'abc (1)' : '1234' } )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc (1)', '1234' ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # ignore
+        
+        HG.test_controller.SetRead( 'media_result', media_result )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'abc' : '789' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict, 'merge_cleverly' : True, 'extend_existing_note_if_possible' : True, 'conflict_resolution' : NoteImportOptions.NOTE_IMPORT_CONFLICT_IGNORE }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], {} )
+        
+        stuff = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( stuff, [] )
+        
+        # append
+        
+        HG.test_controller.SetRead( 'media_result', media_result )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'abc' : '789' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict, 'merge_cleverly' : True, 'extend_existing_note_if_possible' : True, 'conflict_resolution' : NoteImportOptions.NOTE_IMPORT_CONFLICT_APPEND }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], { 'abc' : '123\n\n789' } )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '123\n\n789' ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # replace
+        
+        HG.test_controller.SetRead( 'media_result', media_result )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_notes/set_notes'
+        
+        new_notes_dict = { 'abc' : '789' }
+        
+        body_dict = { 'hash' : hash_hex, 'notes' : new_notes_dict, 'merge_cleverly' : True, 'extend_existing_note_if_possible' : True, 'conflict_resolution' : NoteImportOptions.NOTE_IMPORT_CONFLICT_REPLACE }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'notes' ], { 'abc' : '789' } )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '789' ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+    
     def _test_add_tags( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'everything' ]

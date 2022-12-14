@@ -469,7 +469,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gug = ClientGUIImport.GUGKeyAndNameSelector( gallery_downloader, gug_key_and_name )
             
-            self._gallery_page_wait_period_pages = ClientGUICommon.BetterSpinBox( gallery_downloader, min=1, max=120 )
+            self._gallery_page_wait_period_pages = ClientGUICommon.BetterSpinBox( gallery_downloader, min=1, max=3600 )
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, none_phrase = 'no limit', min = 1, max = 1000000 )
             
             self._highlight_new_query = QW.QCheckBox( gallery_downloader )
@@ -478,7 +478,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
             
-            self._gallery_page_wait_period_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=30 )
+            self._gallery_page_wait_period_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=3600 )
             self._max_simultaneous_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=100 )
             
             self._subscription_file_error_cancel_threshold = ClientGUICommon.NoneableSpinCtrl( subscriptions, min = 1, max = 1000000, unit = 'errors' )
@@ -495,7 +495,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
             
-            self._watcher_page_wait_period = ClientGUICommon.BetterSpinBox( watchers, min=1, max=120 )
+            self._watcher_page_wait_period = ClientGUICommon.BetterSpinBox( watchers, min=1, max=3600 )
             self._highlight_new_watcher = QW.QCheckBox( watchers )
             
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()

@@ -942,11 +942,14 @@ Required Headers:
     
 Arguments (in percent-encoded JSON):
 :   
-*   `notes`: (an Object mapping string note names to string note contents)
-*   `hash`: (selective, an SHA256 hash for the file in 64 characters of hexadecimal)
-*   `file_id`: (selective, the integer numerical identifier for the file)
+* `notes`: (an Object mapping string names to string texts)
+* `hash`: (selective, an SHA256 hash for the file in 64 characters of hexadecimal)
+* `file_id`: (selective, the integer numerical identifier for the file)
+* `merge_cleverly`: true or false (optional, defaults false)
+* `extend_existing_note_if_possible`: true or false (optional, defaults true)
+* `conflict_resolution`: 0, 1, 2, or 3 (optional, defaults 3)
 
-Existing notes will be overwritten. If the file has extra notes you do not specify, they are untouched.
+With `merge_cleverly` left `false`, then this is a simple update operation. Existing notes will be overwritten exactly as you specify. Any other notes the file has will be untouched.
 ```json title="Example request body"
 {
   "notes" : {
@@ -957,8 +960,28 @@ Existing notes will be overwritten. If the file has extra notes you do not speci
 }
 ```
 
+If you turn on `merge_cleverly`, then the client will merge your new notes into the file's existing notes using the same logic you have seen in Note Import Options and the Duplicate Metadata Merge Options. This navigates conflict resolution, and you should use it if you are adding potential duplicate content from an 'automatic' source like a parser and do not want to wade into the logic. Do not use it for a user-editing experience (a user expects a strict overwrite/replace experience and will be confused by this mode).
+
+To start off, in this mode, if your note text exists under a different name for the file, your dupe note will not be added to your new name. `extend_existing_note_if_possible` makes it so your existing note text will overwrite an existing name (or a '... (1)' rename of that name) if the existing text is inside your given text. `conflict_resolution` is an enum governing what to do in all other conflicts:
+
+_If a new note name already exists and its new text differs from what already exists:_
+:  
+* 0 - replace - Overwrite the existing conflicting note.
+* 1 - ignore - Make no changes.
+* 2 - append - Append the new text to the existing text.
+* 3 - rename (default) - Add the new text under a 'name (x)'-style rename.
+
 Response: 
-:   200 with no content. This operation is idempotent.
+:   200 with the note changes actually sent through. If `merge_cleverly=false`, this is exactly what you gave, and this operation is idempotent. If `merge_cleverly=true`, then this may differ, even be empty, and this operation might not be idempotent.
+```json title="Example response"
+{
+  "notes" : {
+    "note name" : "content of note",
+    "another note (1)" : "asdf"
+  }
+}
+```
+
 
 ### **POST `/add_notes/delete_notes`** { id="add_notes_delete_notes" }
 
@@ -984,7 +1007,7 @@ Arguments (in percent-encoded JSON):
 }
 ```
 
-Response: 
+Response:  
 :   200 with no content. This operation is idempotent.
 
 ## Managing Cookies and HTTP Headers

@@ -156,25 +156,33 @@ class TestSerialisables( unittest.TestCase ):
             
         
     
-    def test_SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS( self ):
+    def test_SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS( self ):
         
         def test( obj, dupe_obj ):
             
-            self.assertEqual( obj.ToTuple(), dupe_obj.ToTuple() )
+            self.assertEqual( obj.GetTagServiceActions(), dupe_obj.GetTagServiceActions() )
+            self.assertEqual( obj.GetRatingServiceActions(), dupe_obj.GetRatingServiceActions() )
+            self.assertEqual( obj.GetSyncArchiveAction(), dupe_obj.GetSyncArchiveAction() )
+            self.assertEqual( obj.GetSyncURLsAction(), dupe_obj.GetSyncURLsAction() )
+            self.assertEqual( obj.GetSyncNotesAction(), dupe_obj.GetSyncNotesAction() )
+            self.assertEqual( obj.GetSyncNoteImportOptions().GetSerialisableTuple(), dupe_obj.GetSyncNoteImportOptions().GetSerialisableTuple() )
             
         
-        duplicate_action_options_delete_and_move = ClientDuplicates.DuplicateActionOptions(
-            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ],
-            rating_service_actions = [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ]
-        )
-        duplicate_action_options_copy = ClientDuplicates.DuplicateActionOptions(
-            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, HydrusTags.TagFilter() ) ],
-            rating_service_actions = [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ]
-        )
-        duplicate_action_options_merge = ClientDuplicates.DuplicateActionOptions(
-            tag_service_actions = [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ],
-            rating_service_actions = [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ]
-        )
+        duplicate_content_merge_options_delete_and_move = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        duplicate_content_merge_options_delete_and_move.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, HydrusTags.TagFilter() ) ] )
+        duplicate_content_merge_options_delete_and_move.SetRatingServiceActions( [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ] )
+        
+        duplicate_content_merge_options_copy = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        duplicate_content_merge_options_copy.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, HydrusTags.TagFilter() ) ] )
+        duplicate_content_merge_options_copy.SetRatingServiceActions( [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ] )
+        
+        duplicate_content_merge_options_merge = ClientDuplicates.DuplicateContentMergeOptions()
+        
+        duplicate_content_merge_options_merge.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ] )
+        duplicate_content_merge_options_merge.SetRatingServiceActions( [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
+        
         
         inbox = True
         size = 40960
@@ -278,9 +286,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        self._dump_and_load_and_test( duplicate_action_options_delete_and_move, test )
-        self._dump_and_load_and_test( duplicate_action_options_copy, test )
-        self._dump_and_load_and_test( duplicate_action_options_merge, test )
+        self._dump_and_load_and_test( duplicate_content_merge_options_delete_and_move, test )
+        self._dump_and_load_and_test( duplicate_content_merge_options_copy, test )
+        self._dump_and_load_and_test( duplicate_content_merge_options_merge, test )
         
         #
         
@@ -293,7 +301,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -303,7 +311,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, trashed_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, trashed_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -313,13 +321,13 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, deleted_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, deleted_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         self.assertEqual( result, {} )
         
         #
         
-        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -332,7 +340,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -346,13 +354,13 @@ class TestSerialisables( unittest.TestCase ):
         #
         #
         
-        result = duplicate_action_options_copy.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
         
         self.assertEqual( result, {} )
         
         #
         
-        result = duplicate_action_options_copy.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -365,7 +373,7 @@ class TestSerialisables( unittest.TestCase ):
         #
         #
         
-        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -377,7 +385,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         
@@ -389,7 +397,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( one_media, two_media, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdates( one_media, two_media, file_deletion_reason = file_deletion_reason )
         
         scu = {}
         

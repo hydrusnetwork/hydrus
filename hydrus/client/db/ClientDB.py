@@ -9155,169 +9155,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
         
-        if version == 450:
-            
-            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'shape_perceptual_hashes', ) ).fetchone()
-            
-            if result is not None:
-                
-                self._controller.frame_splash_status.SetSubtext( 'moving some similar file data around' )
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
-                self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
-                self._Execute( 'CREATE TABLE IF NOT EXISTS shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
-                
-                self._Execute( 'INSERT OR IGNORE INTO external_master.shape_perceptual_hashes SELECT phash_id, phash FROM external_caches.shape_perceptual_hashes;' )
-                self._Execute( 'INSERT OR IGNORE INTO external_master.shape_perceptual_hash_map SELECT phash_id, hash_id FROM external_caches.shape_perceptual_hash_map;' )
-                self._Execute( 'INSERT OR IGNORE INTO main.shape_search_cache SELECT hash_id, searched_distance FROM external_caches.shape_search_cache;' )
-                
-                self._Execute( 'DROP TABLE external_caches.shape_perceptual_hashes;' )
-                self._Execute( 'DROP TABLE external_caches.shape_perceptual_hash_map;' )
-                self._Execute( 'DROP TABLE external_caches.shape_search_cache;' )
-                
-                self._CreateIndex( 'external_master.shape_perceptual_hash_map', [ 'hash_id' ] )
-                
-                self.modules_db_maintenance.TouchAnalyzeNewTables()
-                
-            
-        
-        if version == 451:
-            
-            self.modules_services.combined_file_service_id = self.modules_services.GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
-            
-            file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES ) )
-            file_service_ids.append( self.modules_services.combined_file_service_id )
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                
-                if file_service_id == self.modules_services.combined_file_service_id:
-                    
-                    self._controller.frame_splash_status.SetText( 'working on combined tags cache - {}'.format( tag_service_id ) )
-                    
-                else:
-                    
-                    self._controller.frame_splash_status.SetText( 'working on specific tags cache - {} {}'.format( file_service_id, tag_service_id ) )
-                    
-                
-                tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
-                integer_subtags_table_name = self.modules_tag_search.GetIntegerSubtagsTableName( file_service_id, tag_service_id )
-                
-                query = 'SELECT subtag_id FROM {};'.format( tags_table_name )
-                
-                BLOCK_SIZE = 10000
-                
-                for ( group_of_subtag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, query, BLOCK_SIZE ):
-                    
-                    message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
-                    
-                    self._controller.frame_splash_status.SetSubtext( message )
-                    
-                    with self._MakeTemporaryIntegerTable( group_of_subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
-                        
-                        # temp subtag_ids to subtags
-                        subtag_ids_and_subtags = self._Execute( 'SELECT subtag_id, subtag FROM {} CROSS JOIN subtags USING ( subtag_id );'.format( temp_subtag_ids_table_name ) ).fetchall()
-                        
-                        for ( subtag_id, subtag ) in subtag_ids_and_subtags:
-                            
-                            if subtag.isdecimal():
-                                
-                                try:
-                                    
-                                    integer_subtag = int( subtag )
-                                    
-                                    if ClientDBTagSearch.CanCacheInteger( integer_subtag ):
-                                        
-                                        self._Execute( 'INSERT OR IGNORE INTO {} ( subtag_id, integer_subtag ) VALUES ( ?, ? );'.format( integer_subtags_table_name ), ( subtag_id, integer_subtag ) )
-                                        
-                                    
-                                except ValueError:
-                                    
-                                    pass
-                                    
-                                
-                            
-                        
-                    
-                
-            
-        
-        if version == 452:
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES )
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                
-                suffix = '{}_{}'.format( file_service_id, tag_service_id )
-                
-                cache_files_table_name = 'external_caches.specific_files_cache_{}'.format( suffix )
-                
-                result = self._Execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( cache_files_table_name.split( '.', 1 )[1], ) ).fetchone()
-                
-                if result is None:
-                    
-                    continue
-                    
-                
-                self._controller.frame_splash_status.SetText( 'filling holes in specific tags cache - {} {}'.format( file_service_id, tag_service_id ) )
-                
-                # it turns out cache_files_table_name was not being populated on service creation/reset, so files imported before a tag service was created were not being stored in specific mapping cache data!
-                # furthermore, there was confusion whether cache_files_table_name was for mappings (files that have tags) on the tag service or just files on the file service.
-                # since we now store current files for each file service on a separate table, and the clever mappings intepretation seems expensive and not actually so useful, we are moving to our nice table instead in various joins/filters/etc...
-                
-                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
-                
-                query = 'SELECT hash_id FROM {} EXCEPT SELECT hash_id FROM {};'.format( current_files_table_name, cache_files_table_name )
-                
-                BLOCK_SIZE = 10000
-                
-                for ( group_of_hash_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, query, BLOCK_SIZE ):
-                    
-                    message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
-                    
-                    self._controller.frame_splash_status.SetSubtext( message )
-                    
-                    with self._MakeTemporaryIntegerTable( group_of_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-                        
-                        self.modules_mappings_cache_specific_storage.AddFiles( file_service_id, tag_service_id, group_of_hash_ids, temp_hash_ids_table_name )
-                        self.modules_mappings_cache_specific_display.AddFiles( file_service_id, tag_service_id, group_of_hash_ids, temp_hash_ids_table_name )
-                        
-                    
-                
-                self._Execute( 'DROP TABLE {};'.format( cache_files_table_name ) )
-                
-            
-        
-        if version == 459:
-            
-            try:
-                
-                self._controller.frame_splash_status.SetSubtext( 'scheduling clip and apng files for regen' )
-                
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.APPLICATION_CLIP, ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_APNG, ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to schedule clip and apng files for maintenance failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 460:
             
             try:
@@ -10742,6 +10579,56 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 509:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                from hydrus.client.importing.options import NoteImportOptions
+                
+                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER )
+                
+                duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_COPY )
+                
+                note_import_options = NoteImportOptions.NoteImportOptions()
+                
+                note_import_options.SetIsDefault( False )
+                note_import_options.SetGetNotes( True )
+                note_import_options.SetExtendExistingNoteIfPossible( True )
+                note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+                
+                duplicate_content_merge_options.SetSyncNoteImportOptions( note_import_options )
+                
+                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER, duplicate_content_merge_options )
+                
+                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY )
+                
+                duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+                
+                note_import_options = NoteImportOptions.NoteImportOptions()
+                
+                note_import_options.SetIsDefault( False )
+                note_import_options.SetGetNotes( True )
+                note_import_options.SetExtendExistingNoteIfPossible( True )
+                note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+                
+                duplicate_content_merge_options.SetSyncNoteImportOptions( note_import_options )
+                
+                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY, duplicate_content_merge_options )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Updating your duplicate metadata merge options for the new note-merge support failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

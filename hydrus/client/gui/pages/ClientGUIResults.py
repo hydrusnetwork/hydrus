@@ -1461,13 +1461,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
-    def _SetDuplicates( self, duplicate_type, media_pairs = None, media_group = None, duplicate_action_options = None, silent = False ):
+    def _SetDuplicates( self, duplicate_type, media_pairs = None, media_group = None, duplicate_content_merge_options = None, silent = False ):
         
         if duplicate_type == HC.DUPLICATE_POTENTIAL:
             
             yes_no_text = 'queue all possible and valid pair combinations into the duplicate filter'
             
-        elif duplicate_action_options is None:
+        elif duplicate_content_merge_options is None:
             
             yes_no_text = 'apply "{}"'.format( HC.duplicate_type_string_lookup[ duplicate_type ] )
             
@@ -1477,7 +1477,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 new_options = HG.client_controller.new_options
                 
-                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
             
         else:
@@ -1607,13 +1607,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 list_of_service_keys_to_content_updates = hash_pairs_to_list_of_service_keys_to_content_updates[ ( first_hash, second_hash ) ]
                 
-                if duplicate_action_options is not None:
+                if duplicate_content_merge_options is not None:
                     
                     do_not_do_deletes = is_first_run
                     
                     # so the important part of this mess is here. we send the duplicated media, which is keeping up with content updates, to the method here
                     # original 'first_media' is not changed, and won't be until the database Write clears and publishes everything
-                    list_of_service_keys_to_content_updates.append( duplicate_action_options.ProcessPairIntoContentUpdates( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
+                    list_of_service_keys_to_content_updates.append( duplicate_content_merge_options.ProcessPairIntoContentUpdates( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
                     
                 
                 for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
@@ -1678,24 +1678,24 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
         
         new_options = HG.client_controller.new_options
         
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options, for_custom_action = True )
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateContentMergeOptionsPanel( dlg, duplicate_type, duplicate_content_merge_options, for_custom_action = True )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                duplicate_action_options = panel.GetValue()
+                duplicate_content_merge_options = panel.GetValue()
                 
-                self._SetDuplicates( duplicate_type, duplicate_action_options = duplicate_action_options )
+                self._SetDuplicates( duplicate_type, duplicate_content_merge_options = duplicate_content_merge_options )
                 
             
         
     
-    def _SetDuplicatesFocusedBetter( self, duplicate_action_options = None ):
+    def _SetDuplicatesFocusedBetter( self, duplicate_content_merge_options = None ):
         
         if self._HasFocusSingleton():
             

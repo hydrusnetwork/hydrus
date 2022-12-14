@@ -480,7 +480,7 @@ class TestNoteImportOptions( unittest.TestCase ):
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_APPEND )
         
         result = note_import_options.GetServiceKeysToContentUpdates( media_result, conflict_names_and_notes )
-        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes', 'here is a note' + os.linesep * 2 + 'other note' ) ) ] }
+        expected_result = { CC.LOCAL_NOTES_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( example_hash, 'notes', 'here is a note' + '\n' * 2 + 'other note' ) ) ] }
         
         self.assertEqual( result, expected_result )
         

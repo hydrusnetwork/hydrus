@@ -1,6 +1,7 @@
 import collections
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -11,6 +12,7 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
@@ -220,34 +222,27 @@ class DuplicatesManager( object ):
             
         
     
+
 SYNC_ARCHIVE_NONE = 0
 SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
 SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
 
-class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
+class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
-    SERIALISABLE_NAME = 'Duplicate Action Options'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS
+    SERIALISABLE_NAME = 'Duplicate Content Merge Options'
+    SERIALISABLE_VERSION = 6
     
-    def __init__( self, tag_service_actions = None, rating_service_actions = None, sync_archive_action = False, sync_urls_action = None ):
-        
-        if tag_service_actions is None:
-            
-            tag_service_actions = []
-            
-        
-        if rating_service_actions is None:
-            
-            rating_service_actions = []
-            
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._tag_service_actions = tag_service_actions
-        self._rating_service_actions = rating_service_actions
-        self._sync_archive_action = sync_archive_action
-        self._sync_urls_action = sync_urls_action
+        self._tag_service_actions = []
+        self._rating_service_actions = []
+        self._sync_notes_action = HC.CONTENT_MERGE_ACTION_NONE
+        self._sync_note_import_options = NoteImportOptions.NoteImportOptions()
+        self._sync_archive_action = SYNC_ARCHIVE_NONE
+        self._sync_urls_action = HC.CONTENT_MERGE_ACTION_NONE
         
     
     def _GetSerialisableInfo( self ):
@@ -263,15 +258,18 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
         serialisable_rating_service_actions = [ ( service_key.hex(), action ) for ( service_key, action ) in self._rating_service_actions ]
         
-        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive_action, self._sync_urls_action )
+        serialisable_sync_note_import_options = self._sync_note_import_options.GetSerialisableTuple()
+        
+        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_notes_action, serialisable_sync_note_import_options, self._sync_archive_action, self._sync_urls_action )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive_action, self._sync_urls_action ) = serialisable_info
+        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_notes_action, serialisable_sync_note_import_options, self._sync_archive_action, self._sync_urls_action ) = serialisable_info
         
         self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
+        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -345,18 +343,84 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( serialisable_tag_service_actions, serialisable_rating_service_actions, sync_archive_action, sync_urls_action ) = old_serialisable_info
+            
+            if sync_urls_action is None:
+                
+                sync_urls_action = HC.CONTENT_MERGE_ACTION_NONE
+                
+            
+            sync_notes_action = HC.CONTENT_MERGE_ACTION_NONE
+            sync_note_import_options = NoteImportOptions.NoteImportOptions()
+            
+            serialisable_sync_note_import_options = sync_note_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_tag_service_actions, serialisable_rating_service_actions, sync_notes_action, serialisable_sync_note_import_options, sync_archive_action, sync_urls_action )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
-    def SetTuple( self, tag_service_actions, rating_service_actions, sync_archive_action, sync_urls_action ):
+    def GetRatingServiceActions( self ) -> typing.Collection[ tuple ]:
+        
+        return self._rating_service_actions
+        
+    
+    def GetTagServiceActions( self ) -> typing.Collection[ tuple ]:
+        
+        return self._tag_service_actions
+        
+    
+    def GetSyncArchiveAction( self ) -> int:
+        
+        return self._sync_archive_action
+        
+    
+    def GetSyncNotesAction( self ) -> int:
+        
+        return self._sync_notes_action
+        
+    
+    def GetSyncNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+        
+        return self._sync_note_import_options
+        
+    
+    def GetSyncURLsAction( self ) -> int:
+        
+        return self._sync_urls_action
+        
+    
+    def SetRatingServiceActions( self, rating_service_actions: typing.Collection[ tuple ] ):
+        
+        self._rating_service_actions = rating_service_actions
+        
+    
+    def SetTagServiceActions( self, tag_service_actions: typing.Collection[ tuple ] ):
         
         self._tag_service_actions = tag_service_actions
-        self._rating_service_actions = rating_service_actions
-        self._sync_archive_action = sync_archive_action
-        self._sync_urls_action = sync_urls_action
         
     
-    def ToTuple( self ):
+    def SetSyncArchiveAction( self, sync_archive_action: int ):
         
-        return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive_action, self._sync_urls_action )
+        self._sync_archive_action = sync_archive_action
+        
+    
+    def SetSyncNotesAction( self, sync_notes_action: int ):
+        
+        self._sync_notes_action = sync_notes_action
+        
+    
+    def SetSyncNoteImportOptions( self, sync_note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        self._sync_note_import_options = sync_note_import_options
+        
+    
+    def SetSyncURLsAction( self, sync_urls_action: int ):
+        
+        self._sync_urls_action = sync_urls_action
         
     
     def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ):
@@ -505,6 +569,38 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        if self._sync_notes_action != HC.CONTENT_MERGE_ACTION_NONE:
+            
+            first_names_and_notes = list( first_media.GetNotesManager().GetNamesToNotes().items() )
+            second_names_and_notes = list( second_media.GetNotesManager().GetNamesToNotes().items() )
+            
+            content_updates = []
+            
+            # TODO: rework this to UpdateeNamesToNotes
+            
+            if self._sync_notes_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                
+                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media, second_names_and_notes )
+                second_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( second_media, first_names_and_notes )
+                
+                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                content_updates.extend( second_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                
+            elif self._sync_notes_action == HC.CONTENT_MERGE_ACTION_COPY:
+                
+                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media, second_names_and_notes )
+                
+                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ].extend( content_updates )
+                
+            
+        
+        #
+        
         content_update_archive_first = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
         content_update_archive_second = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
         
@@ -537,7 +633,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        if self._sync_urls_action is not None:
+        if self._sync_urls_action != HC.CONTENT_MERGE_ACTION_NONE:
             
             first_urls = set( first_media.GetLocationsManager().GetURLs() )
             second_urls = set( second_media.GetLocationsManager().GetURLs() )
@@ -627,4 +723,4 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         return service_keys_to_content_updates
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS ] = DuplicateActionOptions
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS ] = DuplicateContentMergeOptions
