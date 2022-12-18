@@ -23,6 +23,9 @@ try:
     HydrusBoot.AddBaseDirToEnvPath()
     
     from hydrus.core import HydrusConstants as HC
+    
+    HC.RUNNING_SERVER = True
+    
     from hydrus.core import HydrusExceptions
     from hydrus.core import HydrusData
     from hydrus.core import HydrusGlobals as HG

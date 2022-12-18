@@ -7,6 +7,9 @@ import yaml
 # old method of getting frozen dir, doesn't work for symlinks looks like:
 # BASE_DIR = getattr( sys, '_MEIPASS', None )
 
+RUNNING_CLIENT = False
+RUNNING_SERVER = False
+
 RUNNING_FROM_FROZEN_BUILD = getattr( sys, 'frozen', False )
 
 if RUNNING_FROM_FROZEN_BUILD:

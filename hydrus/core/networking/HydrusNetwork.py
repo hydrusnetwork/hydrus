@@ -20,6 +20,9 @@ MAX_NULLIFICATION_PERIOD = 86400 * 365
 
 def GenerateDefaultServiceDictionary( service_type ):
     
+    # don't store bytes key/value data here until ~version 537
+    # the server kicks out a patched version 1 of serialisabledict, so it can't handle byte gubbins, lad
+    
     dictionary = HydrusSerialisable.SerialisableDictionary()
     
     dictionary[ 'upnp_port' ] = None

@@ -25,6 +25,8 @@ try:
     
     from hydrus.core import HydrusConstants as HC
     
+    HC.RUNNING_CLIENT = True
+    
     from hydrus.core import HydrusData
     from hydrus.core import HydrusGlobals as HG
     from hydrus.core import HydrusLogger

@@ -3,6 +3,7 @@ import json
 import os
 
 from hydrus.core import HydrusCompression
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
@@ -377,12 +378,59 @@ class SerialisableDictionary( SerialisableBase, dict ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_DICTIONARY
     SERIALISABLE_NAME = 'Serialisable Dictionary'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 2 # this is used in the network, do not update it casually!
     
     def __init__( self, *args, **kwargs ):
         
         dict.__init__( self, *args, **kwargs )
         SerialisableBase.__init__( self )
+        
+    def _GetSerialisableInfoVersion1( self ):
+        
+        simple_key_simple_value_pairs = []
+        simple_key_serialisable_value_pairs = []
+        serialisable_key_simple_value_pairs = []
+        serialisable_key_serialisable_value_pairs = []
+        
+        for ( key, value ) in self.items():
+            
+            if isinstance( key, SerialisableBase ):
+                
+                serialisable_key = key.GetSerialisableTuple()
+                
+                if isinstance( value, SerialisableBase ):
+                    
+                    serialisable_value = value.GetSerialisableTuple()
+                    
+                    serialisable_key_serialisable_value_pairs.append( ( serialisable_key, serialisable_value ) )
+                    
+                else:
+                    
+                    serialisable_value = value
+                    
+                    serialisable_key_simple_value_pairs.append( ( serialisable_key, serialisable_value ) )
+                    
+                
+            else:
+                
+                serialisable_key = key
+                
+                if isinstance( value, SerialisableBase ):
+                    
+                    serialisable_value = value.GetSerialisableTuple()
+                    
+                    simple_key_serialisable_value_pairs.append( ( serialisable_key, serialisable_value ) )
+                    
+                else:
+                    
+                    serialisable_value = value
+                    
+                    simple_key_simple_value_pairs.append( ( serialisable_key, serialisable_value ) )
+                    
+                
+            
+        
+        return ( simple_key_simple_value_pairs, simple_key_serialisable_value_pairs, serialisable_key_simple_value_pairs, serialisable_key_serialisable_value_pairs )
         
     
     def _GetSerialisableInfo( self ):
@@ -472,6 +520,38 @@ class SerialisableDictionary( SerialisableBase, dict ):
             new_serialisable_info = meta_keys_and_meta_values
             
             return ( 2, new_serialisable_info )
+            
+        
+    
+    def GetSerialisableTuple( self ):
+        
+        # TODO: delete this around version 537
+        # this is a patch to deal with me foolishly updating SerialisableDictionary without thinking that it is used in network comms
+        # the server suddenly starts giving version 2 Dicts, and old clients can't handle it!
+        # therefore, we are patching this to give a version 1 result if we are the server. we don't transport bytes stuff over network yet, nor store bytes in server services dict, so it is ok
+        # we are doing this for version 511, so let's give lads ~26 weeks to update
+        
+        if HC.RUNNING_SERVER:
+            
+            serialisable_info = self._GetSerialisableInfoVersion1()
+            
+            return ( self.SERIALISABLE_TYPE, 1, serialisable_info )
+            
+        else:
+            
+            if hasattr( self, '_lock' ):
+                
+                with getattr( self, '_lock' ):
+                    
+                    serialisable_info = self._GetSerialisableInfo()
+                    
+                
+            else:
+                
+                serialisable_info = self._GetSerialisableInfo()
+                
+            
+            return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
             
         
     
