@@ -362,8 +362,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 paths = [ path_info for ( path_type, path_info ) in paths_info if path_type != 'zip' ]
                 
                 exclude_deleted = advanced_import_options[ 'exclude_deleted' ]
-                do_not_check_known_urls_before_importing = False
-                do_not_check_hashes_before_importing = False   
+                preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
+                preimport_url_check_type = FileImportOptions.DO_CHECK
+                preimport_url_check_looks_for_neighbours = True
                 allow_decompression_bombs = False
                 min_size = advanced_import_options[ 'min_size' ]
                 max_size = None
@@ -377,7 +378,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 file_import_options = FileImportOptions.FileImportOptions()
                 
-                file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
                 file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                 
                 paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in additional_service_keys_to_tags } for ( path, additional_service_keys_to_tags ) in paths_to_tags.items() }

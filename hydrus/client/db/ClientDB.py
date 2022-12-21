@@ -6147,27 +6147,22 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if data_type == HC.CONTENT_TYPE_FILES:
                         
-                        if action == HC.CONTENT_UPDATE_ADVANCED:
+                        if action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
                             
-                            ( sub_action, sub_row ) = row
+                            hashes = row
                             
-                            if sub_action == 'delete_deleted':
+                            if hashes is None:
                                 
-                                hashes = sub_row
+                                service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord()
                                 
-                                if hashes is None:
-                                    
-                                    service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord()
-                                    
-                                else:
-                                    
-                                    hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
-                                    
-                                    service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord( hash_ids )
-                                    
+                            else:
                                 
-                                self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ( -num_cleared, clear_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) for ( clear_service_id, num_cleared ) in service_ids_to_nums_cleared.items() ) )
+                                hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                                 
+                                service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord( hash_ids )
+                                
+                            
+                            self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ( -num_cleared, clear_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) for ( clear_service_id, num_cleared ) in service_ids_to_nums_cleared.items() ) )
                             
                         elif action == HC.CONTENT_UPDATE_ADD:
                             

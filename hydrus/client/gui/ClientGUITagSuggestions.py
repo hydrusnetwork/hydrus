@@ -10,7 +10,6 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client.media import ClientMedia
 from hydrus.client import ClientParsing
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
@@ -20,6 +19,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
 
@@ -628,7 +628,11 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         parse_results = script.DoQuery( job_key, file_identifier )
         
-        tags = ClientParsing.GetTagsFromParseResults( parse_results )
+        tags = list( ClientParsing.GetTagsFromParseResults( parse_results ) )
+        
+        tag_sort = ClientTagSorting.TagSort( ClientTagSorting.SORT_BY_HUMAN_TAG, sort_order = CC.SORT_ASC )
+        
+        ClientTagSorting.SortTags( tag_sort, tags )
         
         QP.CallAfter( qt_code, tags )
         

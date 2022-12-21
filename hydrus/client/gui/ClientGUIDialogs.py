@@ -517,7 +517,7 @@ class DialogInputTags( Dialog ):
         
         self._service_key = service_key
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key, tag_display_type )
+        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key, tag_display_type = tag_display_type )
         
         default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         

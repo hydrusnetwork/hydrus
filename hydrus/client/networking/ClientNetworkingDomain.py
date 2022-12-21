@@ -2,6 +2,7 @@ import collections
 import os
 import threading
 import time
+import typing
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -1468,6 +1469,29 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             return normalised_url
             
+        
+    
+    def NormaliseURLs( self, urls: typing.Collection[ str ] ) -> typing.List[ str ]:
+        
+        normalised_urls = []
+        
+        for url in urls:
+            
+            try:
+                
+                normalised_url = self.NormaliseURL( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                continue
+                
+            
+            normalised_urls.append( url )
+            
+        
+        normalised_urls = HydrusData.DedupeList( normalised_urls )
+        
+        return normalised_urls
         
     
     def OverwriteDefaultGUGs( self, gug_names ):

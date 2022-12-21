@@ -2583,8 +2583,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             ipfs_service_keys = services_manager.GetServiceKeys( ( HC.IPFS, ) )
             
             thumbnail_bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            
             thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             for media_result in media_results:
                 
@@ -2612,7 +2612,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     
                     if width is not None and height is not None and width > 0 and height > 0:
                         
-                        ( clip_rect, ( expected_thumbnail_width, expected_thumbnail_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type )
+                        ( clip_rect, ( expected_thumbnail_width, expected_thumbnail_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                         
                         metadata_row[ 'thumbnail_width' ] = expected_thumbnail_width
                         metadata_row[ 'thumbnail_height' ] = expected_thumbnail_height

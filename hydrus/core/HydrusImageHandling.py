@@ -843,12 +843,20 @@ thumbnail_scale_str_lookup = {
     THUMBNAIL_SCALE_TO_FILL : 'scale to fill'
 }
 
-def GetThumbnailResolutionAndClipRegion( image_resolution, bounding_dimensions, thumbnail_scale_type: int ):
+def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, int ], bounding_dimensions: typing.Tuple[ int, int ], thumbnail_scale_type: int, thumbnail_dpr_percent: int ):
     
     clip_rect = None
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
+    
+    if thumbnail_dpr_percent != 100:
+        
+        thumbnail_dpr = thumbnail_dpr_percent / 100
+        
+        bounding_height = int( bounding_height * thumbnail_dpr )
+        bounding_width = int( bounding_width * thumbnail_dpr )
+        
     
     if thumbnail_scale_type == THUMBNAIL_SCALE_DOWN_ONLY:
         

@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_511"><a href="#version_511">version 511</a></h2>
+                    <ul>
+                        <li><h3>thumbnail UI scaling</h3></li>
+                        <li>thumbnails can finally look good at high UI scales! a new setting in _options->thumbnails_, 'Thumbnail UI scale supersampling %', lets you tell hydrus to generate thumbnails at a particular UI scale. match it to your monitor, and your thumbnails should regenerate to look crisp</li>
+                        <li>some users have complicated multi-monitor setups, or they change their UI scale regularly, so I'm not auto-setting this _yet_. let me know how it goes</li>
+                        <li>sadly <100% for super-crunchy-mode doesn't work</li>
+                        <li><h3>unnamespaced search tags</h3></li>
+                        <li>_I am not really happy with this solution, since it doesn't neatly restore the old behaviour, but it does make things easier in the new system and I've fixed a related bug_</li>
+                        <li>a new option in _services->manage tag display and search_, 'Unnamespaced input gives (any namespace) wildcard results', now lets you quickly search `*:sam*` by typing `sam`</li>
+                        <li>fixed an issue where an autocomplete input with a total wildcard namespace, like `*:sam` was not matching to unnamespaced tags when preparing the list of tag results</li>
+                        <li>wildcards with `*` namespace now have a special `(any namespace)` suffix, and they show with unnamespaced namespace colour</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the client-server communication problem related to last week's SerialisableDictionary update. I messed up and forgot this object is used in network comms, which meant >=v510 clients couldn't talk to a <=509 server and _vice versa_ version swaps. now the server always kicks out an old SerialisableDictionary serialisation. I plan to remove the patch in 26 weeks, giving us more buffer time for users to update naturally</li>
+                        <li>the recent option to turn off mouse-scroll-changes-menu-button-value is improved--now the wheel event is correctly passed up to the parent panel, so you'll scroll right through one of these buttons, not halt on it. the file sort control now also obeys this option</li>
+                        <li>if you try to zoom a media in so that its virtual size would be >32,000px on a side, the canvas now zooms to 32k exactly. this is the max allowed zoom for technical reasons atm (I'll fix it in a future rewrite). this also fixes the 'zoom max' command, which previously would make no action if the max zoom created a virtual canvas bigger than this. also, 'zoom max' is now shown on the media viewer right-click menu</li>
+                        <li>the 'max zoom' dimension for mpv windows and my native animation window is now 8k. seems like there are smaller technical limits for mpv, and my animation window isn't tiled, so this is to be extra safe for now</li>
+                        <li>fixed a bug where it was possible to send the 'undelete file' signal to a file that was physically deleted (and therefore viewed in a special 'deleted files' domain). the file would obediently return to its original local file service and then throw 'missing file' warnings when the thumb tried to show. now these files are discarded from undelete consideration</li>
+                        <li>if you are looking at physically deleted files, the thumbnail view now provides a 'clear deletion record' menu action! this is the same command as the button in _services->review services->all local files_, but just on the selection</li>
+                        <li>fixed several taglists across the program that were displaying tags in the wrong display context and/or not sorting correctly. this mostly went wrong by setting sorted storage taglists (which normally show sibling/parent flare) as unsorted display taglists</li>
+                        <li>file lookup script tag suggestions (as fetched from some external source) are now set to be sorted</li>
+                        <li><h3>file import options pre-import checking</h3></li>
+                        <li>_this stuff is advanced users only. normal users can rest assured that the way the client skips downloads for 'already in db/previously deleted' files now has fewer false negatives and false positives_</li>
+                        <li>the awkwardly named advanced 'do not check url/hash to see if file already in db/previously deleted' checkboxes in file import options have been overhauled. now they are phrased in the positive ("check x to determine aid/pd?") and offer 'do not check', 'check', and the new 'check - and matches are dispositive'. the tooltip has been updated to talk about what they do. 'dispositive' basically means 'if this one hits, trust it over the other', and by default the 'hash' check remains dispositive over the URLs (this was previously hardcoded, now you can choose urls to rule in some cases).</li>
+                        <li>there is also a new checkbox to optionally disable a component of the url checking that looks at neighbouring urls on the same file to determine url-mapping trustworthiness. this will solve or help explore some weird multi-url-mapping situations</li>
+                        <li>also, novel SHA256 hashes no longer count as 'matches', just like a novel MD5 hash would not. this helps keep useful dispositive behaviour for known hashes but also automatically defers to urls when a site is being CDN-optimised and transfer hashes are different to api-reported ones. this fixes some watchers that have been using excess bandwidth on repeated downloads</li>
+                        <li>fixed several problems with the url-lookup logic, particularly with the method that checks for 'file-neighbour' urls (simply, when a file-url match should be distrusted because that file has multiple urls of the same url class). it was also too aggressive on file/unknown url classes, which can legitimately have tokenised neighbours, and getting confused by http/https dupes</li>
+                        <li>the neighbour test now remembers untrustworthy domains across different url checks for a file, which helps some subsequent direct-file-url checks where neighbours aren't a marker of file-url mapping reliability</li>
+                        <li>the overall logic behind the hash and url lookup is cleaned up significantly</li>
+                        <li>if you are an advanced user who has been working with me on this stuff, let me know how it goes. we erected this rats' nest through years of patches, and now I have cleaned it out. I'm confident it works better overall, but I may have missed one of your complicated situations. at the least, these new options should help us figure out quicker fixes in future</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>removed some old 'subject_identifier' arg parsing from various account-modification calls in the server code. as previously planned, for simplicity and security, the only identifier for these actions is now 'subject_account_key', and subject_identifier is only used for account lookups</li>
+                        <li>improved the error handling around serialised object loading. the messages explain what happened and state object type and the versions involved</li>
+                        <li>cleaned up some tag sort code</li>
+                        <li>cleaned up how advanced file delete content updates work</li>
+                        <li>fixed yet another duplicate potentials count unit test that was sometimes failing due to complex count perspective</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_510"><a href="#version_510">version 510</a></h2>
                     <ul>
                         <li><h3>notes</h3></li>

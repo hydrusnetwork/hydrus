@@ -562,8 +562,6 @@ class TestClientDBTags( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
-        
     
     @classmethod
     def tearDownClass( cls ):
@@ -1057,6 +1055,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
         file_import_options = FileImportOptions.FileImportOptions()
@@ -1155,6 +1155,8 @@ class TestClientDBTags( unittest.TestCase ):
         self._sync_display()
         
         # import a file
+        
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1255,6 +1257,8 @@ class TestClientDBTags( unittest.TestCase ):
         self._sync_display()
         
         # import a file
+        
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1358,6 +1362,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
         file_import_options = FileImportOptions.FileImportOptions()
@@ -1458,6 +1464,8 @@ class TestClientDBTags( unittest.TestCase ):
         self._sync_display()
         
         # import a file
+        
+        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -2579,6 +2587,8 @@ class TestClientDBTags( unittest.TestCase ):
                 file_import_options.SetIsDefault( True )
                 
                 for filename in ( 'muh_jpg.jpg', 'muh_png.png', 'muh_apng.png' ):
+                    
+                    HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
                     
                     path = os.path.join( HC.STATIC_DIR, 'testing', filename )
                     

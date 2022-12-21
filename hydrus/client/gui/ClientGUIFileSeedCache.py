@@ -644,7 +644,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     ClientGUIMediaActions.UndeleteFiles( deletee_hashes )
                     
-                    content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', deletee_hashes ) )
+                    content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, deletee_hashes )
                     
                     service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update_erase_record ] }
                     

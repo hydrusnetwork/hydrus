@@ -296,11 +296,9 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             
             if not self.modules_hashes.HasHash( hash ):
                 
-                f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+                # this used to set the fis.hash = hash here, but that's unhelpful for the callers, who already know the hash and really want to know if there was a good match
                 
-                f.hash = hash
-                
-                return f
+                return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
                 
             else:
                 

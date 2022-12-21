@@ -18,7 +18,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
     SERIALISABLE_NAME = 'Tag Autocomplete Options'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self, service_key: typing.Optional[ bytes ] = None ):
         
@@ -45,6 +45,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._search_namespaces_into_full_tags = False
+        self._unnamespaced_search_gives_any_namespace_wildcards = False
         self._namespace_bare_fetch_all_allowed = False
         self._namespace_fetch_all_allowed = False
         self._fetch_all_allowed = False
@@ -65,6 +66,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._override_write_autocomplete_location_context,
             serialisable_write_autocomplete_location_context,
             self._search_namespaces_into_full_tags,
+            self._unnamespaced_search_gives_any_namespace_wildcards,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
             self._fetch_all_allowed,
@@ -83,6 +85,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             self._override_write_autocomplete_location_context,
             serialisable_write_autocomplete_location_context,
             self._search_namespaces_into_full_tags,
+            self._unnamespaced_search_gives_any_namespace_wildcards,
             self._namespace_bare_fetch_all_allowed,
             self._namespace_fetch_all_allowed,
             self._fetch_all_allowed,
@@ -194,6 +197,40 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_location_context,
+                serialisable_write_autocomplete_location_context,
+                search_namespaces_into_full_tags,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed,
+                fetch_results_automatically,
+                exact_match_character_threshold
+            ] = old_serialisable_info
+            
+            unnamespaced_search_gives_any_namespace_wildcards = False
+            
+            new_serialisable_info = [
+                serialisable_service_key,
+                serialisable_write_autocomplete_tag_domain,
+                override_write_autocomplete_location_context,
+                serialisable_write_autocomplete_location_context,
+                search_namespaces_into_full_tags,
+                unnamespaced_search_gives_any_namespace_wildcards,
+                namespace_bare_fetch_all_allowed,
+                namespace_fetch_all_allowed,
+                fetch_all_allowed,
+                fetch_results_automatically,
+                exact_match_character_threshold
+            ]
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def FetchAllAllowed( self ):
         
@@ -267,6 +304,11 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._search_namespaces_into_full_tags
         
     
+    def UnnamespacedSearchGivesAnyNamespaceWildcards( self ) -> bool:
+        
+        return self._unnamespaced_search_gives_any_namespace_wildcards
+        
+    
     def SetExactMatchCharacterThreshold( self, exact_match_character_threshold: typing.Optional[ int ] ):
         
         self._exact_match_character_threshold = exact_match_character_threshold
@@ -275,6 +317,11 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     def SetFetchResultsAutomatically( self, fetch_results_automatically: bool ):
         
         self._fetch_results_automatically = fetch_results_automatically
+        
+    
+    def SetUnnamespacedSearchGivesAnyNamespaceWildcards( self, unnamespaced_search_gives_any_namespace_wildcards: bool ):
+        
+        self._unnamespaced_search_gives_any_namespace_wildcards = unnamespaced_search_gives_any_namespace_wildcards
         
     
     def SetTuple( self,

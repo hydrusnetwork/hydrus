@@ -1,3 +1,5 @@
+import typing
+
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
@@ -82,33 +84,61 @@ class TagSort( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SORT ] = TagSort
 
-def SortTags( tag_sort: TagSort, list_of_tag_items, tag_items_to_count = None, item_to_tag_key_wrapper = None, item_to_sibling_key_wrapper = None ):
+def lexicographic_key( tag ):
     
-    def lexicographic_key( tag ):
+    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+    
+    comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
+    comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    
+    if namespace == '':
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        return ( comparable_subtag, comparable_subtag )
         
-        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
-        comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    else:
         
-        if namespace == '':
-            
-            return ( comparable_subtag, comparable_subtag )
-            
-        else:
-            
-            return ( comparable_namespace, comparable_subtag )
-            
+        return ( comparable_namespace, comparable_subtag )
         
     
-    def subtag_lexicographic_key( tag ):
+
+def subtag_lexicographic_key( tag ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+    
+    comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    
+    return comparable_subtag
+    
+
+def namespace_key( tag ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+    
+    if namespace == '':
         
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
         
-        comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    
+    return namespace
+    
+
+def namespace_lexicographic_key( tag ):
+    
+    # '{' is above 'z' in ascii, so this works for most situations
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+    
+    if namespace == '':
         
-        return comparable_subtag
+        return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
         
+    else:
+        
+        return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
+        
+    
+
+def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_count = None, item_to_tag_key_wrapper = None, item_to_sibling_key_wrapper = None ):
     
     def incidence_key( tag_item ):
         
@@ -119,34 +149,6 @@ def SortTags( tag_sort: TagSort, list_of_tag_items, tag_items_to_count = None, i
         else:
             
             return tag_items_to_count[ tag_item ]
-            
-        
-    
-    def namespace_key( tag ):
-        
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        if namespace == '':
-            
-            namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
-            
-        
-        return namespace
-        
-    
-    def namespace_lexicographic_key( tag ):
-        
-        # '{' is above 'z' in ascii, so this works for most situations
-        
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        if namespace == '':
-            
-            return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
-            
-        else:
-            
-            return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
             
         
     

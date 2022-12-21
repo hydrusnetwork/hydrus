@@ -231,22 +231,29 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
         
         can_do_it = HG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' )
         
-        if self._value_index is not None and can_do_it:
+        if can_do_it:
             
-            if event.angleDelta().y() > 0:
+            if self._value_index is not None and can_do_it:
                 
-                index_delta = -1
+                if event.angleDelta().y() > 0:
+                    
+                    index_delta = -1
+                    
+                else:
+                    
+                    index_delta = 1
+                    
                 
-            else:
+                new_value_index = ( self._value_index + index_delta ) % len( self._choice_tuples )
                 
-                index_delta = 1
+                self._SetValueIndex( new_value_index )
                 
             
-            new_value_index = ( self._value_index + index_delta ) % len( self._choice_tuples )
+            event.accept()
             
-            self._SetValueIndex( new_value_index )
+        else:
             
-        
-        event.accept()
+            event.ignore()
+            
         
     

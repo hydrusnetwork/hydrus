@@ -1,17 +1,10 @@
 import collections
 import typing
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
-from hydrus.client.gui.search import ClientGUISearch
-from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
 class ListBoxItem( object ):
@@ -193,6 +186,16 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._tag.__hash__()
         
     
+    def __lt__( self, other ):
+        
+        if isinstance( other, ListBoxItemTextTag ):
+            
+            return HydrusTags.ConvertTagToSortable( self.GetCopyableText() ) < HydrusTags.ConvertTagToSortable( other.GetCopyableText() )
+            
+        
+        return NotImplemented
+        
+    
     def _AppendIdealTagTextWithNamespace( self, texts_with_namespaces, render_for_user ):
         
         ( namespace, subtag ) = HydrusTags.SplitTag( self._ideal_tag )
@@ -334,6 +337,16 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         return self._tag.__hash__()
         
     
+    def __lt__( self, other ):
+        
+        if isinstance( other, ListBoxItemTextTagWithCounts ):
+            
+            return HydrusTags.ConvertTagToSortable( self.GetCopyableText( with_counts = False ) ) < HydrusTags.ConvertTagToSortable( other.GetCopyableText( with_counts = False ) )
+            
+        
+        return NotImplemented
+        
+    
     def GetCopyableText( self, with_counts: bool = False ) -> str:
         
         if with_counts:
@@ -438,6 +451,16 @@ class ListBoxItemPredicate( ListBoxItem ):
     def __hash__( self ):
         
         return self._predicate.__hash__()
+        
+    
+    def __lt__( self, other ):
+        
+        if isinstance( other, ListBoxItem ):
+            
+            return HydrusTags.ConvertTagToSortable( self.GetCopyableText() ) < HydrusTags.ConvertTagToSortable( other.GetCopyableText() )
+            
+        
+        return NotImplemented
         
     
     def GetCopyableText( self, with_counts: bool = False ) -> str:

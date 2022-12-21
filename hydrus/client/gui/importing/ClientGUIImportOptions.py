@@ -81,17 +81,45 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._exclude_deleted.setToolTip( tt )
         
-        self._do_not_check_known_urls_before_importing = QW.QCheckBox( pre_import_panel )
-        self._do_not_check_hashes_before_importing = QW.QCheckBox( pre_import_panel )
+        #
         
-        tt = 'DO NOT SET THESE EXPENSIVE OPTIONS UNLESS YOU KNOW YOU NEED THEM FOR THIS ONE JOB'
-        tt += os.linesep * 2
-        tt += 'If hydrus recognises a file\'s URL or hash, if it is confident it already has it or previously deleted it, it will normally skip the download, saving a huge amount of time and bandwidth. The logic behind this gets quite complicated, and it is usually best to let it work normally.'
-        tt += os.linesep * 2
-        tt += 'However, if you believe the clientside url mappings or serverside hashes are inaccurate and the file is being wrongly skipped, turn these on to force a download. Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to turn these on for a file maintenance job that is filling in missing files, as missing files are automatically detected and essentially turn these on for you on a per-file basis.'
+        self._preimport_hash_check_type = ClientGUICommon.BetterChoice( default_panel )
+        self._preimport_url_check_type = ClientGUICommon.BetterChoice( default_panel )
         
-        self._do_not_check_known_urls_before_importing.setToolTip( tt )
-        self._do_not_check_hashes_before_importing.setToolTip( tt )
+        jobs = [
+            ( 'do not check', FileImportOptions.DO_NOT_CHECK ),
+            ( 'check', FileImportOptions.DO_CHECK ),
+            ( 'check - and matches are dispositive', FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        ]
+        
+        for ( display_string, client_data ) in jobs:
+            
+            self._preimport_hash_check_type.addItem( display_string, client_data )
+            self._preimport_url_check_type.addItem( display_string, client_data )
+            
+        
+        tt = 'DO NOT SET THESE AS THE EXPENSIVE "DO NOT CHECK" UNLESS YOU KNOW YOU NEED THEM FOR THIS ONE JOB'
+        tt += os.linesep * 2
+        tt += 'If hydrus recognises a file\'s URL or hash, it can determine that it is "already in db" or "previously deleted" and skip the download entirely, saving a huge amount of time and bandwidth. The logic behind this can get quite complicated, and it is usually best to let it work normally.'
+        tt += os.linesep * 2
+        tt += 'If the checking is set to "dispositive", then if a match is found, that match will be trusted and the other match type is not consulted. Note that, for now, SHA256 hashes your client has never seen before will never count as "matches", just like an MD5 it has not seen before, so in all cases the import will defer to any set url check that says "already in db/previously deleted". (This is to deal with some cloud-storage in-transfer optimisation hash-changing. Novel SHA256 hashes are not always trustworthy.)'
+        tt += os.linesep * 2
+        tt += 'If you believe your clientside parser or url mappings are completely broken, and these logical tests are producing false positive "deleted" or "already in db" results, then set one or both of these to "do not check". Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to switch off checking for a file maintenance job that is filling in missing files, as missing files are automatically detected in the logic.'
+        
+        self._preimport_hash_check_type.setToolTip( tt )
+        self._preimport_url_check_type.setToolTip( tt )
+        
+        self._preimport_url_check_looks_for_neighbours = QW.QCheckBox( pre_import_panel )
+        
+        tt = 'When a file-url mapping is found, and additional check can be performed to see if it is trustworthy.'
+        tt += os.linesep * 2
+        tt += 'If the URL has a Post URL Class, and the file has multiple other URLs with the same domain & URL Class (basically the file has multiple URLs on the same site), then the mapping is assumed to be some parse spam and not trustworthy (leading to more "this file looks new" results in the pre-check).'
+        tt += os.linesep * 2
+        tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
+        
+        self._preimport_url_check_looks_for_neighbours.setToolTip( tt )
+        
+        #
         
         self._allow_decompression_bombs = QW.QCheckBox( pre_import_panel )
         
@@ -192,13 +220,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            rows.append( ( 'force file downloading even if url recognised and already in db/deleted: ', self._do_not_check_known_urls_before_importing ) )
-            rows.append( ( 'force file downloading even if hash recognised and already in db/deleted: ', self._do_not_check_hashes_before_importing ) )
+            rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
+            rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
+            rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbours ) )
             
         else:
             
-            self._do_not_check_known_urls_before_importing.setVisible( False )
-            self._do_not_check_hashes_before_importing.setVisible( False )
+            self._preimport_hash_check_type.setVisible( False )
+            self._preimport_url_check_type.setVisible( False )
+            self._preimport_url_check_looks_for_neighbours.setVisible( False )
             
         
         rows.append( ( 'allowed filetypes: ', self._mimes ) )
@@ -273,6 +303,12 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateIsDefault()
         
+        self._preimport_hash_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromHash )
+        self._preimport_url_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromURL )
+        
+        self._UpdateDispositiveFromHash()
+        self._UpdateDispositiveFromURL()
+        
     
     def _LoadDefaultOptions( self ):
         
@@ -305,15 +341,18 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._use_default_dropdown.SetValue( file_import_options.IsDefault() )
         
-        ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        
+        preimport_url_check_looks_for_neighbours = file_import_options.PreImportURLCheckLooksForNeighbours()
         
         mimes = file_import_options.GetAllowedSpecificFiletypes()
         
         self._mimes.SetValue( mimes )
         
         self._exclude_deleted.setChecked( exclude_deleted )
-        self._do_not_check_known_urls_before_importing.setChecked( do_not_check_known_urls_before_importing )
-        self._do_not_check_hashes_before_importing.setChecked( do_not_check_hashes_before_importing )
+        self._preimport_hash_check_type.SetValue( preimport_hash_check_type )
+        self._preimport_url_check_type.SetValue( preimport_url_check_type )
+        self._preimport_url_check_looks_for_neighbours.setChecked( preimport_url_check_looks_for_neighbours )
         self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
         self._min_size.SetValue( min_size )
         self._max_size.SetValue( max_size )
@@ -377,6 +416,30 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         QW.QMessageBox.information( self, 'Information', help_message )
         
     
+    def _UpdateDispositiveFromHash( self ):
+        
+        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
+        preimport_url_check_type = self._preimport_url_check_type.GetValue()
+        
+        if preimport_hash_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+            
+            self._preimport_url_check_type.SetValue( FileImportOptions.DO_CHECK )
+            
+        
+    
+    def _UpdateDispositiveFromURL( self ):
+        
+        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
+        preimport_url_check_type = self._preimport_url_check_type.GetValue()
+        
+        if preimport_hash_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+            
+            self._preimport_hash_check_type.SetValue( FileImportOptions.DO_CHECK )
+            
+        
+        self._preimport_url_check_looks_for_neighbours.setEnabled( preimport_url_check_type != FileImportOptions.DO_NOT_CHECK )
+        
+    
     def _UpdateIsDefault( self ):
         
         is_default = self._use_default_dropdown.GetValue()
@@ -428,8 +491,9 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         else:
             
             exclude_deleted = self._exclude_deleted.isChecked()
-            do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
-            do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.isChecked()
+            preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
+            preimport_url_check_type = self._preimport_url_check_type.GetValue()
+            preimport_url_check_looks_for_neighbours = self._preimport_url_check_looks_for_neighbours.isChecked()
             allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
             min_size = self._min_size.GetValue()
             max_size = self._max_size.GetValue()
@@ -445,7 +509,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
             destination_location_context = self._destination_location_context.GetValue()
             
-            file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+            file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+            file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
             file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
             file_import_options.SetDestinationLocationContext( destination_location_context )
             file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )

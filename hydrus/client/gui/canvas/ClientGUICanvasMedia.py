@@ -195,8 +195,9 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
             
             bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type )
+            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
             height = height + thumb_height
             
@@ -1416,6 +1417,18 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def _GetMaxZoomDimension( self ):
+        
+        if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV or isinstance( self._media_window, Animation ):
+            
+            return 8000
+            
+        else:
+            
+            return 32000
+            
+        
+    
     def _MakeMediaWindow( self ):
         
         old_media_window = self._media_window
@@ -1586,11 +1599,6 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        if new_zoom == self._current_zoom:
-            
-            return
-            
-        
         my_size = self.size()
         
         my_width = my_size.width()
@@ -1603,7 +1611,21 @@ class MediaContainer( QW.QWidget ):
         new_my_width = new_media_window_size.width()
         new_my_height = new_media_window_size.height()
         
-        if new_my_width > 32000 or new_my_height > 32000:
+        max_zoom_dimension = self._GetMaxZoomDimension()
+        
+        if new_my_width > max_zoom_dimension or new_my_height > max_zoom_dimension:
+            
+            ( limit_max_normal_zoom, limit_max_canvas_zoom ) = CalculateCanvasZooms( QC.QSize( max_zoom_dimension, max_zoom_dimension ), self._canvas_type, my_dpr, self._media, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE )
+            
+            new_zoom = limit_max_canvas_zoom
+            
+            new_media_window_size = CalculateMediaContainerSize( self._media, my_dpr, new_zoom, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE )
+            
+            new_my_width = new_media_window_size.width()
+            new_my_height = new_media_window_size.height()
+            
+        
+        if new_zoom == self._current_zoom:
             
             return
             
@@ -1855,6 +1877,17 @@ class MediaContainer( QW.QWidget ):
                     
                 
             
+        
+    
+    def IsAtMaxZoom( self ):
+        
+        possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+        
+        max_zoom = max( possible_zooms )
+        
+        max_zoom_dimension = self._GetMaxZoomDimension()
+        
+        return self._current_zoom == max_zoom or self.width() == max_zoom_dimension or self.height() == max_zoom_dimension
         
     
     def IsPaused( self ):

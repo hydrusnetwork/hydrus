@@ -156,6 +156,9 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
             return updatee_names_to_notes
             
         
+        # TODO: Add options to noteimportoptions to say whether we discard dupes in names_to_notes and empty notes and any other complex logic here
+        # we can have a complex-ish default, but someone is going to want different, so add options
+        
         existing_names_to_notes = dict( existing_names_to_notes )
         names_and_notes = sorted( names_to_notes.items() )
         

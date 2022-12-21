@@ -143,7 +143,10 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._write_autocomplete_location_context.SetAllKnownFilesAllowed( True, False )
         
         self._search_namespaces_into_full_tags = QW.QCheckBox( self )
-        self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metrod". On large tag services, these searches are extremely slow.' )
+        self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metroid". On large tag services, these searches are extremely slow.' )
+        
+        self._unnamespaced_search_gives_any_namespace_wildcards = QW.QCheckBox( self )
+        self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( 'If on, an unnamespaced search like "sam" will return special wildcards for "sam* (any namespace)" and "sam (any namespace)", just as if you had typed "*:sam".' )
         
         self._namespace_bare_fetch_all_allowed = QW.QCheckBox( self )
         self._namespace_bare_fetch_all_allowed.setToolTip( 'If on, a search for "series:" will return all "series:" results. On large tag services, these searches are extremely slow.' )
@@ -165,6 +168,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._write_autocomplete_tag_domain.SetValue( tag_autocomplete_options.GetWriteAutocompleteTagDomain() )
         self._override_write_autocomplete_location_context.setChecked( tag_autocomplete_options.OverridesWriteAutocompleteLocationContext() )
         self._search_namespaces_into_full_tags.setChecked( tag_autocomplete_options.SearchNamespacesIntoFullTags() )
+        self._unnamespaced_search_gives_any_namespace_wildcards.setChecked( tag_autocomplete_options.UnnamespacedSearchGivesAnyNamespaceWildcards() )
         self._namespace_bare_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceBareFetchAllAllowed() )
         self._namespace_fetch_all_allowed.setChecked( tag_autocomplete_options.NamespaceFetchAllAllowed() )
         self._fetch_all_allowed.setChecked( tag_autocomplete_options.FetchAllAllowed() )
@@ -192,6 +196,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         rows.append( ( 'Search namespaces with normal input: ', self._search_namespaces_into_full_tags ) )
+        rows.append( ( 'Unnamespaced input gives (any namespace) wildcard results: ', self._unnamespaced_search_gives_any_namespace_wildcards ) )
         rows.append( ( 'Allow "namespace:": ', self._namespace_bare_fetch_all_allowed ) )
         rows.append( ( 'Allow "namespace:*": ', self._namespace_fetch_all_allowed ) )
         rows.append( ( 'Allow "*": ', self._fetch_all_allowed ) )
@@ -213,7 +218,8 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
         self._override_write_autocomplete_location_context.stateChanged.connect( self._UpdateControls )
-        self._search_namespaces_into_full_tags.stateChanged.connect( self._UpdateControls )
+        self._search_namespaces_into_full_tags.stateChanged.connect( self._UpdateControlsFromSearchNamespacesIntoFullTags )
+        self._unnamespaced_search_gives_any_namespace_wildcards.stateChanged.connect( self._UpdateControlsFromUnnamespacedSearchGivesAnyNamespaceWildcards )
         self._namespace_bare_fetch_all_allowed.stateChanged.connect( self._UpdateControls )
         
     
@@ -221,10 +227,30 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._write_autocomplete_location_context.setEnabled( self._override_write_autocomplete_location_context.isChecked() )
         
+        for c in ( self._namespace_bare_fetch_all_allowed, self._namespace_fetch_all_allowed ):
+            
+            if not c.isEnabled():
+                
+                c.blockSignals( True )
+                
+                c.setChecked( True )
+                
+                c.blockSignals( False )
+                
+            
+        
+    
+    def _UpdateControlsFromSearchNamespacesIntoFullTags( self ):
+        
         if self._search_namespaces_into_full_tags.isChecked():
             
             self._namespace_bare_fetch_all_allowed.setEnabled( False )
             self._namespace_fetch_all_allowed.setEnabled( False )
+            
+            if self._unnamespaced_search_gives_any_namespace_wildcards.isChecked():
+                
+                self._unnamespaced_search_gives_any_namespace_wildcards.setChecked( False )
+                
             
         else:
             
@@ -240,17 +266,20 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        for c in ( self._namespace_bare_fetch_all_allowed, self._namespace_fetch_all_allowed ):
+        self._UpdateControls()
+        
+    
+    def _UpdateControlsFromUnnamespacedSearchGivesAnyNamespaceWildcards( self ):
+        
+        if self._unnamespaced_search_gives_any_namespace_wildcards.isChecked():
             
-            if not c.isEnabled():
+            if self._search_namespaces_into_full_tags.isChecked():
                 
-                c.blockSignals( True )
-                
-                c.setChecked( True )
-                
-                c.blockSignals( False )
+                self._search_namespaces_into_full_tags.setChecked( False )
                 
             
+        
+        self._UpdateControls()
         
     
     def GetValue( self ):
@@ -277,6 +306,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_autocomplete_options.SetFetchResultsAutomatically( self._fetch_results_automatically.isChecked() )
         tag_autocomplete_options.SetExactMatchCharacterThreshold( self._exact_match_character_threshold.GetValue() )
+        tag_autocomplete_options.SetUnnamespacedSearchGivesAnyNamespaceWildcards( self._unnamespaced_search_gives_any_namespace_wildcards.isChecked() )
         
         return tag_autocomplete_options
         
@@ -3002,8 +3032,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all = QW.QCheckBox( self )
             
             # leave up here since other things have updates based on them
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
@@ -4010,7 +4040,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all = QW.QCheckBox( self )
             
             # leave up here since other things have updates based on them
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
