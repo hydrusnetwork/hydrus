@@ -999,7 +999,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 list_of_service_keys_to_content_updates.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', chunk_of_hashes ) ) for chunk_of_hashes in chunks_of_hashes ]
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                 
                 list_of_service_keys_to_content_updates.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
                 

@@ -567,8 +567,9 @@ class ClientFilesManager( object ):
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
-        ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), bounding_dimensions, thumbnail_scale_type )
+        ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
         percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
         
@@ -1477,8 +1478,9 @@ class ClientFilesManager( object ):
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type )
+            ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
             if current_width != expected_width or current_height != expected_height:
                 
@@ -1783,7 +1785,7 @@ class FilesMaintenanceManager( object ):
                 
                 if not leave_deletion_record:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( hash, ) ) )
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
                     
                     service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
                     

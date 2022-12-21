@@ -922,31 +922,38 @@ class MediaSortControl( QW.QWidget ):
     
     def wheelEvent( self, event ):
         
-        if self._sort_type_button.rect().contains( self._sort_type_button.mapFromGlobal( QG.QCursor.pos() ) ):
+        if HG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ):
             
-            if event.angleDelta().y() > 0:
+            if self._sort_type_button.rect().contains( self._sort_type_button.mapFromGlobal( QG.QCursor.pos() ) ):
                 
-                index_delta = -1
+                if event.angleDelta().y() > 0:
+                    
+                    index_delta = -1
+                    
+                else:
+                    
+                    index_delta = 1
+                    
                 
-            else:
+                sort_types = self._PopulateSortMenuOrList()
                 
-                index_delta = 1
+                if self._sort_type in sort_types:
+                    
+                    index = sort_types.index( self._sort_type )
+                    
+                    new_index = ( index + index_delta ) % len( sort_types )
+                    
+                    new_sort_type = sort_types[ new_index ]
+                    
+                    self._SetSortTypeFromUser( new_sort_type )
+                    
                 
             
-            sort_types = self._PopulateSortMenuOrList()
+            event.accept()
             
-            if self._sort_type in sort_types:
-                
-                index = sort_types.index( self._sort_type )
-                
-                new_index = ( index + index_delta ) % len( sort_types )
-                
-                new_sort_type = sort_types[ new_index ]
-                
-                self._SetSortTypeFromUser( new_sort_type )
-                
+        else:
             
-        
-        event.accept()
+            event.ignore()
+            
         
     

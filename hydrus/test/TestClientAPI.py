@@ -3354,10 +3354,10 @@ class TestClientAPI( unittest.TestCase ):
             if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
                 
                 bounding_dimensions = HG.test_controller.options[ 'thumbnail_dimensions' ]
-                
                 thumbnail_scale_type = HG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+                thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
-                ( clip_rect, ( thumbnail_expected_width, thumbnail_expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type )
+                ( clip_rect, ( thumbnail_expected_width, thumbnail_expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 
                 metadata_row[ 'thumbnail_width' ] = thumbnail_expected_width
                 metadata_row[ 'thumbnail_height' ] = thumbnail_expected_height

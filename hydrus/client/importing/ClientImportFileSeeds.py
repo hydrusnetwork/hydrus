@@ -36,6 +36,78 @@ from hydrus.client.networking import ClientNetworkingFunctions
 FILE_SEED_TYPE_HDD = 0
 FILE_SEED_TYPE_URL = 1
 
+def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, url: str ):
+    
+    # let's see if the file that has this url has any other interesting urls
+    # if the file has another url with the same url class, then this is prob an unreliable 'alternate' source url attribution, and untrustworthy
+    
+    try:
+        
+        url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        
+    except HydrusExceptions.URLClassException:
+        
+        # this url is so borked it doesn't parse. can't make neighbour inferences about it
+        return False
+        
+    
+    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+    
+    # direct file URLs do not care about neighbours, since that can mean tokenised or different CDN URLs
+    url_is_worried_about_neighbours = url_class is not None and url_class.GetURLType() not in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN )
+    
+    if url_is_worried_about_neighbours:
+        
+        media_result = HG.client_controller.Read( 'media_result', hash )
+        
+        file_urls = media_result.GetLocationsManager().GetURLs()
+        
+        # normalise to collapse http/https dupes
+        file_urls = HG.client_controller.network_engine.domain_manager.NormaliseURLs( file_urls )
+        
+        for file_url in file_urls:
+            
+            if file_url == url:
+                
+                # obviously when we find ourselves, that's not a dupe
+                continue
+                
+            
+            if ClientNetworkingFunctions.ConvertURLIntoDomain( file_url ) != ClientNetworkingFunctions.ConvertURLIntoDomain( url ):
+                
+                # checking here for the day when url classes can refer to multiple domains
+                continue
+                
+            
+            try:
+                
+                file_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( file_url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                # this is borked text, not matchable
+                continue
+                
+            
+            if file_url_class is None or url_class.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
+                
+                # being slightly superfluous here, but this file url can't be an untrustworthy neighbour
+                continue
+                
+            
+            if file_url_class == url_class:
+                
+                # oh no, the file this source url refers to has a different known url in this same domain
+                # it is more likely that an edit on this site points to the original elsewhere
+                
+                return True
+                
+            
+        
+    
+    return False
+    
+
 class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
@@ -652,13 +724,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return dict( self._hashes )
         
     
-    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> typing.Tuple[ bool, ClientImportFiles.FileImportStatus ]:
+    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> typing.Tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
         
-        hash_match_found = False
+        # TODO: a user raised the spectre of multiple hash parses on some site that actually provides somehow the pre- and post- optimised versions of a file
+        # some I guess support multiple hashes at some point, maybe, or figure out a different solution, or draw a harder line in parsing about one-hash-per-parse
         
-        if file_import_options.DoNotCheckHashesBeforeImporting() or len( self._hashes ) == 0:
+        preimport_hash_check_type = file_import_options.GetPreImportHashCheckType()
+        
+        match_found = False
+        matches_are_dispositive = preimport_hash_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
+        
+        if len( self._hashes ) == 0 or preimport_hash_check_type == FileImportOptions.DO_NOT_CHECK:
             
-            return ( hash_match_found, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            return ( match_found, matches_are_dispositive, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
         
         # hashes
@@ -680,43 +758,42 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             jobs.append( ( hash_type, found_hash ) )
             
         
-        first_result = None
-        
         for ( hash_type, found_hash ) in jobs:
             
             file_import_status = HG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = '{} hash recognised'.format( hash_type ) )
             
-            hash_match_found = True
+            # there's some subtle gubbins going on here
+            # an sha256 'haven't seen this before' result will not set the hash here and so will not count as a match
+            # this is the same as if we do an md5 lookup and get no sha256 result back. we just aren't trusting a novel sha256 as a 'match'
+            # this is _useful_ to reduce the dispositivity of this lad in this specific case
+            
+            if file_import_status.hash is None:
+                
+                continue
+                
+            
+            match_found = True
             
             file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
             
-            if first_result is None:
-                
-                first_result = file_import_status
-                
-            
-            if not file_import_status.ShouldImport( file_import_options ):
-                
-                return ( hash_match_found, file_import_status )
-                
+            return ( match_found, matches_are_dispositive, file_import_status )
             
         
-        # we do first_result gubbins rather than generating a fresh unknown one to capture correct sha256 hash and mime if db provided it
-        if first_result is None:
-            
-            return ( hash_match_found, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
-            
-        else:
-            
-            return ( hash_match_found, first_result )
-            
+        return ( match_found, matches_are_dispositive, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
-    def GetPreImportStatusPredictionURL( self, file_import_options: FileImportOptions.FileImportOptions, file_url = None ) -> ClientImportFiles.FileImportStatus:
+    def GetPreImportStatusPredictionURL( self, file_import_options: FileImportOptions.FileImportOptions, file_url = None ) -> typing.Tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
         
-        if file_import_options.DoNotCheckKnownURLsBeforeImporting():
+        preimport_url_check_type = file_import_options.GetPreImportURLCheckType()
+        
+        preimport_url_check_looks_for_neighbours = file_import_options.PreImportURLCheckLooksForNeighbours()
+        
+        match_found = False
+        matches_are_dispositive = preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
+        
+        if preimport_url_check_type == FileImportOptions.DO_NOT_CHECK:
             
-            return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+            return ( match_found, matches_are_dispositive, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
         
         # urls
@@ -743,15 +820,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         # now discard gallery pages or post urls that can hold multiple files
         urls = [ url for url in urls if not HG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
         
-        unrecognised_url_results = set()
+        lookup_urls = HG.client_controller.network_engine.domain_manager.NormaliseURLs( urls )
         
-        first_result = None
+        untrustworthy_domains = set()
         
-        for url in urls:
+        for lookup_url in lookup_urls:
             
-            results = HG.client_controller.Read( 'url_statuses', url )
+            if ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url ) in untrustworthy_domains:
+                
+                continue
+                
             
-            if len( results ) == 0: # if no match found, no useful data discovered
+            results = HG.client_controller.Read( 'url_statuses', lookup_url )
+            
+            if len( results ) == 0: # if no match found, this is a new URL, no useful data discovered
                 
                 continue
                 
@@ -759,86 +841,30 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 continue
                 
-            else: # i.e. 1 match found
+            else: # this url is matched to one known file--sounds good!
                 
                 file_import_status = results[0]
                 
                 file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
                 
-                if first_result is None:
+                if preimport_url_check_looks_for_neighbours and FileURLMappingHasUntrustworthyNeighbours( file_import_status.hash, lookup_url ):
                     
-                    first_result = file_import_status
+                    untrustworthy_domains.add( ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url ) )
+                    
+                    continue
                     
                 
-                if not file_import_status.ShouldImport( file_import_options ):
-                    
-                    hash = file_import_status.hash
-                    
-                    # a known one-file url has given a single clear result. sounds good
-                    
-                    we_have_a_match = True
-                    
-                    if self.file_seed_type == FILE_SEED_TYPE_URL:
-                        
-                        # to double-check, let's see if the file that claims that url has any other interesting urls
-                        # if the file has another url with the same url class as ours, then this is prob an unreliable 'alternate' source url attribution, and untrustworthy
-                        
-                        my_url = self.file_seed_data
-                        
-                        if url != my_url:
-                            
-                            my_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( my_url )
-                            
-                            media_result = HG.client_controller.Read( 'media_result', hash )
-                            
-                            this_files_urls = media_result.GetLocationsManager().GetURLs()
-                            
-                            for this_files_url in this_files_urls:
-                                
-                                if this_files_url != my_url:
-                                    
-                                    try:
-                                        
-                                        this_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( this_files_url )
-                                        
-                                    except HydrusExceptions.URLClassException:
-                                        
-                                        continue
-                                        
-                                    
-                                    if my_url_class == this_url_class:
-                                        
-                                        # oh no, the file this source url refers to has a different known url in this same domain
-                                        # it is more likely that an edit on this site points to the original elsewhere
-                                        
-                                        we_have_a_match = False
-                                        
-                                        break
-                                        
-                                    
-                                
-                            
-                        
-                    
-                    if we_have_a_match:
-                        
-                        # if a known one-file url gives a single clear result, that result is reliable
-                        
-                        return file_import_status
-                        
-                    
+                match_found = True
+                
+                # we have discovered a single-file match with a hash and no controversial urls; we have a result
+                # this may be a 'needs to be imported' result, but that's fine. probably a record of a previously deleted file that is now ok to import
+                
+                return ( match_found, matches_are_dispositive, file_import_status )
                 
             
         
-        # we do first_result gubbins rather than generating a fresh unknown one to capture correct sha256 hash and mime if db provided it
-        if first_result is None:
-            
-            return ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
-            
-        else:
-            
-            return first_result
-            
+        # no good matches found
+        return ( match_found, matches_are_dispositive, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     def GetSearchFileSeeds( self ):
@@ -1036,21 +1062,30 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def PredictPreImportStatus( self, file_import_options: FileImportOptions.FileImportOptions, tag_import_options: TagImportOptions.TagImportOptions, note_import_options: NoteImportOptions.NoteImportOptions, file_url = None ):
         
-        ( hash_match_found, hash_file_import_status ) = self.GetPreImportStatusPredictionHash( file_import_options )
+        ( hash_match_found, hash_matches_are_dispositive, hash_file_import_status ) = self.GetPreImportStatusPredictionHash( file_import_options )
+        ( url_match_found, url_matches_are_dispositive, url_file_import_status ) = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
         
         # now let's set the prediction
         
-        url_file_import_status = None
-        
-        if hash_match_found: # trust hashes over urls m8
+        if hash_match_found and hash_matches_are_dispositive:
             
             file_import_status = hash_file_import_status
             
-        else:
-            
-            url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
+        elif url_match_found and url_matches_are_dispositive:
             
             file_import_status = url_file_import_status
+            
+        else:
+            
+            # prefer the one that says already in db/previously deleted
+            if hash_file_import_status.ShouldImport( file_import_options ):
+                
+                file_import_status = url_file_import_status
+                
+            else:
+                
+                file_import_status = hash_file_import_status
+                
             
         
         # and make some recommendations
@@ -1062,21 +1097,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         # but if we otherwise still want to force some tags, let's do it
         if not should_download_metadata and tag_import_options.WorthFetchingTags():
             
-            url_override = False
-            
-            if tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB():
-                
-                if url_file_import_status is None:
-                    
-                    url_file_import_status = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
-                    
-                
-                if url_file_import_status.AlreadyInDB():
-                    
-                    url_override = True
-                    
-                
-            
+            url_override = url_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
             hash_override = hash_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB()
             
             if url_override or hash_override:

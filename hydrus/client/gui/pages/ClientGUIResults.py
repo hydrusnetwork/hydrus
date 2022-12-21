@@ -154,6 +154,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
+    def _ClearDeleteRecord( self ):
+        
+        media = self._GetSelectedFlatMedia()
+        
+        ClientGUIMediaActions.ClearDeleteRecord( self, media )
+        
+    
     def _CopyBMPToClipboard( self ):
         
         copied = False
@@ -3584,6 +3591,7 @@ class MediaPanelThumbnails( MediaPanel ):
         selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() and media.GetLocationsManager().IsLocal() for media in self._selected_media )
+        selection_has_deletion_record = True in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() for locations_manager in selected_locations_managers )
         
         all_file_domains = HydrusData.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
@@ -3668,6 +3676,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 local_delete_phrase = 'delete selected'
                 delete_physically_phrase = 'delete selected physically now'
                 undelete_phrase = 'undelete selected'
+                clear_deletion_phrase = 'clear deletion record for selected'
                 export_phrase = 'files'
                 copy_phrase = 'files'
                 
@@ -3692,6 +3701,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 local_delete_phrase = 'delete'
                 delete_physically_phrase = 'delete physically now'
                 undelete_phrase = 'undelete'
+                clear_deletion_phrase = 'clear deletion record'
                 export_phrase = 'file'
                 copy_phrase = 'file'
                 
@@ -3987,6 +3997,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Completely delete the selected files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
+                
+            
+            if selection_has_deletion_record:
+                
+                ClientGUIMenus.AppendMenuItem( menu, clear_deletion_phrase, 'Clear the deletion record for these files, allowing them to reimport even if previously deleted files are set to be discarded.', self._ClearDeleteRecord )
                 
             
             #
@@ -4665,7 +4680,7 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def GetQtImage( self, device_pixel_ratio ):
+    def GetQtImage( self, device_pixel_ratio ) -> QG.QImage:
         
         # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
         # or just give the qt_image to be drawn to?
@@ -4768,13 +4783,27 @@ class Thumbnail( Selectable ):
         
         painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), new_options.GetColour( background_colour_type ) )
         
-        ( thumb_width, thumb_height ) = thumbnail_hydrus_bmp.GetSize() 
-        
         raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
         
-        x_offset = ( width - thumb_width ) // 2
+        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
-        y_offset = ( height - thumb_height ) // 2
+        if thumbnail_dpr_percent != 100:
+            
+            thumbnail_dpr = thumbnail_dpr_percent / 100
+            
+            raw_thumbnail_qt_image.setDevicePixelRatio( thumbnail_dpr )
+            
+            # qt_image.deviceIndepedentSize isn't supported in Qt5 lmao
+            device_independent_thumb_size = raw_thumbnail_qt_image.size() / thumbnail_dpr
+            
+        else:
+            
+            device_independent_thumb_size = raw_thumbnail_qt_image.size()
+            
+        
+        x_offset = ( width - device_independent_thumb_size.width() ) // 2
+        
+        y_offset = ( height - device_independent_thumb_size.height() ) // 2
         
         painter.drawImage( x_offset, y_offset, raw_thumbnail_qt_image )
         

@@ -712,10 +712,10 @@ class ThumbnailCache( object ):
         ( media_width, media_height ) = display_media.GetResolution()
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
-        
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
-        ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type )
+        ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
         exactly_as_expected = current_width == expected_width and current_height == expected_height
         
@@ -733,7 +733,7 @@ class ThumbnailCache( object ):
                 
                 if HG.file_report_mode:
                     
-                    HydrusData.ShowText( 'Thumbnail {} too small, scheduling regeneration from source.'.format( hash.hex() ) )
+                    HydrusData.ShowText( 'Thumbnail {} wrong size ({}x{} instead of {}x{}), scheduling regeneration from source.'.format( hash.hex(), current_width, current_height, expected_width, expected_height ) )
                     
                 
                 delayed_item = display_media.GetMediaResult()
@@ -754,7 +754,7 @@ class ThumbnailCache( object ):
                 
                 if HG.file_report_mode:
                     
-                    HydrusData.ShowText( 'Stored thumbnail {} was the wrong size, only scaling due to no local source.'.format( hash.hex() ) )
+                    HydrusData.ShowText( 'Thumbnail {} wrong size ({}x{} instead of {}x{}), only scaling due to no local source.'.format( hash.hex(), current_width, current_height, expected_width, expected_height ) )
                     
                 
             
@@ -933,6 +933,7 @@ class ThumbnailCache( object ):
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             # it would be ideal to replace this with mimes_to_default_thumbnail_paths at a convenient point
             
@@ -944,7 +945,7 @@ class ThumbnailCache( object ):
                 
                 numpy_image_resolution = HydrusImageHandling.GetResolutionNumPy( numpy_image )
                 
-                ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( numpy_image_resolution, bounding_dimensions, thumbnail_scale_type )
+                ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( numpy_image_resolution, bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 
                 if clip_rect is not None:
                     

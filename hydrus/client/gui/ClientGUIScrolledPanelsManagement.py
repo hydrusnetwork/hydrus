@@ -3442,7 +3442,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
@@ -3782,7 +3782,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._suggested_favourites_services.addItem( tag_service.GetName(), tag_service.GetServiceKey() )
                 
             
-            self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+            self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             
             self._current_suggested_favourites_service = None
             
@@ -4005,12 +4005,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thumbnail_scale_type = ClientGUICommon.BetterChoice( self )
             
-            self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
-            
             for t in ( HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, HydrusImageHandling.THUMBNAIL_SCALE_TO_FILL ):
                 
                 self._thumbnail_scale_type.addItem( HydrusImageHandling.thumbnail_scale_str_lookup[ t ], t )
                 
+            
+            # I tried <100%, but Qt seems to cap it to 1.0. Sad!
+            self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
+            
+            tt = 'If your OS runs at an UI scale greater than 100%, mirror it here, and your thumbnails will look crisp. If you have multiple monitors at different UI scales, set it to the one you will be looking at hydrus thumbnails on more often. Setting this value to anything other than the monitor hydrus is currently on will cause thumbs to look pixellated and/or muddy.'
+            tt += os.linesep * 2
+            tt += 'I believe your UI scale is {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
+            
+            self._thumbnail_dpr_percentage.setToolTip( tt )
+            
+            self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
             
             self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
@@ -4035,6 +4044,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_margin.setValue( self._new_options.GetInteger( 'thumbnail_margin' ) )
             
             self._thumbnail_scale_type.SetValue( self._new_options.GetInteger( 'thumbnail_scale_type' ) )
+            self._thumbnail_dpr_percentage.setValue( self._new_options.GetInteger( 'thumbnail_dpr_percent' ) )
             
             self._video_thumbnail_percentage_in.setValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             
@@ -4063,6 +4073,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
             rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
+            rows.append( ( 'Thumbnail UI scale supersampling %: ', self._thumbnail_dpr_percentage ) )
             rows.append( ( 'Focus thumbnails in the preview window on ctrl-click: ', self._focus_preview_on_ctrl_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
             rows.append( ( 'Focus thumbnails in the preview window on shift-click: ', self._focus_preview_on_shift_click ) )
@@ -4099,6 +4110,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'thumbnail_margin', self._thumbnail_margin.value() )
             
             self._new_options.SetInteger( 'thumbnail_scale_type', self._thumbnail_scale_type.GetValue() )
+            self._new_options.SetInteger( 'thumbnail_dpr_percent', self._thumbnail_dpr_percentage.value() )
             
             self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.value() )
             
@@ -4156,8 +4168,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             res_changed = HC.options[ 'thumbnail_dimensions' ] != self._original_options[ 'thumbnail_dimensions' ]
             type_changed = test_new_options.GetInteger( 'thumbnail_scale_type' ) != self._original_new_options.GetInteger( 'thumbnail_scale_type' )
+            dpr_changed = test_new_options.GetInteger( 'thumbnail_dpr_percent' ) != self._original_new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            if res_changed or type_changed:
+            if res_changed or type_changed or dpr_changed:
                 
                 HG.client_controller.pub( 'reset_thumbnail_cache' )
                 

@@ -268,32 +268,57 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
-    def InitialiseFromSerialisableInfo( self, version, serialisable_info, raise_error_on_future_version = False ):
+    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info, raise_error_on_future_version = False ):
         
-        if version > self.SERIALISABLE_VERSION:
+        object_is_newer = original_version > self.SERIALISABLE_VERSION
+        
+        if object_is_newer:
             
             if raise_error_on_future_version:
                 
-                message = 'Unfortunately, an object of type {} could not be loaded because it was created in a client that uses an updated version of that object! This client supports versions up to {}, but the object was version {}.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, version )
+                message = 'Unfortunately, an object of type {} could not be loaded because it was created in a client/server that uses an updated version of that object! We support up to version {}, but the object was version {}.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version )
                 message += os.linesep * 2
-                message += 'Please update your client to import this object.'
+                message += 'Please update your client/server to import this object.'
                 
                 raise HydrusExceptions.SerialisationException( message )
                 
             else:
                 
-                message = 'An object of type {} was created in a client that uses an updated version of that object! This client supports versions up to {}, but the object was version {}. For now, the client will try to continue work, but things may break. If you know why this has occured, please correct it. If you do not, please let hydrus dev know.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, version )
+                message = 'An object of type {} was created in a client/server that uses an updated version of that object! We support versions up to {}, but the object was version {}. For now, we will try to continue work, but things may break. If you know why this has occured, please correct it. If you do not, please let hydrus dev know.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version )
                 
                 HydrusData.ShowText( message )
                 
             
         
-        while version < self.SERIALISABLE_VERSION:
+        try:
             
-            ( version, serialisable_info ) = self._UpdateSerialisableInfo( version, serialisable_info )
+            current_version = original_version
+            
+            while current_version < self.SERIALISABLE_VERSION:
+                
+                ( current_version, serialisable_info ) = self._UpdateSerialisableInfo( current_version, serialisable_info )
+                
+            
+        except:
+            
+            raise HydrusExceptions.SerialisationException( 'Could not update this object of type {} from version {} to {}!'.format( self.SERIALISABLE_NAME, original_version, self.SERIALISABLE_VERSION ) )
             
         
-        self._InitialiseFromSerialisableInfo( serialisable_info )
+        try:
+            
+            self._InitialiseFromSerialisableInfo( serialisable_info )
+            
+        except:
+            
+            if object_is_newer:
+                
+                raise HydrusExceptions.SerialisationException( 'An object of type {} was created in a client/server that uses an updated version of that object! We support versions up to {}, but the object was version {}. I tried to load it, but the initialisation failed. You probably need to update your client/server.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version ) )
+                
+            else:
+                
+                raise HydrusExceptions.SerialisationException( 'Could not initialise this object of type {}!'.format( self.SERIALISABLE_NAME ) )
+                
+            
         
     
 

@@ -98,6 +98,34 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
     return True
     
 
+def ClearDeleteRecord( win, media ):
+    
+    clearable_media = [ m for m in media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetDeleted() ]
+    
+    if len( clearable_media ) == 0:
+        
+        return
+        
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, 'Clear the deletion record for {} previously deleted files?.'.format( HydrusData.ToHumanInt( len( clearable_media ) ) ) )
+    
+    if result == QW.QDialog.Accepted:
+        
+        for chunk_of_media in HydrusData.SplitIteratorIntoChunks( clearable_media, 64 ):
+            
+            service_keys_to_content_updates = collections.defaultdict( list )
+            
+            clearee_hashes = [ m.GetHash() for m in chunk_of_media ]
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
+            
+            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ content_update ]
+            
+            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+
 def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_start_on = typing.Optional[ str ] ):
     
     names_to_notes = media.GetNotesManager().GetNamesToNotes()
@@ -635,7 +663,14 @@ def UndeleteFiles( hashes ):
 
 def UndeleteMedia( win, media ):
     
-    media_deleted_service_keys = HydrusData.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in media ) )
+    undeletable_media = [ m for m in media if m.GetLocationsManager().IsLocal() ]
+    
+    if len( undeletable_media ) == 0:
+        
+        return
+        
+    
+    media_deleted_service_keys = HydrusData.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in undeletable_media ) )
     
     local_file_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
     
@@ -673,7 +708,7 @@ def UndeleteMedia( win, media ):
                 
             
         else:
-    
+            
             ( undelete_service, ) = undeletable_services
             
             if HC.options[ 'confirm_trash' ]:
@@ -693,7 +728,7 @@ def UndeleteMedia( win, media ):
         
         if do_it:
             
-            for chunk_of_media in HydrusData.SplitIteratorIntoChunks( media, 64 ):
+            for chunk_of_media in HydrusData.SplitIteratorIntoChunks( undeletable_media, 64 ):
                 
                 service_keys_to_content_updates = collections.defaultdict( list )
                 

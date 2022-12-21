@@ -1619,14 +1619,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             self._parent_key = None
             
         
-        if predicate_type == PREDICATE_TYPE_TAG:
-            
-            self._matchable_search_texts = { self._value }
-            
-        else:
-            
-            self._matchable_search_texts = set()
-            
+        self._RecalculateMatchableSearchTexts()
         
         #
         
@@ -1787,6 +1780,23 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._RecalcPythonHash()
         
     
+    def _RecalculateMatchableSearchTexts( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            self._matchable_search_texts = { self._value }
+            
+            if self._siblings is not None:
+                
+                self._matchable_search_texts.update( self._siblings )
+                
+            
+        else:
+            
+            self._matchable_search_texts = set()
+            
+        
+    
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
         if version == 1:
@@ -1895,7 +1905,14 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( namespace, subtag ) = HydrusTags.SplitTag( tag_analogue )
             
-            return namespace
+            if namespace == '*':
+                
+                return ''
+                
+            else:
+                
+                return namespace
+                
             
         else:
             
@@ -2168,14 +2185,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         self._siblings = siblings
         
-        if self._predicate_type == PREDICATE_TYPE_TAG:
-            
-            self._matchable_search_texts = { self._value }.union( self._siblings )
-            
-        else:
-            
-            self._matchable_search_texts = set()
-            
+        self._RecalculateMatchableSearchTexts()
         
     
     def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ) -> str:
@@ -2856,7 +2866,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == PREDICATE_TYPE_WILDCARD:
             
-            wildcard = self._value + ' (wildcard search)'
+            if self._value.startswith( '*:' ):
+                
+                ( any_namespace, subtag ) = HydrusTags.SplitTag( self._value )
+                
+                wildcard = '{} (any namespace)'.format( subtag )
+                
+            else:
+                
+                wildcard = self._value + ' (wildcard search)'
+                
             
             if not self._inclusive:
                 
@@ -2924,11 +2943,18 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.C
         
         if ':' in s:
             
-            beginning = r'\A'
-            
             ( namespace, subtag ) = s.split( ':', 1 )
             
-            s = r'{}:(.*\s)?{}'.format( namespace, subtag )
+            if namespace == '.*':
+                
+                beginning = r'(\A|:|\s)'
+                s = subtag
+                
+            else:
+                
+                beginning = r'\A'
+                s = r'{}:(.*\s)?{}'.format( namespace, subtag )
+                
             
         elif s.startswith( '.*' ):
             
@@ -3074,13 +3100,36 @@ class ParsedAutocompleteText( object ):
         return 'AC Tag Text: {}'.format( self.raw_input )
         
     
-    def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False ):
+    def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False, allow_unnamespaced_search_gives_any_namespace_wildcards: bool = True ) -> str:
         
         text = CollapseWildcardCharacters( self.raw_content )
+        
+        if len( text ) == 0:
+            
+            return ''
+            
         
         if self._collapse_search_characters and not force_do_not_collapse:
             
             text = ConvertTagToSearchable( text )
+            
+        
+        if allow_unnamespaced_search_gives_any_namespace_wildcards and self._tag_autocomplete_options.UnnamespacedSearchGivesAnyNamespaceWildcards():
+            
+            if ':' not in text:
+                
+                ( namespace, subtag ) = HydrusTags.SplitTag( text )
+                
+                if namespace == '':
+                    
+                    if subtag == '':
+                        
+                        return ''
+                        
+                    
+                    text = '*:{}'.format( subtag )
+                    
+                
             
         
         if always_autocompleting:
@@ -3135,7 +3184,24 @@ class ParsedAutocompleteText( object ):
                 
             elif self.IsExplicitWildcard():
                 
-                search_texts = [ self._GetSearchText( True, force_do_not_collapse = True ), self._GetSearchText( False, force_do_not_collapse = True ) ]
+                search_texts = []
+                
+                allow_unnamespaced_search_gives_any_namespace_wildcards_values = [ True ]
+                always_autocompleting_values = [ True, False ]
+                
+                if '*' in self.raw_content:
+                    
+                    # don't spam users who type something with this setting turned on
+                    allow_unnamespaced_search_gives_any_namespace_wildcards_values.append( False )
+                    
+                
+                for allow_unnamespaced_search_gives_any_namespace_wildcards in allow_unnamespaced_search_gives_any_namespace_wildcards_values:
+                    
+                    for always_autocompleting in always_autocompleting_values:
+                        
+                        search_texts.append( self._GetSearchText( always_autocompleting, allow_unnamespaced_search_gives_any_namespace_wildcards = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
+                        
+                    
                 
                 for s in list( search_texts ):
                     
@@ -3224,7 +3290,7 @@ class ParsedAutocompleteText( object ):
     def IsExplicitWildcard( self ):
         
         # user has intentionally put a '*' in
-        return '*' in self.raw_content
+        return '*' in self.raw_content or self._GetSearchText( False ).startswith( '*:' )
         
     
     def IsNamespaceSearch( self ):

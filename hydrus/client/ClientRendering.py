@@ -1012,14 +1012,14 @@ class HydrusBitmap( object ):
         return self._depth
         
     
-    def GetQtImage( self ):
+    def GetQtImage( self ) -> QG.QImage:
         
         ( width, height ) = self._size
         
         return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
-    def GetQtPixmap( self ):
+    def GetQtPixmap( self ) -> QG.QPixmap:
         
         ( width, height ) = self._size
         

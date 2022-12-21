@@ -314,8 +314,9 @@ class QuickDownloadManager( object ):
                                     file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
                                     
                                     exclude_deleted = False # this is the important part here
-                                    do_not_check_known_urls_before_importing = False
-                                    do_not_check_hashes_before_importing = False
+                                    preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
+                                    preimport_url_check_type = FileImportOptions.DO_CHECK
+                                    preimport_url_check_looks_for_neighbours = True
                                     allow_decompression_bombs = True
                                     min_size = None
                                     max_size = None
@@ -328,7 +329,8 @@ class QuickDownloadManager( object ):
                                     
                                     file_import_options = FileImportOptions.FileImportOptions()
                                     
-                                    file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                                    file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                                    file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
                                     file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                                     
                                     file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )

@@ -1861,20 +1861,7 @@ class ContentUpdate( object ):
         
         if self._data_type == HC.CONTENT_TYPE_FILES:
             
-            if self._action == HC.CONTENT_UPDATE_ADVANCED:
-                
-                ( sub_action, possible_hashes ) = self._row
-                
-                if possible_hashes is None:
-                    
-                    hashes = set()
-                    
-                else:
-                    
-                    hashes = possible_hashes
-                    
-                
-            elif self._action == HC.CONTENT_UPDATE_ADD:
+            if self._action == HC.CONTENT_UPDATE_ADD:
                 
                 ( file_info_manager, timestamp ) = self._row
                 
@@ -1883,6 +1870,11 @@ class ContentUpdate( object ):
             else:
                 
                 hashes = self._row
+                
+                if hashes is None:
+                    
+                    hashes = set()
+                    
                 
             
         elif self._data_type == HC.CONTENT_TYPE_DIRECTORIES:

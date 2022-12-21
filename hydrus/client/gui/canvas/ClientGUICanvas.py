@@ -4263,13 +4263,20 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom in', 'Zoom the media in.', self._media_container.ZoomIn )
                 ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom out', 'Zoom the media out.', self._media_container.ZoomOut )
                 
-                if self._media_container.GetCurrentZoom() != 1.0:
+                current_zoom = self._media_container.GetCurrentZoom()
+                
+                if current_zoom != 1.0:
                     
                     ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom to 100%', 'Set the zoom to 100%.', self._media_container.ZoomSwitch )
                     
-                elif self._media_container.GetCurrentZoom() != self._media_container.GetCanvasZoom():
+                elif current_zoom != self._media_container.GetCanvasZoom():
                     
                     ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._media_container.ZoomSwitch )
+                    
+                
+                if not self._media_container.IsAtMaxZoom():
+                    
+                    ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom to max', 'Set the zoom to the maximum possible.', self._media_container.ZoomMax )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) ) )
