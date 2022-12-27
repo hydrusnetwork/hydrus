@@ -21,4 +21,4 @@ six>=1.14.0
 Twisted>=20.3.0
 
 requests==2.28.1
-setuptools==65.4.1
+setuptools==65.5.1
