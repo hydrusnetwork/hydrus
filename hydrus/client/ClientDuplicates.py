@@ -7,14 +7,524 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientThreading
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+
+hashes_to_jpeg_quality = {}
+hashes_to_pixel_hashes = {}
+
+def GetDuplicateComparisonScore( shown_media, comparison_media ):
+    
+    statements_and_scores = GetDuplicateComparisonStatements( shown_media, comparison_media )
+    
+    total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+    
+    return total_score
+    
+
+# TODO: ok, let's make an enum here at some point and a DuplicateComparisonSetting serialisable object
+# Then we can attach 'show/hide' boolean and allow editable scores and whatnot in a nice class that will one day evolve the enum to an editable MetadataConditional/MetadataComparison object
+# also have banding so we can have 'at this filesize difference, score 10, at this, score 15'
+# show it in a listctrl or whatever in the options, ditch the hardcoding
+# metadatacomparison needs to handle 'if one is a png and one is a jpeg', and then orient to A/B and give it a score
+
+def GetDuplicateComparisonStatements( shown_media, comparison_media ):
+    
+    new_options = HG.client_controller.new_options
+    
+    duplicate_comparison_score_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' )
+    duplicate_comparison_score_much_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality' )
+    duplicate_comparison_score_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' )
+    duplicate_comparison_score_much_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_much_higher_filesize' )
+    duplicate_comparison_score_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_higher_resolution' )
+    duplicate_comparison_score_much_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' )
+    duplicate_comparison_score_more_tags = new_options.GetInteger( 'duplicate_comparison_score_more_tags' )
+    duplicate_comparison_score_older = new_options.GetInteger( 'duplicate_comparison_score_older' )
+    duplicate_comparison_score_nicer_ratio = new_options.GetInteger( 'duplicate_comparison_score_nicer_ratio' )
+    
+    #
+    
+    statements_and_scores = {}
+    
+    s_hash = shown_media.GetHash()
+    c_hash = comparison_media.GetHash()
+    
+    s_mime = shown_media.GetMime()
+    c_mime = comparison_media.GetMime()
+    
+    # size
+    
+    s_size = shown_media.GetSize()
+    c_size = comparison_media.GetSize()
+    
+    is_a_pixel_dupe = False
+    
+    if shown_media.IsStaticImage() and comparison_media.IsStaticImage() and shown_media.GetResolution() == comparison_media.GetResolution():
+        
+        global hashes_to_pixel_hashes
+        
+        if s_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            
+            hashes_to_pixel_hashes[ s_hash ] = HydrusImageHandling.GetImagePixelHash( path, s_mime )
+            
+        
+        if c_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            
+            hashes_to_pixel_hashes[ c_hash ] = HydrusImageHandling.GetImagePixelHash( path, c_mime )
+            
+        
+        s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
+        c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
+        
+        if s_pixel_hash == c_pixel_hash:
+            
+            is_a_pixel_dupe = True
+            
+            if s_mime == HC.IMAGE_PNG and c_mime != HC.IMAGE_PNG:
+                
+                statement = 'this is a pixel-for-pixel duplicate png!'
+                
+                score = -100
+                
+            elif s_mime != HC.IMAGE_PNG and c_mime == HC.IMAGE_PNG:
+                
+                statement = 'other file is a pixel-for-pixel duplicate png!'
+                
+                score = 100
+                
+            else:
+                
+                statement = 'images are pixel-for-pixel duplicates!'
+                
+                score = 0
+                
+            
+            statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
+            
+        
+    
+    if s_size != c_size:
+        
+        absolute_size_ratio = max( s_size, c_size ) / min( s_size, c_size )
+        
+        if absolute_size_ratio > 2.0:
+            
+            if s_size > c_size:
+                
+                operator = '>>'
+                score = duplicate_comparison_score_much_higher_filesize
+                
+            else:
+                
+                operator = '<<'
+                score = -duplicate_comparison_score_much_higher_filesize
+                
+            
+        elif absolute_size_ratio > 1.05:
+            
+            if s_size > c_size:
+                
+                operator = '>'
+                score = duplicate_comparison_score_higher_filesize
+                
+            else:
+                
+                operator = '<'
+                score = -duplicate_comparison_score_higher_filesize
+                
+            
+        else:
+            
+            operator = CC.UNICODE_ALMOST_EQUAL_TO
+            score = 0
+            
+        
+        if s_size > c_size:
+            
+            sign = '+'
+            percentage_difference = ( s_size / c_size ) - 1.0
+            
+        else:
+            
+            sign = ''
+            percentage_difference = ( s_size / c_size ) - 1.0
+            
+        
+        percentage_different_string = ' ({}{})'.format( sign, HydrusData.ConvertFloatToPercentage( percentage_difference ) )
+        
+        if is_a_pixel_dupe:
+            
+            score = 0
+            
+        
+        statement = '{} {} {}{}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ), percentage_different_string )
+        
+        statements_and_scores[ 'filesize' ]  = ( statement, score )
+        
+    
+    # higher/same res
+    
+    s_resolution = shown_media.GetResolution()
+    c_resolution = comparison_media.GetResolution()
+    
+    if s_resolution != c_resolution:
+        
+        ( s_w, s_h ) = s_resolution
+        ( c_w, c_h ) = c_resolution
+        
+        all_measurements_are_good = None not in ( s_w, s_h, c_w, c_h ) and True not in ( d <= 0 for d in ( s_w, s_h, c_w, c_h ) )
+        
+        if all_measurements_are_good:
+            
+            resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
+            
+            if resolution_ratio == 1.0:
+                
+                operator = '!='
+                score = 0
+                
+            elif resolution_ratio > 2.0:
+                
+                operator = '>>'
+                score = duplicate_comparison_score_much_higher_resolution
+                
+            elif resolution_ratio > 1.00:
+                
+                operator = '>'
+                score = duplicate_comparison_score_higher_resolution
+                
+            elif resolution_ratio < 0.5:
+                
+                operator = '<<'
+                score = -duplicate_comparison_score_much_higher_resolution
+                
+            else:
+                
+                operator = '<'
+                score = -duplicate_comparison_score_higher_resolution
+                
+            
+            if s_resolution in HC.NICE_RESOLUTIONS:
+                
+                s_string = HC.NICE_RESOLUTIONS[ s_resolution ]
+                
+            else:
+                
+                s_string = HydrusData.ConvertResolutionToPrettyString( s_resolution )
+                
+                if s_w % 2 == 1 or s_h % 2 == 1:
+                    
+                    s_string += ' (unusual)'
+                    
+                
+            
+            if c_resolution in HC.NICE_RESOLUTIONS:
+                
+                c_string = HC.NICE_RESOLUTIONS[ c_resolution ]
+                
+            else:
+                
+                c_string = HydrusData.ConvertResolutionToPrettyString( c_resolution )
+                
+                if c_w % 2 == 1 or c_h % 2 == 1:
+                    
+                    c_string += ' (unusual)'
+                    
+                
+            
+            statement = '{} {} {}'.format( s_string, operator, c_string )
+            
+            statements_and_scores[ 'resolution' ] = ( statement, score )
+            
+            #
+            
+            s_ratio = s_w / s_h
+            c_ratio = c_w / c_h
+            
+            s_nice = s_ratio in HC.NICE_RATIOS
+            c_nice = c_ratio in HC.NICE_RATIOS
+            
+            if s_nice or c_nice:
+                
+                if s_nice:
+                    
+                    s_string = HC.NICE_RATIOS[ s_ratio ]
+                    
+                else:
+                    
+                    s_string = 'unusual'
+                    
+                
+                if c_nice:
+                    
+                    c_string = HC.NICE_RATIOS[ c_ratio ]
+                    
+                else:
+                    
+                    c_string = 'unusual'
+                    
+                
+                if s_nice and c_nice:
+                    
+                    operator = '-'
+                    score = 0
+                    
+                elif s_nice:
+                    
+                    operator = '>'
+                    score = duplicate_comparison_score_nicer_ratio
+                    
+                elif c_nice:
+                    
+                    operator = '<'
+                    score = -duplicate_comparison_score_nicer_ratio
+                    
+                
+                if s_string == c_string:
+                    
+                    statement = 'both {}'.format( s_string )
+                    
+                else:
+                    
+                    statement = '{} {} {}'.format( s_string, operator, c_string )
+                    
+                
+                statements_and_scores[ 'ratio' ] = ( statement, score )
+                
+                
+            
+        
+    
+    # same/diff mime
+    
+    if s_mime != c_mime:
+        
+        statement = '{} vs {}'.format( HC.mime_string_lookup[ s_mime ], HC.mime_string_lookup[ c_mime ] )
+        score = 0
+        
+        statements_and_scores[ 'mime' ] = ( statement, score )
+        
+    
+    # more tags
+    
+    s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
+    c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
+    
+    if s_num_tags != c_num_tags:
+        
+        if s_num_tags > 0 and c_num_tags > 0:
+            
+            if s_num_tags > c_num_tags:
+                
+                operator = '>'
+                score = duplicate_comparison_score_more_tags
+                
+            else:
+                
+                operator = '<'
+                score = -duplicate_comparison_score_more_tags
+                
+            
+        elif s_num_tags > 0:
+            
+            operator = '>>'
+            score = duplicate_comparison_score_more_tags
+            
+        elif c_num_tags > 0:
+            
+            operator = '<<'
+            score = -duplicate_comparison_score_more_tags
+            
+        
+        statement = '{} tags {} {} tags'.format( HydrusData.ToHumanInt( s_num_tags ), operator, HydrusData.ToHumanInt( c_num_tags ) )
+        
+        statements_and_scores[ 'num_tags' ] = ( statement, score )
+        
+    
+    # older
+    
+    s_ts = shown_media.GetLocationsManager().GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    c_ts = comparison_media.GetLocationsManager().GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    
+    one_month = 86400 * 30
+    
+    if s_ts is not None and c_ts is not None and abs( s_ts - c_ts ) > one_month:
+        
+        if s_ts < c_ts:
+            
+            operator = 'older than'
+            score = duplicate_comparison_score_older
+            
+        else:
+            
+            operator = 'newer than'
+            score = -duplicate_comparison_score_older
+            
+        
+        if is_a_pixel_dupe:
+            
+            score = 0
+            
+        
+        statement = '{}, {} {}'.format( ClientData.TimestampToPrettyTimeDelta( s_ts, history_suffix = ' old' ), operator, ClientData.TimestampToPrettyTimeDelta( c_ts, history_suffix = ' old' ) )
+        
+        statements_and_scores[ 'time_imported' ] = ( statement, score )
+        
+    
+    if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
+        
+        global hashes_to_jpeg_quality
+        
+        if s_hash not in hashes_to_jpeg_quality:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            
+            hashes_to_jpeg_quality[ s_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            
+        
+        if c_hash not in hashes_to_jpeg_quality:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            
+            hashes_to_jpeg_quality[ c_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            
+        
+        ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
+        ( c_label, c_jpeg_quality ) = hashes_to_jpeg_quality[ c_hash ]
+        
+        score = 0
+        
+        if s_label != c_label:
+            
+            if c_jpeg_quality is None or s_jpeg_quality is None:
+                
+                score = 0
+                
+            else:
+                
+                # other way around, low score is good here
+                quality_ratio = c_jpeg_quality / s_jpeg_quality
+                
+                if quality_ratio > 2.0:
+                    
+                    score = duplicate_comparison_score_much_higher_jpeg_quality
+                    
+                elif quality_ratio > 1.0:
+                    
+                    score = duplicate_comparison_score_higher_jpeg_quality
+                    
+                elif quality_ratio < 0.5:
+                    
+                    score = -duplicate_comparison_score_much_higher_jpeg_quality
+                    
+                else:
+                    
+                    score = -duplicate_comparison_score_higher_jpeg_quality
+                    
+                
+            
+            statement = '{} vs {} jpeg quality'.format( s_label, c_label )
+            
+            statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
+            
+        
+    
+    def has_exif( m ):
+        
+        try:
+            
+            hash = m.GetHash()
+            mime = m.GetMime()
+            
+            if mime not in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF ):
+                
+                return False
+                
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+            pil_image = HydrusImageHandling.RawOpenPILImage( path )
+            
+            exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+            
+            if exif_dict is None:
+                
+                return False
+                
+            
+            return len( exif_dict ) > 0
+            
+        except:
+            
+            return False
+            
+        
+    
+    s_has_exif = has_exif( shown_media )
+    c_has_exif = has_exif( comparison_media )
+    
+    if s_has_exif ^ c_has_exif:
+        
+        if s_has_exif:
+            
+            exif_statement = 'has exif data, the other does not'
+            
+        else:
+            
+            exif_statement = 'the other has exif data, this does not'
+            
+        
+        statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
+        
+    
+    s_has_human_readable_embedded_metadata = shown_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+    c_has_human_readable_embedded_metadata = comparison_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+    
+    if s_has_human_readable_embedded_metadata ^ c_has_human_readable_embedded_metadata:
+        
+        if s_has_human_readable_embedded_metadata:
+            
+            embedded_metadata_statement = 'has embedded metadata, the other does not'
+            
+        else:
+            
+            embedded_metadata_statement = 'the other has embedded metadata, this does not'
+            
+        
+        statements_and_scores[ 'embedded_metadata' ] = ( embedded_metadata_statement, 0 )
+        
+    
+    s_has_icc = shown_media.GetMediaResult().GetFileInfoManager().has_icc_profile
+    c_has_icc = comparison_media.GetMediaResult().GetFileInfoManager().has_icc_profile
+    
+    if s_has_icc ^ c_has_icc:
+        
+        if s_has_icc:
+            
+            icc_statement = 'has icc profile, the other does not'
+            
+        else:
+            
+            icc_statement = 'the other has icc profile, this does not'
+            
+        
+        statements_and_scores[ 'icc_profile' ] = ( icc_statement, 0 )
+        
+    
+    return statements_and_scores
+    
 
 class DuplicatesManager( object ):
     
@@ -423,7 +933,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_urls_action = sync_urls_action
         
     
-    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ):
+    def ProcessPairIntoContentUpdates( self, first_media: ClientMedia.MediaSingleton, second_media: ClientMedia.MediaSingleton, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ):
         
         if file_deletion_reason is None:
             
@@ -432,8 +942,13 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_content_updates = collections.defaultdict( list )
         
-        first_hashes = first_media.GetHashes()
-        second_hashes = second_media.GetHashes()
+        first_hash = first_media.GetHash()
+        second_hash = second_media.GetHash()
+        first_hashes = { first_hash }
+        second_hashes = { second_hash }
+        
+        first_media_result = first_media.GetMediaResult()
+        second_media_result = second_media.GetMediaResult()
         
         #
         
@@ -580,17 +1095,27 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             if self._sync_notes_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
-                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media, second_names_and_notes )
-                second_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( second_media, first_names_and_notes )
+                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
+                second_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( second_media_result, first_names_and_notes )
                 
                 content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
                 content_updates.extend( second_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
                 
             elif self._sync_notes_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
-                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media, second_names_and_notes )
+                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
                 
                 content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                
+            elif self._sync_notes_action == HC.CONTENT_MERGE_ACTION_MOVE:
+                
+                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
+                
+                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                
+                content_updates.extend(
+                    [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( second_hash, name ) ) for ( name, note ) in second_names_and_notes ]
+                )
                 
             
             if len( content_updates ) > 0:

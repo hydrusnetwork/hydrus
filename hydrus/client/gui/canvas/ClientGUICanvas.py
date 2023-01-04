@@ -2219,9 +2219,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     showPairInPage = QC.Signal( list )
     
-    def __init__( self, parent, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
+    def __init__( self, parent, file_search_context_1: ClientSearch.FileSearchContext, file_search_context_2: ClientSearch.FileSearchContext, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
         
-        location_context = file_search_context.GetLocationContext()
+        location_context = file_search_context_1.GetLocationContext()
         
         CanvasWithHovers.__init__( self, parent, location_context )
         
@@ -2234,8 +2234,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._my_shortcuts_handler.AddWindowToFilter( hover )
         
-        self._file_search_context = file_search_context
-        self._both_files_match = both_files_match
+        self._file_search_context_1 = file_search_context_1
+        self._file_search_context_2 = file_search_context_2
+        self._dupe_search_type = dupe_search_type
         self._pixel_dupes_preference = pixel_dupes_preference
         self._max_hamming_distance = max_hamming_distance
         
@@ -2623,7 +2624,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._currently_fetching_pairs = True
         
-        HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match, self._pixel_dupes_preference, self._max_hamming_distance )
+        HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context_1, self._file_search_context_2, self._dupe_search_type, self._pixel_dupes_preference, self._max_hamming_distance )
         
         self.update()
         
@@ -2819,7 +2820,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         first_media = ClientMedia.MediaSingleton( first_media_result )
         second_media = ClientMedia.MediaSingleton( second_media_result )
         
-        score = ClientMedia.GetDuplicateComparisonScore( first_media, second_media )
+        score = ClientDuplicates.GetDuplicateComparisonScore( first_media, second_media )
         
         if score > 0:
             
@@ -3057,8 +3058,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
         
-        ClientMedia.hashes_to_jpeg_quality = {} # clear the cache
-        ClientMedia.hashes_to_pixel_hashes = {} # clear the cache
+        ClientDuplicates.hashes_to_jpeg_quality = {} # clear the cache
+        ClientDuplicates.hashes_to_pixel_hashes = {} # clear the cache
         
         CanvasWithHovers.CleanBeforeDestroy( self )
         
@@ -3244,7 +3245,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ):
+    def THREADFetchPairs( self, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
         
         def qt_close():
             
@@ -3273,7 +3274,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._ShowCurrentPair()
             
         
-        result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance )
+        result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
         if len( result ) == 0:
             

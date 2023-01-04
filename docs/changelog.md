@@ -7,6 +7,61 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 512](https://github.com/hydrusnetwork/hydrus/releases/tag/v512)
+
+### two searches in duplicates
+
+* the duplicate filter page now lets you search 'one file is in this search, the other is in this search'! the only real limitation is both searches are locked to the same file domain
+* the main neat thing is you can now search 'pngs vs jpegs, and must be pixel dupes' super easy. this is the first concrete step towards my plan to introduce an optional duplicate auto resolution system (png/jpeg pixel dupes is easy--the jpeg is 99.9999% always better)
+* the database tech to get this working was actually simpler than 'one file matches the search', and in testing it works at _ok_ speed, so we'll see how this goes IRL
+* duplicate calculations should be faster in some simple cases, usually when you set a search to system:everything. this extends to the new two-search mode too (e.g. a two-search with one as system:everything is just a one-search, and the system optimises for this), however I also search complicated domains much more precisely now, which may make some duplicate search stuff work real slow. again, let me know!
+
+### sidecars
+
+* the txt importer/exporter sidecars now allow custom 'separators', so if you don't want newlines, you can use ', ' or whatever format you need
+
+### misc
+
+* when you right-click on a selection of thumbs, the 'x files' can now be 'x videos' or 'x pngs' etc.. as you see on the status bar
+* when you select or right-click on a selection of thumbs that all have duration, the status bar and menu now show the total duration of your selection. same deal on the status bar if you have no selection on a page of only durating-having media
+* thanks to the user who figured out the correct render flag, the new 'thumbnail ui-scale supersampling %' option now draws non-pixelly thumbs on 100% monitors when it is set higher (e.g. 200% thumbs drawing on 100% monitor), so users with unusual multi-monitor setups etc... should have a nicer experience. as the tooltip now says, this setting should now be set to the largest UI scale you have
+* I removed the newgrounds downloader from the defaults (this only affects new users). the downloader has been busted for a while, and last time I looked, it was not trivial to figure out, so I am removing myself from the question
+* the 'manage where tag siblings and parents apply' dialog now explicitly points users to the 'review current sync' panel
+
+### client api
+
+* a new command, /manage_pages/refresh_page, refreshes the specified page
+* the help is updated to talk about this
+* client api version is now 39
+
+### server management
+
+* in the 'modify accounts' dialog, if the null account is checked when you try to do an action, it will be unchecked. this should stop the annoying 400 Errors when you accidentally try to set it something
+* also, if you do 'add to expires', any accounts that currently do not expire will be deselected before the action too, with a brief dialog note about it
+
+### other duplicates improvements
+
+* I reworked a ton of code here, fixing a heap of logic and general 'that isn't quite what you'd expect' comparison selection issues. ideally, the system will just make more obvious human sense more often, but this tech gets a little complicated as it tries to select comparison kings from larger groups, and we might have some situations where it says '3 pairs', but when you load it in the filter it says 'no pairs found m8', so let me know how it goes!
+* first, most importantly, the 'show some random potential pairs' button is vastly improved. it is now much better about limiting the group of presented files to what you specifically have searched, and the 'pixel dupes' and 'search distance' settings are obeyed properly (previously it was fetching too many potentials, not always limiting to the search you set, and choosing candidates from larger groups too liberally)
+* while it shows smaller groups now, since they are all culled better, it _should_ select larger groups more often than before
+* when you say 'show some random potential pairs' with 'at least one file matches the search', the first file displayed, which is the 'master' that the other file(s) are paired against, now always matches the search. when you are set to the new two-search 'files match different searches', the master will always match the first search, and the others of the pairs will always match the second search. in the filter itself, some similar logic applies, so the files selected for actual comparison should match the search you inputted better.
+* setting duplicates with 'custom options' from the thumbnail menu and selecting 'this is better' now correctly sets the focused media as the best. previously it set the first file as the best
+* also, in the duplicate merge options, you can now set notes to 'move' from worse to better
+* as a side thing, the 'search distance' number control is now disabled if you select 'must be pixel dupes'. duh!
+
+### boring cleanup
+
+* refactored the duplicate comparison statement generation code from ClientMedia to ClientDuplicates
+* significantly refactored all the duplicate files calculation pipelines to deal with two file search contexts
+* cleaned up a bunch of the 'find potential duplicate pairs in this file domain' master table join code. less hardcoding, more dynamic assembly
+* refactored the duplicated 'figure out pixel dupes table join gubbins' code in the file duplicates database module into a single separate method, and rolled in the base initialisation and hamming distance part into it too, clearing out more duplicated code
+* split up the 'both files match' search code into separate methods to further clean the logic here
+* updated the main object that handles page data to the new serialisable dictionary, combining its hardcoded key/primitive/serialisable storage into one clean dict that looks after itself
+* cleaned up the type definitions of the the main database file search and fixed the erroneous empty set returns
+* I added a couple unit tests for the new .txt sidecar separator
+* fixed a bad sidecar unit test
+* 'client_running' and 'server_running' are now in the .gitignore
+
 ## [Version 511](https://github.com/hydrusnetwork/hydrus/releases/tag/v511)
 
 ### thumbnail UI scaling
@@ -429,50 +484,3 @@ title: Changelog
 * updated most of the actions in the build script to use updated node16 versions. node12 just started getting deprecation warnings. there is more work to do
 * replaced the node12 pip installer action with a manual command on the reworked requirements.txts
 * replaced most of the build script's uses of 'set-output', which just started getting deprecation warnings. there is more work to do
-
-## [Version 502](https://github.com/hydrusnetwork/hydrus/releases/tag/v502)
-
-### autocomplete dropdown
-* the floating version of the autocomplete dropdown gets the same backend treatment the media hovers and the popup toaster recently received--it is no longer its own window, but now a normal widget floating inside its parent. it should look pretty much the same, but a variety of bugs are eliminated. clients with many search pages open now only have one top level window, rather than potentially hundreds of hidden ones
-* if you have turned off floating a/c windows because of graphical bugs, please try turning them back on today. the checkbox is under _options->search_.
-* as an additional consequence, I have decided to no longer allow 'floating' autocomplete windows in dialogs. I never liked how this worked or looked, overlapping the apply/cancel buttons, and it is not technically possible to make this work with the new tech, so they are always embedded in dialogs now. the related checkbox in _options->search_ is gone as a result
-* if you ok or cancel on the 'OR' buttons, focus is now preserved back to the dropdown
-* a bunch of weird interwindow-focus-juggling and 'what happens if the user's window manager allows them to close a floating a/c dropdown'-style code is cleared out. with simpler logic, some flicker jank is simply eliminated
-* if you move the window around, any displaying floating a/c dropdowns now glide along with them; previously it updated at 10fps
-* the way the client swaps a new thumbnail grid in when results are loaded or dismissed is faster and more atomic. there is less focus-cludge, and as a result the autocomplete is better at retaining focus and staying displayed as changes to the search state occur
-* the way scroll events are caught is also improved, so the floating dropdown should fix its position on scroll more smoothly and capably
-
-### date system predicates
-* _this affects system:import time; :modified time; and :last viewed_
-* updated the system:time UI for time delta so you are choosing 'before', 'since', and '+/- 15% of'
-* updated the system:time UI for calendar date so you are choosing 'before', 'since', 'the day of', and '+/- a month of' rather than the ugly and awkward '<' stuff
-* updated the calendar calculations with calendar time-based system predicates, so '~=' operator now does plus or minus one month to the same calendar day, no matter how many days were in that month (previously it did +/- 30 days)
-* the system predicate parser now reassigns the '=' in a given 'system:time_type = time_delta' to '~='
-
-### misc
-* 'sort files by import time' now sorts files correctly even when two files were imported in the same second. thanks to the user who thought of the solution here!
-* the 'recent' system predicates you see listed in the 'flesh out system pred' dialogs now have a 'X' button that lets you remove them from the recent/favourites
-* fixed the crash that I disabled some code for last week and reactivated the code. the collect-by dropdown is back to refreshing itself whenever you change the settings in _options->sort/collect_. furthermore, this guy now spams less behind the scenes, only reinitialising if there are actual changes to the sort/collect settings
-* brushed up some network content-range checking logic. this data is tracked better, and now any time a given 206 range response has insufficient data for what its header said, this is noted in the log. it doesn't raise an error, and the network job will still try to resume from the truncated point, but let's see how widespread this is. if a server delivers _more_ data than specified, this now does raise an error
-* fixed a tiny bit of logic in how the server calculates changes in sibling and parent petition counts. I am not sure if I fixed the miscount the janitors have seen
-* if a janitor asks for a petition and the current petition count for that type is miscounted, leading to a 404, the server now quickly recalculates that number for the next request
-* updated the system predicate parser to replace all underscores with whitespace, so it can accept system predicates that use_underscores_instead_of_whilespace. I don't _think_ this messes up any of the parsing except in an odd case where a file service might have an underscore'd name, but we'll cross that bridge if and when we get to it
-* added information about 'PRAGMA quick_check;' to 'help my db is broke.txt'
-* patched a unit test that would rarely fail because of random data (issue #1217)
-
-### client api
-* /get_files/search_files:
-* fixed the recent bug where an empty tag input with 'search all' permission would raise an error. entering no search predicates now returns an empty list in all cases, no matter your permissions (issue #1250)
-* entering invalid tags now raises a 400 error
-* improved the tag permissions check. only non-wildcard tags are now tested against the filter
-* updated my unit tests to catch these cases
-* /add_tags/search_tags:
-* a unit test now explicitly tests that empty autocomplete input results in no tags
-* the Client API now responds with Access-Control-Max-Age=86400 on OPTIONS checks, which should reduce some CORS pre-flight spam
-* client api version is now 34
-
-### misc cleanup
-* cleaned up the signalling code in the 'recent system predicate' buttons
-* shuffled some page widget and layout code to make the embedded a/c dropdown work
-* deleted a bunch of a/c event handling and forced layout and other garbage code
-* worked on some linter warnings

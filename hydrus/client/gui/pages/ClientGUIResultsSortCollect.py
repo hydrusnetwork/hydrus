@@ -373,7 +373,7 @@ class MediaCollectControl( QW.QWidget ):
             
             self._management_controller.SetVariable( 'media_collect', self._media_collect )
             
-            page_key = self._management_controller.GetKey( 'page' )
+            page_key = self._management_controller.GetVariable( 'page_key' )
             
             HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
             HG.client_controller.pub( 'a_collect_happened', page_key )
@@ -472,7 +472,7 @@ class MediaCollectControl( QW.QWidget ):
     
     def SetCollectFromPage( self, page_key, media_collect ):
         
-        if page_key == self._management_controller.GetKey( 'page' ):
+        if page_key == self._management_controller.GetVariable( 'page_key' ):
             
             self.SetCollect( media_collect )
             
@@ -847,7 +847,7 @@ class MediaSortControl( QW.QWidget ):
         
         if self._management_controller is not None:
             
-            my_page_key = self._management_controller.GetKey( 'page' )
+            my_page_key = self._management_controller.GetVariable( 'page_key' )
             
             if page_key == my_page_key:
                 
@@ -858,7 +858,7 @@ class MediaSortControl( QW.QWidget ):
     
     def BroadcastSort( self, page_key = None ):
         
-        if page_key is not None and page_key != self._management_controller.GetKey( 'page' ):
+        if page_key is not None and page_key != self._management_controller.GetVariable( 'page_key' ):
             
             return
             

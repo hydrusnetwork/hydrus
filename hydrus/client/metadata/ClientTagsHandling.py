@@ -541,7 +541,7 @@ class TagDisplayMaintenanceManager( object ):
     
     def GetName( self ):
         
-        return 'tag display maintenance'
+        return 'tag display sync'
         
     
     def IsShutdown( self ):
@@ -569,7 +569,9 @@ class TagDisplayMaintenanceManager( object ):
                         
                     except HydrusExceptions.NotFoundException:
                         
-                        time.sleep( 5 )
+                        self._wake_event.wait( 5 )
+                        
+                        self._wake_event.clear()
                         
                         continue
                         

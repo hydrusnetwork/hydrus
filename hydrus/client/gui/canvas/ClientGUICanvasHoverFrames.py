@@ -12,6 +12,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientDuplicates
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -1884,7 +1885,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def _ResetComparisonStatements( self ):
         
-        statements_and_scores = ClientMedia.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
+        statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
         
         for name in self._comparison_statement_names:
             

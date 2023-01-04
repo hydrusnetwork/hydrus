@@ -83,8 +83,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 511
-CLIENT_API_VERSION = 38
+SOFTWARE_VERSION = 512
+CLIENT_API_VERSION = 39
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -117,7 +117,8 @@ CONTENT_MERGE_ACTION_NONE = 3
 content_merge_string_lookup = {
     CONTENT_MERGE_ACTION_COPY : 'copy from worse to better',
     CONTENT_MERGE_ACTION_MOVE : 'move from worse to better',
-    CONTENT_MERGE_ACTION_TWO_WAY_MERGE : 'copy in both directions'
+    CONTENT_MERGE_ACTION_TWO_WAY_MERGE : 'copy in both directions',
+    CONTENT_MERGE_ACTION_NONE : 'do nothing'
 }
 
 CONTENT_STATUS_CURRENT = 0

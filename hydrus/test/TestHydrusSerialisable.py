@@ -294,6 +294,8 @@ class TestSerialisables( unittest.TestCase ):
         
         def assertSCUEqual( one, two ):
             
+            self.maxDiff = None
+            
             self.assertEqual( TC.ConvertServiceKeysToContentUpdatesToComparable( one ), TC.ConvertServiceKeysToContentUpdatesToComparable( two ) )
             
         

@@ -127,3 +127,72 @@ class EditSidecarDetailsPanel( ClientGUICommon.StaticBox ):
         self._filename_string_converter.SetValue( filename_string_converter )
         
     
+
+SEPARATOR_NEWLINE = 0
+SEPARATOR_CUSTOM = 1
+
+class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        ClientGUICommon.StaticBox.__init__( self, parent, 'sidecar txt separator' )
+        
+        self._choice = ClientGUICommon.BetterChoice( self )
+        
+        self._choice.addItem( 'newline', SEPARATOR_NEWLINE )
+        self._choice.addItem( 'custom text', SEPARATOR_CUSTOM )
+        
+        tt = 'You can separate the "rows" of tags by something other than newlines if you like. If you have/want a CSV list, try a separator of "," or ", ".'
+        
+        self._choice.setToolTip( tt )
+        
+        self._custom_input = QW.QLineEdit( self )
+        
+        rows = []
+        
+        rows.append( ( 'separator: ', self._choice ) )
+        rows.append( ( 'custom: ', self._custom_input ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._choice.currentIndexChanged.connect( self._UpdateControls )
+        
+    
+    def _UpdateControls( self ):
+        
+        value = self._choice.GetValue()
+        
+        self._custom_input.setEnabled( value == SEPARATOR_CUSTOM )
+        
+    
+    def GetValue( self ):
+        
+        value = self._choice.GetValue()
+        
+        if value == SEPARATOR_NEWLINE:
+            
+            return '\n'
+            
+        else:
+            
+            return self._custom_input.text()
+            
+        
+    
+    def SetValue( self, value: str ):
+        
+        if value == '\n':
+            
+            self._choice.SetValue( SEPARATOR_NEWLINE )
+            
+        else:
+            
+            self._choice.SetValue( SEPARATOR_CUSTOM )
+            self._custom_input.setText( value )
+            
+        
+        self._UpdateControls()
+        
+    

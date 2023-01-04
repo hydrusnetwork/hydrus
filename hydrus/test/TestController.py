@@ -944,6 +944,11 @@ class Controller( object ):
         return False
         
     
+    def RefreshPage( self, page_key ):
+        
+        self.Write( 'refresh_page', page_key )
+        
+    
     def ShowPage( self, page_key ):
         
         self.Write( 'show_page', page_key )

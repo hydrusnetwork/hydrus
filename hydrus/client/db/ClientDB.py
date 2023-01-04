@@ -1831,141 +1831,201 @@ class DB( HydrusDB.HydrusDB ):
         HydrusDB.HydrusDB._DoAfterJobWork( self )
         
     
-    def _DuplicatesGetRandomPotentialDuplicateHashes( self, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
+    def _DuplicatesGetRandomPotentialDuplicateHashes(
+        self,
+        file_search_context_1: ClientSearch.FileSearchContext,
+        file_search_context_2: ClientSearch.FileSearchContext,
+        dupe_search_type: int,
+        pixel_dupes_preference,
+        max_hamming_distance
+    ) -> typing.List[ bytes ]:
         
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context.GetLocationContext() )
+        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
-        is_complicated_search = False
+        chosen_allowed_hash_ids = None
+        chosen_preferred_hash_ids = None
+        comparison_allowed_hash_ids = None
+        comparison_preferred_hash_ids = None
         
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
+        # first we get a sample of current potential pairs in the db, given our limiting search context
+        
+        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
             
-            # first we get a sample of current potential pairs in the db, given our limiting search context
-            
-            allowed_hash_ids = None
-            preferred_hash_ids = None
-            
-            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
+            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
-                
-            else:
-                
-                is_complicated_search = True
-                
-                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
-                
-                if both_files_match:
+                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
-                    allowed_hash_ids = query_hash_ids
+                    query_hash_ids_1 = set( self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                    query_hash_ids_2 = set( self._PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
+                    
+                    # we are going to say our 'master' king for the pair(s) returned here is always from search 1
+                    chosen_allowed_hash_ids = query_hash_ids_1
+                    comparison_allowed_hash_ids = query_hash_ids_2
+                    
+                    table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
                     
                 else:
                     
-                    preferred_hash_ids = query_hash_ids
+                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                        
+                        table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
+                        
+                    else:
+                        
+                        query_hash_ids = set( self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                        
+                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                            
+                            chosen_allowed_hash_ids = query_hash_ids
+                            comparison_allowed_hash_ids = query_hash_ids
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        else:
+                            
+                            # the master will always be one that matches the search, the comparison can be whatever
+                            chosen_allowed_hash_ids = query_hash_ids
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        
                     
                 
-                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                # ok let's not use a set here, since that un-weights medias that appear a lot, and we want to see common stuff more often
+                potential_media_ids = []
                 
-                self._AnalyzeTempTable( temp_table_name )
-                
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
-                
-            
-            potential_media_ids = set()
-            
-            # distinct important here for the search results table join
-            for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {};'.format( table_join ) ):
-                
-                potential_media_ids.add( smaller_media_id )
-                potential_media_ids.add( larger_media_id )
-                
-                if len( potential_media_ids ) >= 1000:
+                # distinct important here for the search results table join
+                for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {};'.format( table_join ) ):
                     
-                    break
+                    potential_media_ids.append( smaller_media_id )
+                    potential_media_ids.append( larger_media_id )
+                    
+                    if len( potential_media_ids ) >= 1000:
+                        
+                        break
+                        
                     
                 
-            
-            # now let's randomly select a file in these medias
-            
-            potential_media_ids = list( potential_media_ids )
-            
-            random.shuffle( potential_media_ids )
-            
-            chosen_hash_id = None
-            
-            for potential_media_id in potential_media_ids:
+                # now let's randomly select a file in these medias
                 
-                best_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                random.shuffle( potential_media_ids )
                 
-                if best_king_hash_id is not None:
+                chosen_media_id = None
+                chosen_hash_id = None
+                
+                for potential_media_id in potential_media_ids:
                     
-                    chosen_hash_id = best_king_hash_id
+                    best_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
                     
-                    break
+                    if best_king_hash_id is not None:
+                        
+                        chosen_media_id = potential_media_id
+                        chosen_hash_id = best_king_hash_id
+                        
+                        break
+                        
                     
                 
-            
-        
-        if chosen_hash_id is None:
-            
-            return []
-            
-        
-        hash = self.modules_hashes_local_cache.GetHash( chosen_hash_id )
-        
-        if is_complicated_search and both_files_match:
-            
-            allowed_hash_ids = query_hash_ids
-            
-        else:
-            
-            allowed_hash_ids = None
-            
-        
-        location_context = file_search_context.GetLocationContext()
-        
-        return self.modules_files_duplicates.DuplicatesGetFileHashesByDuplicateType( location_context, hash, HC.DUPLICATE_POTENTIAL, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
-        
+                if chosen_hash_id is None:
+                    
+                    return []
+                    
+                
+                # I used to do self.modules_files_duplicates.DuplicatesGetFileHashesByDuplicateType here, but that gets _all_ potentials in the db context, even with allowed_hash_ids doing work it won't capture pixel hashes or duplicate distance that we searched above
+                # so, let's search and make the list manually!
+                
+                comparison_hash_ids = []
+                
+                # distinct important here for the search results table join
+                matching_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {} AND ( smaller_media_id = ? OR larger_media_id = ? );'.format( table_join ), ( chosen_media_id, chosen_media_id ) ).fetchall()
+                
+                for ( smaller_media_id, larger_media_id ) in matching_pairs:
+                    
+                    if smaller_media_id == chosen_media_id:
+                        
+                        potential_media_id = larger_media_id
+                        
+                    else:
+                        
+                        potential_media_id = smaller_media_id
+                        
+                    
+                    best_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = comparison_allowed_hash_ids, preferred_hash_ids = comparison_preferred_hash_ids )
+                    
+                    if best_king_hash_id is not None:
+                        
+                        comparison_hash_ids.append( best_king_hash_id )
+                        
+                    
+                
+                # might as well have some kind of order
+                comparison_hash_ids.sort()
+                
+                results_hash_ids = [ chosen_hash_id ] + comparison_hash_ids
+                
+                return self.modules_hashes_local_cache.GetHashes( results_hash_ids )
+                
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context: ClientSearch.FileSearchContext, both_files_match, pixel_dupes_preference, max_hamming_distance ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context_1: ClientSearch.FileSearchContext, file_search_context_2: ClientSearch.FileSearchContext, dupe_search_type: int, pixel_dupes_preference, max_hamming_distance ):
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to maximise per-decision value
         
         # now we will fetch some unknown pairs
         
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context.GetLocationContext() )
+        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
+        chosen_allowed_hash_ids = None
+        chosen_preferred_hash_ids = None
+        comparison_allowed_hash_ids = None
+        comparison_preferred_hash_ids = None
+        
+        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
             
-            allowed_hash_ids = None
-            preferred_hash_ids = None
-            
-            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
+            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
-                
-            else:
-                
-                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
-                
-                if both_files_match:
+                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
-                    allowed_hash_ids = query_hash_ids
+                    query_hash_ids_1 = set( self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                    query_hash_ids_2 = set( self._PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
+                    
+                    # we always want pairs where one is in one and the other is in the other, we don't want king-selection-trickery giving us a jpeg vs a jpeg
+                    chosen_allowed_hash_ids = query_hash_ids_1
+                    comparison_allowed_hash_ids = query_hash_ids_2
+                    
+                    table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
                     
                 else:
                     
-                    preferred_hash_ids = query_hash_ids
+                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                        
+                        table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
+                        
+                    else:
+                        
+                        query_hash_ids = set( self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                        
+                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                            
+                            # both chosen and comparison must be in the search, no king selection nonsense allowed
+                            chosen_allowed_hash_ids = query_hash_ids
+                            comparison_allowed_hash_ids = query_hash_ids
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        else:
+                            
+                            # the chosen must be in the search, but we don't care about the comparison as long as it is viewable
+                            chosen_preferred_hash_ids = query_hash_ids
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        
                     
                 
-                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                # distinct important here for the search results table join
+                result = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id, distance FROM {} LIMIT 2500;'.format( table_join ) ).fetchall()
                 
-                self._AnalyzeTempTable( temp_table_name )
-                
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
-                
-            
-            # distinct important here for the search results table join
-            result = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id, distance FROM {} LIMIT 2500;'.format( table_join ) ).fetchall()
             
         
         MAX_BATCH_SIZE = HG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
@@ -2051,21 +2111,51 @@ class DB( HydrusDB.HydrusDB ):
         
         seen_hash_ids = set()
         
-        media_ids_to_best_king_ids = {}
+        batch_of_pairs_of_hash_ids = []
         
-        for media_id in seen_media_ids:
+        if chosen_allowed_hash_ids == comparison_allowed_hash_ids and chosen_preferred_hash_ids == comparison_preferred_hash_ids:
             
-            best_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+            # which file was 'chosen' vs 'comparison' is irrelevant. the user is expecting to see a mix, so we want the best kings possible. this is probably 'system:everything' or similar
             
-            if best_king_hash_id is not None:
+            for ( smaller_media_id, larger_media_id ) in batch_of_pairs_of_media_ids:
                 
-                seen_hash_ids.add( best_king_hash_id )
+                best_smaller_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
+                best_larger_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
                 
-                media_ids_to_best_king_ids[ media_id ] = best_king_hash_id
+                if best_smaller_king_hash_id is not None and best_larger_king_hash_id is not None:
+                    
+                    batch_of_pairs_of_hash_ids.append( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
+                    
+                    seen_hash_ids.update( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
+                    
                 
             
-        
-        batch_of_pairs_of_hash_ids = [ ( media_ids_to_best_king_ids[ smaller_media_id ], media_ids_to_best_king_ids[ larger_media_id ] ) for ( smaller_media_id, larger_media_id ) in batch_of_pairs_of_media_ids if smaller_media_id in media_ids_to_best_king_ids and larger_media_id in media_ids_to_best_king_ids ]
+        else:
+            
+            # we want to enforce that our pairs seem human. if the user said 'A is in search 1 and B is in search 2', we don't want king selection going funny and giving us two from 1
+            # previously, we did this on media_ids on their own, but we have to do it in pairs. we choose the 'chosen' and 'comparison' of our pair and filter accordingly
+            
+            for ( smaller_media_id, larger_media_id ) in batch_of_pairs_of_media_ids:
+                
+                best_smaller_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
+                best_larger_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = comparison_allowed_hash_ids, preferred_hash_ids = comparison_preferred_hash_ids )
+                
+                if best_smaller_king_hash_id is None or best_larger_king_hash_id is None:
+                    
+                    # ok smaller was probably the comparison, let's see if that produces a better king hash
+                    
+                    best_smaller_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = comparison_allowed_hash_ids, preferred_hash_ids = comparison_preferred_hash_ids )
+                    best_larger_king_hash_id = self.modules_files_duplicates.DuplicatesGetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
+                    
+                
+                if best_smaller_king_hash_id is not None and best_larger_king_hash_id is not None:
+                    
+                    batch_of_pairs_of_hash_ids.append( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
+                    
+                    seen_hash_ids.update( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
+                    
+                
+            
         
         media_results = self._GetMediaResults( seen_hash_ids )
         
@@ -2076,29 +2166,45 @@ class DB( HydrusDB.HydrusDB ):
         return batch_of_pairs_of_media_results
         
     
-    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context, both_files_match, pixel_dupes_preference, max_hamming_distance ):
+    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
         
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context.GetLocationContext() )
+        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
+        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
             
-            if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
+            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
+                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                    
+                    self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
+                    self._PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
+                    
+                    table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
+                    
+                else:
+                    
+                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                        
+                        table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
+                        
+                    else:
+                        
+                        self._PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
+                        
+                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        else:
+                            
+                            table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
+                            
+                        
+                    
                 
-            else:
+                # distinct important here for the search results table join
+                ( potential_duplicates_count, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} );'.format( table_join ) ).fetchone()
                 
-                query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
-                
-                self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
-                
-                self._AnalyzeTempTable( temp_table_name )
-                
-                table_join = self.modules_files_duplicates.DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name, both_files_match, pixel_dupes_preference, max_hamming_distance )
-                
-            
-            # distinct important here for the search results table join
-            ( potential_duplicates_count, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} );'.format( table_join ) ).fetchone()
             
         
         return potential_duplicates_count
@@ -2916,7 +3022,15 @@ class DB( HydrusDB.HydrusDB ):
         return ( storage_tag_data, display_tag_data )
         
     
-    def _GetHashIdsFromQuery( self, file_search_context: ClientSearch.FileSearchContext, job_key = None, query_hash_ids: typing.Optional[ set ] = None, apply_implicit_limit = True, sort_by = None, limit_sort_by = None ):
+    def _GetHashIdsFromQuery(
+        self,
+        file_search_context: ClientSearch.FileSearchContext,
+        job_key = None,
+        query_hash_ids: typing.Optional[ set ] = None,
+        apply_implicit_limit = True,
+        sort_by = None,
+        limit_sort_by = None
+    ) -> typing.List[ int ]:
         
         if job_key is None:
             
@@ -2944,7 +3058,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if location_context.IsEmpty():
             
-            return set()
+            return []
             
         
         current_file_service_ids = set()
@@ -2959,7 +3073,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.ShowText( 'A file search query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
                 
-                return set()
+                return []
                 
             
             current_file_service_ids.add( current_file_service_id )
@@ -2977,7 +3091,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.ShowText( 'A file search query was run for a file service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
                 
-                return set()
+                return []
                 
             
             deleted_file_service_ids.add( deleted_file_service_id )
@@ -2993,7 +3107,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.ShowText( 'A file search query was run for a tag service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
             
-            return set()
+            return []
             
         
         tags_to_include = file_search_context.GetTagsToInclude()
@@ -3619,7 +3733,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( query_hash_ids ) == 0:
                     
-                    return query_hash_ids
+                    return []
                     
                 
             
@@ -3649,7 +3763,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( query_hash_ids ) == 0:
                     
-                    return query_hash_ids
+                    return []
                     
                 
             
@@ -3679,7 +3793,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( query_hash_ids ) == 0:
                     
-                    return query_hash_ids
+                    return []
                     
                 
             
@@ -3883,7 +3997,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key.IsCancelled():
             
-            return set()
+            return []
             
         
         #
@@ -3921,7 +4035,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if len( query_hash_ids ) == 0:
                         
-                        return query_hash_ids
+                        return []
                         
                     
                     self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( temp_table_name ), ( ( hash_id, ) for hash_id in unwanted_hash_ids ) )
@@ -3935,7 +4049,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if len( query_hash_ids ) == 0:
                         
-                        return query_hash_ids
+                        return []
                         
                     
                     self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( temp_table_name ), ( ( hash_id, ) for hash_id in unwanted_hash_ids ) )
@@ -3949,7 +4063,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if len( query_hash_ids ) == 0:
                         
-                        return query_hash_ids
+                        return []
                         
                     
                     self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( temp_table_name ), ( ( hash_id, ) for hash_id in unwanted_hash_ids ) )
@@ -3959,7 +4073,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key.IsCancelled():
             
-            return set()
+            return []
             
         
         #
@@ -4127,7 +4241,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key.IsCancelled():
             
-            return set()
+            return []
             
         
         #
@@ -4270,7 +4384,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key.IsCancelled():
             
-            return set()
+            return []
             
         
         #
@@ -4305,7 +4419,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key.IsCancelled():
             
-            return set()
+            return []
             
         
         #
@@ -6101,6 +6215,17 @@ class DB( HydrusDB.HydrusDB ):
         return ( still_work_to_do, num_done )
         
     
+    def _PopulateSearchIntoTempTable( self, file_search_context: ClientSearch.FileSearchContext, temp_table_name: str ) -> typing.List[ int ]:
+        
+        query_hash_ids = self._GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
+        
+        self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+        
+        self._AnalyzeTempTable( temp_table_name )
+        
+        return query_hash_ids
+        
+    
     def _ProcessContentUpdates( self, service_keys_to_content_updates, publish_content_updates = True ):
         
         notify_new_downloads = False
@@ -7853,6 +7978,8 @@ class DB( HydrusDB.HydrusDB ):
             job_key.Finish()
             
             job_key.Delete( 5 )
+            
+            HydrusData.ShowText( 'Now the mappings cache regen is done, you might want to restart the program.' )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )

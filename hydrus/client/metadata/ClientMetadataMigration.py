@@ -80,7 +80,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
                 
                 suffix = actually_an_importer.GetSuffix()
                 
-                exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( suffix )
+                exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( suffix = suffix )
                 
             elif isinstance( actually_an_importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags ):
                 

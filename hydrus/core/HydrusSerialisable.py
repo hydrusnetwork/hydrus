@@ -211,6 +211,8 @@ class SerialisableBase( object ):
     SERIALISABLE_NAME = 'Base Serialisable Object'
     SERIALISABLE_VERSION = 1
     
+    # don't make an __eq__ here without more testing and research, it messes a bunch of things up in sets and hashing and stuff
+    
     def _GetSerialisableInfo( self ):
         
         raise NotImplementedError()

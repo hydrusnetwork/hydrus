@@ -808,6 +808,42 @@ class ReviewAccountsPanel( QW.QWidget ):
         self._RefreshAccounts()
         
     
+    def UncheckAccountKey( self, account_key: bytes ):
+        
+        for i in range( self._account_list.count() ):
+            
+            item = self._account_list.item( i )
+            
+            checked_account_key = item.data( QC.Qt.UserRole )
+            
+            if checked_account_key == account_key:
+                
+                item.setCheckState( QC.Qt.Unchecked )
+                
+                return
+                
+            
+        
+    
+    def UncheckNullAccount( self ):
+        
+        for i in range( self._account_list.count() ):
+            
+            item = self._account_list.item( i )
+            
+            account_key = item.data( QC.Qt.UserRole )
+            
+            account = self._account_keys_to_accounts[ account_key ]
+            
+            if account.IsNullAccount():
+                
+                item.setCheckState( QC.Qt.Unchecked )
+                
+                return
+                
+            
+        
+    
 
 class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -968,11 +1004,27 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         expires_delta = self._add_to_expires.GetValue()
         
+        self._account_panel.UncheckNullAccount()
+        
+        subject_accounts = self._account_panel.GetCheckedAccounts()
+        
+        num_unchecked = 0
+        
+        for subject_account in subject_accounts:
+            
+            if subject_account.GetExpires() is None:
+                
+                self._account_panel.UncheckAccountKey( subject_account.GetAccountKey() )
+                
+                num_unchecked += 1
+                
+            
+        
+        QW.QMessageBox.information( self, 'Information', '{} accounts do not expire, so could not have time added!'.format( HydrusData.ToHumanInt( num_unchecked ) ) )
+        
         subject_accounts = self._account_panel.GetCheckedAccounts()
         
         subject_account_keys_and_current_expires = [ ( subject_account.GetAccountKey(), subject_account.GetExpires() ) for subject_account in subject_accounts ]
-        
-        subject_account_keys_and_current_expires = [ pair for pair in subject_account_keys_and_current_expires if pair[1] is not None ]
         
         subject_account_keys_and_new_expires = [ ( subject_account_key, current_expires + expires_delta ) for ( subject_account_key, current_expires ) in subject_account_keys_and_current_expires ]
         
@@ -994,6 +1046,8 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _DoAccountType( self ):
+        
+        self._account_panel.UncheckNullAccount()
         
         subject_account_keys = self._account_panel.GetCheckedAccountKeys()
         
@@ -1035,6 +1089,8 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _DoBan( self ):
+        
+        self._account_panel.UncheckNullAccount()
         
         subject_accounts = self._account_panel.GetCheckedAccounts()
         
@@ -1149,6 +1205,8 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DoSetMessage( self ):
         
+        self._account_panel.UncheckNullAccount()
+        
         subject_accounts = self._account_panel.GetCheckedAccounts()
         
         if len( subject_accounts ) == 0:
@@ -1205,6 +1263,8 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _DoUnban( self ):
+        
+        self._account_panel.UncheckNullAccount()
         
         subject_accounts = self._account_panel.GetCheckedAccounts()
         
@@ -1298,6 +1358,8 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _SetExpires( self ):
+        
+        self._account_panel.UncheckNullAccount()
         
         expires = self._set_expires.GetValue()
         

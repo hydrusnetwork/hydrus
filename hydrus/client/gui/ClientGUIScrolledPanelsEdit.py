@@ -1225,6 +1225,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
             self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
+            self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_MOVE ], HC.CONTENT_MERGE_ACTION_MOVE )
             
         
         self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )

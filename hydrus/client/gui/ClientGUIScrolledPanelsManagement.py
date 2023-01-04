@@ -687,7 +687,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._duplicate_comparison_score_nicer_ratio.setToolTip( 'For instance, 16:9 vs 640:357.')
             
-            self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( self, min = 5, max = 1024 )
+            batches_panel = ClientGUICommon.StaticBox( self, 'duplicate filter batches' )
+            
+            self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( batches_panel, min = 5, max = 1024 )
             
             #
             
@@ -739,9 +741,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Max size of duplicate filter pair batches:', self._duplicate_filter_max_batch_size ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            gridbox = ClientGUICommon.WrapInGrid( batches_panel, rows )
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            batches_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, batches_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -4013,9 +4017,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             # I tried <100%, but Qt seems to cap it to 1.0. Sad!
             self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
             
-            tt = 'If your OS runs at an UI scale greater than 100%, mirror it here, and your thumbnails will look crisp. If you have multiple monitors at different UI scales, set it to the one you will be looking at hydrus thumbnails on more often. Setting this value to anything other than the monitor hydrus is currently on will cause thumbs to look pixellated and/or muddy.'
+            tt = 'If your OS runs at an UI scale greater than 100%, mirror it here and your thumbnails will look crisp. If you have multiple monitors at different UI scales, or you change UI scale regularly, set it to the largest one you use.'
             tt += os.linesep * 2
-            tt += 'I believe your UI scale is {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
+            tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
             
             self._thumbnail_dpr_percentage.setToolTip( tt )
             
@@ -4073,10 +4077,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
             rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
-            rows.append( ( 'Thumbnail UI scale supersampling %: ', self._thumbnail_dpr_percentage ) )
-            rows.append( ( 'Focus thumbnails in the preview window on ctrl-click: ', self._focus_preview_on_ctrl_click ) )
+            rows.append( ( 'Thumbnail UI-scale supersampling %: ', self._thumbnail_dpr_percentage ) )
+            rows.append( ( 'On ctrl-click, focus thumbnails in the preview window: ', self._focus_preview_on_ctrl_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
-            rows.append( ( 'Focus thumbnails in the preview window on shift-click: ', self._focus_preview_on_shift_click ) )
+            rows.append( ( 'On shift-click, focus thumbnails in the preview window: ', self._focus_preview_on_shift_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )

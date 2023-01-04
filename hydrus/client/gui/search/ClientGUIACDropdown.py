@@ -1580,6 +1580,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        return self._location_context_button.GetValue()
+        
+    
     def NotifyNewServices( self ):
         
         self._SetLocationContext( self._location_context_button.GetValue() )

@@ -364,6 +364,8 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         message = 'While a tag service normally only applies its own siblings and parents to itself, it does not have to. You can have other services\' rules apply (e.g. putting the PTR\'s siblings on your "my tags"), or no siblings/parents at all.'
         message += os.linesep * 2
         message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
+        message += os.linesep * 2
+        message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Check the sync progress panel under _tags->sibling/parent sync_ to see how it is going. If your client gets laggy doing the recalc, turn it off during "normal time".'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -5118,7 +5120,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes do not happen immediately--the client catches up in the background. You can review current progress and force faster sync here.'
+        message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes do not happen immediately--the client catches up in the background. This work takes a lot of math and can be laggy.'
+        
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
