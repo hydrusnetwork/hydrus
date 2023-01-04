@@ -2554,7 +2554,33 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        result = HG.test_controller.GetWrite( 'show_page' )
+        result = HG.test_controller.GetWrite( 'show_page' ) # a fake hook in the controller handles this
+        
+        expected_result = [ ( ( page_key, ), {} ) ]
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_pages/refresh_page'
+        
+        page_key = os.urandom( 32 )
+        
+        request_dict = { 'page_key' : page_key.hex() }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        result = HG.test_controller.GetWrite( 'refresh_page' ) # a fake hook in the controller handles this
         
         expected_result = [ ( ( page_key, ), {} ) ]
         

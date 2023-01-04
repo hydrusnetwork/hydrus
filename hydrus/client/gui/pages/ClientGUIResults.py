@@ -493,16 +493,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
         
         ( num_files_descriptor, selected_files_descriptor ) = self._GetSortedSelectedMimeDescriptors()
         
-        if num_files == 1:
-            
-            num_files_string = '1 ' + num_files_descriptor
-            
-        else:
-            
-            suffix = '' if num_files_descriptor.endswith( 's' ) else 's'
-            
-            num_files_string = '{} {}{}'.format( HydrusData.ToHumanInt( num_files ), num_files_descriptor, suffix )
-            
+        num_files_string = '{} {}'.format( HydrusData.ToHumanInt( num_files ), num_files_descriptor )
         
         s = num_files_string # 23 files
         
@@ -514,20 +505,26 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 s += ' - totalling ' + pretty_total_size
                 
+                pretty_total_duration = self._GetPrettyTotalDuration()
+                
+                if pretty_total_duration != '':
+                    
+                    s += ', {}'.format( pretty_total_duration )
+                    
+                
             
         else:
             
             s += ' - '
             
+            # if 1 selected, we show the whole mime string, so no need to specify
             if num_selected == 1 or selected_files_descriptor == num_files_descriptor:
                 
                 selected_files_string = HydrusData.ToHumanInt( num_selected )
                 
             else:
                 
-                suffix = '' if selected_files_descriptor.endswith( 's' ) else 's'
-                
-                selected_files_string = '{} {}{}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor, suffix )
+                selected_files_string = '{} {}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor )
                 
             
             if num_selected == 1: # 23 files - 1 video selected, file_info
@@ -544,24 +541,52 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 if num_inbox == num_selected:
                     
-                    inbox_phrase = 'all in inbox, '
+                    inbox_phrase = 'all in inbox'
                     
                 elif num_inbox == 0:
                     
-                    inbox_phrase = 'all archived, '
+                    inbox_phrase = 'all archived'
                     
                 else:
                     
-                    inbox_phrase = '{} in inbox and {} archived, '.format( HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_selected - num_inbox ) )
+                    inbox_phrase = '{} in inbox and {} archived'.format( HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_selected - num_inbox ) )
                     
                 
                 pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
                 
-                s += '{} selected, {}totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
+                s += '{} selected, {}, totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
+                
+                pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+                
+                if pretty_total_duration != '':
+                    
+                    s += ', {}'.format( pretty_total_duration )
+                    
                 
             
         
         return s
+        
+    
+    def _GetPrettyTotalDuration( self, only_selected = False ):
+        
+        if only_selected:
+            
+            media_source = self._selected_media
+            
+        else:
+            
+            media_source = self._sorted_media
+            
+        
+        if len( media_source ) == 0 or False in ( media.HasDuration() for media in media_source ):
+            
+            return ''
+            
+        
+        total_duration = sum( ( media.GetDuration() for media in media_source ) )
+        
+        return HydrusData.ConvertMillisecondsToPrettyTime( total_duration )
         
     
     def _GetPrettyTotalSize( self, only_selected = False ):
@@ -686,11 +711,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def _GetSortedSelectedMimeDescriptors( self ):
         
-        def GetDescriptor( classes, num_collections ):
+        def GetDescriptor( plural, classes, num_collections ):
+            
+            suffix = 's' if plural else ''
             
             if len( classes ) == 0:
                 
-                return 'file'
+                return 'file' + suffix
                 
             
             if len( classes ) == 1:
@@ -699,39 +726,41 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
                     
-                    return 'files in {} collections'.format( HydrusData.ToHumanInt( num_collections ) )
+                    collections_suffix = 's' if num_collections > 1 else ''
+                    
+                    return 'file{} in {} collection{}'.format( suffix, HydrusData.ToHumanInt( num_collections ), collections_suffix )
                     
                 else:
                     
-                    return HC.mime_string_lookup[ mime ]
+                    return HC.mime_string_lookup[ mime ] + suffix
                     
                 
             
             if len( classes.difference( HC.IMAGES ) ) == 0:
                 
-                return 'image'
+                return 'image' + suffix
                 
             elif len( classes.difference( HC.ANIMATIONS ) ) == 0:
                 
-                return 'animation'
+                return 'animation' + suffix
                 
             elif len( classes.difference( HC.VIDEO ) ) == 0:
                 
-                return 'video'
+                return 'video' + suffix
                 
             elif len( classes.difference( HC.AUDIO ) ) == 0:
                 
-                return 'audio file'
+                return 'audio file' + suffix
                 
             else:
                 
-                return 'file'
+                return 'file' + suffix
                 
             
         
         if len( self._sorted_media ) > 1000:
             
-            sorted_mime_descriptor = 'file'
+            sorted_mime_descriptor = 'files'
             
         else:
             
@@ -746,12 +775,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 num_collections = 0
                 
             
-            sorted_mime_descriptor = GetDescriptor( sorted_mimes, num_collections )
+            plural = len( self._sorted_media ) > 1 or sum( ( m.GetNumFiles() for m in self._sorted_media ) ) > 1
+            
+            sorted_mime_descriptor = GetDescriptor( plural, sorted_mimes, num_collections )
             
         
         if len( self._selected_media ) > 1000:
             
-            selected_mime_descriptor = 'file'
+            selected_mime_descriptor = 'files'
             
         else:
             
@@ -766,7 +797,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 num_collections = 0
                 
             
-            selected_mime_descriptor = GetDescriptor( selected_mimes, num_collections )
+            plural = len( self._selected_media ) > 1 or sum( ( m.GetNumFiles() for m in self._selected_media ) ) > 1
+            
+            selected_mime_descriptor = GetDescriptor( plural, selected_mimes, num_collections )
             
         
         return ( sorted_mime_descriptor, selected_mime_descriptor )
@@ -1697,7 +1730,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                 
                 duplicate_content_merge_options = panel.GetValue()
                 
-                self._SetDuplicates( duplicate_type, duplicate_content_merge_options = duplicate_content_merge_options )
+                if duplicate_type == HC.DUPLICATE_BETTER:
+                    
+                    self._SetDuplicatesFocusedBetter( duplicate_content_merge_options = duplicate_content_merge_options )
+                    
+                else:
+                    
+                    self._SetDuplicates( duplicate_type, duplicate_content_merge_options = duplicate_content_merge_options )
+                    
                 
             
         
@@ -1729,7 +1769,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
             if result == QW.QDialog.Accepted:
                 
-                self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs, silent = True )
+                self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs, silent = True, duplicate_content_merge_options = duplicate_content_merge_options )
                 
             
         else:
@@ -3839,7 +3879,16 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if multiple_selected:
                 
-                selection_info_menu_label = '{} files, {}'.format( HydrusData.ToHumanInt( num_selected ), self._GetPrettyTotalSize( only_selected = True ) )
+                ( num_files_descriptor, selected_files_descriptor ) = self._GetSortedSelectedMimeDescriptors()
+                
+                selection_info_menu_label = '{} {}, {}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor, self._GetPrettyTotalSize( only_selected = True ) )
+                
+                pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+                
+                if pretty_total_duration != '':
+                    
+                    selection_info_menu_label += ', {}'.format( pretty_total_duration )
+                    
                 
             else:
                 
@@ -4736,16 +4785,15 @@ class Thumbnail( Selectable ):
         # EDIT 2: I think it may only look weird when the thumb banner has opacity. Maybe I need to learn about CompositionModes
         #
         # EDIT 3: Appalently Qt 6.4.0 may fix the basic 100% UI scale QImage init bug!
+        #
+        # UPDATE 3a: Qt 6.4.x did not magically fix it. It draws much nicer, but still a different font weight/metrics compared to media viewer background, say.
+        # The PreferAntialias flag on 6.4.x seems to draw very very close to our ideal, so let's be happy with it for now.
         
         painter = QG.QPainter( qt_image )
         
         painter.setRenderHint( QG.QPainter.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
         painter.setRenderHint( QG.QPainter.Antialiasing, True ) # seems to do nothing, it only affects primitives?
-        
-        if device_pixel_ratio > 1.0:
-            
-            painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb scale up prettily and expensively when we need it
-            
+        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb QImage scale up and down prettily when we need it, either because it is too small or DPR gubbins
         
         new_options = HG.client_controller.new_options
         

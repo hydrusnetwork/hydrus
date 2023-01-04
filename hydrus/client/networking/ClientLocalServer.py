@@ -113,6 +113,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_pages.putChild( b'focus_page', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesFocusPage( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_pages', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPages( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_page_info', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( self._service, self._client_requests_domain ) )
+        manage_pages.putChild( b'refresh_page', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesRefreshPage( self._service, self._client_requests_domain ) )
         
         manage_database = NoResource()
         

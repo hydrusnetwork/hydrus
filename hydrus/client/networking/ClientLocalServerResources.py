@@ -3228,6 +3228,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -3253,6 +3254,32 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceCli
         body = Dumps( body_dict, request.preferred_mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        def do_it( page_key ):
+            
+            return HG.client_controller.gui.RefreshPage( page_key )
+            
+        
+        page_key = request.parsed_request_args.GetValue( 'page_key', bytes )
+        
+        try:
+            
+            HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it, page_key )
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that page!' )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
         

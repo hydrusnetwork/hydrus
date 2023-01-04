@@ -3545,7 +3545,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
+        ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._RefreshCurrentPage )
         
         splitter_menu = QW.QMenu( menu )
         
@@ -3677,7 +3677,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         tag_display_maintenance_menu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review tag sibling/parent maintenance', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
+        ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review current sync', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
         ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_idle' )
@@ -3685,14 +3685,14 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during idle time', 'Control whether tag display maintenance can work during idle time.', current_value, func )
+        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during idle time', 'Control whether tag display processing can work during idle time.', current_value, func )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_active' )
         
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display maintenance can work during normal time.', current_value, func )
+        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display processing can work during normal time.', current_value, func )
         
         ClientGUIMenus.AppendMenu( menu, tag_display_maintenance_menu, 'sibling/parent sync' )
         
@@ -5056,7 +5056,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         self._controller.Write( 'save_options', HC.options )
         
     
-    def _Refresh( self ):
+    def _RefreshCurrentPage( self ):
         
         page = self._notebook.GetCurrentMediaPage()
         
@@ -5582,7 +5582,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _ReviewTagDisplayMaintenance( self ):
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'tag display maintenance' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'tag display sync' )
         
         panel = ClientGUITags.ReviewTagDisplayMaintenancePanel( frame )
         
@@ -7619,7 +7619,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif action == CAC.SIMPLE_REFRESH:
                 
-                self._Refresh()
+                self._RefreshCurrentPage()
                 
             elif action == CAC.SIMPLE_REFRESH_ALL_PAGES:
                 
@@ -7818,6 +7818,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._FleshOutSessionWithCleanDataIfNeeded( notebook, name, session )
         
         self._controller.CallToThread( self._controller.SaveGUISession, session )
+        
+    
+    def RefreshPage( self, page_key: bytes ):
+        
+        page = self._notebook.GetPageFromPageKey( page_key )
+        
+        if page is None:
+            
+            raise HydrusExceptions.DataMissing( 'Could not find that page!' )
+            
+        
+        page.RefreshQuery()
         
     
     def RefreshStatusBar( self ):

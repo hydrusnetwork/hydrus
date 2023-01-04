@@ -344,6 +344,25 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         self.assertEqual( set( result ), set( rows ) )
         
+        # diff separator
+        
+        separator = ', '
+        
+        expected_input_path = actual_file_path + '.txt'
+        
+        with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( separator.join( rows ) )
+            
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( separator = separator )
+        
+        result = importer.Import( actual_file_path )
+        
+        os.unlink( expected_input_path )
+        
+        self.assertEqual( set( result ), set( rows ) )
+        
         # with suffix and processing
         
         string_processor = ClientStrings.StringProcessor()
@@ -623,16 +642,34 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         self.assertEqual( set( rows ), set( HydrusText.DeserialiseNewlinedTexts( text ) ) )
         
+        # diff separator
+        
+        separator = ', '
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( suffix = 'tags', separator = separator )
+        
+        exporter.Export( actual_file_path, rows )
+        
+        expected_output_path = actual_file_path + '.tags.txt'
+        
+        self.assertTrue( os.path.exists( expected_output_path ) )
+        
+        with open( expected_output_path, 'r', encoding = 'utf-8' ) as f:
+            
+            text = f.read()
+            
+        
+        os.unlink( expected_output_path )
+        
+        self.assertEqual( set( rows ), set( text.split( separator ) ) )
+        
         # with filename remove ext and string conversion
         
         expected_output_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
         
-        with open( expected_output_path, 'w', encoding = 'utf-8' ) as f:
-            
-            f.write( os.linesep.join( rows ) )
-            
-        
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
+        
+        exporter.Export( actual_file_path, rows )
         
         with open( expected_output_path, 'r', encoding = 'utf-8' ) as f:
             

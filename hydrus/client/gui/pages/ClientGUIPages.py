@@ -438,7 +438,7 @@ class Page( QW.QWidget ):
         
         self._initial_hashes = initial_hashes
         
-        self._management_controller.SetKey( 'page', self._page_key )
+        self._management_controller.SetVariable( 'page_key', self._page_key )
         
         self._initialised = len( initial_hashes ) == 0
         self._pre_initialisation_media_results = []
@@ -2487,7 +2487,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def GetPageFromPageKey( self, page_key ):
+    def GetPageFromPageKey( self, page_key ) -> typing.Optional[ Page ]:
         
         if self._page_key == page_key:
             

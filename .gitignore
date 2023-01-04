@@ -48,6 +48,8 @@ crash.log
 /db/*.key
 /db/*.log
 /db/*.conf
+/db/client_running
+/db/server_running
 /db/client_files/
 /db/server_files/
 /db/missing_and_invalid_files/

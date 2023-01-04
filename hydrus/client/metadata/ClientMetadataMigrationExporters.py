@@ -395,9 +395,9 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_TXT
     SERIALISABLE_NAME = 'Metadata Single File Exporter TXT'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None ):
+    def __init__( self, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None, separator = None ):
         
         if remove_actual_filename_ext is None:
             
@@ -414,20 +414,27 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
             filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.txt' )
             
         
+        if separator is None:
+            
+            separator = '\n'
+            
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
         SingleFileMetadataExporterSidecar.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
+        
+        self._separator = separator
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_filename_string_converter = self._filename_string_converter.GetSerialisableTuple()
         
-        return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter )
+        return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter ) = serialisable_info
+        ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator ) = serialisable_info
         
         self._filename_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_string_converter )
         
@@ -448,6 +455,17 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( remove_actual_filename_ext, suffix, serialisable_filename_string_converter ) = old_serialisable_info
+            
+            separator = '\n'
+            
+            new_serialisable_info = ( remove_actual_filename_ext, suffix, serialisable_filename_string_converter, separator )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
         
@@ -460,8 +478,18 @@ class SingleFileMetadataExporterTXT( HydrusSerialisable.SerialisableBase, Single
         
         with open( path, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( '\n'.join( rows ) )
+            f.write( self._separator.join( rows ) )
             
+        
+    
+    def GetSeparator( self ) -> str:
+        
+        return self._separator
+        
+    
+    def SetSeparator( self, separator: str ):
+        
+        self._separator = separator
         
     
     def ToString( self ) -> str:

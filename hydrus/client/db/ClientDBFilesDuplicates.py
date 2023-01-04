@@ -581,7 +581,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return result_dict
         
     
-    def DuplicatesGetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash, duplicate_type, allowed_hash_ids = None, preferred_hash_ids = None ):
+    def DuplicatesGetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ bytes ]:
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
@@ -924,18 +924,19 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return media_id
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( self, pixel_dupes_preference: int, max_hamming_distance: int ):
         
-        tables = 'potential_duplicate_pairs, duplicate_files AS duplicate_files_smaller, duplicate_files AS duplicate_files_larger'
-        join_predicate = 'smaller_media_id = duplicate_files_smaller.media_id AND larger_media_id = duplicate_files_larger.media_id AND distance <= {}'.format( max_hamming_distance )
+        tables = [
+            'potential_duplicate_pairs',
+            'duplicate_files AS duplicate_files_smaller',
+            'duplicate_files AS duplicate_files_larger'
+        ]
         
-        if not db_location_context.location_context.IsAllKnownFiles():
+        join_predicates = [ 'smaller_media_id = duplicate_files_smaller.media_id AND larger_media_id = duplicate_files_larger.media_id' ]
+        
+        if pixel_dupes_preference != CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
             
-            files_table_name = db_location_context.GetSingleFilesTableName()
-            
-            tables = '{}, {} AS current_files_smaller, {} AS current_files_larger'.format( tables, files_table_name, files_table_name )
-            
-            join_predicate = '{} AND duplicate_files_smaller.king_hash_id = current_files_smaller.hash_id AND duplicate_files_larger.king_hash_id = current_files_larger.hash_id'.format( join_predicate )
+            join_predicates.append( 'distance <= {}'.format( max_hamming_distance ) )
             
         
         if pixel_dupes_preference in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
@@ -944,9 +945,12 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             if pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
                 
-                tables = '{}, pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map AS pixel_hash_map_larger'.format( tables )
+                tables.extend( [
+                    'pixel_hash_map AS pixel_hash_map_smaller',
+                    'pixel_hash_map AS pixel_hash_map_larger'
+                ] )
                 
-                join_predicate = '{} AND {}'.format( join_predicate, join_predicate_pixel_dupes )
+                join_predicates.append( join_predicate_pixel_dupes )
                 
             elif pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
                 
@@ -954,11 +958,30 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger ON ( {} )'.format( join_predicate_pixel_dupes )
                 
-                join_predicate = '{} AND NOT EXISTS ( {} )'.format( join_predicate, select_statement )
+                join_predicates.append( 'NOT EXISTS ( {} )'.format( select_statement ) )
                 
             
         
-        table_join = '{} ON ( {} )'.format( tables, join_predicate )
+        return ( tables, join_predicates )
+        
+    
+    def DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, pixel_dupes_preference: int, max_hamming_distance: int ):
+        
+        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        
+        if not db_location_context.location_context.IsAllKnownFiles():
+            
+            files_table_name = db_location_context.GetSingleFilesTableName()
+            
+            tables.extend( [
+                '{} AS current_files_smaller'.format( files_table_name ),
+                '{} AS current_files_larger'.format( files_table_name )
+            ] )
+            
+            join_predicates.append( 'duplicate_files_smaller.king_hash_id = current_files_smaller.hash_id AND duplicate_files_larger.king_hash_id = current_files_larger.hash_id' )
+            
+        
+        table_join = '{} ON ( {} )'.format( ', '.join( tables ), ' AND '.join( join_predicates ) )
         
         return table_join
         
@@ -979,11 +1002,27 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, results_table_name: str, both_files_match: bool, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( self, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
+        
+        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        
+        tables.extend( [
+            '{} AS results_smaller'.format( results_table_name ),
+            '{} AS results_larger'.format( results_table_name )
+        ] )
+        
+        join_predicates.append( 'duplicate_files_smaller.king_hash_id = results_smaller.hash_id AND duplicate_files_larger.king_hash_id = results_larger.hash_id' )
+        
+        table_join = '{} ON ( {} )'.format( ', '.join( tables ), ' AND '.join( join_predicates ) )
+        
+        return table_join
+        
+    
+    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
         
         # why yes this is a seven table join that involves a mix of duplicated tables, temporary tables, and duplicated temporary tables
         #
-        # main thing is, give this guy a search in duplicate filter UI, it'll give you a fast table join that returns potential dupes that match that
+        # main thing is, give this guy a search from duplicate filter UI, it'll give you a fast table join that returns potential dupes that match that
         #
         # ████████████████████████████████████████████████████████████████████████
         # ████████████████████████████████████████████████████████████████████████
@@ -1030,61 +1069,58 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         # ████████████████████████████████████████████████████████████████████████
         #
         
-        base_tables = 'potential_duplicate_pairs, duplicate_files AS duplicate_files_smaller, duplicate_files AS duplicate_files_larger'
+        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
         
-        join_predicate_media_to_hashes = 'smaller_media_id = duplicate_files_smaller.media_id AND larger_media_id = duplicate_files_larger.media_id AND distance <= {}'.format( max_hamming_distance )
-        
-        if both_files_match:
+        if db_location_context.location_context.IsAllKnownFiles():
             
-            tables = '{}, {} AS results_smaller, {} AS results_larger'.format( base_tables, results_table_name, results_table_name )
+            tables.append( '{} AS results_table_for_this_query'.format( results_table_name ) )
             
-            join_predicate_hashes_to_allowed_results = 'duplicate_files_smaller.king_hash_id = results_smaller.hash_id AND duplicate_files_larger.king_hash_id = results_larger.hash_id'
+            join_predicates.append( '( duplicate_files_smaller.king_hash_id = results_table_for_this_query.hash_id OR duplicate_files_larger.king_hash_id = results_table_for_this_query.hash_id )' )
             
         else:
             
-            if db_location_context.location_context.IsAllKnownFiles():
-                
-                tables = '{}, {} AS results_table_for_this_query'.format( base_tables, results_table_name )
-                
-                join_predicate_hashes_to_allowed_results = '( duplicate_files_smaller.king_hash_id = results_table_for_this_query.hash_id OR duplicate_files_larger.king_hash_id = results_table_for_this_query.hash_id )'
-                
-            else:
-                
-                files_table_name = db_location_context.GetSingleFilesTableName()
-                
-                tables = '{}, {} AS results_table_for_this_query, {} AS current_files_for_this_query'.format( base_tables, results_table_name, files_table_name )
-                
-                join_predicate_smaller_matches = '( duplicate_files_smaller.king_hash_id = results_table_for_this_query.hash_id AND duplicate_files_larger.king_hash_id = current_files_for_this_query.hash_id )'
-                
-                join_predicate_larger_matches = '( duplicate_files_smaller.king_hash_id = current_files_for_this_query.hash_id AND duplicate_files_larger.king_hash_id = results_table_for_this_query.hash_id )'
-                
-                join_predicate_hashes_to_allowed_results = '( {} OR {} )'.format( join_predicate_smaller_matches, join_predicate_larger_matches )
-                
+            files_table_name = db_location_context.GetSingleFilesTableName()
+            
+            tables.extend( [
+                '{} AS results_table_for_this_query'.format( results_table_name ),
+                '{} AS current_files_for_this_query'.format( files_table_name )
+            ] )
+            
+            join_predicate_smaller_matches = '( duplicate_files_smaller.king_hash_id = results_table_for_this_query.hash_id AND duplicate_files_larger.king_hash_id = current_files_for_this_query.hash_id )'
+            
+            join_predicate_larger_matches = '( duplicate_files_smaller.king_hash_id = current_files_for_this_query.hash_id AND duplicate_files_larger.king_hash_id = results_table_for_this_query.hash_id )'
+            
+            join_predicates.append( '( {} OR {} )'.format( join_predicate_smaller_matches, join_predicate_larger_matches ) )
             
         
-        if pixel_dupes_preference in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
-            
-            join_predicate_pixel_dupes = 'duplicate_files_smaller.king_hash_id = pixel_hash_map_smaller.hash_id AND duplicate_files_larger.king_hash_id = pixel_hash_map_larger.hash_id AND pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id'
-            
-            if pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
-                
-                tables = '{}, pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map AS pixel_hash_map_larger'.format( tables )
-                
-                join_predicate_hashes_to_allowed_results = '{} AND {}'.format( join_predicate_hashes_to_allowed_results, join_predicate_pixel_dupes )
-                
-            elif pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
-                
-                # can't do "AND NOT {}", or the join will just give you the million rows where it isn't true. we want 'AND NEVER {}', and quick
-                
-                select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger ON ( {} )'.format( join_predicate_pixel_dupes )
-                
-                join_predicate_hashes_to_allowed_results = '{} AND NOT EXISTS ( {} )'.format( join_predicate_hashes_to_allowed_results, select_statement )
-                
-            
+        table_join = '{} ON ( {} )'.format( ', '.join( tables ), ' AND '.join( join_predicates ) )
         
-        join_predicate = '{} AND {}'.format( join_predicate_media_to_hashes, join_predicate_hashes_to_allowed_results )
+        return table_join
         
-        table_join = '{} ON ( {} )'.format( tables, join_predicate )
+    
+    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( self, results_table_name_1: str, results_table_name_2: str, pixel_dupes_preference: int, max_hamming_distance: int ):
+        
+        #
+        # And taking the above to its logical conclusion with two results sets, one file in xor either
+        #
+        
+        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        
+        # we don't have to do any db_location_context jibber-jabber here as long as we stipulate that the two results sets have the same location context, which we'll enforce in UI
+        # just like above when 'both files match', we know we are db_location_context cross-referenced since we are intersecting with file searches performed on that search domain
+        # so, this is actually a bit simpler than the non-both-files-match one search case!!
+        
+        tables.extend( [
+            '{} AS results_table_for_this_query_1'.format( results_table_name_1 ),
+            '{} AS results_table_for_this_query_2'.format( results_table_name_2 )
+        ] )
+        
+        one_two = '( duplicate_files_smaller.king_hash_id = results_table_for_this_query_1.hash_id AND duplicate_files_larger.king_hash_id = results_table_for_this_query_2.hash_id )'
+        two_one = '( duplicate_files_smaller.king_hash_id = results_table_for_this_query_2.hash_id AND duplicate_files_larger.king_hash_id = results_table_for_this_query_1.hash_id )'
+        
+        join_predicates.append( '( {} OR {} )'.format( one_two, two_one ) )
+        
+        table_join = '{} ON ( {} )'.format( ', '.join( tables ), ' AND '.join( join_predicates ) )
         
         return table_join
         

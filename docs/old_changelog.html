@@ -35,6 +35,50 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_512"><a href="#version_512">version 512</a></h2>
+                    <ul>
+                        <li><h3>two searches in duplicates</h3></li>
+                        <li>the duplicate filter page now lets you search 'one file is in this search, the other is in this search'! the only real limitation is both searches are locked to the same file domain</li>
+                        <li>the main neat thing is you can now search 'pngs vs jpegs, and must be pixel dupes' super easy. this is the first concrete step towards my plan to introduce an optional duplicate auto resolution system (png/jpeg pixel dupes is easy--the jpeg is 99.9999% always better)</li>
+                        <li>the database tech to get this working was actually simpler than 'one file matches the search', and in testing it works at _ok_ speed, so we'll see how this goes IRL</li>
+                        <li>duplicate calculations should be faster in some simple cases, usually when you set a search to system:everything. this extends to the new two-search mode too (e.g. a two-search with one as system:everything is just a one-search, and the system optimises for this), however I also search complicated domains much more precisely now, which may make some duplicate search stuff work real slow. again, let me know!</li>
+                        <li><h3>sidecars</h3></li>
+                        <li>the txt importer/exporter sidecars now allow custom 'separators', so if you don't want newlines, you can use ', ' or whatever format you need</li>
+                        <li><h3>misc</h3></li>
+                        <li>when you right-click on a selection of thumbs, the 'x files' can now be 'x videos' or 'x pngs' etc.. as you see on the status bar</li>
+                        <li>when you select or right-click on a selection of thumbs that all have duration, the status bar and menu now show the total duration of your selection. same deal on the status bar if you have no selection on a page of only durating-having media</li>
+                        <li>thanks to the user who figured out the correct render flag, the new 'thumbnail ui-scale supersampling %' option now draws non-pixelly thumbs on 100% monitors when it is set higher (e.g. 200% thumbs drawing on 100% monitor), so users with unusual multi-monitor setups etc... should have a nicer experience. as the tooltip now says, this setting should now be set to the largest UI scale you have</li>
+                        <li>I removed the newgrounds downloader from the defaults (this only affects new users). the downloader has been busted for a while, and last time I looked, it was not trivial to figure out, so I am removing myself from the question</li>
+                        <li>the 'manage where tag siblings and parents apply' dialog now explicitly points users to the 'review current sync' panel</li>
+                        <li><h3>client api</h3></li>
+                        <li>a new command, /manage_pages/refresh_page, refreshes the specified page</li>
+                        <li>the help is updated to talk about this</li>
+                        <li>client api version is now 39</li>
+                        <li><h3>server management</h3></li>
+                        <li>in the 'modify accounts' dialog, if the null account is checked when you try to do an action, it will be unchecked. this should stop the annoying 400 Errors when you accidentally try to set it something</li>
+                        <li>also, if you do 'add to expires', any accounts that currently do not expire will be deselected before the action too, with a brief dialog note about it</li>
+                        <li><h3>other duplicates improvements</h3></li>
+                        <li>I reworked a ton of code here, fixing a heap of logic and general 'that isn't quite what you'd expect' comparison selection issues. ideally, the system will just make more obvious human sense more often, but this tech gets a little complicated as it tries to select comparison kings from larger groups, and we might have some situations where it says '3 pairs', but when you load it in the filter it says 'no pairs found m8', so let me know how it goes!</li>
+                        <li>first, most importantly, the 'show some random potential pairs' button is vastly improved. it is now much better about limiting the group of presented files to what you specifically have searched, and the 'pixel dupes' and 'search distance' settings are obeyed properly (previously it was fetching too many potentials, not always limiting to the search you set, and choosing candidates from larger groups too liberally)</li>
+                        <li>while it shows smaller groups now, since they are all culled better, it _should_ select larger groups more often than before</li>
+                        <li>when you say 'show some random potential pairs' with 'at least one file matches the search', the first file displayed, which is the 'master' that the other file(s) are paired against, now always matches the search. when you are set to the new two-search 'files match different searches', the master will always match the first search, and the others of the pairs will always match the second search. in the filter itself, some similar logic applies, so the files selected for actual comparison should match the search you inputted better.</li>
+                        <li>setting duplicates with 'custom options' from the thumbnail menu and selecting 'this is better' now correctly sets the focused media as the best. previously it set the first file as the best</li>
+                        <li>also, in the duplicate merge options, you can now set notes to 'move' from worse to better</li>
+                        <li>as a side thing, the 'search distance' number control is now disabled if you select 'must be pixel dupes'. duh!</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>refactored the duplicate comparison statement generation code from ClientMedia to ClientDuplicates</li>
+                        <li>significantly refactored all the duplicate files calculation pipelines to deal with two file search contexts</li>
+                        <li>cleaned up a bunch of the 'find potential duplicate pairs in this file domain' master table join code. less hardcoding, more dynamic assembly</li>
+                        <li>refactored the duplicated 'figure out pixel dupes table join gubbins' code in the file duplicates database module into a single separate method, and rolled in the base initialisation and hamming distance part into it too, clearing out more duplicated code</li>
+                        <li>split up the 'both files match' search code into separate methods to further clean the logic here</li>
+                        <li>updated the main object that handles page data to the new serialisable dictionary, combining its hardcoded key/primitive/serialisable storage into one clean dict that looks after itself</li>
+                        <li>cleaned up the type definitions of the the main database file search and fixed the erroneous empty set returns</li>
+                        <li>I added a couple unit tests for the new .txt sidecar separator</li>
+                        <li>fixed a bad sidecar unit test</li>
+                        <li>'client_running' and 'server_running' are now in the .gitignore</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_511"><a href="#version_511">version 511</a></h2>
                     <ul>
                         <li><h3>thumbnail UI scaling</h3></li>

@@ -1329,6 +1329,33 @@ Response:
 :   200 with no content. If the page key is not found, this will 404.
     
 
+### **POST `/manage_pages/refresh_page`** { id="manage_pages_refresh_page" }
+
+_Refresh a page in the main GUI. Like hitting F5 in the client, this obviously makes file search pages perform their search again, but for other page types it will force the currently in-view files to be re-sorted._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `page_key`: (the page key for the page you wish to refresh)
+
+The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If a file search page is not set to 'searching immediately', a 'refresh' command does nothing.
+
+```json title="Example request body"
+{
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}
+```
+
+Response:
+:   200 with no content. If the page key is not found, this will 404.
+    
+
 ## Searching Files
 
 File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.

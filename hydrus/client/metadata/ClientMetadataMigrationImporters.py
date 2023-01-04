@@ -437,9 +437,9 @@ class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, Single
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_TXT
     SERIALISABLE_NAME = 'Metadata Single File Importer TXT'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, string_processor = None, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None ):
+    def __init__( self, string_processor = None, remove_actual_filename_ext = None, suffix = None, filename_string_converter = None, separator = None ):
         
         if remove_actual_filename_ext is None:
             
@@ -461,6 +461,13 @@ class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, Single
             string_processor = ClientStrings.StringProcessor()
             
         
+        if separator is None:
+            
+            separator = '\n'
+            
+        
+        self._separator = separator
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
         SingleFileMetadataImporterSidecar.__init__( self, string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
         
@@ -470,12 +477,12 @@ class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, Single
         serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         serialisable_filename_string_converter = self._filename_string_converter.GetSerialisableTuple()
         
-        return ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter )
+        return ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
     
-        ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter ) = serialisable_info
+        ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator ) = serialisable_info
         
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         self._filename_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_string_converter )
@@ -510,10 +517,26 @@ class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, Single
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( serialisable_string_processor, remove_actual_filename_ext, suffix, serialisable_filename_string_converter ) = old_serialisable_info
+            
+            separator = '\n'
+            
+            new_serialisable_info = ( serialisable_string_processor, remove_actual_filename_ext, suffix, serialisable_filename_string_converter, separator )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def GetExpectedSidecarPath( self, actual_file_path: str ):
         
         return ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' )
+        
+    
+    def GetSeparator( self ) -> str:
+        
+        return self._separator
         
     
     def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
@@ -539,12 +562,25 @@ class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, Single
         
         rows = HydrusText.DeserialiseNewlinedTexts( raw_text )
         
+        if self._separator != '\n':
+            
+            # don't want any newlines, so this 'undo' is correct
+            rejoined_text = ''.join( rows )
+            
+            rows = rejoined_text.split( self._separator )
+            
+        
         if self._string_processor.MakesChanges():
             
             rows = self._string_processor.ProcessStrings( rows )
             
         
         return rows
+        
+    
+    def SetSeparator( self, separator: str ):
+        
+        self._separator = separator
         
     
     def ToString( self ) -> str:
