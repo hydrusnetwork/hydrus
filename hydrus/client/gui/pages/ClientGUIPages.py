@@ -820,7 +820,7 @@ class Page( QW.QWidget ):
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_type' ] = self._management_controller.GetType()
-        root[ 'focused' ] = is_selected
+        root[ 'selected' ] = is_selected
         
         return root
         

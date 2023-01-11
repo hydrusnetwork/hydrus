@@ -55,10 +55,12 @@ LOCAL_BOORU_STRING_PARAMS = set()
 LOCAL_BOORU_JSON_PARAMS = set()
 LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
-CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'file_service_key' }
+# if a variable name isn't defined here, a GET with it won't work
+
+CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'file_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'file_service_name', 'tag_service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'tags_1', 'tags_2', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_names_tags', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -109,6 +111,24 @@ def CheckHashLength( hashes, hash_type = 'sha256' ):
             
         
     
+
+def CheckTagService( tag_service_key: bytes ):
+    
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( tag_service_key )
+        
+    except:
+        
+        raise HydrusExceptions.BadRequestException( 'Could not find that tag service!' )
+        
+    
+    if service.GetServiceType() not in HC.ALL_TAG_SERVICES:
+        
+        raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a tag service!' )
+        
+    
+
 def ConvertServiceNamesDictToKeys( allowed_service_types, service_name_dict ):
     
     service_key_dict = {}
@@ -413,6 +433,60 @@ def ParseClientAPISearchPredicates( request ) -> typing.List[ ClientSearch.Predi
     
     return predicates
     
+
+def ParseDuplicateSearch( request: HydrusServerRequest.HydrusRequest ):
+    
+    # TODO: When we have ParseLocationContext for clever file searching, swap it in here too
+    # LocationContext has to be the same for both searches
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+    
+    tag_service_key_1 = request.parsed_request_args.GetValue( 'tag_service_key_1', bytes, default_value = CC.COMBINED_TAG_SERVICE_KEY )
+    tag_service_key_2 = request.parsed_request_args.GetValue( 'tag_service_key_2', bytes, default_value = CC.COMBINED_TAG_SERVICE_KEY )
+    
+    CheckTagService( tag_service_key_1 )
+    CheckTagService( tag_service_key_2 )
+    
+    tag_context_1 = ClientSearch.TagContext( service_key = tag_service_key_1 )
+    tag_context_2 = ClientSearch.TagContext( service_key = tag_service_key_2 )
+    
+    tags_1 = request.parsed_request_args.GetValue( 'tags_1', list, default_value = [] )
+    tags_2 = request.parsed_request_args.GetValue( 'tags_2', list, default_value = [] )
+    
+    if len( tags_1 ) == 0:
+        
+        predicates_1 = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
+        
+    else:
+        
+        predicates_1 = ConvertTagListToPredicates( request, tags_1, do_permission_check = False )
+        
+    
+    if len( tags_2 ) == 0:
+        
+        predicates_2 = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
+        
+    else:
+        
+        predicates_2 = ConvertTagListToPredicates( request, tags_2, do_permission_check = False )
+        
+    
+    
+    file_search_context_1 = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context_1, predicates = predicates_1 )
+    file_search_context_2 = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context_2, predicates = predicates_2 )
+    
+    dupe_search_type = request.parsed_request_args.GetValue( 'potentials_search_type', int, default_value = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+    pixel_dupes_preference = request.parsed_request_args.GetValue( 'pixel_duplicates', int, default_value = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+    max_hamming_distance = request.parsed_request_args.GetValue( 'max_hamming_distance', int, default_value = 4 )
+    
+    return (
+        file_search_context_1,
+        file_search_context_2,
+        dupe_search_type,
+        pixel_dupes_preference,
+        max_hamming_distance
+    )
+    
+
 def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: ClientLocation.LocationContext ):
     
     if 'file_service_key' in request.parsed_request_args or 'file_service_name' in request.parsed_request_args:
@@ -456,6 +530,7 @@ def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: C
         return default
         
     
+
 def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
     
     hashes = set()
@@ -496,6 +571,7 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
     
     return hashes
     
+
 def ParseRequestedResponseMime( request: HydrusServerRequest.HydrusRequest ):
     
     # let them ask for something specifically, else default to what they asked in, finally default to json
@@ -539,6 +615,38 @@ def ParseRequestedResponseMime( request: HydrusServerRequest.HydrusRequest ):
         
     
     return HC.APPLICATION_JSON
+    
+
+def ParseTagServiceKey( request: HydrusServerRequest.HydrusRequest ):
+    
+    if 'tag_service_key' in request.parsed_request_args or 'tag_service_name' in request.parsed_request_args:
+        
+        if 'tag_service_key' in request.parsed_request_args:
+            
+            tag_service_key = request.parsed_request_args[ 'tag_service_key' ]
+            
+        else:
+            
+            tag_service_name = request.parsed_request_args[ 'tag_service_name' ]
+            
+            try:
+                
+                tag_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_TAG_SERVICES, tag_service_name )
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( tag_service_name ) )
+                
+            
+        
+        CheckTagService( tag_service_key )
+        
+    else:
+        
+        tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+        
+    
+    return tag_service_key
     
 
 def ConvertTagListToPredicates( request, tag_list, do_permission_check = True, error_on_invalid_tag = True ) -> typing.List[ ClientSearch.Predicate ]:
@@ -1246,6 +1354,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
                 ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
                 ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
+                ClientAPI.CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
                 ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES
             )
         )
@@ -1778,43 +1887,6 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         return parsed_autocomplete_text
         
     
-    def _GetTagServiceKey( self, request: HydrusServerRequest.HydrusRequest ):
-        
-        tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
-        
-        if 'tag_service_key' in request.parsed_request_args:
-            
-            tag_service_key = request.parsed_request_args[ 'tag_service_key' ]
-            
-        elif 'tag_service_name' in request.parsed_request_args:
-            
-            tag_service_name = request.parsed_request_args[ 'tag_service_name' ]
-            
-            try:
-                
-                tag_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_TAG_SERVICES, tag_service_name )
-                
-            except:
-                
-                raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( tag_service_name ) )  
-                
-            
-        try:
-            
-            service = HG.client_controller.services_manager.GetService( tag_service_key )
-            
-        except:
-            
-            raise HydrusExceptions.BadRequestException( 'Could not find that tag service!' )
-            
-        if service.GetServiceType() not in HC.ALL_TAG_SERVICES:
-            
-            raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a tag service!' )
-            
-        
-        return tag_service_key
-        
-    
     def _GetTagMatches( self, request: HydrusServerRequest.HydrusRequest, tag_display_type: int, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ) -> typing.List[ ClientSearch.Predicate ]:
         
         matches = []
@@ -1855,7 +1927,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         tag_display_type = ClientTags.TAG_DISPLAY_STORAGE if tag_display_type_str == 'storage' else ClientTags.TAG_DISPLAY_ACTUAL
         
-        tag_service_key = self._GetTagServiceKey( request )
+        tag_service_key = ParseTagServiceKey( request )
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText( search, tag_service_key )
         
@@ -2213,44 +2285,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         
         location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
-        if 'tag_service_key' in request.parsed_request_args or 'tag_service_name' in request.parsed_request_args:
-            
-            if 'tag_service_key' in request.parsed_request_args:
-                
-                tag_service_key = request.parsed_request_args[ 'tag_service_key' ]
-                
-            else:
-                
-                tag_service_name = request.parsed_request_args[ 'tag_service_name' ]
-                
-                try:
-                    
-                    tag_service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.ALL_TAG_SERVICES, tag_service_name )
-                    
-                except:
-                    
-                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( tag_service_name ) )
-                    
-                
-            
-            try:
-                
-                service = HG.client_controller.services_manager.GetService( tag_service_key )
-                
-            except:
-                
-                raise HydrusExceptions.BadRequestException( 'Could not find that tag service!' )
-                
-            
-            if service.GetServiceType() not in HC.ALL_TAG_SERVICES:
-                
-                raise HydrusExceptions.BadRequestException( 'Sorry, that service key did not give a tag service!' )
-                
-            
-        else:
-            
-            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
+        tag_service_key = ParseTagServiceKey( request )
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and location_context.IsAllKnownFiles():
             
@@ -3099,6 +3134,285 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
         return response_context
         
     
+
+class HydrusResourceClientAPIRestrictedManageFileRelationships( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS )
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRelationships( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        # TODO: When we have ParseLocationContext for clever file searching, swap it in here too
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        hashes = ParseHashes( request )
+        
+        # maybe in future we'll just get the media results and dump the dict from there, but whatever
+        hashes_to_file_duplicates = HG.client_controller.Read( 'file_relationships_for_api', location_context, hashes )
+        
+        body_dict = { 'file_relationships' : hashes_to_file_duplicates }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialsCount( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        (
+            file_search_context_1,
+            file_search_context_2,
+            dupe_search_type,
+            pixel_dupes_preference,
+            max_hamming_distance
+        ) = ParseDuplicateSearch( request )
+        
+        count = HG.client_controller.Read( 'potential_duplicates_count', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        
+        body_dict = { 'potential_duplicates_count' : count }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        (
+            file_search_context_1,
+            file_search_context_2,
+            dupe_search_type,
+            pixel_dupes_preference,
+            max_hamming_distance
+        ) = ParseDuplicateSearch( request )
+        
+        max_num_pairs = request.parsed_request_args.GetValue( 'max_num_pairs', int, default_value = HG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
+        
+        filtering_pairs_media_results = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance, max_num_pairs = max_num_pairs )
+        
+        filtering_pairs_hashes = [ ( m1.GetHash().hex(), m2.GetHash().hex() ) for ( m1, m2 ) in filtering_pairs_media_results ]
+        
+        body_dict = { 'potential_duplicate_pairs' : filtering_pairs_hashes }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRandomPotentials( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        (
+            file_search_context_1,
+            file_search_context_2,
+            dupe_search_type,
+            pixel_dupes_preference,
+            max_hamming_distance
+        ) = ParseDuplicateSearch( request )
+        
+        hashes = HG.client_controller.Read( 'random_potential_duplicate_hashes', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        
+        body_dict = { 'random_potential_duplicate_hashes' : [ hash.hex() for hash in hashes ] }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetKings( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        hashes = ParseHashes( request )
+        
+        for hash in hashes:
+            
+            HG.client_controller.WriteSynchronous( 'duplicate_set_king', hash )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( HydrusResourceClientAPIRestrictedManageFileRelationships ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        rows = []
+        
+        raw_rows = request.parsed_request_args.GetValue( 'pair_rows', list, expected_list_type = list )
+        
+        all_hashes = set()
+        
+        for row in raw_rows:
+            
+            if len( row ) != 6:
+                
+                raise HydrusExceptions.BadRequestException( 'One of the pair rows was the wrong length!' )
+                
+            
+            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_first, delete_second ) = row
+            
+            try:
+                
+                hash_a = bytes.fromhex( hash_a_hex )
+                hash_b = bytes.fromhex( hash_b_hex )
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand one of the hashes {} or {}!'.format( hash_a_hex, hash_b_hex ) )
+                
+            
+            CheckHashLength( ( hash_a, hash_b ) )
+            
+            all_hashes.update( ( hash_a, hash_b ) )
+            
+        
+        media_results = HG.client_controller.Read( 'media_results', all_hashes )
+        
+        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+        
+        for row in raw_rows:
+            
+            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_first, delete_second ) = row
+            
+            if duplicate_type not in [
+                HC.DUPLICATE_FALSE_POSITIVE,
+                HC.DUPLICATE_ALTERNATE,
+                HC.DUPLICATE_BETTER,
+                HC.DUPLICATE_WORSE,
+                HC.DUPLICATE_SAME_QUALITY,
+                HC.DUPLICATE_POTENTIAL
+            ]:
+                
+                raise HydrusExceptions.BadRequestException( 'One of the duplicate statuses ({}) was incorrect!'.format( duplicate_type ) )
+                
+            
+            try:
+                
+                hash_a = bytes.fromhex( hash_a_hex )
+                hash_b = bytes.fromhex( hash_b_hex )
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand one of the hashes {} or {}!'.format( hash_a_hex, hash_b_hex ) )
+                
+            
+            if not isinstance( do_default_content_merge, bool ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, "do_default_content_merge" has to be a boolean! "{}" was not!'.format( do_default_content_merge ) )
+                
+            
+            if not isinstance( delete_first, bool ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, "delete_first" has to be a boolean! "{}" was not!'.format( delete_first ) )
+                
+            
+            if not isinstance( delete_second, bool ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, "delete_second" has to be a boolean! "{}" was not!'.format( delete_second ) )
+                
+            
+            # ok the raw row looks good
+            
+            list_of_service_keys_to_content_updates = []
+            
+            first_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_a ] )
+            second_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_b ] )
+            
+            file_deletion_reason = 'From Client API (duplicates processing).'
+            
+            if do_default_content_merge:
+                
+                duplicate_content_merge_options = HG.client_controller.new_options.GetDuplicateContentMergeOptions( duplicate_type )
+                
+                list_of_service_keys_to_content_updates.append( duplicate_content_merge_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
+                
+            elif delete_first or delete_second:
+                
+                service_keys_to_content_updates = collections.defaultdict( list )
+                
+                deletee_media = set()
+                
+                if delete_first:
+                    
+                    deletee_media.add( first_media )
+                    
+                
+                if delete_second:
+                    
+                    deletee_media.add( second_media )
+                    
+                
+                for media in deletee_media:
+                    
+                    if media.HasDeleteLocked():
+                        
+                        ClientMedia.ReportDeleteLockFailures( [ media ] )
+                        
+                        continue
+                        
+                    
+                    if media.GetLocationsManager().IsTrashed():
+                        
+                        deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
+                        
+                    else:
+                        
+                        local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                        
+                        deletee_service_keys = media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
+                        
+                    
+                    for deletee_service_key in deletee_service_keys:
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
+                        
+                        service_keys_to_content_updates[ deletee_service_key ].append( content_update )
+                        
+                    
+                
+                list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                
+            
+            rows.append( ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) )
+            
+        
+        if len( rows ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', rows )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -3106,6 +3420,7 @@ class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestr
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES )
         
     
+
 class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -3183,6 +3498,7 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):

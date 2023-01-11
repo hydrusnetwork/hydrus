@@ -39,6 +39,7 @@ SET /P install_type=Do you want the (s)imple or (a)dvanced install?
 
 IF "%install_type%" == "s" goto :create
 IF "%install_type%" == "a" goto :question_qt
+IF "%install_type%" == "d" goto :create
 goto :parse_fail
 
 :question_qt
@@ -98,7 +99,23 @@ IF "%install_type%" == "s" (
 	
 	python -m pip install -r requirements.txt
 	
-) ELSE (
+)
+
+IF "%install_type%" == "d" (
+
+	python -m pip install -r static\requirements\advanced\requirements_core.txt
+	
+	python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
+	python -m pip install pyside2
+	python -m pip install PyQtChart PyQt5
+	python -m pip install PyQt6-Charts PyQt6
+	python -m pip install -r static\requirements\advanced\requirements_new_mpv.txt
+	python -m pip install -r static\requirements\advanced\requirements_new_opencv.txt
+	python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
+	
+)
+
+IF "%install_type%" == "a" (
 	
 	python -m pip install -r static\requirements\advanced\requirements_core.txt
 	

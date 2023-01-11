@@ -8,6 +8,7 @@ import shutil
 import time
 import unittest
 import urllib
+import urllib.parse
 
 from twisted.internet import reactor
 
@@ -21,7 +22,9 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
+from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
+from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client import ClientServices
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
@@ -30,6 +33,8 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientLocalServer
 from hydrus.client.networking import ClientLocalServerResources
 from hydrus.client.networking import ClientNetworkingContexts
+
+from hydrus.test import HelperFunctions
 
 CBOR_AVAILABLE = False
 try:
@@ -2506,6 +2511,417 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( boned_stats, dict( expected_data ) )
         
     
+    def _test_manage_duplicates( self, connection, set_up_permissions ):
+        
+        # this stuff is super dependent on the db requests, which aren't tested in this class, but we can do the arg parsing and wrapper
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        default_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        # file relationships
+        
+        file_relationships_hash = bytes.fromhex( 'ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d' )
+        
+        # yes the database returns hex hashes in this case
+        example_response = {
+            "file_relationships" : {
+                "ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d" : {
+                    "is_king" : False,
+                    "king" : "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+                    "0" : [
+                    ],
+                    "1" : [],
+                    "3" : [
+                        "8bf267c4c021ae4fd7c4b90b0a381044539519f80d148359b0ce61ce1684fefe"
+                    ],
+                    "8" : [
+                        "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+                        "3fa8ef54811ec8c2d1892f4f08da01e7fc17eed863acae897eb30461b051d5c3"
+                    ]
+                }
+            }
+        }
+        
+        HG.test_controller.SetRead( 'file_relationships_for_api', example_response )
+        
+        path = '/manage_file_relationships/get_file_relationships?hash={}'.format( file_relationships_hash.hex() )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'file_relationships' ], example_response )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_relationships_for_api' )
+
+        ( location_context, hashes ) = args
+        
+        self.assertEqual( location_context, default_location_context )
+        self.assertEqual( hashes, { file_relationships_hash } )
+        
+        # search files failed tag permission
+        
+        tag_context = ClientSearch.TagContext( CC.COMBINED_TAG_SERVICE_KEY )
+        predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) }
+        
+        default_file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = tag_context, predicates = predicates )
+        
+        default_potentials_search_type = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+        default_pixel_duplicates = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        default_max_hamming_distance = 4
+        
+        test_tag_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        test_tags_1 = [ 'skirt', 'system:width<400' ]
+        
+        test_tag_context_1 = ClientSearch.TagContext( test_tag_service_key_1 )
+        test_predicates_1 = ClientLocalServerResources.ConvertTagListToPredicates( None, test_tags_1, do_permission_check = False )
+        
+        test_file_search_context_1 = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_1, predicates = test_predicates_1 )
+        
+        test_tag_service_key_2 = HG.test_controller.example_tag_repo_service_key
+        test_tags_2 = [ 'system:untagged' ]
+        
+        test_tag_context_2 = ClientSearch.TagContext( test_tag_service_key_2 )
+        test_predicates_2 = ClientLocalServerResources.ConvertTagListToPredicates( None, test_tags_2, do_permission_check = False )
+        
+        test_file_search_context_2 = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_2, predicates = test_predicates_2 )
+        
+        test_potentials_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES
+        test_pixel_duplicates = CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED
+        test_max_hamming_distance = 8
+        
+        # get count
+        
+        HG.test_controller.SetRead( 'potential_duplicates_count', 5 )
+        
+        path = '/manage_file_relationships/get_potentials_count'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'potential_duplicates_count' ], 5 )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'potential_duplicates_count' )
+
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, default_potentials_search_type )
+        self.assertEqual( pixel_duplicates, default_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, default_max_hamming_distance )
+        
+        # get count with params
+        
+        HG.test_controller.SetRead( 'potential_duplicates_count', 5 )
+        
+        path = '/manage_file_relationships/get_potentials_count?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
+            test_tag_service_key_1.hex(),
+            urllib.parse.quote( json.dumps( test_tags_1 ) ),
+            test_tag_service_key_2.hex(),
+            urllib.parse.quote( json.dumps( test_tags_2 ) ),
+            test_potentials_search_type,
+            test_pixel_duplicates,
+            test_max_hamming_distance
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'potential_duplicates_count' ], 5 )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'potential_duplicates_count' )
+
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, test_potentials_search_type )
+        self.assertEqual( pixel_duplicates, test_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, test_max_hamming_distance )
+        
+        # get pairs
+        
+        default_max_num_pairs = 250
+        test_max_num_pairs = 20
+        
+        test_hash_pairs = [ ( os.urandom( 32 ), os.urandom( 32 ) ) for i in range( 10 ) ]
+        test_media_result_pairs = [ ( HelperFunctions.GetFakeMediaResult( h1 ), HelperFunctions.GetFakeMediaResult( h2 ) ) for ( h1, h2 ) in test_hash_pairs ]
+        test_hash_pairs_hex = [ [ h1.hex(), h2.hex() ] for ( h1, h2 ) in test_hash_pairs ]
+        
+        HG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        
+        path = '/manage_file_relationships/get_potential_pairs'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+        
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        max_num_pairs = kwargs[ 'max_num_pairs' ]
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, default_potentials_search_type )
+        self.assertEqual( pixel_duplicates, default_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, default_max_hamming_distance )
+        self.assertEqual( max_num_pairs, default_max_num_pairs )
+        
+        # get pairs with params
+        
+        HG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        
+        path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&max_num_pairs={}'.format(
+            test_tag_service_key_1.hex(),
+            urllib.parse.quote( json.dumps( test_tags_1 ) ),
+            test_tag_service_key_2.hex(),
+            urllib.parse.quote( json.dumps( test_tags_2 ) ),
+            test_potentials_search_type,
+            test_pixel_duplicates,
+            test_max_hamming_distance,
+            test_max_num_pairs
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        max_num_pairs = kwargs[ 'max_num_pairs' ]
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, test_potentials_search_type )
+        self.assertEqual( pixel_duplicates, test_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, test_max_hamming_distance )
+        self.assertEqual( max_num_pairs, test_max_num_pairs )
+        
+        # get random
+        
+        test_hashes = [ os.urandom( 32 ) for i in range( 6 ) ]
+        test_hash_pairs_hex = [ h.hex() for h in test_hashes ]
+        
+        HG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
+        
+        path = '/manage_file_relationships/get_random_potentials'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
+        
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, default_potentials_search_type )
+        self.assertEqual( pixel_duplicates, default_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, default_max_hamming_distance )
+        
+        # get random with params
+        
+        HG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
+        
+        path = '/manage_file_relationships/get_random_potentials?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
+            test_tag_service_key_1.hex(),
+            urllib.parse.quote( json.dumps( test_tags_1 ) ),
+            test_tag_service_key_2.hex(),
+            urllib.parse.quote( json.dumps( test_tags_2 ) ),
+            test_potentials_search_type,
+            test_pixel_duplicates,
+            test_max_hamming_distance
+        )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
+
+        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        
+        self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
+        self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
+        self.assertEqual( potentials_search_type, test_potentials_search_type )
+        self.assertEqual( pixel_duplicates, test_pixel_duplicates )
+        self.assertEqual( max_hamming_distance, test_max_hamming_distance )
+        
+        # set relationship
+        
+        # this is tricky to test fully
+        
+        HG.test_controller.ClearWrites( 'duplicate_pair_status' )
+        
+        HG.test_controller.ClearReads( 'media_result' )
+        
+        hashes = {
+            'b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2',
+            'bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845',
+            '22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2',
+            '65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423',
+            '0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec',
+            '5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7'
+        }
+        
+        # TODO: populate the fakes here with real tags and test actual content merge
+        # to test the content merge, we'd want to set some content merge options and populate these fakes with real tags
+        # don't need to be too clever, just test one thing and we know it'll all be hooked up right
+        HG.test_controller.SetRead( 'media_results', [ HelperFunctions.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in hashes ] )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_file_relationships/set_file_relationships'
+        
+        test_pair_rows = [
+            [ 4, "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2", "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845", False, False, True ],
+            [ 4, "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2", "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423", False, False, True ],
+            [ 2, "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec", "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7", False, False, False ]
+        ]
+        
+        request_dict = { 'pair_rows' : test_pair_rows }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'duplicate_pair_status' )
+
+        ( written_rows, ) = args
+        
+        def delete_thing( h, do_it ):
+            
+            if do_it:
+                
+                c = collections.defaultdict( list )
+                
+                c[ b'local files' ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { bytes.fromhex( h ) }, reason = 'From Client API (duplicates processing).' ) ]
+                
+                return [ c ]
+                
+            else:
+                
+                return []
+                
+            
+        
+        expected_written_rows = [ ( duplicate_type, bytes.fromhex( hash_a_hex ), bytes.fromhex( hash_b_hex ), delete_thing( hash_b_hex, delete_second ) ) for ( duplicate_type, hash_a_hex, hash_b_hex, merge, delete_first, delete_second ) in test_pair_rows ]
+        
+        self.assertEqual( written_rows, expected_written_rows )
+        
+        # set kings
+        
+        HG.test_controller.ClearWrites( 'duplicate_set_king' )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_file_relationships/set_kings'
+        
+        test_hashes = [
+            "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2",
+            "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845"
+        ]
+        
+        request_dict = { 'hashes' : test_hashes }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( args1, kwargs1 ), ( args2, kwargs2 ) ] = HG.test_controller.GetWrite( 'duplicate_set_king' )
+        
+        self.assertEqual( { args1[0], args2[0] }, { bytes.fromhex( h ) for h in test_hashes } )
+        
+    
     def _test_manage_pages( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'manage_pages' ]
@@ -4183,6 +4599,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
+        self._test_manage_duplicates( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )

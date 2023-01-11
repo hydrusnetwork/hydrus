@@ -5,11 +5,9 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
@@ -32,6 +30,137 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self.modules_similar_files = modules_similar_files
         
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
+        
+    
+    def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ int ]:
+        
+        dupe_hash_ids = set()
+        
+        if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    false_positive_alternates_group_ids = self.GetFalsePositiveAlternatesGroupIds( alternates_group_id )
+                    
+                    false_positive_alternates_group_ids.discard( alternates_group_id )
+                    
+                    false_positive_media_ids = set()
+                    
+                    for false_positive_alternates_group_id in false_positive_alternates_group_ids:
+                        
+                        false_positive_media_ids.update( self.GetAlternateMediaIds( false_positive_alternates_group_id ) )
+                        
+                    
+                    for false_positive_media_id in false_positive_media_ids:
+                        
+                        best_king_hash_id = self.GetBestKingId( false_positive_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        
+                        if best_king_hash_id is not None:
+                            
+                            dupe_hash_ids.add( best_king_hash_id )
+                            
+                        
+                    
+                
+            
+        elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    alternates_media_ids = self._STS( self._Execute( 'SELECT media_id FROM alternate_file_group_members WHERE alternates_group_id = ?;', ( alternates_group_id, ) ) )
+                    
+                    alternates_media_ids.discard( media_id )
+                    
+                    for alternates_media_id in alternates_media_ids:
+                        
+                        best_king_hash_id = self.GetBestKingId( alternates_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        
+                        if best_king_hash_id is not None:
+                            
+                            dupe_hash_ids.add( best_king_hash_id )
+                            
+                        
+                    
+                
+            
+        elif duplicate_type == HC.DUPLICATE_MEMBER:
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                media_hash_ids = self.GetDuplicateHashIds( media_id, db_location_context = db_location_context )
+                
+                if allowed_hash_ids is not None:
+                    
+                    media_hash_ids.intersection_update( allowed_hash_ids )
+                    
+                
+                dupe_hash_ids.update( media_hash_ids )
+                
+            
+        elif duplicate_type == HC.DUPLICATE_KING:
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                best_king_hash_id = self.GetBestKingId( media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                
+                if best_king_hash_id is not None:
+                    
+                    dupe_hash_ids.add( best_king_hash_id )
+                    
+                
+            
+        elif duplicate_type == HC.DUPLICATE_POTENTIAL:
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                table_join = self.GetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
+                
+                for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT smaller_media_id, larger_media_id FROM {} WHERE smaller_media_id = ? OR larger_media_id = ?;'.format( table_join ), ( media_id, media_id ) ).fetchall():
+                    
+                    if smaller_media_id != media_id:
+                        
+                        potential_media_id = smaller_media_id
+                        
+                    else:
+                        
+                        potential_media_id = larger_media_id
+                        
+                    
+                    best_king_hash_id = self.GetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                    
+                    if best_king_hash_id is not None:
+                        
+                        dupe_hash_ids.add( best_king_hash_id )
+                        
+                    
+                
+            
+        
+        dupe_hash_ids.discard( hash_id )
+        
+        dupe_hash_ids = list( dupe_hash_ids )
+        
+        dupe_hash_ids.insert( 0, hash_id )
+        
+        return dupe_hash_ids
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:
@@ -62,7 +191,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         }
         
     
-    def DuplicatesAddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
+    def AddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
         
         inserts = []
         
@@ -73,12 +202,12 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 continue
                 
             
-            if self.DuplicatesMediasAreFalsePositive( media_id, potential_duplicate_media_id ):
+            if self.MediasAreFalsePositive( media_id, potential_duplicate_media_id ):
                 
                 continue
                 
             
-            if self.DuplicatesMediasAreConfirmedAlternates( media_id, potential_duplicate_media_id ):
+            if self.MediasAreConfirmedAlternates( media_id, potential_duplicate_media_id ):
                 
                 continue
                 
@@ -98,7 +227,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
     
-    def DuplicatesAlternatesGroupsAreFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
+    def AlternatesGroupsAreFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
         
         if alternates_group_id_a == alternates_group_id_b:
             
@@ -115,38 +244,38 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return false_positive_pair_found
         
     
-    def DuplicatesClearAllFalsePositiveRelations( self, alternates_group_id ):
+    def ClearAllFalsePositiveRelations( self, alternates_group_id ):
         
         self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
         
-        media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+        media_ids = self.GetAlternateMediaIds( alternates_group_id )
         
-        hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids )
+        hash_ids = self.GetDuplicatesHashIds( media_ids )
         
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def DuplicatesClearAllFalsePositiveRelationsFromHashes( self, hashes ):
+    def ClearAllFalsePositiveRelationsFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
             
             if media_id is not None:
                 
-                alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
                 
                 if alternates_group_id is not None:
                     
-                    self.DuplicatesClearAllFalsePositiveRelations( alternates_group_id )
+                    self.ClearAllFalsePositiveRelations( alternates_group_id )
                     
                 
             
         
     
-    def DuplicatesClearFalsePositiveRelationsBetweenGroups( self, alternates_group_ids ):
+    def ClearFalsePositiveRelationsBetweenGroups( self, alternates_group_ids ):
         
         pairs = list( itertools.combinations( alternates_group_ids, 2 ) )
         
@@ -160,25 +289,25 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         for alternates_group_id in alternates_group_ids:
             
-            media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+            media_ids = self.GetAlternateMediaIds( alternates_group_id )
             
-            hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids )
+            hash_ids = self.GetDuplicatesHashIds( media_ids )
             
             self.modules_similar_files.ResetSearch( hash_ids )
             
         
     
-    def DuplicatesClearFalsePositiveRelationsBetweenGroupsFromHashes( self, hashes ):
+    def ClearFalsePositiveRelationsBetweenGroupsFromHashes( self, hashes ):
         
         alternates_group_ids = set()
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
-        media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+        media_id = self.GetMediaId( hash_id, do_not_create = True )
         
         if media_id is not None:
             
-            alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+            alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
             
             if alternates_group_id is not None:
                 
@@ -188,11 +317,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if len( alternates_group_ids ) > 1:
             
-            self.DuplicatesClearFalsePositiveRelationsBetweenGroups( alternates_group_ids )
+            self.ClearFalsePositiveRelationsBetweenGroups( alternates_group_ids )
             
         
     
-    def DuplicatesClearPotentialsBetweenMedias( self, media_ids_a, media_ids_b ):
+    def ClearPotentialsBetweenMedias( self, media_ids_a, media_ids_b ):
         
         # these two groups of medias now have a false positive or alternates relationship set between them, or they are about to be merged
         # therefore, potentials between them are no longer needed
@@ -228,17 +357,17 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
     
-    def DuplicatesClearPotentialsBetweenAlternatesGroups( self, alternates_group_id_a, alternates_group_id_b ):
+    def ClearPotentialsBetweenAlternatesGroups( self, alternates_group_id_a, alternates_group_id_b ):
         
         # these groups are being set as false positive. therefore, any potential between them no longer applies
         
-        media_ids_a = self.DuplicatesGetAlternateMediaIds( alternates_group_id_a )
-        media_ids_b = self.DuplicatesGetAlternateMediaIds( alternates_group_id_b )
+        media_ids_a = self.GetAlternateMediaIds( alternates_group_id_a )
+        media_ids_b = self.GetAlternateMediaIds( alternates_group_id_b )
         
-        self.DuplicatesClearPotentialsBetweenMedias( media_ids_a, media_ids_b )
+        self.ClearPotentialsBetweenMedias( media_ids_a, media_ids_b )
         
     
-    def DuplicatesDeleteAllPotentialDuplicatePairs( self ):
+    def DeleteAllPotentialDuplicatePairs( self ):
         
         media_ids = set()
         
@@ -248,50 +377,50 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             media_ids.add( larger_media_id )
             
         
-        hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids )
+        hash_ids = self.GetDuplicatesHashIds( media_ids )
         
         self._Execute( 'DELETE FROM potential_duplicate_pairs;' )
         
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def DuplicatesDissolveAlternatesGroupId( self, alternates_group_id ):
+    def DissolveAlternatesGroupId( self, alternates_group_id ):
         
-        media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+        media_ids = self.GetAlternateMediaIds( alternates_group_id )
         
         for media_id in media_ids:
             
-            self.DuplicatesDissolveMediaId( media_id )
+            self.DissolveMediaId( media_id )
             
         
     
-    def DuplicatesDissolveAlternatesGroupIdFromHashes( self, hashes ):
+    def DissolveAlternatesGroupIdFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
             
             if media_id is not None:
                 
-                alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
                 
                 if alternates_group_id is not None:
                     
-                    self.DuplicatesDissolveAlternatesGroupId( alternates_group_id )
+                    self.DissolveAlternatesGroupId( alternates_group_id )
                     
                 
             
         
     
-    def DuplicatesDissolveMediaId( self, media_id ):
+    def DissolveMediaId( self, media_id ):
         
-        self.DuplicatesRemoveAlternateMember( media_id )
+        self.RemoveAlternateMember( media_id )
         
         self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
         
-        hash_ids = self.DuplicatesGetDuplicateHashIds( media_id )
+        hash_ids = self.GetDuplicateHashIds( media_id )
         
         self._Execute( 'DELETE FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) )
         self._Execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( media_id, ) )
@@ -299,22 +428,22 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def DuplicatesDissolveMediaIdFromHashes( self, hashes ):
+    def DissolveMediaIdFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
             
             if media_id is not None:
                 
-                self.DuplicatesDissolveMediaId( media_id )
+                self.DissolveMediaId( media_id )
                 
             
         
     
-    def DuplicatesFilterKingHashIds( self, allowed_hash_ids ):
+    def FilterKingHashIds( self, allowed_hash_ids ):
         
         # can't just pull explicit king_hash_ids, since files that do not have a media_id are still kings
         # kings = hashes - explicitly not kings
@@ -336,7 +465,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return allowed_hash_ids.difference( all_non_king_hash_ids )
         
     
-    def DuplicatesFilterMediaIdPairs( self, db_location_context: ClientDBFilesStorage.DBLocationContext, media_id_pairs ):
+    def FilterMediaIdPairs( self, db_location_context: ClientDBFilesStorage.DBLocationContext, media_id_pairs ):
         
         if len( media_id_pairs ) == 0:
             
@@ -363,7 +492,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return good_media_id_pairs
         
     
-    def DuplicatesGetAlternatesGroupId( self, media_id, do_not_create = False ):
+    def GetAlternatesGroupId( self, media_id, do_not_create = False ):
         
         result = self._Execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()
         
@@ -388,16 +517,16 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return alternates_group_id
         
     
-    def DuplicatesGetAlternateMediaIds( self, alternates_group_id ):
+    def GetAlternateMediaIds( self, alternates_group_id ):
         
         media_ids = self._STS( self._Execute( 'SELECT media_id FROM alternate_file_group_members WHERE alternates_group_id = ?;', ( alternates_group_id, ) ) )
         
         return media_ids
         
     
-    def DuplicatesGetBestKingId( self, media_id, db_location_context: ClientDBFilesStorage.DBLocationContext, allowed_hash_ids = None, preferred_hash_ids = None ):
+    def GetBestKingId( self, media_id, db_location_context: ClientDBFilesStorage.DBLocationContext, allowed_hash_ids = None, preferred_hash_ids = None ):
         
-        media_hash_ids = self.DuplicatesGetDuplicateHashIds( media_id, db_location_context = db_location_context )
+        media_hash_ids = self.GetDuplicateHashIds( media_id, db_location_context = db_location_context )
         
         if allowed_hash_ids is not None:
             
@@ -406,7 +535,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if len( media_hash_ids ) > 0:
             
-            king_hash_id = self.DuplicatesGetKingHashId( media_id )
+            king_hash_id = self.GetKingHashId( media_id )
             
             if preferred_hash_ids is not None:
                 
@@ -434,7 +563,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return None
         
     
-    def DuplicatesGetDuplicateHashIds( self, media_id, db_location_context: ClientDBFilesStorage.DBLocationContext = None ):
+    def GetDuplicateHashIds( self, media_id, db_location_context: ClientDBFilesStorage.DBLocationContext = None ):
         
         table_join = 'duplicate_file_members'
         
@@ -457,7 +586,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def DuplicatesGetDuplicatesHashIds( self, media_ids, db_location_context: ClientDBFilesStorage.DBLocationContext = None ):
+    def GetDuplicatesHashIds( self, media_ids, db_location_context: ClientDBFilesStorage.DBLocationContext = None ):
         
         with self._MakeTemporaryIntegerTable( media_ids, 'media_id' ) as temp_media_ids_table_name:
             
@@ -474,7 +603,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def DuplicatesGetFalsePositiveAlternatesGroupIds( self, alternates_group_id ):
+    def GetFalsePositiveAlternatesGroupIds( self, alternates_group_id ):
         
         false_positive_alternates_group_ids = set()
         
@@ -489,7 +618,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return false_positive_alternates_group_ids
         
     
-    def DuplicatesGetFileDuplicateInfo( self, location_context, hash ):
+    def GetFileDuplicateInfo( self, location_context, hash ):
         
         result_dict = {}
         
@@ -499,7 +628,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         counter = collections.Counter()
         
-        media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+        media_id = self.GetMediaId( hash_id, do_not_create = True )
         
         if media_id is not None:
             
@@ -507,18 +636,18 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             all_potential_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id, ) ).fetchall()
             
-            potential_pairs = self.DuplicatesFilterMediaIdPairs( db_location_context, all_potential_pairs )
+            potential_pairs = self.FilterMediaIdPairs( db_location_context, all_potential_pairs )
             
             if len( potential_pairs ) > 0:
                 
                 counter[ HC.DUPLICATE_POTENTIAL ] = len( potential_pairs )
                 
             
-            king_hash_id = self.DuplicatesGetKingHashId( media_id )
+            king_hash_id = self.GetKingHashId( media_id )
             
             result_dict[ 'is_king' ] = king_hash_id == hash_id
             
-            media_hash_ids = self.DuplicatesGetDuplicateHashIds( media_id, db_location_context = db_location_context )
+            media_hash_ids = self.GetDuplicateHashIds( media_id, db_location_context = db_location_context )
             
             num_other_dupe_members = len( media_hash_ids ) - 1
             
@@ -527,17 +656,17 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 counter[ HC.DUPLICATE_MEMBER ] = num_other_dupe_members
                 
             
-            alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+            alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
             
             if alternates_group_id is not None:
                 
-                alt_media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+                alt_media_ids = self.GetAlternateMediaIds( alternates_group_id )
                 
                 alt_media_ids.discard( media_id )
                 
                 for alt_media_id in alt_media_ids:
                     
-                    alt_hash_ids = self.DuplicatesGetDuplicateHashIds( alt_media_id, db_location_context = db_location_context )
+                    alt_hash_ids = self.GetDuplicateHashIds( alt_media_id, db_location_context = db_location_context )
                     
                     if len( alt_hash_ids ) > 0:
                         
@@ -555,17 +684,17 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                false_positive_alternates_group_ids = self.DuplicatesGetFalsePositiveAlternatesGroupIds( alternates_group_id )
+                false_positive_alternates_group_ids = self.GetFalsePositiveAlternatesGroupIds( alternates_group_id )
                 
                 false_positive_alternates_group_ids.discard( alternates_group_id )
                 
                 for false_positive_alternates_group_id in false_positive_alternates_group_ids:
                     
-                    fp_media_ids = self.DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id )
+                    fp_media_ids = self.GetAlternateMediaIds( false_positive_alternates_group_id )
                     
                     for fp_media_id in fp_media_ids:
                         
-                        fp_hash_ids = self.DuplicatesGetDuplicateHashIds( fp_media_id, db_location_context = db_location_context )
+                        fp_hash_ids = self.GetDuplicateHashIds( fp_media_id, db_location_context = db_location_context )
                         
                         if len( fp_hash_ids ) > 0:
                             
@@ -581,144 +710,92 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return result_dict
         
     
-    def DuplicatesGetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ bytes ]:
+    def GetFileRelationshipsForAPI( self, location_context: ClientLocation.LocationContext, hashes: typing.Collection[ bytes ] ):
+        
+        hashes_to_file_relationships = {}
+        
+        db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+        
+        duplicate_types_to_fetch = (
+            HC.DUPLICATE_POTENTIAL,
+            HC.DUPLICATE_MEMBER,
+            HC.DUPLICATE_FALSE_POSITIVE,
+            HC.DUPLICATE_ALTERNATE
+        )
+        
+        for hash in hashes:
+            
+            file_relationships_dict = {}
+            
+            hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+            
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is None:
+                
+                file_relationships_dict[ 'is_king' ] = True
+                file_relationships_dict[ 'king' ] = hash.hex()
+                
+                for duplicate_type in duplicate_types_to_fetch:
+                    
+                    file_relationships_dict[ str( duplicate_type ) ] = []
+                    
+                
+            else:
+                
+                king_hash_id = self.GetBestKingId( media_id, db_location_context )
+                
+                if king_hash_id is None:
+                    
+                    file_relationships_dict[ 'is_king' ] = False
+                    file_relationships_dict[ 'king' ] = None
+                    
+                elif king_hash_id == hash_id:
+                    
+                    file_relationships_dict[ 'is_king' ] = True
+                    file_relationships_dict[ 'king' ] = hash.hex()
+                    
+                else:
+                    
+                    file_relationships_dict[ 'is_king' ] = False
+                    file_relationships_dict[ 'king' ] = self.modules_hashes_local_cache.GetHash( king_hash_id ).hex()
+                    
+                
+                for duplicate_type in ( HC.DUPLICATE_POTENTIAL, HC.DUPLICATE_MEMBER, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
+                    
+                    dupe_hash_ids = list( self._GetFileHashIdsByDuplicateType( db_location_context, hash_id, duplicate_type ) )
+                    
+                    dupe_hash_ids.sort()
+                    
+                    if hash_id in dupe_hash_ids:
+                        
+                        dupe_hash_ids.remove( hash_id )
+                        
+                    
+                    file_relationships_dict[ str( duplicate_type ) ] = [ h.hex() for h in self.modules_hashes_local_cache.GetHashes( dupe_hash_ids ) ]
+                    
+                
+            
+            hashes_to_file_relationships[ hash.hex() ] = file_relationships_dict
+            
+        
+        return hashes_to_file_relationships
+        
+    
+    def GetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ bytes ]:
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
         
-        dupe_hash_ids = set()
-        
-        if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
-            
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
-            
-            if media_id is not None:
-                
-                alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
-                
-                if alternates_group_id is not None:
-                    
-                    false_positive_alternates_group_ids = self.DuplicatesGetFalsePositiveAlternatesGroupIds( alternates_group_id )
-                    
-                    false_positive_alternates_group_ids.discard( alternates_group_id )
-                    
-                    false_positive_media_ids = set()
-                    
-                    for false_positive_alternates_group_id in false_positive_alternates_group_ids:
-                        
-                        false_positive_media_ids.update( self.DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id ) )
-                        
-                    
-                    for false_positive_media_id in false_positive_media_ids:
-                        
-                        best_king_hash_id = self.DuplicatesGetBestKingId( false_positive_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
-                        
-                        if best_king_hash_id is not None:
-                            
-                            dupe_hash_ids.add( best_king_hash_id )
-                            
-                        
-                    
-                
-            
-        elif duplicate_type == HC.DUPLICATE_ALTERNATE:
-            
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
-            
-            if media_id is not None:
-                
-                alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
-                
-                if alternates_group_id is not None:
-                    
-                    alternates_media_ids = self._STS( self._Execute( 'SELECT media_id FROM alternate_file_group_members WHERE alternates_group_id = ?;', ( alternates_group_id, ) ) )
-                    
-                    alternates_media_ids.discard( media_id )
-                    
-                    for alternates_media_id in alternates_media_ids:
-                        
-                        best_king_hash_id = self.DuplicatesGetBestKingId( alternates_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
-                        
-                        if best_king_hash_id is not None:
-                            
-                            dupe_hash_ids.add( best_king_hash_id )
-                            
-                        
-                    
-                
-            
-        elif duplicate_type == HC.DUPLICATE_MEMBER:
-            
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
-            
-            if media_id is not None:
-                
-                media_hash_ids = self.DuplicatesGetDuplicateHashIds( media_id, db_location_context = db_location_context )
-                
-                if allowed_hash_ids is not None:
-                    
-                    media_hash_ids.intersection_update( allowed_hash_ids )
-                    
-                
-                dupe_hash_ids.update( media_hash_ids )
-                
-            
-        elif duplicate_type == HC.DUPLICATE_KING:
-            
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
-            
-            if media_id is not None:
-                
-                best_king_hash_id = self.DuplicatesGetBestKingId( media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
-                
-                if best_king_hash_id is not None:
-                    
-                    dupe_hash_ids.add( best_king_hash_id )
-                    
-                
-            
-        elif duplicate_type == HC.DUPLICATE_POTENTIAL:
-            
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
-            
-            if media_id is not None:
-                
-                table_join = self.DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
-                
-                for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT smaller_media_id, larger_media_id FROM {} WHERE smaller_media_id = ? OR larger_media_id = ?;'.format( table_join ), ( media_id, media_id ) ).fetchall():
-                    
-                    if smaller_media_id != media_id:
-                        
-                        potential_media_id = smaller_media_id
-                        
-                    else:
-                        
-                        potential_media_id = larger_media_id
-                        
-                    
-                    best_king_hash_id = self.DuplicatesGetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
-                    
-                    if best_king_hash_id is not None:
-                        
-                        dupe_hash_ids.add( best_king_hash_id )
-                        
-                    
-                
-            
-        
-        dupe_hash_ids.discard( hash_id )
-        
-        dupe_hash_ids = list( dupe_hash_ids )
-        
-        dupe_hash_ids.insert( 0, hash_id )
+        dupe_hash_ids = self._GetFileHashIdsByDuplicateType( db_location_context, hash_id, duplicate_type, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
         
         dupe_hashes = self.modules_hashes_local_cache.GetHashes( dupe_hash_ids )
         
         return dupe_hashes
         
     
-    def DuplicatesGetHashIdsFromDuplicateCountPredicate( self, db_location_context: ClientDBFilesStorage.DBLocationContext, operator, num_relationships, dupe_type ):
+    def GetHashIdsFromDuplicateCountPredicate( self, db_location_context: ClientDBFilesStorage.DBLocationContext, operator, num_relationships, dupe_type ):
         
         # doesn't work for '= 0' or '< 1'
         
@@ -779,11 +856,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                         
                         valid = False
                         
-                        fp_media_ids = self.DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id )
+                        fp_media_ids = self.GetAlternateMediaIds( false_positive_alternates_group_id )
                         
                         for fp_media_id in fp_media_ids:
                             
-                            fp_hash_ids = self.DuplicatesGetDuplicateHashIds( fp_media_id, db_location_context = db_location_context )
+                            fp_hash_ids = self.GetDuplicateHashIds( fp_media_id, db_location_context = db_location_context )
                             
                             if len( fp_hash_ids ) > 0:
                                 
@@ -804,9 +881,9 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 if filter_func( count ):
                     
-                    media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+                    media_ids = self.GetAlternateMediaIds( alternates_group_id )
                     
-                    hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
+                    hash_ids = self.GetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
                     
                 
             
@@ -820,13 +897,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 count -= 1 # num relationships is number group members - 1
                 
-                media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+                media_ids = self.GetAlternateMediaIds( alternates_group_id )
                 
                 alternates_group_id_hash_ids = []
                 
                 for media_id in media_ids:
                     
-                    media_id_hash_ids = self.DuplicatesGetDuplicateHashIds( media_id, db_location_context = db_location_context )
+                    media_id_hash_ids = self.GetDuplicateHashIds( media_id, db_location_context = db_location_context )
                     
                     if len( media_id_hash_ids ) == 0:
                         
@@ -863,11 +940,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                     
                 
             
-            hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
+            hash_ids = self.GetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
             
         elif dupe_type == HC.DUPLICATE_POTENTIAL:
             
-            table_join = self.DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
+            table_join = self.GetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
             
             smaller_query = 'SELECT smaller_media_id, COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} ) GROUP BY smaller_media_id;'.format( table_join )
             larger_query = 'SELECT larger_media_id, COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} ) GROUP BY larger_media_id;'.format( table_join )
@@ -886,20 +963,20 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             media_ids = [ media_id for ( media_id, count ) in media_ids_to_counts.items() if filter_func( count ) ]
             
-            hash_ids = self.DuplicatesGetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
+            hash_ids = self.GetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
             
         
         return hash_ids
         
     
-    def DuplicatesGetKingHashId( self, media_id ):
+    def GetKingHashId( self, media_id ):
         
         ( king_hash_id, ) = self._Execute( 'SELECT king_hash_id FROM duplicate_files WHERE media_id = ?;', ( media_id, ) ).fetchone()
         
         return king_hash_id
         
     
-    def DuplicatesGetMediaId( self, hash_id, do_not_create = False ):
+    def GetMediaId( self, hash_id, do_not_create = False ):
         
         result = self._Execute( 'SELECT media_id FROM duplicate_file_members WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
@@ -924,7 +1001,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return media_id
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( self, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( self, pixel_dupes_preference: int, max_hamming_distance: int ):
         
         tables = [
             'potential_duplicate_pairs',
@@ -965,9 +1042,9 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return ( tables, join_predicates )
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, pixel_dupes_preference: int, max_hamming_distance: int ):
         
-        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        ( tables, join_predicates ) = self.GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
         
         if not db_location_context.location_context.IsAllKnownFiles():
             
@@ -986,7 +1063,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnFileService( self, db_location_context: ClientDBFilesStorage.DBLocationContext ):
+    def GetPotentialDuplicatePairsTableJoinOnFileService( self, db_location_context: ClientDBFilesStorage.DBLocationContext ):
         
         if db_location_context.location_context.IsAllKnownFiles():
             
@@ -1002,9 +1079,9 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( self, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( self, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
         
-        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        ( tables, join_predicates ) = self.GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
         
         tables.extend( [
             '{} AS results_smaller'.format( results_table_name ),
@@ -1018,7 +1095,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def GetPotentialDuplicatePairsTableJoinOnSearchResults( self, db_location_context: ClientDBFilesStorage.DBLocationContext, results_table_name: str, pixel_dupes_preference: int, max_hamming_distance: int ):
         
         # why yes this is a seven table join that involves a mix of duplicated tables, temporary tables, and duplicated temporary tables
         #
@@ -1069,7 +1146,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         # ████████████████████████████████████████████████████████████████████████
         #
         
-        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        ( tables, join_predicates ) = self.GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
         
         if db_location_context.location_context.IsAllKnownFiles():
             
@@ -1098,13 +1175,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesGetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( self, results_table_name_1: str, results_table_name_2: str, pixel_dupes_preference: int, max_hamming_distance: int ):
+    def GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( self, results_table_name_1: str, results_table_name_2: str, pixel_dupes_preference: int, max_hamming_distance: int ):
         
         #
         # And taking the above to its logical conclusion with two results sets, one file in xor either
         #
         
-        ( tables, join_predicates ) = self.DuplicatesGetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
+        ( tables, join_predicates ) = self.GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( pixel_dupes_preference, max_hamming_distance )
         
         # we don't have to do any db_location_context jibber-jabber here as long as we stipulate that the two results sets have the same location context, which we'll enforce in UI
         # just like above when 'both files match', we know we are db_location_context cross-referenced since we are intersecting with file searches performed on that search domain
@@ -1125,16 +1202,16 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def DuplicatesMediasAreAlternates( self, media_id_a, media_id_b ):
+    def MediasAreAlternates( self, media_id_a, media_id_b ):
         
-        alternates_group_id_a = self.DuplicatesGetAlternatesGroupId( media_id_a, do_not_create = True )
+        alternates_group_id_a = self.GetAlternatesGroupId( media_id_a, do_not_create = True )
         
         if alternates_group_id_a is None:
             
             return False
             
         
-        alternates_group_id_b = self.DuplicatesGetAlternatesGroupId( media_id_b, do_not_create = True )
+        alternates_group_id_b = self.GetAlternatesGroupId( media_id_b, do_not_create = True )
         
         if alternates_group_id_b is None:
             
@@ -1144,7 +1221,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return alternates_group_id_a == alternates_group_id_b
         
     
-    def DuplicatesMediasAreConfirmedAlternates( self, media_id_a, media_id_b ):
+    def MediasAreConfirmedAlternates( self, media_id_a, media_id_b ):
         
         smaller_media_id = min( media_id_a, media_id_b )
         larger_media_id = max( media_id_a, media_id_b )
@@ -1154,40 +1231,40 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def DuplicatesMediasAreFalsePositive( self, media_id_a, media_id_b ):
+    def MediasAreFalsePositive( self, media_id_a, media_id_b ):
         
-        alternates_group_id_a = self.DuplicatesGetAlternatesGroupId( media_id_a, do_not_create = True )
+        alternates_group_id_a = self.GetAlternatesGroupId( media_id_a, do_not_create = True )
         
         if alternates_group_id_a is None:
             
             return False
             
         
-        alternates_group_id_b = self.DuplicatesGetAlternatesGroupId( media_id_b, do_not_create = True )
+        alternates_group_id_b = self.GetAlternatesGroupId( media_id_b, do_not_create = True )
         
         if alternates_group_id_b is None:
             
             return False
             
         
-        return self.DuplicatesAlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b )
+        return self.AlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b )
         
     
-    def DuplicatesMergeMedias( self, superior_media_id, mergee_media_id ):
+    def MergeMedias( self, superior_media_id, mergee_media_id ):
         
         if superior_media_id == mergee_media_id:
             
             return
             
         
-        self.DuplicatesClearPotentialsBetweenMedias( ( superior_media_id, ), ( mergee_media_id, ) )
+        self.ClearPotentialsBetweenMedias( ( superior_media_id, ), ( mergee_media_id, ) )
         
-        alternates_group_id = self.DuplicatesGetAlternatesGroupId( superior_media_id )
-        mergee_alternates_group_id = self.DuplicatesGetAlternatesGroupId( mergee_media_id )
+        alternates_group_id = self.GetAlternatesGroupId( superior_media_id )
+        mergee_alternates_group_id = self.GetAlternatesGroupId( mergee_media_id )
         
         if alternates_group_id != mergee_alternates_group_id:
             
-            if self.DuplicatesAlternatesGroupsAreFalsePositive( alternates_group_id, mergee_alternates_group_id ):
+            if self.AlternatesGroupsAreFalsePositive( alternates_group_id, mergee_alternates_group_id ):
                 
                 smaller_alternates_group_id = min( alternates_group_id, mergee_alternates_group_id )
                 larger_alternates_group_id = max( alternates_group_id, mergee_alternates_group_id )
@@ -1195,7 +1272,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( smaller_alternates_group_id, larger_alternates_group_id ) )
                 
             
-            self.DuplicatesSetAlternates( superior_media_id, mergee_media_id )
+            self.SetAlternates( superior_media_id, mergee_media_id )
             
         
         self._Execute( 'UPDATE duplicate_file_members SET media_id = ? WHERE media_id = ?;', ( superior_media_id, mergee_media_id ) )
@@ -1228,7 +1305,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             potential_duplicate_media_ids_and_distances = [ ( media_id_b, distance ) ]
             
-            self.DuplicatesAddPotentialDuplicates( media_id_a, potential_duplicate_media_ids_and_distances )
+            self.AddPotentialDuplicates( media_id_a, potential_duplicate_media_ids_and_distances )
             
         
         # ensure any previous confirmed alt pair is gone
@@ -1253,13 +1330,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( mergee_media_id, ) )
         
     
-    def DuplicatesRemoveAlternateMember( self, media_id ):
+    def RemoveAlternateMember( self, media_id ):
         
-        alternates_group_id = self.DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+        alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
         
         if alternates_group_id is not None:
             
-            alternates_media_ids = self.DuplicatesGetAlternateMediaIds( alternates_group_id )
+            alternates_media_ids = self.GetAlternateMediaIds( alternates_group_id )
             
             self._Execute( 'DELETE FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) )
             
@@ -1272,38 +1349,38 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
                 
             
-            hash_ids = self.DuplicatesGetDuplicateHashIds( media_id )
+            hash_ids = self.GetDuplicateHashIds( media_id )
             
             self.modules_similar_files.ResetSearch( hash_ids )
             
         
     
-    def DuplicatesRemoveAlternateMemberFromHashes( self, hashes ):
+    def RemoveAlternateMemberFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+            media_id = self.GetMediaId( hash_id, do_not_create = True )
             
             if media_id is not None:
                 
-                self.DuplicatesRemoveAlternateMember( media_id )
+                self.RemoveAlternateMember( media_id )
                 
             
         
     
-    def DuplicatesRemoveMediaIdMember( self, hash_id ):
+    def RemoveMediaIdMember( self, hash_id ):
         
-        media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+        media_id = self.GetMediaId( hash_id, do_not_create = True )
         
         if media_id is not None:
             
-            king_hash_id = self.DuplicatesGetKingHashId( media_id )
+            king_hash_id = self.GetKingHashId( media_id )
             
             if hash_id == king_hash_id:
                 
-                self.DuplicatesDissolveMediaId( media_id )
+                self.DissolveMediaId( media_id )
                 
             else:
                 
@@ -1314,19 +1391,19 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
     
-    def DuplicatesRemoveMediaIdMemberFromHashes( self, hashes ):
+    def RemoveMediaIdMemberFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            self.DuplicatesRemoveMediaIdMember( hash_id )
+            self.RemoveMediaIdMember( hash_id )
             
         
     
-    def DuplicatesRemovePotentialPairs( self, hash_id ):
+    def RemovePotentialPairs( self, hash_id ):
         
-        media_id = self.DuplicatesGetMediaId( hash_id, do_not_create = True )
+        media_id = self.GetMediaId( hash_id, do_not_create = True )
         
         if media_id is not None:
             
@@ -1334,17 +1411,17 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
     
-    def DuplicatesRemovePotentialPairsFromHashes( self, hashes ):
+    def RemovePotentialPairsFromHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
         for hash_id in hash_ids:
             
-            self.DuplicatesRemovePotentialPairs( hash_id )
+            self.RemovePotentialPairs( hash_id )
             
         
     
-    def DuplicatesSetAlternates( self, media_id_a, media_id_b ):
+    def SetAlternates( self, media_id_a, media_id_b ):
         
         if media_id_a == media_id_b:
             
@@ -1353,14 +1430,14 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         # let's clear out any outstanding potentials. whether this is a valid or not connection, we don't want to see it again
         
-        self.DuplicatesClearPotentialsBetweenMedias( ( media_id_a, ), ( media_id_b, ) )
+        self.ClearPotentialsBetweenMedias( ( media_id_a, ), ( media_id_b, ) )
         
         # now check if we should be making a new relationship
         
-        alternates_group_id_a = self.DuplicatesGetAlternatesGroupId( media_id_a )
-        alternates_group_id_b = self.DuplicatesGetAlternatesGroupId( media_id_b )
+        alternates_group_id_a = self.GetAlternatesGroupId( media_id_a )
+        alternates_group_id_b = self.GetAlternatesGroupId( media_id_b )
         
-        if self.DuplicatesAlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b ):
+        if self.AlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b ):
             
             return
             
@@ -1388,11 +1465,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             if smaller_false_positive_alternates_group_id == alternates_group_id_a:
                 
-                self.DuplicatesClearPotentialsBetweenAlternatesGroups( alternates_group_id_b, larger_false_positive_alternates_group_id )
+                self.ClearPotentialsBetweenAlternatesGroups( alternates_group_id_b, larger_false_positive_alternates_group_id )
                 
             else:
                 
-                self.DuplicatesClearPotentialsBetweenAlternatesGroups( smaller_false_positive_alternates_group_id, alternates_group_id_b )
+                self.ClearPotentialsBetweenAlternatesGroups( smaller_false_positive_alternates_group_id, alternates_group_id_b )
                 
             
         
@@ -1410,11 +1487,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             if smaller_false_positive_alternates_group_id == alternates_group_id_b:
                 
-                self.DuplicatesSetFalsePositive( alternates_group_id_a, larger_false_positive_alternates_group_id )
+                self.SetFalsePositive( alternates_group_id_a, larger_false_positive_alternates_group_id )
                 
             else:
                 
-                self.DuplicatesSetFalsePositive( smaller_false_positive_alternates_group_id, alternates_group_id_a )
+                self.SetFalsePositive( smaller_false_positive_alternates_group_id, alternates_group_id_a )
                 
             
         
@@ -1425,14 +1502,14 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         # pubsub to refresh alternates info for alternates_group_id_a and _b goes here
         
     
-    def DuplicatesSetFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
+    def SetFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
         
         if alternates_group_id_a == alternates_group_id_b:
             
             return
             
         
-        self.DuplicatesClearPotentialsBetweenAlternatesGroups( alternates_group_id_a, alternates_group_id_b )
+        self.ClearPotentialsBetweenAlternatesGroups( alternates_group_id_a, alternates_group_id_b )
         
         smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
         larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
@@ -1440,18 +1517,18 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self._Execute( 'INSERT OR IGNORE INTO duplicate_false_positives ( smaller_alternates_group_id, larger_alternates_group_id ) VALUES ( ?, ? );', ( smaller_alternates_group_id, larger_alternates_group_id ) )
         
     
-    def DuplicatesSetKing( self, king_hash_id, media_id ):
+    def SetKing( self, king_hash_id, media_id ):
         
         self._Execute( 'UPDATE duplicate_files SET king_hash_id = ? WHERE media_id = ?;', ( king_hash_id, media_id ) )
         
     
-    def DuplicatesSetKingFromHash( self, hash ):
+    def SetKingFromHash( self, hash ):
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
-        media_id = self.DuplicatesGetMediaId( hash_id )
+        media_id = self.GetMediaId( hash_id )
         
-        self.DuplicatesSetKing( hash_id, media_id )
+        self.SetKing( hash_id, media_id )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

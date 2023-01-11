@@ -99,6 +99,25 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_cookies.putChild( b'get_cookies', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesGetCookies( self._service, self._client_requests_domain ) )
         manage_cookies.putChild( b'set_cookies', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesSetCookies( self._service, self._client_requests_domain ) )
         
+        manage_database = NoResource()
+        
+        root.putChild( b'manage_database', manage_database )
+        
+        manage_database.putChild( b'mr_bones', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'lock_on', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOn( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'lock_off', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOff( self._service, self._client_requests_domain ) )
+        
+        manage_file_relationships = NoResource()
+        
+        root.putChild( b'manage_file_relationships', manage_file_relationships )
+        
+        manage_file_relationships.putChild( b'get_file_relationships', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRelationships( self._service, self._client_requests_domain ) )
+        manage_file_relationships.putChild( b'get_potentials_count', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialsCount( self._service, self._client_requests_domain ) )
+        manage_file_relationships.putChild( b'get_potential_pairs', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs( self._service, self._client_requests_domain ) )
+        manage_file_relationships.putChild( b'get_random_potentials', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRandomPotentials( self._service, self._client_requests_domain ) )
+        manage_file_relationships.putChild( b'set_file_relationships', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( self._service, self._client_requests_domain ) )
+        manage_file_relationships.putChild( b'set_kings', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageFileRelationshipsSetKings( self._service, self._client_requests_domain ) )
+        
         manage_headers = NoResource()
         
         root.putChild( b'manage_headers', manage_headers )
@@ -114,14 +133,6 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_pages.putChild( b'get_pages', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPages( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_page_info', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'refresh_page', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesRefreshPage( self._service, self._client_requests_domain ) )
-        
-        manage_database = NoResource()
-        
-        root.putChild( b'manage_database', manage_database )
-        
-        manage_database.putChild( b'mr_bones', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
-        manage_database.putChild( b'lock_on', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOn( self._service, self._client_requests_domain ) )
-        manage_database.putChild( b'lock_off', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOff( self._service, self._client_requests_domain ) )
         
         return root
         

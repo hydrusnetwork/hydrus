@@ -86,6 +86,8 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._basic_permissions.Append( ClientAPI.basic_permission_to_str_lookup[ permission ], permission )
             
         
+        self._basic_permissions.sortItems()
+        
         search_tag_filter = api_permissions.GetSearchTagFilter()
         
         message = 'The API will only permit searching for tags that pass through this filter.'
@@ -114,7 +116,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'access key: ', self._access_key ) )
         rows.append( ( 'name: ', self._name ) )
-        rows.append( ( 'permissions: ', self._basic_permissions) )
+        rows.append( ( 'permissions: ', self._basic_permissions ) )
         rows.append( ( 'tag search permissions: ', self._search_tag_filter ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
