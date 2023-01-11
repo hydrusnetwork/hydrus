@@ -316,27 +316,28 @@ When running from source you may want to [build the hydrus help docs](about_docs
 
 ## building packages on windows { id="windows_build" }
 
-Almost everything is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, it may be you need that compiler tech.
+Almost everything you get through pip is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, you have two choices:
 
-You also need this if you want to build a frozen release locally.
+- Get Visual Studio 14/whatever build tools
+- Pick a different library version
 
-Although these tools are free, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Instead, install [Chocolatey](https://chocolatey.org/) and use this one simple line:
+Option B is always the simpler. If opencv-headless as the requirements.txt specifies won't compile in Python 3.10, then try a newer version--there will probably be one of these new highly compatible wheels and it'll just work in seconds. Check my build scripts and various requirements.txts for ideas on what versions to try for your python etc...
+
+If you are confident you need Visual Studio tools, then prepare for headaches. Although the tools are free from Microsoft, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Expect a 5GB+ install with an eye-watering number of checkboxes that probably needs some stackexchange searches to figure out.
+
+On Windows 10, [Chocolatey](https://chocolatey.org/) has been the easy answer. Get it installed and and use this one simple line:
 
 ```
-choco install -y vcbuildtools visualstudio2017buildtools
+choco install -y vcbuildtools visualstudio2017buildtools windows-sdk-10.0
 ```
 
 Trust me, just do this, it will save a ton of headaches!
 
-This can also be helpful for Windows 10 python work generally:
-
-```
-choco install -y windows-sdk-10.0
-```
+_Update:_ On Windows 11, in 2023-01, I had trouble with the above. There's a couple '11' SDKs that installed ok, but the vcbuildtools stuff had unusual errors. I hadn't done this in years, so maybe they are broken for Windows 10 too! The good news is that a basic stock Win 11 install with Python 3.10 is fine getting everything on our requirements and even making a build without any extra compiler tech. 
 
 ## additional windows info { id="additional_windows" }
 
-This does not matter much any more, but in the old days, Windows pip could have problems building modules like lz4 and lxml, and Visual Studio was tricky to get working. [This page](http://www.lfd.uci.edu/~gohlke/pythonlibs/) has a lot of prebuilt binaries--I have found it very helpful many times.
+This does not matter much any more, but in the old days, building modules like lz4 and lxml was a complete nightmare, and hooking up Visual Studio was even more difficult. [This page](http://www.lfd.uci.edu/~gohlke/pythonlibs/) has a lot of prebuilt binaries--I have found it very helpful many times.
 
 I have a fair bit of experience with Windows python, so send me a mail if you need help.
 
@@ -344,4 +345,4 @@ I have a fair bit of experience with Windows python, so send me a mail if you ne
 
 My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
 
-I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone, however, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.
+I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.

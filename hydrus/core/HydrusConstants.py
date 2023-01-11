@@ -2,6 +2,7 @@ import os
 import sqlite3
 import sys
 import typing
+
 import yaml
 
 # old method of getting frozen dir, doesn't work for symlinks looks like:
@@ -83,8 +84,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 512
-CLIENT_API_VERSION = 39
+SOFTWARE_VERSION = 513
+CLIENT_API_VERSION = 40
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

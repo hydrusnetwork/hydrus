@@ -7,6 +7,34 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 513](https://github.com/hydrusnetwork/hydrus/releases/tag/v513)
+
+### client api
+
+* the Client API now supports the duplicates system! this is early stages, and what I've exposed is ugly and technical, but if you want to try out some external dupe processing, give it a go and let me know what you think! (issue #347)
+* a new 'manage file relationships' permission gives your api keys access
+* the new GET commands are:
+* - `/manage_file_relationships/get_file_relationships`, which fetches potential dupes, dupes, alternates, false positives, and dupe kings
+* - `/manage_file_relationships/get_potentials_count`, which can take two file searches, a potential dupes search type, a pixel match type, and max hamming distance, and will give the number of potential pairs in that domain
+* - `/manage_file_relationships/get_potential_pairs`, which takes the same params as count and a `max_num_pairs` and gives you a batch of pairs to process, just like the dupe filter
+* - `/manage_file_relationships/get_random_potentials`, which takes the same params as count and gives you some hashes just like the 'show some random potential pairs' button
+* the new POST commands are:
+* - `/manage_file_relationships/set_file_relationships`, which sets potential/dupe/alternate/false positive relationships between file pairs with some optional content merge and file deletes
+* - `/manage_file_relationships/set_kings`, which sets duplicate group kings
+* more commands will be written in the future for various remove/dissolve actions
+* wrote unit tests for all the commands!
+* wrote help for all the commands!
+* fixed an issue in the '/manage_pages/get_pages' call where the response data structure was saying 'focused' instead of 'selected' for 'page of pages'
+* cilent api version is now 40
+
+### boring misc cleanup and refactoring
+
+* cleaned and wrote some more parsing methods for the api to support duplicate search tech and reduce copypasted parsing code
+* renamed the client api permission labels a little, just making it all clearer and line up better. also, the 'edit client permissions' dialog now sorts the permissions
+* reordered and renamed the dev help headers in the same way
+* simple but significant rename-refactoring in file duplicates database module, tearing off the old 'Duplicates' prefixes to every method ha ha
+* updated the advanced Windows 'running from source' help to talk more about VC build tools. some old scripts don't seem to work any more in Win 11, but you also don't really need it any more (I moved to a new dev machine this week so had to set everything up again)
+
 ## [Version 512](https://github.com/hydrusnetwork/hydrus/releases/tag/v512)
 
 ### two searches in duplicates
@@ -451,36 +479,3 @@ title: Changelog
 * cleaned up a bunch of related metadata importer/exporter code
 * cleaned import folder code
 * cleaned hdd importer code
-
-## [Version 503](https://github.com/hydrusnetwork/hydrus/releases/tag/v503)
-
-### misc
-* fixed show/hiding the main gui splitters after a regression in v502. also, keyboard focus after these events should now be less jank
-* thanks to a user, the Deviant Art parser we rolled back to recently now gets video support. I also added artist tag parsing like the api parser used to do
-* if you use the internal client database backup system, it now says in the menu when it was last run. this menu doesn't update often, so I put a bit of buffer in where it says 'did one recently'. let me know if the numbers here are ever confusing
-* fixed a bug where the database menu was not immediately updating the first time you set a backup location
-* if an apng has sub-millisecond frame durations (seems to be jitter-apngs that were created oddly), these are now each rounded up to 1ms. any apngs that previously appeared to have 0 duration now have borked-tiny but valid duration and will now import ok
-* the client now catches 529 error responses from servers (service is overloaded) and treats them like a 429/509 bandwidth problem, waiting for a bit before retrying. more work may be needed here
-* the new popup toaster should restore from minimised better
-* fixed a subtle bug where trashing and untrashing a file when searching the special 'all my files' domain would temporarily sort that file at the front/end of sorting by 'import time'
-* added 'dateutil present' to _help->about_ and reordered all the entries for readability
-* brushed up the network job response-bytes-size counting logic a little more
-* cleaned up the EVT_ICONIZE event processing wx/Qt patch
-
-### running from source is now easy on Windows
-* as I expect to drop Qt5 support in the builds next week, we need an easy way for Windows 7 and other older-OS users to run from source. I am by no means an expert at this, but I have written some easy-setup scripts that can get you running the client in Windows from nothing in a few minutes with no python experience
-* the help is updated to reflect this, with more pointers to 'running from source', and that page now has a new guide that takes you through it all in simple steps
-* there's a client-user.bat you can edit to add your own launch parameters, and a setup_help.bat to build the help too
-* all the requirements.txts across the program have had a full pass. all are now similarly formatted for easy future editing. it is now simple to select whether you want Qt5 or Qt6, and seeing the various differences between the documents is now obvious
-* the .gitignore has been updated to not stomp over your venv, mpv/ffmpeg/sqlite, or client-user.bat
-* feedback on how this works and how to make it better would be appreciated, and once we are happy with the workflow, I will invite Linux and macOS users to generate equivalent .sh and .command scripts so we are multiplatform-easy
-
-### build stuff
-* _this is all wizard nonsense, so you can ignore it. I am mostly just noting it here for my records. tl;dr: I fixed more boot problems, now and in the future_
-* just when I was getting on top of the latest boot problems, we had another one last week, caused by yet another external library that updated unusually, this time just a day after the normal release. it struck some users who run from source (such as AUR), and the macOS hotfix I put out on saturday. it turns out PySide6 6.4.0 is not yet supported by qtpy. since these big libraries' bleeding edge versions are common problems, I have updated all the requirements.txts across the program to set specific versions for qtpy, PySide2/PySide6, opencv-python-headless, requests, python-mpv, and setuptools (issue #1254)
-* updated all the requirements.txts with 'python-dateutil', which has spotty default support and whose absence broke some/all of the macOS and Docker deployments last week
-* added failsafe code in case python-dateutil is not available
-* pylzma is no longer in the main requirements.txt. it doesn't have a wheel (and hence needs compiler tech to pip install), and it is only useful for some weird flash files. UPDATE: with the blessed assistance of stackexchange, I rewrote the 'decompress lzma-compressed flash file' routine to re-munge the flash header into a proper lzma header and use the python default 'lzma' library, so 'pylzma' is no longer needed and removed from all requirements.txts
-* updated most of the actions in the build script to use updated node16 versions. node12 just started getting deprecation warnings. there is more work to do
-* replaced the node12 pip installer action with a manual command on the reworked requirements.txts
-* replaced most of the build script's uses of 'set-output', which just started getting deprecation warnings. there is more work to do

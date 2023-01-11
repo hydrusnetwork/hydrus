@@ -145,13 +145,15 @@ Arguments:
         
         The permissions are currently:
 
-        *   0 - Import URLs
-        *   1 - Import Files
-        *   2 - Add Tags
-        *   3 - Search for Files
+        *   0 - Import and Edit URLs
+        *   1 - Import and Delete Files
+        *   2 - Edit File Tags
+        *   3 - Search for and Fetch Files
         *   4 - Manage Pages
         *   5 - Manage Cookies
         *   6 - Manage Database
+        *   7 - Edit File Notes
+        *   8 - Manage File Relationships
 
     ``` title="Example request"
     /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
@@ -336,7 +338,7 @@ Response:
     * 99 - server administration
     
 
-## Adding Files
+## Importing and Deleting Files
 
 ### **POST `/add_files/add_file`** { id="add_files_add_file" }
 
@@ -352,7 +354,7 @@ Arguments (in JSON):
 :   - `path`: (the path you want to import)
 
 ```json title="Example request body"
-{"path" : "E:\to_import\ayanami.jpg"}
+{"path" : "E:\\to_import\\ayanami.jpg"}
 ```
 
 Arguments (as bytes): 
@@ -505,212 +507,7 @@ You can use hash or hashes, whichever is more convenient.
 This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.
     
 
-## Adding Tags
-
-### **GET `/add_tags/clean_tags`** { id="add_tags_clean_tags" }
-
-_Ask the client about how it will see certain tags._
-
-Restricted access: 
-:   YES. Add Tags permission needed.
-    
-Required Headers: n/a
-    
-Arguments (in percent-encoded JSON):
-:   
-*   `tags`: (a list of the tags you want cleaned)
-
-Example request:
-:   Given tags `#!json [ " bikini ", "blue    eyes", " character : samus aran ", " :)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]`:
-    ```
-    /add_tags/clean_tags?tags=%5B%22%20bikini%20%22%2C%20%22blue%20%20%20%20eyes%22%2C%20%22%20character%20%3A%20samus%20aran%20%22%2C%20%22%3A%29%22%2C%20%22%20%20%20%22%2C%20%22%22%2C%20%2210%22%2C%20%2211%22%2C%20%229%22%2C%20%22system%3Awew%22%2C%20%22-flower%22%5D
-    ```
-
-Response: 
-:  The tags cleaned according to hydrus rules. They will also be in hydrus human-friendly sorting order.
-```json title="Example response"
-{
-  "tags" : ["9", "10", "11", " ::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew"]
-}
-```
-
-    Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
-    
-
-### **GET `/add_tags/get_tag_services`** { id="add_tags_get_tag_services" }
-
-!!! warning "Deprecated"
-    This is becoming obsolete and will be removed! Use [/get_services](#get_services) instead!
-
-_Ask the client about its tag services._
-
-Restricted access:
-:   YES. Add Tags permission needed.
-    
-Required Headers: n/a
-    
-Arguments: n/a
-    
-Response:
-:   Some JSON listing the client's 'local tags' and tag repository services by name.
-```json title="Example response"
-{
-  "local_tags" : ["my tags"],
-  "tag_repositories" : [ "public tag repository", "mlp fanfic tagging server" ]
-}
-```
-
-    !!! note
-        A user can rename their services. Don't assume the client's local tags service will be "my tags".
-
-### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
-
-_Search the client for tags._
-
-Restricted access:
-:   YES. Search for Files permission needed.
-
-Required Headers: n/a
-
-Arguments:
-:   
-* `search`: (the tag text to search for, enter exactly what you would in the client UI)
-* `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
-* `tag_service_name`: (optional, selective, string, the tag domain on which to search)
-* `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags)
-
-Example request:
-:   
-```http title="Example request"
-/add_tags/search_tags?search=kim
-```
-
-Response:
-:   Some JSON listing the client's matching tags.
-
-:   
-```json title="Example response"
-{
-  "tags" : [
-    {
-      "value" : "series:kim possible", 
-      "count" : 3
-    },
-    {
-      "value" : "kimchee", 
-      "count" : 2
-    },
-    {
-      "value" : "character:kimberly ann possible", 
-      "count" : 1
-    }
-  ]
-}
-```
-
-The `tags` list will be sorted by descending count. If you do not specify a tag service, it will default to 'all known tags'. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
-
-The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
-
-Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
-
-Also, for now, it gives you the 'storage' tags, which are the 'raw' ones you see in the manage tags dialog, without collapsed siblings, but more options will be added in future.
-
-### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
-
-_Make changes to the tags that files have._
-
-Restricted access:
-:   YES. Add Tags permission needed.
-    
-Required Headers: n/a
-    
-Arguments (in JSON):
-:   
-*   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (selective A, a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
-*   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
-*   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
-*   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
-*   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
-
-    You can use either 'hash' or 'hashes'.
-
-    You can use either 'service\_names\_to...' or 'service\_keys\_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the [/get_services](#get_services) call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.
-
-    Also, you can use either '...to\_tags', which is simple and add-only, or '...to\_actions\_to\_tags', which is more complicated and allows you to remove/petition or rescind pending content.
-
-    The permitted 'actions' are:
-
-    *   0 - Add to a local tag service.
-    *   1 - Delete from a local tag service.
-    *   2 - Pend to a tag repository.
-    *   3 - Rescind a pend from a tag repository.
-    *   4 - Petition from a tag repository. (This is special)
-    *   5 - Rescind a petition from a tag repository.
-
-    When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of \[ tag, reason \] pairs.
-
-Some example requests:
-:   
-```json title="Adding some tags to a file"
-{
-  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-  "service_names_to_tags" : {
-    "my tags" : ["character:supergirl", "rating:safe"]
-  }
-}
-```
-```json title="Adding more tags to two files"
-{
-  "hashes" : [
-    "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-    "f2b022214e711e9a11e2fcec71bfd524f10f0be40c250737a7861a5ddd3faebf"
-  ],
-  "service_names_to_tags" : {
-    "my tags" : ["process this"],
-    "public tag repository" : ["creator:dandon fuga"]
-  }
-}
-```
-```json title="A complicated transaction with all possible actions"
-{
-  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-  "service_keys_to_actions_to_tags" : {
-    "6c6f63616c2074616773" : {
-      "0" : ["character:supergirl", "rating:safe"],
-      "1" : ["character:superman"]
-    },
-    "aa0424b501237041dab0308c02c35454d377eebd74cfbc5b9d7b3e16cc2193e9" : {
-      "2" : ["character:supergirl", "rating:safe"],
-      "3" : ["filename:image.jpg"],
-      "4" : [["creator:danban faga", "typo"], ["character:super_girl", "underscore"]],
-      "5" : ["skirt"]
-    }
-  }
-}
-```
-
-    This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.
-
-    Note that the enumerated status keys in the service\_names\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
-
-Response description:
-:  200 and no content.
-
-!!! note
-    Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.
-    
-    It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.
-
-!!! danger "HOWEVER"
-    When you delete a tag, a deletion record is made _even if the tag does not exist on the file_. This is important if you expect to add the tags again via parsing, because, in general, when hydrus adds tags through a downloader, it will not overwrite a previously 'deleted' tag record (this is to stop re-downloads overwriting the tags you hand-removed previously). Undeletes usually have to be done manually by a human.  
-    
-    So, _do_ be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.
-
-## Adding URLs
+## Importing and Editing URLs
 
 ### **GET `/add_urls/get_url_files`** { id="add_urls_get_url_files" }
 
@@ -927,7 +724,212 @@ Response:
 :   200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.
     
 
-## Adding Notes
+## Editing File Tags
+
+### **GET `/add_tags/clean_tags`** { id="add_tags_clean_tags" }
+
+_Ask the client about how it will see certain tags._
+
+Restricted access: 
+:   YES. Add Tags permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+*   `tags`: (a list of the tags you want cleaned)
+
+Example request:
+:   Given tags `#!json [ " bikini ", "blue    eyes", " character : samus aran ", " :)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]`:
+    ```
+    /add_tags/clean_tags?tags=%5B%22%20bikini%20%22%2C%20%22blue%20%20%20%20eyes%22%2C%20%22%20character%20%3A%20samus%20aran%20%22%2C%20%22%3A%29%22%2C%20%22%20%20%20%22%2C%20%22%22%2C%20%2210%22%2C%20%2211%22%2C%20%229%22%2C%20%22system%3Awew%22%2C%20%22-flower%22%5D
+    ```
+
+Response: 
+:  The tags cleaned according to hydrus rules. They will also be in hydrus human-friendly sorting order.
+```json title="Example response"
+{
+  "tags" : ["9", "10", "11", " ::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew"]
+}
+```
+
+    Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
+    
+
+### **GET `/add_tags/get_tag_services`** { id="add_tags_get_tag_services" }
+
+!!! warning "Deprecated"
+    This is becoming obsolete and will be removed! Use [/get_services](#get_services) instead!
+
+_Ask the client about its tag services._
+
+Restricted access:
+:   YES. Add Tags permission needed.
+    
+Required Headers: n/a
+    
+Arguments: n/a
+    
+Response:
+:   Some JSON listing the client's 'local tags' and tag repository services by name.
+```json title="Example response"
+{
+  "local_tags" : ["my tags"],
+  "tag_repositories" : [ "public tag repository", "mlp fanfic tagging server" ]
+}
+```
+
+    !!! note
+        A user can rename their services. Don't assume the client's local tags service will be "my tags".
+
+### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
+
+_Search the client for tags._
+
+Restricted access:
+:   YES. Search for Files permission needed.
+
+Required Headers: n/a
+
+Arguments:
+:   
+* `search`: (the tag text to search for, enter exactly what you would in the client UI)
+* `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
+* `tag_service_name`: (optional, selective, string, the tag domain on which to search)
+* `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags)
+
+Example request:
+:   
+```http title="Example request"
+/add_tags/search_tags?search=kim
+```
+
+Response:
+:   Some JSON listing the client's matching tags.
+
+:   
+```json title="Example response"
+{
+  "tags" : [
+    {
+      "value" : "series:kim possible", 
+      "count" : 3
+    },
+    {
+      "value" : "kimchee", 
+      "count" : 2
+    },
+    {
+      "value" : "character:kimberly ann possible", 
+      "count" : 1
+    }
+  ]
+}
+```
+
+The `tags` list will be sorted by descending count. If you do not specify a tag service, it will default to 'all known tags'. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
+
+The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
+
+Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
+
+Also, for now, it gives you the 'storage' tags, which are the 'raw' ones you see in the manage tags dialog, without collapsed siblings, but more options will be added in future.
+
+### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
+
+_Make changes to the tags that files have._
+
+Restricted access:
+:   YES. Add Tags permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in JSON):
+:   
+*   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
+*   `hashes`: (selective A, a list of SHA256 hashes)
+*   `file_id`: (a numerical file id)
+*   `file_ids`: (a list of numerical file ids)
+*   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
+*   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
+*   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
+*   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
+
+    You can use either 'hash' or 'hashes'.
+
+    You can use either 'service\_names\_to...' or 'service\_keys\_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the [/get_services](#get_services) call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.
+
+    Also, you can use either '...to\_tags', which is simple and add-only, or '...to\_actions\_to\_tags', which is more complicated and allows you to remove/petition or rescind pending content.
+
+    The permitted 'actions' are:
+
+    *   0 - Add to a local tag service.
+    *   1 - Delete from a local tag service.
+    *   2 - Pend to a tag repository.
+    *   3 - Rescind a pend from a tag repository.
+    *   4 - Petition from a tag repository. (This is special)
+    *   5 - Rescind a petition from a tag repository.
+
+    When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of \[ tag, reason \] pairs.
+
+Some example requests:
+:   
+```json title="Adding some tags to a file"
+{
+  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
+  "service_names_to_tags" : {
+    "my tags" : ["character:supergirl", "rating:safe"]
+  }
+}
+```
+```json title="Adding more tags to two files"
+{
+  "hashes" : [
+    "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
+    "f2b022214e711e9a11e2fcec71bfd524f10f0be40c250737a7861a5ddd3faebf"
+  ],
+  "service_names_to_tags" : {
+    "my tags" : ["process this"],
+    "public tag repository" : ["creator:dandon fuga"]
+  }
+}
+```
+```json title="A complicated transaction with all possible actions"
+{
+  "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
+  "service_keys_to_actions_to_tags" : {
+    "6c6f63616c2074616773" : {
+      "0" : ["character:supergirl", "rating:safe"],
+      "1" : ["character:superman"]
+    },
+    "aa0424b501237041dab0308c02c35454d377eebd74cfbc5b9d7b3e16cc2193e9" : {
+      "2" : ["character:supergirl", "rating:safe"],
+      "3" : ["filename:image.jpg"],
+      "4" : [["creator:danban faga", "typo"], ["character:super_girl", "underscore"]],
+      "5" : ["skirt"]
+    }
+  }
+}
+```
+
+    This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.
+
+    Note that the enumerated status keys in the service\_names\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
+
+Response description:
+:  200 and no content.
+
+!!! note
+    Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.
+    
+    It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.
+
+!!! danger "HOWEVER"
+    When you delete a tag, a deletion record is made _even if the tag does not exist on the file_. This is important if you expect to add the tags again via parsing, because, in general, when hydrus adds tags through a downloader, it will not overwrite a previously 'deleted' tag record (this is to stop re-downloads overwriting the tags you hand-removed previously). Undeletes usually have to be done manually by a human.  
+    
+    So, _do_ be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.
+
+## Editing File Notes
 
 ### **POST `/add_notes/set_notes`** { id="add_notes_set_notes" }
 
@@ -1010,353 +1012,7 @@ Arguments (in percent-encoded JSON):
 Response:  
 :   200 with no content. This operation is idempotent.
 
-## Managing Cookies and HTTP Headers
-
-This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.
-
-### **GET `/manage_cookies/get_cookies`** { id="manage_cookies_get_cookies" }
-
-_Get the cookies for a particular domain._
-
-Restricted access: 
-:   YES. Manage Cookies permission needed.
-    
-Required Headers: n/a
-    
-Arguments:
-:   *  `domain`
-
-    ``` title="Example request (for gelbooru.com)"
-    /manage_cookies/get_cookies?domain=gelbooru.com
-    ```
-        
-
-Response:
-:   A JSON Object listing all the cookies for that domain in \[ name, value, domain, path, expires \] format.
-```json title="Example response"
-{
-	"cookies" : [
-		["__cfduid", "f1bef65041e54e93110a883360bc7e71", ".gelbooru.com", "/", 1596223327],
-		["pass_hash", "0b0833b797f108e340b315bc5463c324", "gelbooru.com", "/", 1585855361],
-		["user_id", "123456", "gelbooru.com", "/", 1585855361]
-	]
-}
-```
-
-    Note that these variables are all strings except 'expires', which is either an integer timestamp or _null_ for session cookies.
-
-    This request will also return any cookies for subdomains. The session system in hydrus generally stores cookies according to the second-level domain, so if you request for specific.someoverbooru.net, you will still get the cookies for someoverbooru.net and all its subdomains.
-
-### **POST `/manage_cookies/set_cookies`** { id="manage_cookies_set_cookies" }
-
-Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.
-
-Restricted access: 
-:   YES. Manage Cookies permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `cookies`: (a list of cookie rows in the same format as the GET request above)
-
-```json title="Example request body"
-{
-  "cookies" : [
-    ["PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719],
-    ["tag_filter", "1", ".somesite.com", "/", 1627327719]
-  ]
-}
-```
-
-You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).
-
-Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
-
-### **POST `/manage_headers/set_user_agent`** { id="manage_headers_set_user_agent" }
-
-This sets the 'Global' User-Agent for the client, as typically editable under _network->data->manage http headers_, for instance if you want hydrus to appear as a specific browser associated with some cookies.
-
-Restricted access: 
-:   YES. Manage Cookies permission needed.
-    
-Required Headers:
-:    
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:       
-    *   `user-agent`: (a string)
-
-```json title="Example request body"
-{
-  "user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
-}
-```
-
-Send an empty string to reset the client back to the default User-Agent, which should be `Mozilla/5.0 (compatible; Hydrus Client)`.
-
-## Managing Pages
-
-This refers to the pages of the main client UI.
-
-### **GET `/manage_pages/get_pages`** { id="manage_pages_get_pages" }
-
-_Get the page structure of the current UI session._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers: n/a
-    
-Arguments: n/a
-    
-
-Response: 
-:   A JSON Object of the top-level page 'notebook' (page of pages) detailing its basic information and current sub-pages. Page of pages beneath it will list their own sub-page lists.
-```json title="Example response"
-{
-  "pages" : {
-    "name" : "top pages notebook",
-    "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
-    "page_type" : 10,
-    "selected" : true,
-    "pages" : [
-      {
-        "name" : "files",
-        "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
-        "page_type" : 6,
-        "selected" : false
-      },
-      {
-        "name" : "thread watcher",
-        "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
-        "page_type" : 9,
-        "selected" : false
-      },
-      {
-        "name" : "pages",
-        "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
-        "page_type" : 10,
-        "selected" : true,
-        "pages" : [
-          {
-            "name" : "urls",
-            "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
-            "page_type" : 7,
-            "selected" : true
-          },
-          {
-            "name" : "files",
-            "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
-            "page_type" : 6,
-            "selected" : false
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-    The page types are as follows:
-
-    *   1 - Gallery downloader
-    *   2 - Simple downloader
-    *   3 - Hard drive import
-    *   5 - Petitions (used by repository janitors)
-    *   6 - File search
-    *   7 - URL downloader
-    *   8 - Duplicates
-    *   9 - Thread watcher
-    *   10 - Page of pages
-
-    The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.
-
-    The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.
-
-### **GET `/manage_pages/get_page_info`** { id="manage_pages_get_page_info" }
-
-_Get information about a specific page._
-
-!!! warning "Under Construction"
-    This is under construction. The current call dumps a ton of info for different downloader pages. Please experiment in IRL situations and give feedback for now! I will flesh out this help with more enumeration info and examples as this gets nailed down. POST commands to alter pages (adding, removing, highlighting), will come later.
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers: n/a
-    
-Arguments:
-:   
-    *   `page_key`: (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#manage_pages_get_pages))
-    *   `simple`: true or false (optional, defaulting to true)
-
-    ``` title="Example request"
-    /manage_pages/get_page_info?page_key=aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da&simple=true
-    ```
-
-Response description
-:   A JSON Object of the page's information. At present, this mostly means downloader information.
-```json title="Example response with simple = true"
-{
-  "page_info" : {
-    "name" : "threads",
-    "page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
-    "page_type" : 3,
-    "management" : {
-      "multiple_watcher_import" : {
-        "watcher_imports" : [
-          {
-            "url" : "https://someimageboard.net/m/123456",
-            "watcher_key" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85",
-            "created" : 1566164269,
-            "last_check_time" : 1566164272,
-            "next_check_time" : 1566174272,
-            "files_paused" : false,
-            "checking_paused" : false,
-            "checking_status" : 0,
-            "subject" : "gundam pictures",
-            "imports" : {
-              "status" : "4 successful (2 already in db)",
-              "simple_status" : "4",
-              "total_processed" : 4,
-              "total_to_process" : 4
-            },
-            "gallery_log" : {
-              "status" : "1 successful",
-              "simple_status" : "1",
-              "total_processed" : 1,
-              "total_to_process" : 1
-            }
-          },
-          {
-            "url" : "https://someimageboard.net/a/1234",
-            "watcher_key" : "6bc17555b76da5bde2dcceedc382cf7d23281aee6477c41b643cd144ec168510",
-            "created" : 1566063125,
-            "last_check_time" : 1566063133,
-            "next_check_time" : 1566104272,
-            "files_paused" : false,
-            "checking_paused" : true,
-            "checking_status" : 1,
-            "subject" : "anime pictures",
-            "imports" : {
-              "status" : "124 successful (22 already in db), 2 previously deleted",
-              "simple_status" : "124",
-              "total_processed" : 124,
-              "total_to_process" : 124
-            },
-            "gallery_log" : {
-              "status" : "3 successful",
-              "simple_status" : "3",
-              "total_processed" : 3,
-              "total_to_process" : 3
-            }
-          }
-        ]
-      },
-      "highlight" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85"
-    }
-  },
-  "media" : {
-    "num_files" : 4
-  }
-}
-```
-
-    As you can see, even the 'simple' mode can get very large. Imagine that response for a page watching 100 threads! Turning simple mode off will display every import item, gallery log entry, and all hashes in the media (thumbnail) panel.
-    
-    For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.
-    
-
-### **POST `/manage_pages/add_files`** { id="manage_pages_add_files" }
-
-_Add files to a page._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `page_key`: (the page key for the page you wish to add files to)
-    *   `file_id`: (selective, a numerical file id)
-    *   `file_ids`: (selective, a list of numerical file ids)
-    *   `hash`: (selective, a hexadecimal SHA256 hash)
-    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
-
-You need to use either file_ids or hashes. The files they refer to will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
-
-```json title="Example request body"
-{
-  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
-  "file_ids" : [123, 124, 125]
-}
-```
-
-Response:
-:   200 with no content. If the page key is not found, this will 404.
-
-### **POST `/manage_pages/focus_page`** { id="manage_pages_focus_page" }
-
-_'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `page_key`: (the page key for the page you wish to show)
-
-The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
-
-```json title="Example request body"
-{
-  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
-}
-```
-
-Response:
-:   200 with no content. If the page key is not found, this will 404.
-    
-
-### **POST `/manage_pages/refresh_page`** { id="manage_pages_refresh_page" }
-
-_Refresh a page in the main GUI. Like hitting F5 in the client, this obviously makes file search pages perform their search again, but for other page types it will force the currently in-view files to be re-sorted._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `page_key`: (the page key for the page you wish to refresh)
-
-The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If a file search page is not set to 'searching immediately', a 'refresh' command does nothing.
-
-```json title="Example request body"
-{
-  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
-}
-```
-
-Response:
-:   200 with no content. If the page key is not found, this will 404.
-    
-
-## Searching Files
+## Searching and Fetching Files
 
 File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.
 
@@ -1922,22 +1578,24 @@ If you set `only_return_basic_information=true`, this will be much faster for fi
 If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
 
 ```json title="For example"
-"detailed_known_urls" : [
-  {
-    "normalised_url" : "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
-    "url_type" : 0,
-    "url_type_string" : "post url",
-    "match_name" : "gelbooru file page",
-    "can_parse" : true
-  },
-  {
-    "normalised_url" : "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
-    "url_type" : 5,
-    "url_type_string" : "unknown url",
-    "match_name" : "unknown url",
-    "can_parse" : false
-  }
-]
+{
+  "detailed_known_urls": [
+    {
+      "normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
+      "url_type": 0,
+      "url_type_string": "post url",
+      "match_name": "gelbooru file page",
+      "can_parse": true
+    },
+    {
+      "normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+      "url_type": 5,
+      "url_type_string": "unknown url",
+      "match_name": "unknown url",
+      "can_parse": false
+    }
+  ]
+}
 ```
 
 
@@ -2000,6 +1658,642 @@ Response:
     If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
 
     
+
+## Managing File Relationships
+
+This refers to the File Relationships system, which includes 'potential duplicates', 'duplicates', and 'alternates'.
+
+This system is pending significant rework and expansion, so please do not get too married to some of the routines here. I am mostly just exposing my internal commands, so things are a little ugly/hacked. I expect duplicate and alternate groups to get some form of official identifier in future, which may end up being the way to refer and edit things here.
+
+Also, at least for now, 'Manage File Relationships' permission is not going to be bound by the search permission restrictions that normal file search does. Getting this permission allows you to search anything. I expect to add this permission filtering tech in future, particularly for file domains.
+
+_There is more work to do here, including adding various 'dissolve'/'undo' commands to break groups apart._
+
+### **GET `/manage_file_relationships/get_file_relationships`** { id="manage_file_relationships_get_file_relationships" }
+
+_Get the current relationships for one or more files._
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+    *   `file_id`: (selective, a numerical file id)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+
+``` title="Example request"
+/manage_file_relationships/get_file_relationships?hash=ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d
+```
+
+Response:
+:   A JSON Object mapping the hashes to their relationships.
+``` json title="Example response"
+{
+	"file_relationships" : {
+        "ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d" : {
+            "is_king" : false,
+            "king" : "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+            "0" : [
+            ],
+            "1" : [],
+            "3" : [
+                "8bf267c4c021ae4fd7c4b90b0a381044539519f80d148359b0ce61ce1684fefe"
+            ],
+            "8" : [
+                "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+                "3fa8ef54811ec8c2d1892f4f08da01e7fc17eed863acae897eb30461b051d5c3"
+            ]
+        }
+    }
+}
+```
+
+`is_king` and `king` relate to which file is the set best of a group. The king is usually the best representative of a group if you need to do comparisons between groups, and the 'get some pairs to filter'-style commands usually try to select the kings of the various to-be-compared duplicate groups.
+
+**It is possible for the king to not be available, in which case `king` is null.** The king can be unavailable in several duplicate search contexts, generally when you have the option to search/filter and it is outside of that domain. For this request, the king will usually be available unless the user has deleted it. You have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
+
+A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.
+
+The numbers are from a duplicate status enum, as so:
+
+* 0 - potential duplicates
+* 1 - false positives
+* 3 - alternates
+* 8 - duplicates
+
+Note that because of JSON constraints, these are the string versions of the integers since they are Object keys.
+
+All the hashes given here are in 'all my files', i.e. not in the trash. A file may have duplicates that have long been deleted, but, like the null king above, they will not show here.
+
+### **GET `/manage_file_relationships/get_potentials_count`** { id="manage_file_relationships_get_potentials_count" }
+
+_Get the count of remaining potential duplicate pairs in a particular search domain. Exactly the same as the counts you see in the duplicate processing page._
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+    *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_2`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `potentials_search_type`: (optional, integer, default 0, regarding how the pairs should match the search(es))
+    *   `pixel_duplicates`: (optional, integer, default 1, regarding whether the pairs should be pixel duplicates)
+    *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the pairs)
+
+``` title="Example request"
+/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+```
+
+`tag_service_key` and `tags` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2. For now the file domain is locked to 'all my files'.
+
+`potentials_search_type` and `pixel_duplicates` are enums:
+
+* 0 - one file matches search 1
+* 1 - both files match search 1
+* 2 - one file matches search 1, the other 2
+
+-and-
+
+* 0 - must be pixel duplicates
+* 1 - can be pixel duplicates
+* 2 - must not be pixel duplicates
+
+The `max_hamming_distance` is the same 'search distance' you see in the Client UI. A higher number means more speculative 'similar files' search. If `pixel_duplicates` is set to 'must be', then `max_hamming_distance` is obviously ignored.
+
+Response:
+:   A JSON Object stating the count.
+``` json title="Example response"
+{
+	"potential_duplicates_count" : 17
+}
+```
+
+If you confirm that a pair of potentials are duplicates, this may transitively collapse other potential pairs and decrease the count by more than 1.
+
+### **GET `/manage_file_relationships/get_potential_pairs`** { id="manage_file_relationships_get_potential_pairs" }
+
+_Get some potential duplicate pairs for a filtering workflow. Exactly the same as the 'duplicate filter' in the duplicate processing page._
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+    *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_2`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `potentials_search_type`: (optional, integer, default 0, regarding how the pairs should match the search(es))
+    *   `pixel_duplicates`: (optional, integer, default 1, regarding whether the pairs should be pixel duplicates)
+    *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the pairs)
+    *   `max_num_pairs`: (optional, integer, defaults to client's option, how many pairs to get in a batch)
+
+``` title="Example request"
+/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+```
+
+The search arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count).
+
+`max_num_pairs` is simple and just caps how many pairs you get.
+
+Response:
+:   A JSON Object listing a batch of hash pairs.
+```json title="Example response"
+{
+	"potential_duplicate_pairs" : [
+        [ "16470d6e73298cd75d9c7e8e2004810e047664679a660a9a3ba870b0fa3433d3", "7ed062dc76265d25abeee5425a859cfdf7ab26fd291f50b8de7ca381e04db079" ],
+        [ "eeea390357f259b460219d9589b4fa11e326403208097b1a1fbe63653397b210", "9215dfd39667c273ddfae2b73d90106b11abd5fd3cbadcc2afefa526bb226608" ],
+        [ "a1ea7d671245a3ae35932c603d4f3f85b0d0d40c5b70ffd78519e71945031788", "8e9592b2dfb436fe0a8e5fa15de26a34a6dfe4bca9d4363826fac367a9709b25" ]
+	]
+}
+```
+
+The selected pair sample and their order is strictly hardcoded for now (e.g. to guarantee that a decision will not invalidate any other pair in the batch, you shouldn't see the same file twice in a batch, nor two files in the same duplicate group). Treat it as the client filter does, where you fetch batches to process one after another. I expect to make it more flexible in future, in the client itself and here.
+
+You will see significantly fewer than `max_num_pairs` (and potential duplicate count) as you close to the last available pairs, and when there are none left, you will get an empty list.
+
+### **GET `/manage_file_relationships/get_random_potentials`** { id="manage_file_relationships_get_random_potentials" }
+
+_Get some random potentially duplicate file hashes. Exactly the same as the 'show some random potential dupes' button in the duplicate processing page._
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers: n/a
+    
+Arguments (in percent-encoded JSON):
+:   
+    *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
+    *   `tags_2`: (optional, default system:everything, a list of tags you wish to search for)
+    *   `potentials_search_type`: (optional, integer, default 0, regarding how the files should match the search(es))
+    *   `pixel_duplicates`: (optional, integer, default 1, regarding whether the files should be pixel duplicates)
+    *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the files)
+
+``` title="Example request"
+/manage_file_relationships/get_random_potentials?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0
+```
+
+The arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count), with the caveat that `potentials_search_type` has special logic:
+
+* 0 - first file matches search 1
+* 1 - all files match search 1
+* 2 - first file matches search 1, the others 2
+
+Essentially, the first hash is the 'master' to which the others are paired. The other files will include every matching file.
+
+Response:
+:   A JSON Object listing a group of hashes exactly as the client would.
+```json title="Example response"
+{
+	"random_potential_duplicate_hashes" : [
+		"16470d6e73298cd75d9c7e8e2004810e047664679a660a9a3ba870b0fa3433d3",
+        "7ed062dc76265d25abeee5425a859cfdf7ab26fd291f50b8de7ca381e04db079",
+        "9e0d6b928b726562d70e1f14a7b506ba987c6f9b7f2d2e723809bb11494c73e6",
+        "9e01744819b5ff2a84dda321e3f1a326f40d0e7f037408ded9f18a11ee2b2da8"
+	]
+}
+```
+
+If there are no potential duplicate groups in the search, this returns an empty list.
+
+### **POST `/manage_file_relationships/set_file_relationships`** { id="manage_file_relationships_set_kings" }
+
+Set the relationships to the specified file pairs.
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `pair_rows`: (a list of lists)
+
+Each row is:
+
+    * [ relationship, hash_a, hash_b, do_default_content_merge, delete_a, delete_b ]
+
+Where `relationship` is one of this enum:
+
+* 0 - set as potential duplicates
+* 1 - set as false positives
+* 2 - set as same quality
+* 3 - set as alternates
+* 4 - set A as better
+* 7 - set B as better
+
+2, 4, and 7 all make the files 'duplicates' (8 under `get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets A>B. You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.
+
+`hash_a` and `hash_b` are normal hex SHA256 hashes for your file pair.
+
+`do_default_content_merge` is a boolean setting whether the user's duplicate content merge options should be loaded and applied to the files along with the duplicate status. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.
+
+`delete_a` and `delete_b` are booleans that obviously select whether to delete A and/or B. You can also do this externally if you prefer.
+
+```json title="Example request body"
+{
+  "pair_rows" : [
+    [ 4, "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2", "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845", true, false, true ],
+    [ 4, "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2", "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423", true, false, true ],
+    [ 2, "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec", "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7", true, false, false ]
+  ]
+}
+```
+
+Response:
+:   200 with no content.
+
+If you try to add an invalid or redundant relationship, for instance setting that files that are already duplicates are potential duplicates, no changes are made.
+
+This is the file relationships request that is probably most likely to change in future. I may implement content merge options. I may move from file pairs to group identifiers. When I expand alternates, those file groups are going to support more variables.
+
+### **POST `/manage_file_relationships/set_kings`** { id="manage_file_relationships_set_kings" }
+
+Set the specified files to be the kings of their duplicate groups.
+
+Restricted access: 
+:   YES. Manage File Relationships permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `file_id`: (selective, a numerical file id)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+
+```json title="Example request body"
+{
+  "file_id" : 123
+}
+```
+
+Response:
+:   200 with no content.
+
+The files will be promoted to be the kings of their respective duplicate groups. If the file is already the king (also true for any file with no duplicates), this is idempotent. It also processes the files in the given order, so if you specify two files in the same group, the latter will be the king at the end of the request.
+
+## Managing Cookies and HTTP Headers
+
+This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.
+
+### **GET `/manage_cookies/get_cookies`** { id="manage_cookies_get_cookies" }
+
+_Get the cookies for a particular domain._
+
+Restricted access: 
+:   YES. Manage Cookies permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:   *  `domain`
+
+    ``` title="Example request (for gelbooru.com)"
+    /manage_cookies/get_cookies?domain=gelbooru.com
+    ```
+        
+
+Response:
+:   A JSON Object listing all the cookies for that domain in \[ name, value, domain, path, expires \] format.
+```json title="Example response"
+{
+	"cookies" : [
+		["__cfduid", "f1bef65041e54e93110a883360bc7e71", ".gelbooru.com", "/", 1596223327],
+		["pass_hash", "0b0833b797f108e340b315bc5463c324", "gelbooru.com", "/", 1585855361],
+		["user_id", "123456", "gelbooru.com", "/", 1585855361]
+	]
+}
+```
+
+    Note that these variables are all strings except 'expires', which is either an integer timestamp or _null_ for session cookies.
+
+    This request will also return any cookies for subdomains. The session system in hydrus generally stores cookies according to the second-level domain, so if you request for specific.someoverbooru.net, you will still get the cookies for someoverbooru.net and all its subdomains.
+
+### **POST `/manage_cookies/set_cookies`** { id="manage_cookies_set_cookies" }
+
+Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.
+
+Restricted access: 
+:   YES. Manage Cookies permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `cookies`: (a list of cookie rows in the same format as the GET request above)
+
+```json title="Example request body"
+{
+  "cookies" : [
+    ["PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719],
+    ["tag_filter", "1", ".somesite.com", "/", 1627327719]
+  ]
+}
+```
+
+You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).
+
+Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
+
+### **POST `/manage_headers/set_user_agent`** { id="manage_headers_set_user_agent" }
+
+This sets the 'Global' User-Agent for the client, as typically editable under _network->data->manage http headers_, for instance if you want hydrus to appear as a specific browser associated with some cookies.
+
+Restricted access: 
+:   YES. Manage Cookies permission needed.
+    
+Required Headers:
+:    
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:       
+    *   `user-agent`: (a string)
+
+```json title="Example request body"
+{
+  "user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
+}
+```
+
+Send an empty string to reset the client back to the default User-Agent, which should be `Mozilla/5.0 (compatible; Hydrus Client)`.
+
+## Managing Pages
+
+This refers to the pages of the main client UI.
+
+### **GET `/manage_pages/get_pages`** { id="manage_pages_get_pages" }
+
+_Get the page structure of the current UI session._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers: n/a
+    
+Arguments: n/a
+    
+
+Response: 
+:   A JSON Object of the top-level page 'notebook' (page of pages) detailing its basic information and current sub-pages. Page of pages beneath it will list their own sub-page lists.
+```json title="Example response"
+{
+  "pages" : {
+    "name" : "top pages notebook",
+    "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
+    "page_type" : 10,
+    "selected" : true,
+    "pages" : [
+      {
+        "name" : "files",
+        "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
+        "page_type" : 6,
+        "selected" : false
+      },
+      {
+        "name" : "thread watcher",
+        "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
+        "page_type" : 9,
+        "selected" : false
+      },
+      {
+        "name" : "pages",
+        "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
+        "page_type" : 10,
+        "selected" : true,
+        "pages" : [
+          {
+            "name" : "urls",
+            "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
+            "page_type" : 7,
+            "selected" : true
+          },
+          {
+            "name" : "files",
+            "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
+            "page_type" : 6,
+            "selected" : false
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+    The page types are as follows:
+
+    *   1 - Gallery downloader
+    *   2 - Simple downloader
+    *   3 - Hard drive import
+    *   5 - Petitions (used by repository janitors)
+    *   6 - File search
+    *   7 - URL downloader
+    *   8 - Duplicates
+    *   9 - Thread watcher
+    *   10 - Page of pages
+
+    The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.
+
+    The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.
+
+### **GET `/manage_pages/get_page_info`** { id="manage_pages_get_page_info" }
+
+_Get information about a specific page._
+
+!!! warning "Under Construction"
+    This is under construction. The current call dumps a ton of info for different downloader pages. Please experiment in IRL situations and give feedback for now! I will flesh out this help with more enumeration info and examples as this gets nailed down. POST commands to alter pages (adding, removing, highlighting), will come later.
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:   
+    *   `page_key`: (hexadecimal page\_key as stated in [/manage\_pages/get\_pages](#manage_pages_get_pages))
+    *   `simple`: true or false (optional, defaulting to true)
+
+    ``` title="Example request"
+    /manage_pages/get_page_info?page_key=aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da&simple=true
+    ```
+
+Response description
+:   A JSON Object of the page's information. At present, this mostly means downloader information.
+```json title="Example response with simple = true"
+{
+  "page_info" : {
+    "name" : "threads",
+    "page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
+    "page_type" : 3,
+    "management" : {
+      "multiple_watcher_import" : {
+        "watcher_imports" : [
+          {
+            "url" : "https://someimageboard.net/m/123456",
+            "watcher_key" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85",
+            "created" : 1566164269,
+            "last_check_time" : 1566164272,
+            "next_check_time" : 1566174272,
+            "files_paused" : false,
+            "checking_paused" : false,
+            "checking_status" : 0,
+            "subject" : "gundam pictures",
+            "imports" : {
+              "status" : "4 successful (2 already in db)",
+              "simple_status" : "4",
+              "total_processed" : 4,
+              "total_to_process" : 4
+            },
+            "gallery_log" : {
+              "status" : "1 successful",
+              "simple_status" : "1",
+              "total_processed" : 1,
+              "total_to_process" : 1
+            }
+          },
+          {
+            "url" : "https://someimageboard.net/a/1234",
+            "watcher_key" : "6bc17555b76da5bde2dcceedc382cf7d23281aee6477c41b643cd144ec168510",
+            "created" : 1566063125,
+            "last_check_time" : 1566063133,
+            "next_check_time" : 1566104272,
+            "files_paused" : false,
+            "checking_paused" : true,
+            "checking_status" : 1,
+            "subject" : "anime pictures",
+            "imports" : {
+              "status" : "124 successful (22 already in db), 2 previously deleted",
+              "simple_status" : "124",
+              "total_processed" : 124,
+              "total_to_process" : 124
+            },
+            "gallery_log" : {
+              "status" : "3 successful",
+              "simple_status" : "3",
+              "total_processed" : 3,
+              "total_to_process" : 3
+            }
+          }
+        ]
+      },
+      "highlight" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85"
+    }
+  },
+  "media" : {
+    "num_files" : 4
+  }
+}
+```
+
+    As you can see, even the 'simple' mode can get very large. Imagine that response for a page watching 100 threads! Turning simple mode off will display every import item, gallery log entry, and all hashes in the media (thumbnail) panel.
+    
+    For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.
+    
+
+### **POST `/manage_pages/add_files`** { id="manage_pages_add_files" }
+
+_Add files to a page._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `page_key`: (the page key for the page you wish to add files to)
+    *   `file_id`: (selective, a numerical file id)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+
+The files you set will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
+
+```json title="Example request body"
+{
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18",
+  "file_ids" : [123, 124, 125]
+}
+```
+
+Response:
+:   200 with no content. If the page key is not found, this will 404.
+
+### **POST `/manage_pages/focus_page`** { id="manage_pages_focus_page" }
+
+_'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `page_key`: (the page key for the page you wish to show)
+
+The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
+
+```json title="Example request body"
+{
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}
+```
+
+Response:
+:   200 with no content. If the page key is not found, this will 404.
+    
+
+### **POST `/manage_pages/refresh_page`** { id="manage_pages_refresh_page" }
+
+_Refresh a page in the main GUI. Like hitting F5 in the client, this obviously makes file search pages perform their search again, but for other page types it will force the currently in-view files to be re-sorted._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `page_key`: (the page key for the page you wish to refresh)
+
+The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If a file search page is not set to 'searching immediately', a 'refresh' command does nothing.
+
+```json title="Example request body"
+{
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}
+```
+
+Response:
+:   200 with no content. If the page key is not found, this will 404.
 
 ## Managing the Database
 

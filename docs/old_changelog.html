@@ -35,6 +35,33 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_513"><a href="#version_513">version 513</a></h2>
+                    <ul>
+                        <li><h3>client api</h3></li>
+                        <li>the Client API now supports the duplicates system! this is early stages, and what I've exposed is ugly and technical, but if you want to try out some external dupe processing, give it a go and let me know what you think! (issue #347)</li>
+                        <li>a new 'manage file relationships' permission gives your api keys access</li>
+                        <li>the new GET commands are:</li>
+                        <li>- `/manage_file_relationships/get_file_relationships`, which fetches potential dupes, dupes, alternates, false positives, and dupe kings</li>
+                        <li>- `/manage_file_relationships/get_potentials_count`, which can take two file searches, a potential dupes search type, a pixel match type, and max hamming distance, and will give the number of potential pairs in that domain</li>
+                        <li>- `/manage_file_relationships/get_potential_pairs`, which takes the same params as count and a `max_num_pairs` and gives you a batch of pairs to process, just like the dupe filter</li>
+                        <li>- `/manage_file_relationships/get_random_potentials`, which takes the same params as count and gives you some hashes just like the 'show some random potential pairs' button</li>
+                        <li>the new POST commands are:</li>
+                        <li>- `/manage_file_relationships/set_file_relationships`, which sets potential/dupe/alternate/false positive relationships between file pairs with some optional content merge and file deletes</li>
+                        <li>- `/manage_file_relationships/set_kings`, which sets duplicate group kings</li>
+                        <li>more commands will be written in the future for various remove/dissolve actions</li>
+                        <li>wrote unit tests for all the commands!</li>
+                        <li>wrote help for all the commands!</li>
+                        <li>fixed an issue in the '/manage_pages/get_pages' call where the response data structure was saying 'focused' instead of 'selected' for 'page of pages'</li>
+                        <li>cilent api version is now 40</li>
+                        <li><h3>boring misc cleanup and refactoring</h3></li>
+                        <li>cleaned and wrote some more parsing methods for the api to support duplicate search tech and reduce copypasted parsing code</li>
+                        <li>renamed the client api permission labels a little, just making it all clearer and line up better. also, the 'edit client permissions' dialog now sorts the permissions</li>
+                        <li>reordered and renamed the dev help headers in the same way</li>
+                        <li>simple but significant rename-refactoring in file duplicates database module, tearing off the old 'Duplicates' prefixes to every method ha ha</li>
+                        <li>updated the advanced Windows 'running from source' help to talk more about VC build tools. some old scripts don't seem to work any more in Win 11, but you also don't really need it any more (I moved to a new dev machine this week so had to set everything up again)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_512"><a href="#version_512">version 512</a></h2>
                     <ul>
                         <li><h3>two searches in duplicates</h3></li>
