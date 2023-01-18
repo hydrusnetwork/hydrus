@@ -132,7 +132,7 @@ Arguments:
     *   `deleted_file_service_key`: (optional, selective B, hexadecimal, the 'deleted from this file domain' on which to search)
     *   `deleted_file_service_keys`: (optional, selective B, list of hexadecimals, the union of 'deleted from this file domain' on which to search)
 
-The service keys are as in [/get_services](#get_services).
+The service keys are as in [/get\_services](#get_services).
 
 Hydrus supports two concepts here:
 
@@ -150,6 +150,22 @@ Please note that unions can be very very computationally expensive. If you can a
 'all known files' is a tricky domain. It converts much of the search tech to ignore where files actually are and look at the accompanying tag domain (e.g. all the files that have been tagged), and can sometimes be very expensive.
 
 Also, if you have the option to set both file and tag domains, you cannot enter 'all known files'/'all known tags'. It is too complicated to support, sorry!
+
+### **legacy service_name parameters** { id="legacy_service_name_parameters" }
+
+The Client API used to respond to various name-based service identifiers, for instance using 'my tags' instead of something like '6c6f63616c2074616773'. Service names can change, and they aren't _strictly_ unique either, so I have moved away from them, but there is some soft legacy support.
+
+The client will attempt to convert any of these to their 'service_key(s)' equivalents:
+
+* file_service_name
+* tag_service_name
+* service_names_to_tags
+* service_names_to_actions_to_tags
+* service_names_to_additional_tags
+
+But I strongly encourage you to move away from them as soon as reasonably possible. Look up the service keys you need with [/get\_service](#get_service) or [/get\_services](#get_services).
+
+If you have a clever script/program that does many things, then hit up [/get\_services](#get_services) on session initialisation and cache an internal map of key_to_name for the labels to use when you present services to the user.
 
 ## Access Management
 
@@ -252,6 +268,44 @@ Response:
 }
 ```
         
+
+### **GET `/get_service`** { id="get_service" }
+
+_Ask the client about a specific service._
+
+Restricted access: 
+:   YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:       
+    *   `service_name`: (selective, string, the name of the service)
+    *   `service_key`: (selective, hex string, the service key of the service)
+
+Example requests:
+:   
+    ```title="Example requests"
+    /get_service?service_name=my%20tags
+    /get_service?service_key=6c6f63616c2074616773
+    ```
+
+Response: 
+:   Some JSON about the service. The same basic format as [/get\_services](#get_services)
+```json title="Example response"
+{
+  "service" : {
+    "name" : "my tags",
+    "service_key" : "6c6f63616c2074616773",
+    "type" : 5,
+    "type_pretty" : "local tag service"
+  }
+}
+```
+
+If the service does not exist, this gives 404. It is very unlikely but edge-case possible that two services will have the same name, in this case you'll get the pseudorandom first.
+
+It will only respond to services in the /get_services list. I will expand the available types in future as we add ratings etc... to the Client API.
 
 ### **GET `/get_services`** { id="get_services" }
 
@@ -845,7 +899,7 @@ Arguments (in JSON):
 *   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
 *   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
 
-    In 'service\_keys\_to...', the keys are as in [/get_services](#get_services). You may need some selection UI on your end so the user can pick what to do if there are multiple choices.
+    In 'service\_keys\_to...', the keys are as in [/get\_services](#get_services). You may need some selection UI on your end so the user can pick what to do if there are multiple choices.
     
     Also, you can use either '...to\_tags', which is simple and add-only, or '...to\_actions\_to\_tags', which is more complicated and allows you to remove/petition or rescind pending content.
     
@@ -1480,7 +1534,7 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
 `ipfs_multihashes` stores the ipfs service key to any known multihash for the file. 
 
-The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
+The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
 
 #### tags
 
@@ -1488,7 +1542,7 @@ The 'tags' structures are undergoing transition. Previously, this was a mess of 
 
 `hide_service_keys_tags` is deprecated and will be deleted soon. When set to `false`, it shows the old `service_keys_to_statuses_to_tags` and `service_keys_to_statuses_to_display_tags` Objects.
 
-The `tags` structures are similar to the [/add_tags/add_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
+The `tags` structures are similar to the [/add\_tags/add\_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
 
 *   0 - current
 *   1 - pending
@@ -1498,7 +1552,7 @@ The `tags` structures are similar to the [/add_tags/add_tags](#add_tags_add_tags
 !!! note
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-To learn more about service names and keys on a client, use the [/get_services](#get_services) call.
+To learn more about service names and keys on a client, use the [/get\_services](#get_services) call.
 
 While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
 
@@ -1698,7 +1752,7 @@ Arguments (in percent-encoded JSON):
     *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the pairs)
 
 ``` title="Example request"
-/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
 ```
 
 `tag_service_key` and `tags` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2. For now the file domain is locked to 'all my files'.
@@ -1749,7 +1803,7 @@ Arguments (in percent-encoded JSON):
     *   `max_num_pairs`: (optional, integer, defaults to client's option, how many pairs to get in a batch)
 
 ``` title="Example request"
-/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
 ```
 
 The search arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count).
@@ -1793,7 +1847,7 @@ Arguments (in percent-encoded JSON):
     *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the files)
 
 ``` title="Example request"
-/manage_file_relationships/get_random_potentials?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0
+/manage_file_relationships/get_random_potentials?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0
 ```
 
 The arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count), with the caveat that `potentials_search_type` has special logic:
@@ -2031,36 +2085,42 @@ Response:
   "pages" : {
     "name" : "top pages notebook",
     "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
+    "page_state" : 0,
     "page_type" : 10,
     "selected" : true,
     "pages" : [
       {
         "name" : "files",
         "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
+        "page_state" : 0,
         "page_type" : 6,
         "selected" : false
       },
       {
         "name" : "thread watcher",
         "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
+        "page_state" : 0,
         "page_type" : 9,
         "selected" : false
       },
       {
         "name" : "pages",
         "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
+        "page_state" : 0,
         "page_type" : 10,
         "selected" : true,
         "pages" : [
           {
             "name" : "urls",
             "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
+            "page_state" : 0,
             "page_type" : 7,
             "selected" : true
           },
           {
             "name" : "files",
             "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
+            "page_state" : 0,
             "page_type" : 6,
             "selected" : false
           }
@@ -2071,7 +2131,11 @@ Response:
 }
 ```
 
-    The page types are as follows:
+    `name` is the full text on the page tab. 
+    
+    `page_key` is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a session reload.
+    
+    `page_type` is as follows:
 
     *   1 - Gallery downloader
     *   2 - Simple downloader
@@ -2082,10 +2146,20 @@ Response:
     *   8 - Duplicates
     *   9 - Thread watcher
     *   10 - Page of pages
-
-    The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.
-
-    The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.
+    
+    `page_state` is as follows:
+    
+    * 0 - ready
+    * 1 - initialising
+    * 2 - searching/loading
+    * 3 - search cancelled
+    
+    Most pages will be 0, normal/ready, at all times. Large pages will start in an 'initialising' state for a few seconds, which means their session-saved thumbnails aren't loaded yet. Search pages will enter 'searching' after a refresh or search change and will either return to 'ready' when the search is complete, or fall to 'search cancelled' if the search was interrupted. 
+    
+    `selected` means which page is currently in view. It will propagate down the page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a media page.    
+    
+    The top page of pages will always be there, and always selected.
+    
 
 ### **GET `/manage_pages/get_page_info`** { id="manage_pages_get_page_info" }
 
@@ -2115,6 +2189,7 @@ Response description
   "page_info" : {
     "name" : "threads",
     "page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
+    "page_state" : 0,
     "page_type" : 3,
     "management" : {
       "multiple_watcher_import" : {
@@ -2176,6 +2251,8 @@ Response description
 }
 ```
 
+    `name`, `page_key`, `page_state`, and `page_type` are as in [/manage\_pages/get\_pages](#manage_pages_get_pages).
+    
     As you can see, even the 'simple' mode can get very large. Imagine that response for a page watching 100 threads! Turning simple mode off will display every import item, gallery log entry, and all hashes in the media (thumbnail) panel.
     
     For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.
