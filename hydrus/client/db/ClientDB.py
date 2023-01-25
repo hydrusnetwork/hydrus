@@ -5237,7 +5237,7 @@ class DB( HydrusDB.HydrusDB ):
         
         with self._MakeTemporaryIntegerTable( search_tag_ids_to_search_tags.keys(), 'tag_id' ) as temp_tag_id_table_name:
             
-            search_tag_ids_to_total_counts = collections.Counter( { tag_id : current_count + pending_count for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) } )
+            search_tag_ids_to_total_counts = collections.Counter( { tag_id : abs( current_count ) + abs( pending_count ) for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) } )
             
         
         #
@@ -5338,7 +5338,7 @@ class DB( HydrusDB.HydrusDB ):
         
         with self._MakeTemporaryIntegerTable( all_tag_ids, 'tag_id' ) as temp_tag_id_table_name:
             
-            tag_ids_to_total_counts = { tag_id : current_count + pending_count for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) }
+            tag_ids_to_total_counts = { tag_id : abs( current_count ) + abs( pending_count ) for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) }
             
         
         tag_ids_to_total_counts.update( search_tag_ids_to_total_counts )
@@ -5370,7 +5370,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 suggestion_tag_count = tag_ids_to_total_counts[ tag_id ]
                 
-                score = matching_count / ( ( suggestion_tag_count * search_tag_count ) ** 0.5 )
+                score = matching_count / ( ( abs( suggestion_tag_count ) * abs( search_tag_count ) ) ** 0.5 )
                 
                 # sophisticated hydev score-tuning
                 if search_tag_is_unnamespaced:
