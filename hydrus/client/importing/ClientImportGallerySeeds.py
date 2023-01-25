@@ -298,7 +298,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, gallery_token_name, gallery_seed_log, file_seeds_callable, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, gallery_urls_seen_before = None ):
+    def WorkOnURL( self, gallery_token_name, gallery_seed_log: "GallerySeedLog", file_seeds_callable, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, gallery_urls_seen_before = None ):
         
         if gallery_urls_seen_before is None:
             
@@ -494,7 +494,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         sub_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                         
                     
-                    gallery_seed_log.AddGallerySeeds( sub_gallery_seeds )
+                    gallery_seed_log.AddGallerySeeds( sub_gallery_seeds, parent_gallery_seed = self )
                     
                     added_new_gallery_pages = True
                     
@@ -569,7 +569,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                                 next_gallery_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                                 
                             
-                            gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
+                            gallery_seed_log.AddGallerySeeds( next_gallery_seeds, parent_gallery_seed = self )
                             
                             added_new_gallery_pages = True
                             
@@ -760,7 +760,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = True
         
     
-    def AddGallerySeeds( self, gallery_seeds ):
+    def AddGallerySeeds( self, gallery_seeds, parent_gallery_seed: typing.Optional[ GallerySeed ] = None ) -> int:
         
         if len( gallery_seeds ) == 0:
             
@@ -786,22 +786,47 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 
                 new_gallery_seeds.append( gallery_seed )
                 
-                self._gallery_seeds.append( gallery_seed )
-                
-                self._gallery_seeds_to_indices[ gallery_seed ] = len( self._gallery_seeds ) - 1
-                
                 seen_urls.add( gallery_seed.url )
                 
             
+            if len( new_gallery_seeds ) == 0:
+                
+                return 0
+                
+            
+            if parent_gallery_seed is None or parent_gallery_seed not in self._gallery_seeds:
+                
+                insertion_index = len( self._gallery_seeds )
+                
+            else:
+                
+                insertion_index = self._gallery_seeds.index( parent_gallery_seed ) + 1
+                
+            
+            original_insertion_index = insertion_index
+            
+            for gallery_seed in new_gallery_seeds:
+                
+                self._gallery_seeds.insert( insertion_index, gallery_seed )
+                
+                insertion_index += 1
+                
+            
+            self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }
+            
             self._SetStatusDirty()
             
+            updated_gallery_seeds = self._gallery_seeds[ original_insertion_index : ]
+            
         
-        self.NotifyGallerySeedsUpdated( new_gallery_seeds )
+        self.NotifyGallerySeedsUpdated( updated_gallery_seeds )
         
         return len( new_gallery_seeds )
         
     
     def AdvanceGallerySeed( self, gallery_seed ):
+        
+        updated_gallery_seeds = []
         
         with self._lock:
             
@@ -811,16 +836,20 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 
                 if index > 0:
                     
+                    swapped_gallery_seed = self._gallery_seeds[ index - 1 ]
+                    
                     self._gallery_seeds.remove( gallery_seed )
                     
                     self._gallery_seeds.insert( index - 1, gallery_seed )
                     
-                
-                self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }
-                
+                    self._gallery_seeds_to_indices[ gallery_seed ] = index - 1
+                    self._gallery_seeds_to_indices[ swapped_gallery_seed ] = index
+                    
+                    updated_gallery_seeds = ( gallery_seed, swapped_gallery_seed )
+                    
             
         
-        self.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        self.NotifyGallerySeedsUpdated( updated_gallery_seeds )
         
     
     def CanCompact( self, compact_before_this_source_time ):
@@ -900,6 +929,8 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     def DelayGallerySeed( self, gallery_seed ):
         
+        updated_gallery_seeds = []
+        
         with self._lock:
             
             if gallery_seed in self._gallery_seeds_to_indices:
@@ -908,16 +939,21 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 
                 if index < len( self._gallery_seeds ) - 1:
                     
+                    swapped_gallery_seed = self._gallery_seeds[ index + 1 ]
+                    
                     self._gallery_seeds.remove( gallery_seed )
                     
                     self._gallery_seeds.insert( index + 1, gallery_seed )
                     
-                
-                self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }
+                    self._gallery_seeds_to_indices[ swapped_gallery_seed ] = index
+                    self._gallery_seeds_to_indices[ gallery_seed ] = index + 1
+                    
+                    updated_gallery_seeds = ( swapped_gallery_seed, gallery_seed )
+                    
                 
             
         
-        self.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        self.NotifyGallerySeedsUpdated( updated_gallery_seeds )
         
     
     def GetExampleGallerySeed( self ):
@@ -1062,6 +1098,11 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     def NotifyGallerySeedsUpdated( self, gallery_seeds ):
         
+        if len( gallery_seeds ) == 0:
+            
+            return
+            
+        
         with self._lock:
             
             self._SetStatusDirty()
@@ -1070,11 +1111,18 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         HG.client_controller.pub( 'gallery_seed_log_gallery_seeds_updated', self._gallery_seed_log_key, gallery_seeds )
         
     
-    def RemoveGallerySeeds( self, gallery_seeds ):
+    def RemoveGallerySeeds( self, gallery_seeds_to_delete ):
         
         with self._lock:
             
-            gallery_seeds_to_delete = set( gallery_seeds )
+            gallery_seeds_to_delete = { gallery_seed for gallery_seed in gallery_seeds_to_delete if gallery_seed in self._gallery_seeds_to_indices }
+            
+            if len( gallery_seeds_to_delete ) == 0:
+                
+                return
+                
+            
+            earliest_affected_index = min( ( self._gallery_seeds_to_indices[ gallery_seed ] for gallery_seed in gallery_seeds_to_delete ) )
             
             self._gallery_seeds = HydrusSerialisable.SerialisableList( [ gallery_seed for gallery_seed in self._gallery_seeds if gallery_seed not in gallery_seeds_to_delete ] )
             
@@ -1082,8 +1130,12 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
             self._SetStatusDirty()
             
+            index_shuffled_gallery_seeds = self._gallery_seeds[ earliest_affected_index : ]
+            
         
-        self.NotifyGallerySeedsUpdated( gallery_seeds_to_delete )
+        updated_gallery_seeds = gallery_seeds_to_delete.union( index_shuffled_gallery_seeds )
+        
+        self.NotifyGallerySeedsUpdated( updated_gallery_seeds )
         
     
     def RemoveGallerySeedsByStatus( self, statuses_to_remove ):

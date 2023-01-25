@@ -996,6 +996,8 @@ class ManagementPanel( QW.QScrollArea ):
         self._page = page
         self._page_key = self._management_controller.GetVariable( 'page_key' )
         
+        self._page_state = CC.PAGE_STATE_NORMAL
+        
         self._current_selection_tags_list = None
         
         self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self, management_controller = self._management_controller )
@@ -1095,6 +1097,11 @@ class ManagementPanel( QW.QScrollArea ):
         media_panel.SetEmptyPageStatusOverride( status )
         
         return media_panel
+        
+    
+    def GetPageState( self ) -> int:
+        
+        return self._page_state
         
     
     def PageHidden( self ):
@@ -1620,16 +1627,20 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._page.SwapMediaPanel( panel )
         
+        self._page_state = CC.PAGE_STATE_NORMAL
+        
     
     def _ShowRandomPotentialDupes( self ):
         
         ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
         
+        self._page_state = CC.PAGE_STATE_SEARCHING
+        
         hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
         if len( hashes ) == 0:
             
-            HydrusData.ShowText( 'No files were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            HydrusData.ShowText( 'No random potential duplicates were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
             
         
         self._ShowPotentialDupes( hashes )
@@ -5501,6 +5512,8 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._page.SwapMediaPanel( panel )
             
+            self._page_state = CC.PAGE_STATE_SEARCHING_CANCELLED
+            
             self._UpdateCancelButton()
             
         
@@ -5575,6 +5588,8 @@ class ManagementPanelQuery( ManagementPanel ):
                 self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
                 
                 panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, location_context )
+                
+                self._page_state = CC.PAGE_STATE_SEARCHING
                 
             else:
                 
@@ -5748,6 +5763,8 @@ class ManagementPanelQuery( ManagementPanel ):
             panel.Sort( self._media_sort.GetSort() )
             
             self._page.SwapMediaPanel( panel )
+            
+            self._page_state = CC.PAGE_STATE_NORMAL
             
         
     

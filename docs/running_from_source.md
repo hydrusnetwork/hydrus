@@ -186,7 +186,7 @@ The first start will take a little longer. It will operate just like a normal bu
 
     If you want to redirect your database or use any other launch arguments, then copy 'client.command' to 'client-user.command' and edit it, inserting your desired db path. Run this instead of 'client.command'. New `git pull` commands will not affect 'client-user.command'.
 
-## Simple Updating Guide
+### Simple Updating Guide
 
 To update, you do the same thing as for the extract builds.
 
@@ -195,11 +195,33 @@ To update, you do the same thing as for the extract builds.
 
 If you get a library version error when you try to boot, run the venv setup again. It is worth doing this anyway, every now and then, just to stay up to date.
 
-## doing it manually { id="what_you_need" }
+### Migrating from an Existing Install
+
+Many users start out using one of the official built releases and decide to move to source. There is lots of information [here](database_migration.md) about how to migrate the database, but for your purposes, the simple method is this:
+
+**If you never moved your database to another place and do not use -d/--db_dir launch parameter**
+
+1. Follow the above guide to get the source install working in a new folder on a fresh database
+2. **MAKE A BACKUP OF EVERYTHING**
+3. Delete everything from the source install's `db` directory.
+4. Move your built release's entire `db` directory to the source.
+5. Run your source release again--it should load your old db no problem!
+6. Update your backup routine to point to the new source install location.
+
+**If you moved your database to another location and use the -d/--db_dir launch parameter**
+
+1. Follow the above guide to get the source install working in a new folder on a fresh database (without -db_dir)
+2. **MAKE A BACKUP OF EVERYTHING**
+3. Just to be neat, delete the .db files, .log files, and client_files folder from the source install's `db` directory.
+4. Run the source install with --db_dir just as you would the built executable--it should load your old db no problem!
+
+## Doing it Yourself { id="what_you_need" }
 
 _This is for advanced users only._
 
-Inside the extract should be client.py and server.py. You will be treating these basically the same as the 'client' and 'server' executables--you should be able to launch them the same way and they take the same launch parameters as the exes.
+_If you have never used python before, do not try this. If the easy setup scripts failed for you and you don't know what happened, please contact hydev before trying this, as the thing that went wrong there will probably go much more wrong here._
+
+You can also set up the environment yourself. Inside the extract should be client.py and server.py. You will be treating these basically the same as the 'client' and 'server' executables--with the right environment, you should be able to launch them the same way and they take the same launch parameters as the exes.
 
 Hydrus needs a whole bunch of libraries, so let's now set your python up. I **strongly** recommend you create a virtual environment. It is easy and doesn't mess up your system python.
 
@@ -210,14 +232,14 @@ To create a new venv environment:
 * Open a terminal at your hydrus extract folder. If `python3` doesn't work, use `python`.
 * `python3 -m pip install virtualenv` (if you need it)
 * `python3 -m venv venv`
-* `source venv/bin/activate`
+* `source venv/bin/activate` (`CALL venv\Scripts\activate.bat` in Windows cmd)
 * `python -m pip install --upgrade pip`
 * `python -m pip install --upgrade wheel`
 
 !!! info "venvs"
-    That `source venv/bin/activate` line turns on your venv. You should see your terminal note you are now in it. A venv is an isolated environment of python that you can install modules to without worrying about breaking something system-wide. **Ideally, you do not want to install python modules to your system python.**  
+    That `source venv/bin/activate` line turns on your venv. You should see your terminal prompt note you are now in it. A venv is an isolated environment of python that you can install modules to without worrying about breaking something system-wide. **Ideally, you do not want to install python modules to your system python.**  
     
-    This activate line will be needed every time you alter your venv or run the `client.py`/`server.py` files. You can easily tuck this venv activation line into a launch script--check the easy setup files for examples.  
+    This activate line will be needed every time you alter your venv or run the `client.py`/`server.py` files. You can easily tuck this into a launch script--check the easy setup files for examples.  
     
     On Windows Powershell, the command is `.\venv\Scripts\activate`, but you may find the whole deal is done much easier in cmd than Powershell. When in Powershell, just type `cmd` to get an old fashioned command line. In cmd, the launch command is just `venv\scripts\activate.bat`, no leading period.
 
@@ -227,9 +249,9 @@ To create a new venv environment:
 python -m pip install -r requirements.txt
 ```
 
-If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on.
+If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on. You'll likely need the newer OpenCV on Python 3.10, for instance.
 
-## Qt { id="qt" }
+### Qt { id="qt" }
 
 Qt is the UI library. You can run PySide2, PySide6, PyQt5, or PyQt6. A wrapper library called `qtpy` allows this. The default is PySide6, but if it is missing, qtpy will fall back to an available alternative. For PyQt5 or PyQt6, you need an extra Chart module, so go:
 
@@ -245,17 +267,15 @@ If you want to set QT_API in a batch file, do this:
 
 `set QT_API=pyqt6`
 
-If you run Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Please try PySide2 or PyQt5.
+If you run <= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or PyQt5.
 
-## mpv support { id="mpv" }
+### mpv { id="mpv" }
 
 MPV is optional and complicated, but it is great, so it is worth the time to figure out!
 
-As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying library. This is _not_ mpv the program, but 'libmpv', often called 'libmpv1'.
+As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is _not_ mpv the program, but 'libmpv', often called 'libmpv1'.
 
-For Windows, the dll builds are [here](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/), although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions.
-
-You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.
+For Windows, the dll builds are [here](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/), although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.
 
 If you are on Linux, you can usually get 'libmpv1' like so:
 
@@ -265,13 +285,11 @@ On macOS, you should be able to get it with `brew install mpv`, but you are like
 
 Hit _help->about_ to see your mpv status. If you don't have it, it will present an error popup box with more info.
 
-## SQLite { id="sqlite" }
+### SQLite { id="sqlite" }
 
-If you can, update python's SQLite--it'll improve performance.
+If you can, update python's SQLite--it'll improve performance. The SQLite that comes with stock python is usually quite old, so you'll get a significant boost in speed. In some python deployments, the built-in SQLite not compiled with neat features like Fast Text Search (FTS) that hydrus needs.
 
-On Windows, get the 64-bit sqlite3.dll [here](https://www.sqlite.org/download.html), and just drop it in your base install directory.
-
-You can also just grab the 'sqlite3.dll' I bundle in my extractable Windows release.
+On Windows, get the 64-bit sqlite3.dll [here](https://www.sqlite.org/download.html), and just drop it in your base install directory. You can also just grab the 'sqlite3.dll' I bundle in my extractable Windows release.
 
 You _may_ be able to update your SQLite on Linux or macOS with:
 
@@ -279,27 +297,27 @@ You _may_ be able to update your SQLite on Linux or macOS with:
 * (activate your venv)
 * `python -m pip install pysqlite3`
 
-But it isn't a big deal.
+But as long as the program launches, it usually isn't a big deal.
 
 !!! warning "Extremely safe no way it can go wrong"
     If you want to update sqlite for your system python install, you can also drop it into `C:\Python38\DLLs` or wherever you have python installed. You'll be overwriting the old file, so make a backup if you want to (I have never had trouble updating like this, however).
+    
+    A user who made a Windows venv with Anaconda reported they had to replace the sqlite3.dll in their conda env at `~/.conda/envs/<envname>/Library/bin/sqlite3.dll`.
 
-## FFMPEG { id="ffmpeg" }
+### FFMPEG { id="ffmpeg" }
 
-If you don't have FFMPEG in your PATH and you want to import anything more fun than jpegs, you will need to put a static [FFMPEG](https://ffmpeg.org/) executable in your PATH or the `install_dir/bin` directory. [This](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z) should always point to a new build.
+If you don't have FFMPEG in your PATH and you want to import anything more fun than jpegs, you will need to put a static [FFMPEG](https://ffmpeg.org/) executable in your PATH or the `install_dir/bin` directory. [This](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z) should always point to a new build for Windows. Alternately, you can just copy the exe from one of my extractable Windows releases.
 
-Alternately, you can just copy the exe from one of my extractable Windows releases.
+### Running It { id="running_it" }
 
-## running it { id="running_it" }
-
-Once you have everything set up, client.py and server.py should look for and run off client.db and server.db just like the executables. You are looking at entering something like this into the terminal:
+Once you have everything set up, client.py and server.py should look for and run off client.db and server.db just like the executables. You can use the 'client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:
 
 ```
 source venv/bin/activate
 python client.py
 ```
 
-This will look in the 'db' directory by default, but you can use the [launch arguments](launch_arguments.md) just like for the executables. For example, this could be your client-user.sh file:
+This will use the 'db' directory for your database by default, but you can use the [launch arguments](launch_arguments.md) just like for the executables. For example, this could be your client-user.sh file:
 
 ```
 #!/bin/bash
@@ -308,13 +326,11 @@ source venv/bin/activate
 python client.py -d="/path/to/database"
 ```
 
-I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.
+### Building these Docs
 
-## Building the docs
+When running from source you may want to [build the hydrus help docs](about_docs.md) yourself. You can also check the `setup_help` scripts in the install directory. 
 
-When running from source you may want to [build the hydrus help docs](about_docs.md) yourself.
-
-## building packages on windows { id="windows_build" }
+### Building Packages on Windows { id="windows_build" }
 
 Almost everything you get through pip is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, you have two choices:
 
@@ -335,13 +351,15 @@ Trust me, just do this, it will save a ton of headaches!
 
 _Update:_ On Windows 11, in 2023-01, I had trouble with the above. There's a couple '11' SDKs that installed ok, but the vcbuildtools stuff had unusual errors. I hadn't done this in years, so maybe they are broken for Windows 10 too! The good news is that a basic stock Win 11 install with Python 3.10 is fine getting everything on our requirements and even making a build without any extra compiler tech. 
 
-## additional windows info { id="additional_windows" }
+### Additional Windows Info { id="additional_windows" }
 
 This does not matter much any more, but in the old days, building modules like lz4 and lxml was a complete nightmare, and hooking up Visual Studio was even more difficult. [This page](http://www.lfd.uci.edu/~gohlke/pythonlibs/) has a lot of prebuilt binaries--I have found it very helpful many times.
 
 I have a fair bit of experience with Windows python, so send me a mail if you need help.
 
-## my code { id="my_code" }
+## My Code { id="my_code" }
+
+I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.
 
 My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
 

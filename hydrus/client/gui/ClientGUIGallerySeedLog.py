@@ -447,17 +447,14 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _TrySelectedAgain( self, can_generate_more_pages ):
         
-        new_gallery_seeds = []
-        
         gallery_seeds = self._list_ctrl.GetData( only_selected = True )
         
         for gallery_seed in gallery_seeds:
             
-            new_gallery_seeds.append( gallery_seed.GenerateRestartedDuplicate( can_generate_more_pages ) )
+            restarted_gallery_seed = gallery_seed.GenerateRestartedDuplicate( can_generate_more_pages )
             
-        
-        self._gallery_seed_log.AddGallerySeeds( new_gallery_seeds )
-        self._gallery_seed_log.NotifyGallerySeedsUpdated( new_gallery_seeds )
+            self._gallery_seed_log.AddGallerySeeds( ( restarted_gallery_seed, ), parent_gallery_seed = gallery_seed )
+            
         
     
     def _UpdateListCtrl( self, gallery_seeds ):

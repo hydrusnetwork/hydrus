@@ -83,6 +83,27 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
         
+        if len( metadata_routers ) > 0:
+            
+            message = 'You have some default metadata sidecar settings, most likely from a previous file export. They look like this:'
+            message += os.linesep * 2
+            message += os.linesep.join( [ router.ToString( pretty = True ) for router in metadata_routers ] )
+            message += os.linesep * 2
+            message += 'Do you want these in the new export folder?'
+
+            ( result, cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, no_label = 'no, I want an empty sidecar list', check_for_cancelled = True )
+            
+            if cancelled:
+                
+                return
+                
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                metadata_routers = []
+                
+            
+        
         period = 15 * 60
         
         export_folder = ClientExportingFiles.ExportFolder(

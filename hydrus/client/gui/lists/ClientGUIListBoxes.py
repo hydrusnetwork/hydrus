@@ -1489,6 +1489,8 @@ class ListBox( QW.QScrollArea ):
                 
             
         
+        self._SelectionChanged()
+        
         self.widget().update()
         
     
@@ -1779,6 +1781,11 @@ class ListBox( QW.QScrollArea ):
     def _SelectAll( self ):
         
         self._selected_terms = set( self._terms_to_logical_indices.keys() )
+        
+    
+    def _SelectionChanged( self ):
+        
+        pass
         
     
     def _SetVirtualSize( self ):
@@ -2169,6 +2176,7 @@ COPY_ALL_SUBTAGS_WITH_COUNTS = 7
 
 class ListBoxTags( ListBox ):
     
+    tagsSelected = QC.Signal( set )
     can_spawn_new_windows = True
     
     def __init__( self, parent, *args, tag_display_type: int = ClientTags.TAG_DISPLAY_STORAGE, **kwargs ):
@@ -2435,6 +2443,13 @@ class ListBoxTags( ListBox ):
     def _SelectFilesWithTags( self, select_type ):
         
         pass
+        
+    
+    def _SelectionChanged( self ):
+        
+        tags = set( self._GetTagsFromTerms( self._selected_terms ) )
+        
+        self.tagsSelected.emit( tags )
         
     
     def _UpdateBackgroundColour( self ):

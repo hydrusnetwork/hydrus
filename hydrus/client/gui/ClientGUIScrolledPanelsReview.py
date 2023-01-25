@@ -2450,15 +2450,6 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        label = 'Please note that delete and inbox time tracking are new so you may not have full data for them.'
-        
-        st = ClientGUICommon.BetterStaticText( self, label = label )
-        
-        st.setWordWrap( True )
-        st.setAlignment( QC.Qt.AlignCenter )
-        
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
         flip_deleted = QW.QCheckBox( 'show deleted', self )
         
         flip_deleted.setChecked( True )
@@ -3424,6 +3415,8 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         num_unimportable_mime_files = 0
         num_occupied_files = 0
         
+        num_sidecars = 0
+        
         while not HG.started_shutdown:
             
             if not self or not QP.isValid( self ):
@@ -3462,7 +3455,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
                 
             
-            if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files > 0:
+            if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files + num_sidecars > 0:
                 
                 if num_good_files == 0:
                     
@@ -3474,6 +3467,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
                 bad_comments = []
+                
+                if num_sidecars > 0:
+                    
+                    bad_comments.append( '{} looked like txt/json/xml sidecars'.format( HydrusData.ToHumanInt( num_sidecars ) ) )
+                    
                 
                 if num_empty_files > 0:
                     
@@ -3544,9 +3542,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 try:
                     
                     raw_paths = unparsed_paths_queue.get( block = False )
+
+                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
-                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
-                    
+                    num_sidecars += num_sidecars_this_loop
                     unparsed_paths.extend( paths )
                     
                 except queue.Empty:
@@ -3562,9 +3561,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 try:
                     
                     raw_paths = unparsed_paths_queue.get( timeout = 5 )
+
+                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
-                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
-                    
+                    num_sidecars += num_sidecars_this_loop
                     unparsed_paths.extend( paths )
                     
                 except queue.Empty:

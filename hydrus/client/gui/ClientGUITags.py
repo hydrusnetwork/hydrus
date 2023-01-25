@@ -2298,6 +2298,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
             
             self._suggested_tags.mouseActivationOccurred.connect( self.SetTagBoxFocus )
             
+            self._tags_box.tagsSelected.connect( self._suggested_tags.SetSelectedTags )
+            
         
         def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
@@ -4473,17 +4475,32 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             current_dict = dict( current_pairs )
             
-            current_olds = set( current_dict.keys() )
-            
             for ( potential_old, potential_new ) in pairs:
                 
                 if potential_new in current_dict:
                     
                     loop_new = potential_new
                     
+                    seen_tags = set()
+                    
                     while loop_new in current_dict:
                         
+                        seen_tags.add( loop_new )
+                        
                         next_new = current_dict[ loop_new ]
+                        
+                        if next_new in seen_tags:
+                            
+                            QW.QMessageBox.warning( self, 'Loop Problem!', 'While trying to test the new pair(s) for potential loops, I think I ran across an existing loop! Please review everything and see if you can break any loops yourself.' )
+                            
+                            message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop manually. The tags involved in the loop are:'
+                            message += os.linesep * 2
+                            message += ', '.join( seen_tags )
+                            
+                            QW.QMessageBox.critical( self, 'Error', message )
+                            
+                            break
+                            
                         
                         if next_new == potential_old:
                             

@@ -1576,7 +1576,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if predicate_type == PREDICATE_TYPE_SYSTEM_MIME and value is not None:
             
-            value = tuple( ConvertSpecificFiletypesToSummary( value ) )
+            value = tuple( sorted( ConvertSpecificFiletypesToSummary( value ) ) )
             
         
         if predicate_type == PREDICATE_TYPE_OR_CONTAINER:
@@ -1771,6 +1771,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = serialisable_value
             
+            if self._predicate_type == PREDICATE_TYPE_SYSTEM_MIME and self._value is not None:
+                
+                self._value = tuple( sorted( ConvertSpecificFiletypesToSummary( self._value ) ) )
+                
+            
         
         if isinstance( self._value, list ):
             
@@ -1863,7 +1868,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 summary_mimes = ConvertSpecificFiletypesToSummary( specific_mimes )
                 
-                serialisable_value = tuple( summary_mimes )
+                serialisable_value = tuple( sorted( summary_mimes ) )
                 
             
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
@@ -3100,7 +3105,7 @@ class ParsedAutocompleteText( object ):
         return 'AC Tag Text: {}'.format( self.raw_input )
         
     
-    def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False, allow_unnamespaced_search_gives_any_namespace_wildcards: bool = True ) -> str:
+    def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False, allow_auto_wildcard_conversion: bool = False ) -> str:
         
         text = CollapseWildcardCharacters( self.raw_content )
         
@@ -3114,7 +3119,7 @@ class ParsedAutocompleteText( object ):
             text = ConvertTagToSearchable( text )
             
         
-        if allow_unnamespaced_search_gives_any_namespace_wildcards and self._tag_autocomplete_options.UnnamespacedSearchGivesAnyNamespaceWildcards():
+        if allow_auto_wildcard_conversion and self._tag_autocomplete_options.UnnamespacedSearchGivesAnyNamespaceWildcards():
             
             if ':' not in text:
                 
@@ -3149,12 +3154,12 @@ class ParsedAutocompleteText( object ):
     
     def GetAddTagPredicate( self ):
         
-        return Predicate( PREDICATE_TYPE_TAG, self.raw_content )
+        return Predicate( PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
         
     
-    def GetImmediateFileSearchPredicate( self ):
+    def GetImmediateFileSearchPredicate( self, allow_auto_wildcard_conversion ):
         
-        non_tag_predicates = self.GetNonTagFileSearchPredicates()
+        non_tag_predicates = self.GetNonTagFileSearchPredicates( allow_auto_wildcard_conversion )
         
         if len( non_tag_predicates ) > 0:
             
@@ -3166,7 +3171,7 @@ class ParsedAutocompleteText( object ):
         return tag_search_predicate
         
     
-    def GetNonTagFileSearchPredicates( self ):
+    def GetNonTagFileSearchPredicates( self, allow_auto_wildcard_conversion ):
         
         predicates = []
         
@@ -3182,7 +3187,7 @@ class ParsedAutocompleteText( object ):
                 
                 predicates.append( predicate )
                 
-            elif self.IsExplicitWildcard():
+            elif self.IsExplicitWildcard( allow_auto_wildcard_conversion ):
                 
                 search_texts = []
                 
@@ -3199,7 +3204,7 @@ class ParsedAutocompleteText( object ):
                     
                     for always_autocompleting in always_autocompleting_values:
                         
-                        search_texts.append( self._GetSearchText( always_autocompleting, allow_unnamespaced_search_gives_any_namespace_wildcards = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
+                        search_texts.append( self._GetSearchText( always_autocompleting, allow_auto_wildcard_conversion = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
                         
                     
                 
@@ -3220,9 +3225,9 @@ class ParsedAutocompleteText( object ):
         return predicates
         
     
-    def GetSearchText( self, always_autocompleting: bool ):
+    def GetSearchText( self, always_autocompleting: bool, allow_auto_wildcard_conversion = True ):
         
-        return self._GetSearchText( always_autocompleting )
+        return self._GetSearchText( always_autocompleting, allow_auto_wildcard_conversion = allow_auto_wildcard_conversion )
         
     
     def GetTagAutocompleteOptions( self ):
@@ -3232,7 +3237,7 @@ class ParsedAutocompleteText( object ):
     
     def IsAcceptableForTagSearches( self ):
         
-        search_text = self._GetSearchText( False )
+        search_text = self._GetSearchText( False, allow_auto_wildcard_conversion = True )
         
         if search_text == '':
             
@@ -3267,7 +3272,7 @@ class ParsedAutocompleteText( object ):
     
     def IsAcceptableForFileSearches( self ):
         
-        search_text = self._GetSearchText( False )
+        search_text = self._GetSearchText( False, allow_auto_wildcard_conversion = True )
         
         if len( search_text ) == 0:
             
@@ -3287,10 +3292,10 @@ class ParsedAutocompleteText( object ):
         return self.raw_input == ''
         
     
-    def IsExplicitWildcard( self ):
+    def IsExplicitWildcard( self, allow_auto_wildcard_conversion ):
         
         # user has intentionally put a '*' in
-        return '*' in self.raw_content or self._GetSearchText( False ).startswith( '*:' )
+        return '*' in self.raw_content or self._GetSearchText( False, allow_auto_wildcard_conversion = allow_auto_wildcard_conversion ).startswith( '*:' )
         
     
     def IsNamespaceSearch( self ):
@@ -3300,9 +3305,9 @@ class ParsedAutocompleteText( object ):
         return SearchTextIsNamespaceFetchAll( search_text ) or SearchTextIsNamespaceBareFetchAll( search_text )
         
     
-    def IsTagSearch( self ):
+    def IsTagSearch( self, allow_auto_wildcard_conversion ):
         
-        if self.IsEmpty() or self.IsExplicitWildcard() or self.IsNamespaceSearch():
+        if self.IsEmpty() or self.IsExplicitWildcard( allow_auto_wildcard_conversion ) or self.IsNamespaceSearch():
             
             return False
             

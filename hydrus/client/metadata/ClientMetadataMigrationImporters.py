@@ -153,6 +153,9 @@ class SingleFileMetadataImporterMediaTags( HydrusSerialisable.SerialisableBase, 
         
         tags = media_result.GetTagsManager().GetCurrent( self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
         
+        # turning ::) into :)
+        tags = { HydrusText.re_leading_double_colon.sub( ':', tag ) for tag in tags }
+        
         if self._string_processor.MakesChanges():
             
             tags = self._string_processor.ProcessStrings( tags )

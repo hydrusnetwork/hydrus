@@ -482,6 +482,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'human_bytes_sig_figs' ] = 3
         
+        self._dictionary[ 'integers' ][ 'ms_to_wait_between_physical_file_deletes' ] = 250
+        
         #
         
         self._dictionary[ 'keys' ] = {}

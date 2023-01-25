@@ -606,6 +606,11 @@ def DebugPrint( debug_info ):
     
 def DedupeList( xs: typing.Iterable ):
     
+    if isinstance( xs, set ):
+        
+        return list( xs )
+        
+    
     xs_seen = set()
     
     xs_return = []
@@ -1381,7 +1386,7 @@ def RestartProcess():
         
         # exe is python's exe, me is the script
         
-        args = [ sys.executable ] + sys.argv
+        args = [ exe ] + sys.argv
         
     else:
         
@@ -1398,6 +1403,7 @@ def RestartProcess():
     
     os.execv( exe, args )
     
+
 def SampleSetByGettingFirst( s: set, n ):
     
     # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
