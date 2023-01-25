@@ -5212,7 +5212,7 @@ class DB( HydrusDB.HydrusDB ):
         return results
         
     
-    def _GetRelatedTagsNew( self, file_service_key, tag_service_key, search_tags, max_results = 100, concurrence_threshold = 0.04, total_search_tag_count_threshold = 500000 ):
+    def _GetRelatedTagsNew( self, file_service_key, tag_service_key, search_tags, max_results = 100, concurrence_threshold = 0.04, total_search_tag_count_threshold = 25000 ):
         
         # a user provided the basic idea here
         
@@ -5378,7 +5378,7 @@ class DB( HydrusDB.HydrusDB ):
                     score /= 3
                     
                 
-                tag_ids_to_scores[ tag_id ] += score
+                tag_ids_to_scores[ tag_id ] += float( score )
                 
             
         
