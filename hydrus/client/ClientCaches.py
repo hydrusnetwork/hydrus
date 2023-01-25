@@ -42,15 +42,17 @@ class DataCache( object ):
         if key not in self._keys_to_data:
             
             return
-            
+
+
+        ( data, size_estimate ) = self._keys_to_data[ key ]
         
         del self._keys_to_data[ key ]
         
-        self._RecalcMemoryUsage()
+        self._total_estimated_memory_footprint -= size_estimate
         
         if HG.cache_report_mode:
             
-            HydrusData.ShowText( 'Cache "{}" removing "{}". Current size {}.'.format( self._name, key, HydrusData.ConvertValueRangeToBytes( self._total_estimated_memory_footprint, self._cache_size ) ) )
+            HydrusData.ShowText( 'Cache "{}" removing "{}", size "{}". Current size {}.'.format( self._name, key, HydrusData.ToHumanBytes( size_estimate ), HydrusData.ConvertValueRangeToBytes( self._total_estimated_memory_footprint, self._cache_size ) ) )
             
         
     
@@ -61,9 +63,27 @@ class DataCache( object ):
         self._Delete( deletee_key )
         
     
-    def _RecalcMemoryUsage( self ):
+    def _GetData( self, key ):
         
-        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in self._keys_to_data.values() ) )
+        if key not in self._keys_to_data:
+            
+            raise Exception( 'Cache error! Looking for {}, but it was missing.'.format( key ) )
+            
+        
+        self._TouchKey( key )
+
+        ( data, size_estimate ) = self._keys_to_data[ key ]
+        
+        new_estimate = data.GetEstimatedMemoryFootprint()
+        
+        if new_estimate != size_estimate:
+            
+            self._total_estimated_memory_footprint += new_estimate - size_estimate
+            
+            self._keys_to_data[ key ] = ( data, new_estimate )
+            
+        
+        return data
         
     
     def _TouchKey( self, key ):
@@ -99,11 +119,13 @@ class DataCache( object ):
                     self._DeleteItem()
                     
                 
-                self._keys_to_data[ key ] = data
+                size_estimate = data.GetEstimatedMemoryFootprint()
+                
+                self._keys_to_data[ key ] = ( data, size_estimate )
+                
+                self._total_estimated_memory_footprint += size_estimate
                 
                 self._TouchKey( key )
-                
-                self._RecalcMemoryUsage()
                 
                 if HG.cache_report_mode:
                     
@@ -111,7 +133,7 @@ class DataCache( object ):
                         'Cache "{}" adding "{}" ({}). Current size {}.'.format(
                             self._name,
                             key,
-                            HydrusData.ToHumanBytes( data.GetEstimatedMemoryFootprint() ),
+                            HydrusData.ToHumanBytes( size_estimate ),
                             HydrusData.ConvertValueRangeToBytes( self._total_estimated_memory_footprint, self._cache_size )
                         )
                     )
@@ -132,14 +154,7 @@ class DataCache( object ):
         
         with self._lock:
             
-            if key not in self._keys_to_data:
-                
-                raise Exception( 'Cache error! Looking for {}, but it was missing.'.format( key ) )
-                
-            
-            self._TouchKey( key )
-            
-            return self._keys_to_data[ key ]
+            return self._GetData( key )
             
         
     
@@ -149,9 +164,7 @@ class DataCache( object ):
             
             if key in self._keys_to_data:
                 
-                self._TouchKey( key )
-                
-                return self._keys_to_data[ key ]
+                return self._GetData( key )
                 
             else:
                 
@@ -179,6 +192,11 @@ class DataCache( object ):
     def MaintainCache( self ):
         
         with self._lock:
+            
+            while self._total_estimated_memory_footprint > self._cache_size:
+                
+                self._DeleteItem()
+                
             
             while True:
                 

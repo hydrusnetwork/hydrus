@@ -46,6 +46,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'session_key', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAccountSessionKey( self._service, self._client_requests_domain ) )
         root.putChild( b'verify_access_key', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAccountVerify( self._service, self._client_requests_domain ) )
         root.putChild( b'get_services', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetServices( self._service, self._client_requests_domain ) )
+        root.putChild( b'get_service', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetService( self._service, self._client_requests_domain ) )
         
         add_files = NoResource()
         
@@ -63,7 +64,6 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         add_tags.putChild( b'add_tags', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddTagsAddTags( self._service, self._client_requests_domain ) )
         add_tags.putChild( b'clean_tags', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddTagsCleanTags( self._service, self._client_requests_domain ) )
-        add_tags.putChild( b'get_tag_services', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddTagsGetTagServices( self._service, self._client_requests_domain ) )
         add_tags.putChild( b'search_tags', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddTagsSearchTags( self._service, self._client_requests_domain ) )
         
         add_urls = NoResource()

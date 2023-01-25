@@ -189,7 +189,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            limits_max = 10000
+            limits_max = 50000
             
         else:
             

@@ -2098,7 +2098,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
         event_pos = self.mapFromGlobal( QG.QCursor.pos() )
         
-        mouse_currently_shown = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
+        mouse_currently_shown = self.cursor().shape() == QC.Qt.ArrowCursor
         show_mouse = mouse_currently_shown
         
         is_dragging = event.buttons() & QC.Qt.LeftButton and self._last_drag_pos is not None

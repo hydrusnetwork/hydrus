@@ -27,6 +27,7 @@ nav:
   - Advanced:
     - advanced_siblings.md
     - advanced_parents.md
+    - advanced_sidecars.md
     - advanced_multiple_local_file_services.md
     - advanced.md
     - reducing_lag.md

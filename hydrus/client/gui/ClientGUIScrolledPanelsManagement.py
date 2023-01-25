@@ -942,6 +942,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin = QW.QCheckBox( self )
             
+            self._ms_to_wait_between_physical_file_deletes = ClientGUICommon.BetterSpinBox( self, min=20, max = 5000 )
+            tt = 'Deleting a file from a hard disk can be resource expensive, so when files leave the trash, the actual physical file delete happens later, in the background. The operation is spread out so as not to give you lag spikes.'
+            self._ms_to_wait_between_physical_file_deletes.setToolTip( tt )
+            
             self._confirm_trash = QW.QCheckBox( self )
             self._confirm_archive = QW.QCheckBox( self )
             
@@ -987,6 +991,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin.setChecked( HC.options[ 'delete_to_recycle_bin' ] )
             
+            self._ms_to_wait_between_physical_file_deletes.setValue( self._new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) )
+            
             self._confirm_trash.setChecked( HC.options[ 'confirm_trash' ] )
             
             self._confirm_archive.setChecked( HC.options[ 'confirm_archive' ] )
@@ -1028,7 +1034,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'Confirm when copying files across local file services: ', self._confirm_multiple_local_file_services_copy ) )
             rows.append( ( 'Confirm when moving files across local file services: ', self._confirm_multiple_local_file_services_move ) )
-            rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
+            rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
+            rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
@@ -1119,6 +1126,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.isChecked()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', self._ms_to_wait_between_physical_file_deletes.value() )
             
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_copy', self._confirm_multiple_local_file_services_copy.isChecked() )
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_move', self._confirm_multiple_local_file_services_move.isChecked() )
@@ -3861,14 +3870,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Show related tags on single-file manage tags windows: ', self._show_related_tags ) )
+            rows.append( ( 'Show related tags: ', self._show_related_tags ) )
             rows.append( ( 'Initial search duration (ms): ', self._related_tags_search_1_duration_ms ) )
             rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
             rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
-            desc = 'This will search the database for statistically related tags based on what your focused file already has.'
+            desc = 'This will search the database for tags statistically related to what your files already have.'
             
             QP.AddToLayout( panel_vbox, ClientGUICommon.BetterStaticText(suggested_tags_related_panel,desc), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )

@@ -461,9 +461,9 @@ class TestTagObjects( unittest.TestCase ):
             self.assertEqual( pat.IsAcceptableForFileSearches(), values[0] )
             self.assertEqual( pat.IsAcceptableForTagSearches(), values[1] )
             self.assertEqual( pat.IsEmpty(), values[2] )
-            self.assertEqual( pat.IsExplicitWildcard(), values[3] )
+            self.assertEqual( pat.IsExplicitWildcard( True ), values[3] )
             self.assertEqual( pat.IsNamespaceSearch(), values[4] )
-            self.assertEqual( pat.IsTagSearch(), values[5] )
+            self.assertEqual( pat.IsTagSearch( True ), values[5] )
             self.assertEqual( pat.inclusive, values[6] )
             
         
@@ -475,8 +475,8 @@ class TestTagObjects( unittest.TestCase ):
         
         def read_predicate_tests( pat: ClientSearch.ParsedAutocompleteText, values ):
             
-            self.assertEqual( pat.GetImmediateFileSearchPredicate(), values[0] )
-            self.assertEqual( pat.GetNonTagFileSearchPredicates(), values[1] )
+            self.assertEqual( pat.GetImmediateFileSearchPredicate( True ), values[0] )
+            self.assertEqual( pat.GetNonTagFileSearchPredicates( True ), values[1] )
             
         
         def write_predicate_tests( pat: ClientSearch.ParsedAutocompleteText, values ):

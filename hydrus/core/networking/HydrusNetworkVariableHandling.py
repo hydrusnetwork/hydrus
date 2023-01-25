@@ -2,6 +2,7 @@ import collections
 import json
 import os
 import traceback
+import typing
 import urllib
 
 CBOR_AVAILABLE = False
@@ -300,7 +301,7 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes ):
     
     return args
     
-def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_params, json_params, json_byte_list_params ):
+def ParseTwistedRequestGETArgs( requests_args: dict, int_params, byte_params, string_params, json_params, json_byte_list_params ):
     
     args = ParsedRequestArguments()
     
@@ -311,9 +312,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
         raise HydrusExceptions.NotAcceptable( 'Sorry, this service does not support CBOR!' )
         
     
-    for name_bytes in requests_args:
-        
-        values_bytes = requests_args[ name_bytes ]
+    for ( name_bytes, values_bytes ) in requests_args.items():
         
         try:
             
@@ -413,6 +412,84 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
     
     return args
     
+
+variable_type_to_text_lookup = collections.defaultdict( lambda: 'unknown!' )
+
+variable_type_to_text_lookup[ int ] = 'integer'
+variable_type_to_text_lookup[ str ] = 'string'
+variable_type_to_text_lookup[ bytes ] = 'hex-encoded bytestring'
+variable_type_to_text_lookup[ bool ] = 'boolean'
+variable_type_to_text_lookup[ list ] = 'list'
+variable_type_to_text_lookup[ dict ] = 'object/dict'
+
+def GetValueFromDict( dictionary: dict, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None, none_on_missing = False ):
+    
+    # not None because in JSON sometimes people put 'null' to mean 'did not enter this optional parameter'
+    if key in dictionary and dictionary[ key ] is not None:
+        
+        value = dictionary[ key ]
+        
+        TestVariableType( key, value, expected_type, expected_list_type = expected_list_type, expected_dict_types = expected_dict_types )
+        
+        return value
+        
+    else:
+        
+        if default_value is None and not none_on_missing:
+            
+            raise HydrusExceptions.BadRequestException( 'The required parameter "{}" was missing!'.format( key ) )
+            
+        else:
+            
+            return default_value
+            
+        
+    
+
+def TestVariableType( name: str, value: typing.Any, expected_type: type, expected_list_type = None, expected_dict_types = None, allowed_values = None ):
+    
+    if not isinstance( value, expected_type ):
+        
+        type_error_text = variable_type_to_text_lookup[ expected_type ]
+        
+        raise HydrusExceptions.BadRequestException( 'The parameter "{}", with value "{}", was not the expected type: {}!'.format( name, value, type_error_text ) )
+        
+    
+    if allowed_values is not None and value not in allowed_values:
+        
+        raise HydrusExceptions.BadRequestException( 'The parameter "{}", with value "{}", was not in the allowed values: {}!'.format( name, value, allowed_values ) )
+        
+    
+    if expected_type is list and expected_list_type is not None:
+        
+        for item in value:
+            
+            if not isinstance( item, expected_list_type ):
+                
+                raise HydrusExceptions.BadRequestException( 'The list parameter "{}" held an item, "{}" that was {} and not the expected type: {}!'.format( name, item, type( item ), variable_type_to_text_lookup[ expected_list_type ] ) )
+                
+            
+        
+    
+    if expected_type is dict and expected_dict_types is not None:
+        
+        ( expected_key_type, expected_value_type ) = expected_dict_types
+        
+        for ( dict_key, dict_value ) in value.items():
+            
+            if not isinstance( dict_key, expected_key_type ):
+                
+                raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a key, "{}" that was {} and not the expected type: {}!'.format( name, dict_key, type( dict_key ), variable_type_to_text_lookup[ expected_key_type ] ) )
+                
+            
+            if not isinstance( dict_value, expected_value_type ):
+                
+                raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a value, "{}" that was {} and not the expected type: {}!'.format( name, dict_value, type( dict_value ), variable_type_to_text_lookup[ expected_value_type ] ) )
+                
+            
+        
+    
+
 class ParsedRequestArguments( dict ):
     
     def __missing__( self, key ):
@@ -422,75 +499,6 @@ class ParsedRequestArguments( dict ):
     
     def GetValue( self, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None, none_on_missing = False ):
         
-        # not None because in JSON sometimes people put 'null' to mean 'did not enter this optional parameter'
-        if key in self and self[ key ] is not None:
-            
-            value = self[ key ]
-            
-            error_text_lookup = collections.defaultdict( lambda: 'unknown!' )
-            
-            error_text_lookup[ int ] = 'integer'
-            error_text_lookup[ str ] = 'string'
-            error_text_lookup[ bytes ] = 'hex-encoded bytestring'
-            error_text_lookup[ bool ] = 'boolean'
-            error_text_lookup[ list ] = 'list'
-            error_text_lookup[ dict ] = 'object/dict'
-            
-            if not isinstance( value, expected_type ):
-                
-                if expected_type in error_text_lookup:
-                    
-                    type_error_text = error_text_lookup[ expected_type ]
-                    
-                else:
-                    
-                    type_error_text = 'unknown!'
-                    
-                
-                raise HydrusExceptions.BadRequestException( 'The parameter "{}" was not the expected type: {}!'.format( key, type_error_text ) )
-                
-            
-            if expected_type is list and expected_list_type is not None:
-                
-                for item in value:
-                    
-                    if not isinstance( item, expected_list_type ):
-                        
-                        raise HydrusExceptions.BadRequestException( 'The list parameter "{}" held an item, "{}" that was {} and not the expected type: {}!'.format( key, item, type( item ), error_text_lookup[ expected_list_type ] ) )
-                        
-                    
-                
-            
-            if expected_type is dict and expected_dict_types is not None:
-                
-                ( expected_key_type, expected_value_type ) = expected_dict_types
-                
-                for ( dict_key, dict_value ) in value.items():
-                    
-                    if not isinstance( dict_key, expected_key_type ):
-                        
-                        raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a key, "{}" that was {} and not the expected type: {}!'.format( key, dict_key, type( dict_key ), error_text_lookup[ expected_key_type ] ) )
-                        
-                    
-                    if not isinstance( dict_value, expected_value_type ):
-                        
-                        raise HydrusExceptions.BadRequestException( 'The Object parameter "{}" held a value, "{}" that was {} and not the expected type: {}!'.format( key, dict_value, type( dict_value ), error_text_lookup[ expected_value_type ] ) )
-                        
-                    
-                
-            
-            return value
-            
-        else:
-            
-            if default_value is None and not none_on_missing:
-                
-                raise HydrusExceptions.BadRequestException( 'The required parameter "{}" was missing!'.format( key ) )
-                
-            else:
-                
-                return default_value
-                
-            
+        return GetValueFromDict( self, key, expected_type, expected_list_type = expected_list_type, expected_dict_types = expected_dict_types, default_value = default_value, none_on_missing = none_on_missing )
         
     

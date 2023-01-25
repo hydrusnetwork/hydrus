@@ -664,6 +664,7 @@ class Page( QW.QWidget ):
         
         d[ 'name' ] = self._management_controller.GetPageName()
         d[ 'page_key' ] = self._page_key.hex()
+        d[ 'page_state' ] = self.GetPageState()
         d[ 'page_type' ] = self._management_controller.GetType()
         
         management_info = self._management_controller.GetAPIInfoDict( simple )
@@ -770,6 +771,18 @@ class Page( QW.QWidget ):
         return { self._page_key }
         
     
+    def GetPageState( self ) -> int:
+        
+        if self._initialised:
+            
+            return self._management_panel.GetPageState()
+            
+        else:
+            
+            return CC.PAGE_STATE_INITIALISING
+            
+        
+    
     def GetParentNotebook( self ):
         
         return self._parent_notebook
@@ -819,6 +832,7 @@ class Page( QW.QWidget ):
         
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
+        root[ 'page_state' ] = self.GetPageState()
         root[ 'page_type' ] = self._management_controller.GetType()
         root[ 'selected' ] = is_selected
         
@@ -2286,7 +2300,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def GetAPIInfoDict( self, simple ):
         
-        return {}
+        return {
+            'name' : self.GetName(),
+            'page_key' : self._page_key.hex(),
+            'page_state' : self.GetPageState(),
+            'page_type' : ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
+        }
         
     
     def GetCurrentGUISession( self, name: str, only_changed_page_data: bool, about_to_save: bool ):
@@ -2540,6 +2559,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._GetPages()
         
     
+    def GetPageState( self ) -> int:
+        
+        return CC.PAGE_STATE_NORMAL
+        
+    
     def GetPrettyStatusForStatusBar( self ):
         
         ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
@@ -2596,6 +2620,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
+        root[ 'page_state' ] = self.GetPageState()
         root[ 'page_type' ] = ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
         root[ 'selected' ] = is_selected
         root[ 'pages' ] = my_pages_list

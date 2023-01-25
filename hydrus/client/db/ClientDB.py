@@ -5158,6 +5158,246 @@ class DB( HydrusDB.HydrusDB ):
         return predicates
         
     
+    def _GetRelatedTagsNewOneTag( self, tag_display_type, file_service_id, tag_service_id, search_tag_id ):
+        
+        # a user provided the basic idea here
+        
+        # we are saying get me all the tags for all the hashes this tag has
+        # specifying namespace is critical to increase search speed, otherwise we actually are searching all tags for tags
+        # we also call this with single specific file domains to keep things fast
+        
+        # also this thing searches in fixed file domain to get fast
+        
+        # this table selection is hacky as anything, but simpler than GetMappingAndTagTables for now
+        
+        mappings_table_names = []
+        
+        if file_service_id == self.modules_services.combined_file_service_id:
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+            
+            mappings_table_names.extend( [ current_mappings_table_name, pending_mappings_table_name ] )
+            
+        else:
+            
+            if tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+                
+                ( cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
+                
+                mappings_table_names.extend( [ cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ] )
+                
+            else:
+                
+                statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNames( file_service_id, tag_service_id )
+                
+                mappings_table_names.extend( [ statuses_to_table_names[ HC.CONTENT_STATUS_CURRENT ], statuses_to_table_names[ HC.CONTENT_STATUS_PENDING ] ] )
+                
+            
+        
+        results = collections.Counter()
+        
+        tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
+        
+        # while this searches pending and current tags, it does not cross-reference current and pending on the same file, oh well!
+        
+        for mappings_table_name in mappings_table_names:
+            
+            search_predicate = 'hash_id IN ( SELECT hash_id FROM {} WHERE tag_id = {} )'.format( mappings_table_name, search_tag_id )
+            
+            query = 'SELECT tag_id, COUNT( * ) FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {} GROUP BY subtag_id;'.format( mappings_table_name, tags_table_name, search_predicate )
+            
+            results.update( dict( self._Execute( query ).fetchall() ) )
+            
+        
+        return results
+        
+    
+    def _GetRelatedTagsNew( self, file_service_key, tag_service_key, search_tags, max_results = 100, concurrence_threshold = 0.04, total_search_tag_count_threshold = 500000 ):
+        
+        # a user provided the basic idea here
+        
+        if len( search_tags ) == 0:
+            
+            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ]
+            
+        
+        tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL
+        
+        tag_service_id = self.modules_services.GetServiceId( tag_service_key )
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        
+        if tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+            
+            search_tags = self.modules_tag_siblings.GetIdeals( tag_display_type, tag_service_key, search_tags )
+            
+            # I had a thing here that added the parents, but it gave some whack results compared to what you expected
+            
+        
+        search_tag_ids_to_search_tags = self.modules_tags_local_cache.GetTagIdsToTags( tags = search_tags )
+        
+        with self._MakeTemporaryIntegerTable( search_tag_ids_to_search_tags.keys(), 'tag_id' ) as temp_tag_id_table_name:
+            
+            search_tag_ids_to_total_counts = collections.Counter( { tag_id : current_count + pending_count for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) } )
+            
+        
+        #
+        
+        search_tags = set()
+        
+        for ( search_tag_id, count ) in search_tag_ids_to_total_counts.items():
+            
+            # pending only
+            if count == 0:
+                
+                continue
+                
+            
+            search_tags.add( search_tag_ids_to_search_tags[ search_tag_id ] )
+            
+        
+        if len( search_tags ) == 0:
+            
+            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'not enough data in search domain' ) ]
+            
+        
+        #
+        
+        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: row[1] )
+        
+        search_tags = set()
+        total_count = 0
+        
+        # TODO: I think I would rather rework this into a time threshold thing like the old related tags stuff.
+        # so, should ditch the culling and instead make all the requests cancellable. just keep searching until we are out of time, then put results together
+        
+        # TODO: Another option as I vacillate on 'all my files' vs 'all known files' would be to incorporate that into the search timer
+        # do all my files first, then replace that with all known files results until we run out of time (only do this for repositories)
+        
+        # we don't really want to use '1girl' and friends as search tags here, since the search domain is so huge
+        # so, we go for the smallest count tags first. they have interesting suggestions
+        # searching all known files is gonkmode, so we curtail our max search size
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            total_search_tag_count_threshold /= 25
+            
+        
+        for ( search_tag_id, count ) in search_tag_ids_flat_sorted_ascending:
+            
+            # we don't want the total domain to be too large either. death by a thousand cuts
+            if total_count + count > total_search_tag_count_threshold:
+                
+                break
+                
+            
+            total_count += count
+            
+            search_tags.add( search_tag_ids_to_search_tags[ search_tag_id ] )
+            
+        
+        if len( search_tags ) == 0:
+            
+            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'search domain too big' ) ]
+            
+        
+        #
+        
+        search_tag_ids_to_tag_ids_to_matching_counts = {}
+        
+        for search_tag in search_tags:
+            
+            search_tag_id = self.modules_tags_local_cache.GetTagId( search_tag )
+            
+            tag_ids_to_matching_counts = self._GetRelatedTagsNewOneTag( tag_display_type, file_service_id, tag_service_id, search_tag_id )
+            
+            if search_tag_id in tag_ids_to_matching_counts:
+                
+                del tag_ids_to_matching_counts[ search_tag_id ] # duh, don't recommend your 100% matching self
+                
+            
+            search_tag_ids_to_tag_ids_to_matching_counts[ search_tag_id ] = tag_ids_to_matching_counts
+            
+        
+        #
+        
+        # ok we have a bunch of counts here for different search tags, so let's figure out some normalised scores and merge them all
+        #
+        # the master score is: number matching mappings found / square_root( suggestion_tag_count * search_tag_count )
+        #
+        # I don't really know what this *is*, but the user did it and it seems to make nice scores, so hooray
+        # the dude said it was arbitrary and could do with tuning, so we'll see how it goes
+        
+        all_tag_ids = set()
+        
+        for tag_ids_to_matching_counts in search_tag_ids_to_tag_ids_to_matching_counts.values():
+            
+            all_tag_ids.update( tag_ids_to_matching_counts.keys() )
+            
+        
+        all_tag_ids.difference_update( search_tag_ids_to_search_tags.keys() )
+        
+        with self._MakeTemporaryIntegerTable( all_tag_ids, 'tag_id' ) as temp_tag_id_table_name:
+            
+            tag_ids_to_total_counts = { tag_id : current_count + pending_count for ( tag_id, current_count, pending_count ) in self.modules_mappings_counts.GetCountsForTags( tag_display_type, file_service_id, tag_service_id, temp_tag_id_table_name ) }
+            
+        
+        tag_ids_to_total_counts.update( search_tag_ids_to_total_counts )
+        
+        tag_ids_to_scores = collections.Counter()
+        
+        for ( search_tag_id, tag_ids_to_matching_counts ) in search_tag_ids_to_tag_ids_to_matching_counts.items():
+            
+            if search_tag_id not in tag_ids_to_total_counts:
+                
+                continue
+                
+            
+            search_tag_count = tag_ids_to_total_counts[ search_tag_id ]
+            
+            search_tag_is_unnamespaced = HydrusTags.IsUnnamespaced( search_tag_ids_to_search_tags[ search_tag_id ] )
+            
+            for ( tag_id, matching_count ) in tag_ids_to_matching_counts.items():
+                
+                if matching_count / search_tag_count < concurrence_threshold:
+                    
+                    continue
+                    
+                
+                if tag_id not in tag_ids_to_total_counts:
+                    
+                    continue
+                    
+                
+                suggestion_tag_count = tag_ids_to_total_counts[ tag_id ]
+                
+                score = matching_count / ( ( suggestion_tag_count * search_tag_count ) ** 0.5 )
+                
+                # sophisticated hydev score-tuning
+                if search_tag_is_unnamespaced:
+                    
+                    score /= 3
+                    
+                
+                tag_ids_to_scores[ tag_id ] += score
+                
+            
+        
+        results_flat_sorted_descending = sorted( tag_ids_to_scores.items(), key = lambda row: row[1], reverse = True )
+        
+        tag_ids_to_scores = dict( results_flat_sorted_descending[ : max_results ] )
+        
+        #
+        
+        inclusive = True
+        pending_count = 0
+        
+        tag_ids_to_full_counts = { tag_id : ( int( score * 1000 ), None, pending_count, None ) for ( tag_id, score ) in tag_ids_to_scores.items() }
+        
+        predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, tag_service_id, tag_ids_to_full_counts, inclusive )
+        
+        return predicates
+        
+    
     def _GetRepositoryThumbnailHashesIDoNotHave( self, service_key ):
         
         service_id = self.modules_services.GetServiceId( service_key )
@@ -7379,6 +7619,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self.modules_services.GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self.modules_similar_files.GetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
+        elif action == 'related_tags_new': result = self._GetRelatedTagsNew( *args, **kwargs )
         elif action == 'tag_display_application': result = self.modules_tag_display.GetApplication( *args, **kwargs )
         elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
         elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
@@ -10757,6 +10998,116 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Updating your duplicate metadata merge options for the new note-merge support failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 513:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( 'cleaning some surplus records' )
+                
+                # clear deletion record wasn't purging on 'all my files'
+                
+                all_my_deleted_hash_ids = set( self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_media_service_id ) )
+                
+                all_local_current_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_deleted_hash_ids = self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                erroneous_hash_ids = all_my_deleted_hash_ids.difference( all_local_current_hash_ids ).difference( all_local_deleted_hash_ids )
+                
+                if len( erroneous_hash_ids ) > 0:
+                    
+                    service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord( erroneous_hash_ids )
+                    
+                    self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ( -num_cleared, clear_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) for ( clear_service_id, num_cleared ) in service_ids_to_nums_cleared.items() ) )
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to clean up some bad delete records failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                def ask_what_to_do_twitter_stuff():
+                    
+                    message = 'Twitter removed their old API that we were using, breaking all the old downloaders! I am going to delete your old twitter downloaders and add a new limited one that can only get the first ~20 tweets of a profile. Make sure to check your subscriptions are linked to it, and you might want to speed up their check times! OK?'
+                    
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Swap to new twitter downloader?', yes_label = 'do it', no_label = 'do not do it, I need to keep the old broken stuff' )
+                    
+                    return result == QW.QDialog.Accepted
+                    
+                
+                do_twitter_stuff = self._controller.CallBlockingToQt( None, ask_what_to_do_twitter_stuff )
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'danbooru file page parser - get webm ugoira',
+                    'deviant art file page parser',
+                    'pixiv file page api parser'
+                ] )
+                
+                if do_twitter_stuff:
+                    
+                    domain_manager.DeleteGUGs( [
+                        'twitter collection lookup',
+                        'twitter likes lookup',
+                        'twitter list lookup'
+                    ] )
+                    
+                    url_classes = domain_manager.GetURLClasses()
+                    
+                    deletee_url_class_names = [ url_class.GetName() for url_class in url_classes if url_class.GetName() == 'twitter list' or url_class.GetName().startswith( 'twitter syndication api' ) ]
+                    
+                    domain_manager.DeleteURLClasses( deletee_url_class_names )
+                    
+                    # we're going to leave the one spare non-overwritten parser in place
+                    
+                    #
+                    
+                    domain_manager.OverwriteDefaultGUGs( [
+                        'twitter profile lookup',
+                        'twitter profile lookup (with replies)'
+                    ] )
+                    
+                    domain_manager.OverwriteDefaultURLClasses( [
+                        'twitter tweet (i/web/status)',
+                        'twitter tweet',
+                        'twitter syndication api tweet-result',
+                        'twitter syndication api timeline-profile'
+                    ] )
+                    
+                    domain_manager.OverwriteDefaultParsers( [
+                        'twitter syndication api timeline-profile parser',
+                        'twitter syndication api tweet parser'
+                    ] )
+                    
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

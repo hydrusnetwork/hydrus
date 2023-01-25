@@ -452,7 +452,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'Hydrus-Client-API-Access-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Access-Key' : 'abcd', 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -464,7 +464,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 403 )
         
-        body_dict = { 'Hydrus-Client-API-Session-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Session-Key' : 'abcd', 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -505,7 +505,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -521,7 +521,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearWrites( 'content_updates' )
         
-        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -728,6 +728,15 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
+        get_service_expected_result = {
+            'service' : {
+                'name' : 'repository updates',
+                'service_key' : '7265706f7369746f72792075706461746573',
+                'type': 20,
+                'type_pretty': 'local update file domain'
+            }
+        }
+        
         for api_permissions in should_work.union( should_break ):
             
             access_key_hex = api_permissions.GetAccessKey().hex()
@@ -758,6 +767,55 @@ class TestClientAPI( unittest.TestCase ):
                 
                 self.assertEqual( response.status, 403 )
                 
+            
+            #
+            
+            path = '/get_service?service_name=repository%20updates'
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            if api_permissions in should_work:
+                
+                text = str( data, 'utf-8' )
+                
+                self.assertEqual( response.status, 200 )
+                
+                d = json.loads( text )
+                
+                self.assertEqual( d, get_service_expected_result )
+                
+            else:
+                
+                self.assertEqual( response.status, 403 )
+                
+            
+            path = '/get_service?service_key={}'.format( CC.LOCAL_UPDATE_SERVICE_KEY.hex() )
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            if api_permissions in should_work:
+                
+                text = str( data, 'utf-8' )
+                
+                self.assertEqual( response.status, 200 )
+                
+                d = json.loads( text )
+                
+                self.assertEqual( d, get_service_expected_result )
+                
+            else:
+                
+                self.assertEqual( response.status, 403 )
+                
+            
             
         
     
@@ -966,7 +1024,9 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_files/delete_files'
         
-        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_name' : 'not existing service' }
+        not_existing_service_hex = os.urandom( 32 ).hex()
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : not_existing_service_hex }
         
         body = json.dumps( body_dict )
         
@@ -980,7 +1040,7 @@ class TestClientAPI( unittest.TestCase ):
         
         text = str( data, 'utf-8' )
         
-        self.assertIn( 'not existing service', text ) # error message should be complaining about it
+        self.assertIn( not_existing_service_hex, text ) # error message should be complaining about it
         
         #
         
@@ -1036,7 +1096,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_files/undelete_files'
         
-        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_name' : 'not existing service' }
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : not_existing_service_hex }
         
         body = json.dumps( body_dict )
         
@@ -1050,7 +1110,7 @@ class TestClientAPI( unittest.TestCase ):
         
         text = str( data, 'utf-8' )
         
-        self.assertIn( 'not existing service', text ) # error message should be complaining about it
+        self.assertIn( not_existing_service_hex, text ) # error message should be complaining about it
         
         #
         
@@ -1482,7 +1542,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'service_names_to_tags' : { 'my tags' : [ 'test' ] } }
+        body_dict = { 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test' ] } }
         
         body = json.dumps( body_dict )
         
@@ -1498,7 +1558,9 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'bad tag service' : [ 'test' ] } }
+        not_existing_service_key_hex = os.urandom( 32 ).hex()
+        
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_tags' : { not_existing_service_key_hex : [ 'test' ] } }
         
         body = json.dumps( body_dict )
         
@@ -1510,13 +1572,17 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 400 )
         
+        text = str( data, 'utf-8' )
+        
+        self.assertIn( not_existing_service_key_hex, text ) # test it complains about the key in the error
+        
         # add tags to local
         
         HG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -1542,7 +1608,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_actions_to_tags' : { 'my tags' : { str( HC.CONTENT_UPDATE_ADD ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_DELETE ) : [ 'test_delete', 'test_delete2' ] } } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : { str( HC.CONTENT_UPDATE_ADD ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_DELETE ) : [ 'test_delete', 'test_delete2' ] } } }
         
         body = json.dumps( body_dict )
         
@@ -1573,7 +1639,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'example tag repo' : [ 'test', 'test2' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_tags' : { HG.test_controller.example_tag_repo_service_key.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -1599,7 +1665,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_actions_to_tags' : { 'example tag repo' : { str( HC.CONTENT_UPDATE_PEND ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_PETITION ) : [ [ 'test_delete', 'muh reason' ], 'test_delete2' ] } } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { HG.test_controller.example_tag_repo_service_key.hex() : { str( HC.CONTENT_UPDATE_PEND ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_PETITION ) : [ [ 'test_delete', 'muh reason' ], 'test_delete2' ] } } }
         
         body = json.dumps( body_dict )
         
@@ -1630,7 +1696,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hashes' : [ hash_hex, hash2_hex ], 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'hashes' : [ hash_hex, hash2_hex ], 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -2080,7 +2146,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearWrites( 'import_url_test' )
         
-        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'filterable_tags' : [ 'filename:yo' ], 'service_names_to_additional_tags' : { 'my tags' : [ '/tv/ thread' ] } }
+        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'filterable_tags' : [ 'filename:yo' ], 'service_keys_to_additional_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ '/tv/ thread' ] } }
         
         request_body = json.dumps( request_dict )
         
@@ -2570,7 +2636,7 @@ class TestClientAPI( unittest.TestCase ):
         ( location_context, hashes ) = args
         
         self.assertEqual( location_context, default_location_context )
-        self.assertEqual( hashes, { file_relationships_hash } )
+        self.assertEqual( set( hashes ), { file_relationships_hash } )
         
         # search files failed tag permission
         
@@ -2850,13 +2916,30 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/manage_file_relationships/set_file_relationships'
         
-        test_pair_rows = [
-            [ 4, "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2", "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845", False, False, True ],
-            [ 4, "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2", "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423", False, False, True ],
-            [ 2, "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec", "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7", False, False, False ]
-        ]
-        
-        request_dict = { 'pair_rows' : test_pair_rows }
+        request_dict = {
+            "relationships" : [
+                {
+                    "hash_a" : "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2",
+                    "hash_b" : "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845",
+                    "relationship" : 4,
+                    "do_default_content_merge" : False,
+                    "delete_b" : True
+                },
+                {
+                    "hash_a" : "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2",
+                    "hash_b" : "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423",
+                    "relationship" : 4,
+                    "do_default_content_merge" : False,
+                    "delete_b" : True
+                },
+                {
+                    "hash_a" : "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec",
+                    "hash_b" : "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7",
+                    "relationship" : 2,
+                    "do_default_content_merge" : False
+                }
+            ]
+        }
         
         request_body = json.dumps( request_dict )
         
@@ -2888,7 +2971,7 @@ class TestClientAPI( unittest.TestCase ):
                 
             
         
-        expected_written_rows = [ ( duplicate_type, bytes.fromhex( hash_a_hex ), bytes.fromhex( hash_b_hex ), delete_thing( hash_b_hex, delete_second ) ) for ( duplicate_type, hash_a_hex, hash_b_hex, merge, delete_first, delete_second ) in test_pair_rows ]
+        expected_written_rows = [ ( r_dict[ 'relationship' ], bytes.fromhex( r_dict[ 'hash_a' ] ), bytes.fromhex( r_dict[ 'hash_b' ] ), delete_thing( r_dict[ 'hash_b' ], 'delete_b' in r_dict and r_dict[ 'delete_b' ] ) ) for r_dict in request_dict[ 'relationships' ] ]
         
         self.assertEqual( written_rows, expected_written_rows )
         
@@ -3294,11 +3377,11 @@ class TestClientAPI( unittest.TestCase ):
         
         tags = [ 'kino', 'green' ]
         
-        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_name={}'.format(
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_key={}'.format(
             urllib.parse.quote( json.dumps( tags ) ),
             CC.SORT_FILES_BY_FRAMERATE,
             'true',
-            'trash'
+            CC.TRASH_SERVICE_KEY.hex()
         )
         
         connection.request( 'GET', path, headers = headers )
@@ -3340,12 +3423,12 @@ class TestClientAPI( unittest.TestCase ):
         
         tags = [ 'kino', 'green' ]
         
-        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_key={}&tag_service_name={}'.format(
+        path = '/get_files/search_files?tags={}&file_sort_type={}&file_sort_asc={}&file_service_key={}&tag_service_key={}'.format(
             urllib.parse.quote( json.dumps( tags ) ),
             CC.SORT_FILES_BY_FRAMERATE,
             'true',
             CC.TRASH_SERVICE_KEY.hex(),
-            'all%20known%20tags'
+            CC.COMBINED_TAG_SERVICE_KEY.hex()
         )
         
         connection.request( 'GET', path, headers = headers )
@@ -3453,18 +3536,6 @@ class TestClientAPI( unittest.TestCase ):
         
         pretend_request = PretendRequest()
         
-        pretend_request.parsed_request_args = { 'system_inbox' : True }
-        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
-        
-        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
-            
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
-            
-        
-        #
-        
-        pretend_request = PretendRequest()
-        
         pretend_request.parsed_request_args = { 'tags' : [ '-green' ] }
         pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
         
@@ -3510,38 +3581,6 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
         expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'kino', inclusive = False ) )
-        
-        self.assertEqual( set( predicates ), set( expected_predicates ) )
-        
-        #
-        
-        pretend_request = PretendRequest()
-        
-        pretend_request.parsed_request_args = { 'tags' : [ 'green' ], 'system_inbox' : True }
-        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
-        
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
-        
-        expected_predicates = []
-        
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
-        
-        self.assertEqual( set( predicates ), set( expected_predicates ) )
-        
-        #
-        
-        pretend_request = PretendRequest()
-        
-        pretend_request.parsed_request_args = { 'tags' : [ 'green' ], 'system_archive' : True }
-        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
-        
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
-        
-        expected_predicates = []
-        
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_TAG, value = 'green' ) )
-        expected_predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
         
@@ -3676,11 +3715,16 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
         
-        file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
+        file_ids_to_hashes = { i : os.urandom( 32 ) for i in range( 20 ) }
         
         metadata = []
         
         for ( file_id, hash ) in file_ids_to_hashes.items():
+            
+            if file_id == 0 or file_id >= 4:
+                
+                continue
+                
             
             metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
             
@@ -3708,6 +3752,11 @@ class TestClientAPI( unittest.TestCase ):
         done_a_multihash = False
         
         for ( file_id, hash ) in file_ids_to_hashes.items():
+            
+            if file_id == 0 or file_id >= 4:
+                
+                continue
+                
             
             size = random.randint( 8192, 20 * 1048576 )
             mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
@@ -3888,56 +3937,6 @@ class TestClientAPI( unittest.TestCase ):
             
             metadata_row[ 'tags' ] = tags_dict
             
-            # old stuff start
-            
-            api_service_keys_to_statuses_to_tags = {}
-            
-            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
-            
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                
-                if service_key not in service_keys_to_names:
-                    
-                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                    
-                
-                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
-                
-                if len( s ) > 0:
-                    
-                    service_name = service_keys_to_names[ service_key ]
-                    
-                    api_service_keys_to_statuses_to_tags[ service_key.hex() ] = s
-                    
-                
-            
-            metadata_row[ 'service_keys_to_statuses_to_tags' ] = api_service_keys_to_statuses_to_tags
-            
-            service_keys_to_statuses_to_display_tags = {}
-            
-            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
-            
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                
-                if service_key not in service_keys_to_names:
-                    
-                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
-                    
-                
-                s = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in statuses_to_tags.items() if len( tags ) > 0 }
-                
-                if len( s ) > 0:
-                    
-                    service_name = service_keys_to_names[ service_key ]
-                    
-                    service_keys_to_statuses_to_display_tags[ service_key.hex() ] = s
-                    
-                
-            
-            metadata_row[ 'service_keys_to_statuses_to_display_tags' ] = service_keys_to_statuses_to_display_tags
-            
-            # old stuff end
-            
             metadata.append( metadata_row )
             
             detailed_known_urls_metadata_row = dict( metadata_row )
@@ -3971,6 +3970,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # fail on non-permitted files
         
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3, 7 ] } )
+        
         path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3, 7 ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
@@ -3995,6 +3996,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # identifiers from file_ids
         
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
         path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
@@ -4013,6 +4016,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # basic metadata from file_ids
         
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
         path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
@@ -4030,6 +4035,8 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( d, expected_only_return_basic_information_result )
         
         # metadata from file_ids
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -4084,7 +4091,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # identifiers from hashes
         
-        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4102,7 +4109,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # basic metadata from hashes
         
-        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4120,7 +4127,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from hashes
         
-        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4150,7 +4157,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from hashes with detailed url info
         
-        path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4168,7 +4175,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from hashes with notes info
         
-        path = '/get_files/file_metadata?hashes={}&include_notes=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&include_notes=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4186,7 +4193,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # failure on missing file_ids
         
-        HG.test_controller.SetRead( 'media_results_from_ids', HydrusExceptions.DataMissing( 'test missing' ) )
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', HydrusExceptions.DataMissing( 'test missing' ) )
         
         api_permissions = set_up_permissions[ 'everything' ]
         

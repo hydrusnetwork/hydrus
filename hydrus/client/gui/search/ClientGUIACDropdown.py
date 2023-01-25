@@ -43,7 +43,9 @@ def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: Cl
     
     if include_unusual_predicate_types:
         
-        non_tag_predicates = list( parsed_autocomplete_text.GetNonTagFileSearchPredicates() )
+        allow_auto_wildcard_conversion = True
+        
+        non_tag_predicates = list( parsed_autocomplete_text.GetNonTagFileSearchPredicates( allow_auto_wildcard_conversion ) )
         
         non_tag_predicates.reverse()
         
@@ -58,11 +60,11 @@ def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: Cl
         PutAtTopOfMatches( predicates, under_construction_or_predicate )
         
     
-def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, insert_if_does_not_exist: bool = True ):
+def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
     
-    if parsed_autocomplete_text.IsTagSearch():
+    if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion):
         
-        tag_predicate = parsed_autocomplete_text.GetImmediateFileSearchPredicate()
+        tag_predicate = parsed_autocomplete_text.GetImmediateFileSearchPredicate( allow_auto_wildcard_conversion )
         
         actual_tag = tag_predicate.GetValue()
         
@@ -185,7 +187,9 @@ def ReadFetch(
         
         if fetch_from_db:
             
-            is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard()
+            allow_auto_wildcard_conversion = True
+            
+            is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard( allow_auto_wildcard_conversion )
             
             small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
             
@@ -340,7 +344,9 @@ def ReadFetch(
             
         
     
-    InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, insert_if_does_not_exist = False )
+    allow_auto_wildcard_conversion = True
+    
+    InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
     
     InsertOtherPredicatesForRead( matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
     
@@ -376,7 +382,9 @@ def PutAtTopOfMatches( matches: list, predicate: ClientSearch.Predicate, insert_
     
 def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText ):
     
-    if parsed_autocomplete_text.IsExplicitWildcard():
+    allow_auto_wildcard_conversion = True
+    
+    if parsed_autocomplete_text.IsExplicitWildcard( allow_auto_wildcard_conversion ):
         
         return False
         
@@ -418,9 +426,12 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         
     else:
         
-        is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard()
+        allow_auto_wildcard_conversion = False
         
-        strict_search_text = parsed_autocomplete_text.GetSearchText( False )
+        # TODO: This allow_auto_wildcard_conversion hack to handle allow_unnamespaced_search_gives_any_namespace_wildcards is hell. I should write IsImplicitWildcard or something!
+        is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard( allow_auto_wildcard_conversion )
+        
+        strict_search_text = parsed_autocomplete_text.GetSearchText( False, allow_auto_wildcard_conversion = allow_auto_wildcard_conversion )
         autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
         
         small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
@@ -490,7 +501,9 @@ def WriteFetch( win, job_key, results_callable, parsed_autocomplete_text: Client
         matches = ClientSearch.SortPredicates( matches )
         
     
-    InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text )
+    allow_auto_wildcard_conversion = False
+    
+    InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion )
     
     HG.client_controller.CallAfterQtSafe( win, 'write a/c fetch', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
     
@@ -1909,7 +1922,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if parsed_autocomplete_text.IsAcceptableForFileSearches():
             
-            return parsed_autocomplete_text.GetImmediateFileSearchPredicate()
+            allow_auto_wildcard_conversion = True
+            
+            return parsed_autocomplete_text.GetImmediateFileSearchPredicate( allow_auto_wildcard_conversion )
             
         else:
             
@@ -2656,9 +2671,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
-        if parsed_autocomplete_text.IsTagSearch():
+        allow_auto_wildcard_conversion = False
+        
+        if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion ):
             
-            return parsed_autocomplete_text.GetImmediateFileSearchPredicate()
+            return parsed_autocomplete_text.GetImmediateFileSearchPredicate( allow_auto_wildcard_conversion )
             
         else:
             
@@ -2765,7 +2782,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         stub_predicates = []
         
-        InsertTagPredicates( stub_predicates, self._display_tag_service_key, parsed_autocomplete_text )
+        allow_auto_wildcard_conversion = False
+        
+        InsertTagPredicates( stub_predicates, self._display_tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion )
         
         AppendLoadingPredicate( stub_predicates )
         

@@ -130,7 +130,7 @@ class SingleFileMetadataExporterMediaTags( HydrusSerialisable.SerialisableBase, 
         
         if len( tags ) > 0:
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in rows ]
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in tags ]
             
             HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
             

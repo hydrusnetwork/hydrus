@@ -1602,7 +1602,6 @@ class ReviewServicePanel( QW.QWidget ):
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             self._id_button.hide()
-            self._service_key_button.hide()
             
         
         vbox = QP.VBoxLayout()

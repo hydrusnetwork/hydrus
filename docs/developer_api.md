@@ -106,6 +106,68 @@ Session keys will expire if they are not used within 24 hours, or if the client 
 
 Bear in mind the Client API is still under construction. Setting up the Client API to be accessible across the internet requires technical experience to be convenient. HTTPS is available for encrypted comms, but the default certificate is self-signed (which basically means an eavesdropper can't see through it, but your ISP/government could if they decided to target you). If you have your own domain and SSL cert, you can replace them though (check the db directory for client.crt and client.key). Otherwise, be careful about transmitting sensitive content outside of your localhost/network.
 
+## Common Complex Parameters
+
+### **files** { id="parameters_files" }
+
+If you need to refer to some files, you can use any of the following:
+
+Arguments:
+:   
+    *   `file_id`: (selective, a numerical file id)
+    *   `file_ids`: (selective, a list of numerical file ids)
+    *   `hash`: (selective, a hexadecimal SHA256 hash)
+    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+
+In GET requests, make sure any list is percent-encoded.
+
+### **file domain** { id="parameters_file_domain" }
+
+When you are searching, you may want to specify a particular file domain. Most of the time, you'll want to just set `file_service_key`, but this can get complex:
+
+Arguments:
+:   
+    *   `file_service_key`: (optional, selective A, hexadecimal, the file domain on which to search)
+    *   `file_service_keys`: (optional, selective A, list of hexadecimals, the union of file domains on which to search)
+    *   `deleted_file_service_key`: (optional, selective B, hexadecimal, the 'deleted from this file domain' on which to search)
+    *   `deleted_file_service_keys`: (optional, selective B, list of hexadecimals, the union of 'deleted from this file domain' on which to search)
+
+The service keys are as in [/get\_services](#get_services).
+
+Hydrus supports two concepts here:
+
+* Searching over a UNION of subdomains. If the user has several local file domains, e.g. 'favourites', 'personal', 'sfw', and 'nsfw', they might like to search two of them at once.
+* Searching deleted files of subdomains. You can specifically, and quickly, search the files that have been deleted from somewhere.
+
+You can play around with this yourself by clicking 'multiple locations' in the client with _help->advanced mode_ on.
+
+In extreme edge cases, these two can be mixed by populating both A and B selective, making a larger union of both current and deleted file records.
+
+Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like `all my files` or `all local files`, please do. Otherwise, let me know what is running slow and I'll have a look at it.
+
+'deleted from all local files' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files _and_ the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!
+
+'all known files' is a tricky domain. It converts much of the search tech to ignore where files actually are and look at the accompanying tag domain (e.g. all the files that have been tagged), and can sometimes be very expensive.
+
+Also, if you have the option to set both file and tag domains, you cannot enter 'all known files'/'all known tags'. It is too complicated to support, sorry!
+
+### **legacy service_name parameters** { id="legacy_service_name_parameters" }
+
+The Client API used to respond to name-based service identifiers, for instance using 'my tags' instead of something like '6c6f63616c2074616773'. Service names can change, and they aren't _strictly_ unique either, so I have moved away from them, but there is some soft legacy support.
+
+The client will attempt to convert any of these to their 'service_key(s)' equivalents:
+
+* file_service_name
+* tag_service_name
+* service_names_to_tags
+* service_names_to_actions_to_tags
+* service_names_to_additional_tags
+
+But I strongly encourage you to move away from them as soon as reasonably possible. Look up the service keys you need with [/get\_service](#get_service) or [/get\_services](#get_services).
+
+If you have a clever script/program that does many things, then hit up [/get\_services](#get_services) on session initialisation and cache an internal map of key_to_name for the labels to use when you present services to the user.
+
+Also, note that all users can now copy their service keys from _review services_.
 
 ## Access Management
 
@@ -208,6 +270,44 @@ Response:
 }
 ```
         
+
+### **GET `/get_service`** { id="get_service" }
+
+_Ask the client about a specific service._
+
+Restricted access: 
+:   YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:       
+    *   `service_name`: (selective, string, the name of the service)
+    *   `service_key`: (selective, hex string, the service key of the service)
+
+Example requests:
+:   
+    ```title="Example requests"
+    /get_service?service_name=my%20tags
+    /get_service?service_key=6c6f63616c2074616773
+    ```
+
+Response: 
+:   Some JSON about the service. The same basic format as [/get\_services](#get_services)
+```json title="Example response"
+{
+  "service" : {
+    "name" : "my tags",
+    "service_key" : "6c6f63616c2074616773",
+    "type" : 5,
+    "type_pretty" : "local tag service"
+  }
+}
+```
+
+If the service does not exist, this gives 404. It is very unlikely but edge-case possible that two services will have the same name, in this case you'll get the pseudorandom first.
+
+It will only respond to services in the /get_services list. I will expand the available types in future as we add ratings etc... to the Client API.
 
 ### **GET `/get_services`** { id="get_services" }
 
@@ -312,11 +412,14 @@ Response:
   ]
 }
 ```  
-    These services may be referred to in various metadata responses or required in request parameters (e.g. where to add tag mappings). Note that a user can rename their services. The older parts of the Client API use the renameable 'service name' as service identifier, but wish to move away from this. Please use the hex 'service_key', which is a non-mutable ID specific to each client. The hardcoded services have shorter service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-made stuff will have 64-character hex.
+
+    Note that a user can rename their services, so while they will recognise `name`, it is not an excellent identifier, and definitely not something to save to any permanent config file.
     
-    Now that I state `type` and `type_pretty` here, I may rearrange this call, probably to make the `service_key` the Object key, rather than the arbitrary 'all_known_tags' strings.
+    `service_key` is non-mutable and is the main service identifier. The hardcoded/initial services have shorter fixed service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-created services will have random 64-character hex.
     
-    You won't see all these, and you'll only ever need some, but `type` is:
+    Now that I state `type` and `type_pretty` here, I may rearrange this call, probably into a flat list. The `all_known_files` Object keys here are arbitrary.
+    
+    For service `type`, you won't see all these, and you'll only ever need some, but the enum is:
     
     * 0 - tag repository
     * 1 - file repository
@@ -337,6 +440,7 @@ Response:
     * 21 - all my files -- union of all local file domains
     * 99 - server administration
     
+    `type_pretty` is something you can show users if you like. Hydrus uses the same labels in _manage services_ and so on.
 
 ## Importing and Deleting Files
 
@@ -396,12 +500,8 @@ Required Headers:
 
 Arguments (in JSON):
 :   
-*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
-*   `file_service_name`: (optional, selective, string, the local file domain from which to delete, or all local files)
-*   `file_service_key`: (optional, selective, hexadecimal, the local file domain from which to delete, or all local files)
+*   [files](#parameters_files)
+*   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
 *   `reason`: (optional, string, the reason attached to the delete action)
 
 ```json title="Example request body"
@@ -411,9 +511,7 @@ Arguments (in JSON):
 Response:
 :   200 and no content.
 
-You can use hash or hashes, whichever is more convenient.
-
-If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), but if you specific 'all local files', you should be able to trigger a physical delete if you wish. 
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet). It defaults to 'all my files', which will delete from all local services (i.e. force sending to trash). Sending 'all local files' on a file already in the trash will trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
@@ -428,12 +526,8 @@ Required Headers:
 
 Arguments (in JSON):
 :   
-*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
-*   `file_service_name`: (optional, selective, string, the local file domain to which to undelete)
-*   `file_service_key`: (optional, selective, hexadecimal, the local file domain to which to undelete)
+*   [files](#parameters_files)
+*   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
 
 ```json title="Example request body"
 {"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -444,7 +538,7 @@ Response:
     
 You can use hash or hashes, whichever is more convenient.
     
-This is the reverse of a delete_files--removing files from trash and putting them back where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). If you do not specify a file service, they will be undeleted to all local file services for which there are deletion records. There is no error if any files do not currently exist in 'trash'.
+This is the reverse of a delete_files--removing files from trash and putting them back where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records. There is no error if any of the files do not currently exist in 'trash'.
     
 
 ### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
@@ -460,10 +554,7 @@ Required Headers:
 
 Arguments (in JSON):
 :  
-*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
+*   [files](#parameters_files)
 
 ```json title="Example request body"
 {"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -472,8 +563,6 @@ Arguments (in JSON):
 Response: 
 :   200 and no content.
     
-You can use hash or hashes, whichever is more convenient.
-
 This puts files in the 'archive', taking them out of the inbox. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the archive.
     
 
@@ -490,10 +579,7 @@ Required Headers:
 
 Arguments (in JSON):
 :  
-*   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
+*   [files](#parameters_files)
 
 ```json title="Example request body"
 {"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
@@ -501,8 +587,6 @@ Arguments (in JSON):
     
 Response: 
 :   200 and no content.
-    
-You can use hash or hashes, whichever is more convenient.
     
 This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.
     
@@ -616,10 +700,8 @@ Arguments (in JSON):
     *   `destination_page_key`: (optional page identifier for the page to receive the url)
     *   `destination_page_name`: (optional page name to receive the url)
     *   `show_destination_page`: (optional, defaulting to false, controls whether the UI will change pages on add)
-    *   `service_names_to_additional_tags`: (optional, selective, tags to give to any files imported from this url)
     *   `service_keys_to_additional_tags`: (optional, selective, tags to give to any files imported from this url)
     *   `filterable_tags`: (optional tags to be filtered by any tag import options that applies to the URL)
-    *   _`service_names_to_tags`: (obsolete, legacy synonym for service\_names\_to\_additional_tags)_
 
 If you specify a `destination_page_name` and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
 
@@ -627,7 +709,7 @@ Alternately, `destination_page_key` defines exactly which page should be used. B
 
 `show_destination_page` defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
 
-`service_names_to_additional_tags` and `service_keys_to_additional_tags` use the same data structure as in /add\_tags/add\_tags--service ids to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
+`service_keys_to_additional_tags` uses the same data structure as in /add\_tags/add\_tags--service keys to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a _tag import options_. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.
 
 filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a _tag import options_, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.
 
@@ -635,8 +717,8 @@ filterable_tags works like the tags parsed by a hydrus downloader. It is just a 
 {
   "url" : "https://8ch.net/tv/res/1846574.html",
   "destination_page_name" : "kino zone",
-  "service_names_to_additional_tags" : {
-    "my tags" : ["as seen on /tv/"]
+  "service_keys_to_additional_tags" : {
+    "6c6f63616c2074616773" : ["as seen on /tv/"]
   }
 }
 ```
@@ -703,16 +785,13 @@ Required Headers:
 
 Arguments (in JSON):
 :   
-    *   `url_to_add`: (an url you want to associate with the file(s))
-    *   `urls_to_add`: (a list of urls you want to associate with the file(s))
-    *   `url_to_delete`: (an url you want to disassociate from the file(s))
-    *   `urls_to_delete`: (a list of urls you want to disassociate from the file(s))
-    *   `hash`: (an SHA256 hash for a file in 64 characters of hexadecimal)
-    *   `hashes`: (a list of SHA256 hashes)
-    *   `file_id`: (a numerical file id)
-    *   `file_ids`: (a list of numerical file ids)
+    *   `url_to_add`: (optional, selective A, an url you want to associate with the file(s))
+    *   `urls_to_add`: (optional, selective A, a list of urls you want to associate with the file(s))
+    *   `url_to_delete`: (optional, selective B, an url you want to disassociate from the file(s))
+    *   `urls_to_delete`: (optional, selective B, a list of urls you want to disassociate from the file(s))
+    *   [files](#parameters_files)
 
-    All of these are optional, but you obviously need to have at least one of `url` arguments and one of the `hash` arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
+    The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
 ```json title="Example request body"
 {
   "url_to_add" : "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
@@ -756,32 +835,6 @@ Response:
     Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
     
 
-### **GET `/add_tags/get_tag_services`** { id="add_tags_get_tag_services" }
-
-!!! warning "Deprecated"
-    This is becoming obsolete and will be removed! Use [/get_services](#get_services) instead!
-
-_Ask the client about its tag services._
-
-Restricted access:
-:   YES. Add Tags permission needed.
-    
-Required Headers: n/a
-    
-Arguments: n/a
-    
-Response:
-:   Some JSON listing the client's 'local tags' and tag repository services by name.
-```json title="Example response"
-{
-  "local_tags" : ["my tags"],
-  "tag_repositories" : [ "public tag repository", "mlp fanfic tagging server" ]
-}
-```
-
-    !!! note
-        A user can rename their services. Don't assume the client's local tags service will be "my tags".
-
 ### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
 
 _Search the client for tags._
@@ -793,15 +846,21 @@ Required Headers: n/a
 
 Arguments:
 :   
-* `search`: (the tag text to search for, enter exactly what you would in the client UI)
-* `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
-* `tag_service_name`: (optional, selective, string, the tag domain on which to search)
-* `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags)
+    * `search`: (the tag text to search for, enter exactly what you would in the client UI)
+    * [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    * `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all known tags')
+    * `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags, defaults to 'storage')
+
+The `file domain` and `tag_service_key` perform the function of the file and tag domain buttons in the client UI.
+
+The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
+
+'all my files'/'all known tags' works fine for most cases, but a specific tag service or 'all known files'/'tag service' can work better for editing tag repository `storage` contexts, since it provides results just for that service, and for repositories, it gives tags for all the non-local files other users have tagged.
 
 Example request:
 :   
 ```http title="Example request"
-/add_tags/search_tags?search=kim
+/add_tags/search_tags?search=kim&tag_display_type=display
 ```
 
 Response:
@@ -827,13 +886,9 @@ Response:
 }
 ```
 
-The `tags` list will be sorted by descending count. If you do not specify a tag service, it will default to 'all known tags'. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
-
-The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
+The `tags` list will be sorted by descending count. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
 
 Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
-
-Also, for now, it gives you the 'storage' tags, which are the 'raw' ones you see in the manage tags dialog, without collapsed siblings, but more options will be added in future.
 
 ### **POST `/add_tags/add_tags`** { id="add_tags_add_tags" }
 
@@ -846,21 +901,14 @@ Required Headers: n/a
     
 Arguments (in JSON):
 :   
-*   `hash`: (selective A, an SHA256 hash for a file in 64 characters of hexadecimal)
-*   `hashes`: (selective A, a list of SHA256 hashes)
-*   `file_id`: (a numerical file id)
-*   `file_ids`: (a list of numerical file ids)
-*   `service_names_to_tags`: (selective B, an Object of service names to lists of tags to be 'added' to the files)
+*   [files](#parameters_files)
 *   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
-*   `service_names_to_actions_to_tags`: (selective B, an Object of service names to content update actions to lists of tags)
 *   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
 
-    You can use either 'hash' or 'hashes'.
-
-    You can use either 'service\_names\_to...' or 'service\_keys\_to...', where names is simple and human-friendly "my tags" and similar (but may be renamed by a user), but keys is a little more complicated but accurate/unique. Since a client may have multiple tag services with non-default names and pseudo-random keys, if it is not your client you will need to check the [/get_services](#get_services) call to get the names or keys, and you may need some selection UI on your end so the user can pick what to do if there are multiple choices. I encourage using keys if you can.
-
+    In 'service\_keys\_to...', the keys are as in [/get\_services](#get_services). You may need some selection UI on your end so the user can pick what to do if there are multiple choices.
+    
     Also, you can use either '...to\_tags', which is simple and add-only, or '...to\_actions\_to\_tags', which is more complicated and allows you to remove/petition or rescind pending content.
-
+    
     The permitted 'actions' are:
 
     *   0 - Add to a local tag service.
@@ -877,8 +925,8 @@ Some example requests:
 ```json title="Adding some tags to a file"
 {
   "hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
-  "service_names_to_tags" : {
-    "my tags" : ["character:supergirl", "rating:safe"]
+  "service_keys_to_tags" : {
+    "6c6f63616c2074616773" : ["character:supergirl", "rating:safe"]
   }
 }
 ```
@@ -888,9 +936,9 @@ Some example requests:
     "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
     "f2b022214e711e9a11e2fcec71bfd524f10f0be40c250737a7861a5ddd3faebf"
   ],
-  "service_names_to_tags" : {
-    "my tags" : ["process this"],
-    "public tag repository" : ["creator:dandon fuga"]
+  "service_keys_to_tags" : {
+    "6c6f63616c2074616773" : ["process this"],
+    "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9" : ["creator:dandon fuga"]
   }
 }
 ```
@@ -914,7 +962,7 @@ Some example requests:
 
     This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.
 
-    Note that the enumerated status keys in the service\_names\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
+    Note that the enumerated status keys in the service\_keys\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
 
 Response description:
 :  200 and no content.
@@ -1028,16 +1076,12 @@ Required Headers: n/a
 Arguments (in percent-encoded JSON):
 :   
     *   `tags`: (a list of tags you wish to search for)
-    *   `file_service_name`: (optional, selective, string, the file domain on which to search)
-    *   `file_service_key`: (optional, selective, hexadecimal, the file domain on which to search)
-    *   `tag_service_name`: (optional, selective, string, the tag domain on which to search)
-    *   `tag_service_key`: (optional, selective, hexadecimal, the tag domain on which to search)
-    *   `file_sort_type`: (optional, integer, the results sort method)
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all my files')
+    *   `file_sort_type`: (optional, integer, the results sort method, defaults to 'all known tags')
     *   `file_sort_asc`: true or false (optional, the results sort order)
     *   `return_file_ids`: true or false (optional, default true, returns file id results)
     *   `return_hashes`: true or false (optional, default false, returns hex hash results)
-    *   _`system_inbox`: true or false (obsolete, use tags)_
-    *   _`system_archive`: true or false (obsolete, use tags)_
 
 ``` title='Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "кино"'
 /get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D
@@ -1045,8 +1089,6 @@ Arguments (in percent-encoded JSON):
     
 
 If the access key's permissions only permit search for certain tags, at least one positive whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be checked against the permissions whitelist.
-
-File searches occur in the `display` `tag_display_type`. If you want to pair autocomplete tag lookup from [/search_tags](#add_tags_search_tags) to this file search (e.g. for making a standard booru search interface), then make sure you are searching `display` tags there.
 
 Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
 
@@ -1109,8 +1151,10 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:file service currently in my files
     *   system:file service is not currently in my files
     *   system:file service is not pending to my files
+    *   system:number of file relationships = 2 duplicates
+    *   system:number of file relationships > 10 potential duplicates
     *   system:num file relationships < 3 alternates
-    *   system:number of file relationships > 3 false positives
+    *   system:num file relationships > 3 false positives
     *   system:ratio is wider than 16:9
     *   system:ratio is 16:9
     *   system:ratio taller than 1:1
@@ -1153,7 +1197,9 @@ Makes:
 *   samus aran OR lara croft
 *   system:height > 1000
 
-The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'my files' and 'all known tags', and you can use either key or name as in [GET /get_services](#get_services), whichever is easiest for your situation.
+The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'. 
+
+File searches occur in the `display` `tag_display_type`. If you want to pair autocomplete tag lookup from [/search_tags](#add_tags_search_tags) to this file search (e.g. for making a standard booru search interface), then make sure you are searching `display` tags there.
 
 file\_sort\_asc is 'true' for ascending, and 'false' for descending. The default is descending.
 
@@ -1242,24 +1288,20 @@ _Get metadata about files in the client._
 
 Restricted access: 
 :   YES. Search for Files permission needed. Additional search permission limits may apply.
-    
+
 Required Headers: n/a
-    
+
 Arguments (in percent-encoded JSON):
 :   
-    *   `file_id`: (selective, a numerical file id)
-    *   `file_ids`: (selective, a list of numerical file ids)
-    *   `hash`: (selective, a hexadecimal SHA256 hash)
-    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   [files](#parameters_files)
     *   `create_new_file_ids`: true or false (optional if asking with hash(es), defaulting to false)
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
     *   `include_notes`: true or false (optional, defaulting to false)
-    *   `hide_service_keys_tags`: **Will be set default false and deprecated soon!** true or false (optional, defaulting to false)
-    *   `hide_service_names_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
+    *   `hide_service_keys_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
 
-You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and **the file_ids you search for must have been in the most recent search result**.
+If your access key is restricted by tag, **the files you search for must have been in the most recent search result**.
 
 ``` title="Example request for two files with ids 123 and 4567"
 /get_files/file_metadata?file_ids=%5B123%2C%204567%5D
@@ -1309,8 +1351,6 @@ Response:
       "has_human_readable_embedded_metadata" : true,
       "has_icc_profile" : true,
       "known_urls" : [],
-      "service_keys_to_statuses_to_tags" : {},
-      "service_keys_to_statuses_to_display_tags" : {},
       "tags" : {
         "6c6f63616c2074616773" : {
           "name" : "local tags",
@@ -1400,34 +1440,6 @@ Response:
         "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
         "http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
       ],
-      "service_keys_to_statuses_to_tags" : {
-        "6c6f63616c2074616773" : {
-          "0" : ["samus favourites"],
-          "2" : ["process this later"]
-        },
-        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
-          "0" : ["blonde_hair", "blue_eyes", "looking_at_viewer"],
-          "1" : ["bodysuit"]
-        },
-        "616c6c206b6e6f776e2074616773" : {
-          "0" : ["samus favourites", "blonde_hair", "blue_eyes", "looking_at_viewer"],
-          "1" : ["bodysuit"]
-        }
-      },
-      "service_keys_to_statuses_to_display_tags" : {
-        "6c6f63616c2074616773" : {
-          "0" : ["samus favourites", "favourites"],
-          "2" : ["process this later"]
-        },
-        "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
-          "0" : ["blonde hair", "blue_eyes", "looking at viewer"],
-          "1" : ["bodysuit", "clothing"]
-        },
-        "616c6c206b6e6f776e2074616773" : {
-          "0" : ["samus favourites", "favourites", "blonde hair", "blue_eyes", "looking at viewer"],
-          "1" : ["bodysuit", "clothing"]
-        }
-      },
       "tags" : {
         "6c6f63616c2074616773" : {
           "name" : "local tags",
@@ -1530,17 +1542,15 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
 `ipfs_multihashes` stores the ipfs service key to any known multihash for the file. 
 
-The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
+The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
 
 #### tags
 
 The 'tags' structures are undergoing transition. Previously, this was a mess of different Objects in different domains, all `service_xxx_to_xxx_tags`, but they are being transitioned to the combined `tags` Object.
 
-`hide_service_names_tags` is deprecated and will be deleted soon. When set to `false`, it shows the old `service_names_to_statuses_to_tags` and `service_names_to_statuses_to_display_tags` Objects. The new `tags` structure now shows the service name--migrate to this asap.
+`hide_service_keys_tags` is deprecated and will be deleted soon. When set to `false`, it shows the old `service_keys_to_statuses_to_tags` and `service_keys_to_statuses_to_display_tags` Objects.
 
-`hide_service_keys_tags` will soon be set to default `false` and deprecated in the same way. Move to `tags` please!
-
-The `tags` structures are similar to the [/add_tags/add_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
+The `tags` structures are similar to the [/add\_tags/add\_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
 
 *   0 - current
 *   1 - pending
@@ -1550,7 +1560,7 @@ The `tags` structures are similar to the [/add_tags/add_tags](#add_tags_add_tags
 !!! note
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-To learn more about service names and keys on a client, use the [/get_services](#get_services) call.
+To learn more about service names and keys on a client, use the [/get\_services](#get_services) call.
 
 While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
 
@@ -1665,7 +1675,7 @@ This refers to the File Relationships system, which includes 'potential duplicat
 
 This system is pending significant rework and expansion, so please do not get too married to some of the routines here. I am mostly just exposing my internal commands, so things are a little ugly/hacked. I expect duplicate and alternate groups to get some form of official identifier in future, which may end up being the way to refer and edit things here.
 
-Also, at least for now, 'Manage File Relationships' permission is not going to be bound by the search permission restrictions that normal file search does. Getting this permission allows you to search anything. I expect to add this permission filtering tech in future, particularly for file domains.
+Also, at least for now, 'Manage File Relationships' permission is not going to be bound by the search permission restrictions that normal file search does. Getting this file relationship management permission allows you to search anything.
 
 _There is more work to do here, including adding various 'dissolve'/'undo' commands to break groups apart._
 
@@ -1680,10 +1690,8 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   `file_id`: (selective, a numerical file id)
-    *   `file_ids`: (selective, a list of numerical file ids)
-    *   `hash`: (selective, a hexadecimal SHA256 hash)
-    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   [files](#parameters_files)
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
 
 ``` title="Example request"
 /manage_file_relationships/get_file_relationships?hash=ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d
@@ -1714,7 +1722,9 @@ Response:
 
 `is_king` and `king` relate to which file is the set best of a group. The king is usually the best representative of a group if you need to do comparisons between groups, and the 'get some pairs to filter'-style commands usually try to select the kings of the various to-be-compared duplicate groups.
 
-**It is possible for the king to not be available, in which case `king` is null.** The king can be unavailable in several duplicate search contexts, generally when you have the option to search/filter and it is outside of that domain. For this request, the king will usually be available unless the user has deleted it. You have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
+The relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files' is usually most useful.
+
+**It is possible for the king to not be available, in which case `king` is null.** The king can be unavailable in several duplicate search contexts, generally when it is outside of the set file domain. For the default domain, 'all my files', the king will be available unless the user has deleted it. You have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
 
 A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.
 
@@ -1740,6 +1750,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -1749,10 +1760,10 @@ Arguments (in percent-encoded JSON):
     *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the pairs)
 
 ``` title="Example request"
-/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
 ```
 
-`tag_service_key` and `tags` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2. For now the file domain is locked to 'all my files'.
+`tag_service_key_x` and `tags_x` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2.
 
 `potentials_search_type` and `pixel_duplicates` are enums:
 
@@ -1789,6 +1800,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -1799,7 +1811,7 @@ Arguments (in percent-encoded JSON):
     *   `max_num_pairs`: (optional, integer, defaults to client's option, how many pairs to get in a batch)
 
 ``` title="Example request"
-/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
+/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
 ```
 
 The search arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count).
@@ -1833,6 +1845,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -1842,7 +1855,7 @@ Arguments (in percent-encoded JSON):
     *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the files)
 
 ``` title="Example request"
-/manage_file_relationships/get_random_potentials?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&search_type=1&pixel_duplicates=2&max_hamming_distance=0
+/manage_file_relationships/get_random_potentials?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0
 ```
 
 The arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count), with the caveat that `potentials_search_type` has special logic:
@@ -1881,13 +1894,20 @@ Required Headers:
 
 Arguments (in JSON):
 :   
-    *   `pair_rows`: (a list of lists)
+    *   `relationships`: (a list of Objects, one for each file-pair being set)
 
-Each row is:
+Each Object is:
 
-    * [ relationship, hash_a, hash_b, do_default_content_merge, delete_a, delete_b ]
+    *   `hash_a`: (a hexadecimal SHA256 hash)
+    *   `hash_b`: (a hexadecimal SHA256 hash)
+    *   `relationship`: (integer enum for the relationship being set)
+    *   `do_default_content_merge`: (bool)
+    *   `delete_a`: (optional, bool, default false)
+    *   `delete_b`: (optional, bool, default false)
 
-Where `relationship` is one of this enum:
+`hash_a` and `hash_b` are normal hex SHA256 hashes for your file pair.
+
+`relationship` is one of this enum:
 
 * 0 - set as potential duplicates
 * 1 - set as false positives
@@ -1898,18 +1918,33 @@ Where `relationship` is one of this enum:
 
 2, 4, and 7 all make the files 'duplicates' (8 under `get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets A>B. You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.
 
-`hash_a` and `hash_b` are normal hex SHA256 hashes for your file pair.
+`do_default_content_merge` sets whether the user's duplicate content merge options should be loaded and applied to the files along with the relationship. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.
 
-`do_default_content_merge` is a boolean setting whether the user's duplicate content merge options should be loaded and applied to the files along with the duplicate status. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.
-
-`delete_a` and `delete_b` are booleans that obviously select whether to delete A and/or B. You can also do this externally if you prefer.
+`delete_a` and `delete_b` are booleans that select whether to delete A and/or B in the same operation as setting the relationship. You can also do this externally if you prefer.
 
 ```json title="Example request body"
 {
-  "pair_rows" : [
-    [ 4, "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2", "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845", true, false, true ],
-    [ 4, "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2", "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423", true, false, true ],
-    [ 2, "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec", "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7", true, false, false ]
+  "relationships" : [
+    {
+      "hash_a" : "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2",
+      "hash_b" : "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845",
+      "relationship" : 4,
+      "do_default_content_merge" : true,
+      "delete_b" : true
+    },
+    {
+      "hash_a" : "22667427eaa221e2bd7ef405e1d2983846c863d40b2999ce8d1bf5f0c18f5fb2",
+      "hash_b" : "65d228adfa722f3cd0363853a191898abe8bf92d9a514c6c7f3c89cfed0bf423",
+      "relationship" : 4,
+      "do_default_content_merge" : true,
+      "delete_b" : true
+    },
+    {
+      "hash_a" : "0480513ffec391b77ad8c4e57fe80e5b710adfa3cb6af19b02a0bd7920f2d3ec",
+      "hash_b" : "5fab162576617b5c3fc8caabea53ce3ab1a3c8e0a16c16ae7b4e4a21eab168a7",
+      "relationship" : 2,
+      "do_default_content_merge" : true
+    }
   ]
 }
 ```
@@ -1917,7 +1952,7 @@ Where `relationship` is one of this enum:
 Response:
 :   200 with no content.
 
-If you try to add an invalid or redundant relationship, for instance setting that files that are already duplicates are potential duplicates, no changes are made.
+If you try to add an invalid or redundant relationship, for instance setting files that are already duplicates as potential duplicates, no changes are made.
 
 This is the file relationships request that is probably most likely to change in future. I may implement content merge options. I may move from file pairs to group identifiers. When I expand alternates, those file groups are going to support more variables.
 
@@ -1934,10 +1969,7 @@ Required Headers:
 
 Arguments (in JSON):
 :   
-    *   `file_id`: (selective, a numerical file id)
-    *   `file_ids`: (selective, a list of numerical file ids)
-    *   `hash`: (selective, a hexadecimal SHA256 hash)
-    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   [files](#parameters_files)
 
 ```json title="Example request body"
 {
@@ -2061,36 +2093,42 @@ Response:
   "pages" : {
     "name" : "top pages notebook",
     "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
+    "page_state" : 0,
     "page_type" : 10,
     "selected" : true,
     "pages" : [
       {
         "name" : "files",
         "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
+        "page_state" : 0,
         "page_type" : 6,
         "selected" : false
       },
       {
         "name" : "thread watcher",
         "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
+        "page_state" : 0,
         "page_type" : 9,
         "selected" : false
       },
       {
         "name" : "pages",
         "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
+        "page_state" : 0,
         "page_type" : 10,
         "selected" : true,
         "pages" : [
           {
             "name" : "urls",
             "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
+            "page_state" : 0,
             "page_type" : 7,
             "selected" : true
           },
           {
             "name" : "files",
             "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
+            "page_state" : 0,
             "page_type" : 6,
             "selected" : false
           }
@@ -2101,7 +2139,11 @@ Response:
 }
 ```
 
-    The page types are as follows:
+    `name` is the full text on the page tab. 
+    
+    `page_key` is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a session reload.
+    
+    `page_type` is as follows:
 
     *   1 - Gallery downloader
     *   2 - Simple downloader
@@ -2112,10 +2154,20 @@ Response:
     *   8 - Duplicates
     *   9 - Thread watcher
     *   10 - Page of pages
-
-    The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.
-
-    The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.
+    
+    `page_state` is as follows:
+    
+    * 0 - ready
+    * 1 - initialising
+    * 2 - searching/loading
+    * 3 - search cancelled
+    
+    Most pages will be 0, normal/ready, at all times. Large pages will start in an 'initialising' state for a few seconds, which means their session-saved thumbnails aren't loaded yet. Search pages will enter 'searching' after a refresh or search change and will either return to 'ready' when the search is complete, or fall to 'search cancelled' if the search was interrupted (usually this means the user clicked the 'stop' button that appears after some time). 
+    
+    `selected` means which page is currently in view. It will propagate down the page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a media page.    
+    
+    The top page of pages will always be there, and always selected.
+    
 
 ### **GET `/manage_pages/get_page_info`** { id="manage_pages_get_page_info" }
 
@@ -2145,6 +2197,7 @@ Response description
   "page_info" : {
     "name" : "threads",
     "page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
+    "page_state" : 0,
     "page_type" : 3,
     "management" : {
       "multiple_watcher_import" : {
@@ -2206,6 +2259,8 @@ Response description
 }
 ```
 
+    `name`, `page_key`, `page_state`, and `page_type` are as in [/manage\_pages/get\_pages](#manage_pages_get_pages).
+    
     As you can see, even the 'simple' mode can get very large. Imagine that response for a page watching 100 threads! Turning simple mode off will display every import item, gallery log entry, and all hashes in the media (thumbnail) panel.
     
     For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.
@@ -2225,10 +2280,7 @@ Required Headers:
 Arguments (in JSON):
 :   
     *   `page_key`: (the page key for the page you wish to add files to)
-    *   `file_id`: (selective, a numerical file id)
-    *   `file_ids`: (selective, a list of numerical file ids)
-    *   `hash`: (selective, a hexadecimal SHA256 hash)
-    *   `hashes`: (selective, a list of hexadecimal SHA256 hashes)
+    *   [files](#parameters_files)
 
 The files you set will be appended to the given page, just like a thumbnail drag and drop operation. The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_pages_get_pages) call.
 
@@ -2294,6 +2346,8 @@ The page key is the same as fetched in the [/manage\_pages/get\_pages](#manage_p
 
 Response:
 :   200 with no content. If the page key is not found, this will 404.
+
+Poll the `page_state` in [/manage\_pages/get\_pages](#manage_pages_get_pages) or [/manage\_pages/get\_page\_info](#manage_pages_get_page_info) to see when the search is complete.
 
 ## Managing the Database
 

@@ -669,8 +669,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def _CheckFolder( self, job_key ):
-        
-        all_paths = ClientFiles.GetAllFilePaths( [ self._path ] )
+    
+        ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ self._path ] )
         
         all_paths = HydrusPaths.FilterFreePaths( all_paths )
         

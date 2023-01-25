@@ -1,3 +1,4 @@
+import os
 import typing
 
 from qtpy import QtCore as QC
@@ -35,13 +36,17 @@ def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch
     
 def FilterSuggestedTagsForMedia( tags: typing.Sequence[ str ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
     
+    # TODO: figure out a nice way to filter out siblings here
+    # maybe have to wait for when tags always know their siblings
+    # then we could also filter out worse/better siblings of the same count
+    
+    num_media = len( medias )
+    
     tags_filtered_set = set( tags )
     
     ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( medias, service_key, ClientTags.TAG_DISPLAY_STORAGE )
     
     current_tags_to_count.update( pending_tags_to_count )
-    
-    num_media = len( medias )
     
     for ( tag, count ) in current_tags_to_count.items():
         
@@ -331,17 +336,46 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._have_fetched = False
         
+        self._selected_tags = set()
+        
         self._new_options = HG.client_controller.new_options
         
         vbox = QP.VBoxLayout()
         
+        tt = 'If you select some tags, this will search using only those as reference!'
+        
         self._button_2 = QW.QPushButton( 'medium', self )
         self._button_2.clicked.connect( self.RefreshMedium )
         self._button_2.setMinimumWidth( 30 )
+        self._button_2.setToolTip( tt )
         
         self._button_3 = QW.QPushButton( 'thorough', self )
         self._button_3.clicked.connect( self.RefreshThorough )
         self._button_3.setMinimumWidth( 30 )
+        self._button_3.setToolTip( tt )
+        
+        self._button_new = QW.QPushButton( 'new 1', self )
+        self._button_new.clicked.connect( self.RefreshNew )
+        self._button_new.setMinimumWidth( 30 )
+        tt = 'Please test this! This uses the new statistical method and searches your local files\' tags. Should be pretty fast, but its search domain is limited.' + os.linesep * 2 + 'Hydev thinks this mode sucks for the PTR, so let him know if it is actually works ok there.'
+        self._button_new.setToolTip( tt )
+        
+        self._button_new_2 = QW.QPushButton( 'new 2', self )
+        self._button_new_2.clicked.connect( self.RefreshNew2 )
+        self._button_new_2.setMinimumWidth( 30 )
+        tt = 'Please test this! This uses the new statistical method and searches all the service\'s tags. May search slow and will not get results from large-count tags.' + os.linesep * 2 + 'Hydev wants to use this in the end, so let him know if it is too laggy.'
+        self._button_new_2.setToolTip( tt )
+        
+        if len( self._media ) > 1:
+            
+            self._button_2.setVisible( False )
+            self._button_3.setVisible( False )
+            
+        
+        if HG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
+            
+            self._button_new_2.setVisible( False )
+            
         
         self._related_tags = ListBoxTagsSuggestionsRelated( self, service_key, activate_callable )
         
@@ -349,6 +383,8 @@ class RelatedTagsPanel( QW.QWidget ):
         
         QP.AddToLayout( button_hbox, self._button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( button_hbox, self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._button_new, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._button_new_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -385,15 +421,75 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._related_tags.SetPredicates( [] )
         
+        if len( self._media ) > 1:
+            
+            return
+            
+        
         ( m, ) = self._media
         
         hash = m.GetHash()
         
-        search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+        # TODO: If user has some tags selected, use them instead
+        
+        if len( self._selected_tags ) == 0:
+            
+            search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+            
+        else:
+            
+            search_tags = self._selected_tags
+            
         
         max_results = 100
         
         HG.client_controller.CallToThread( do_it, self._service_key, hash, search_tags, max_results, max_time_to_take )
+        
+    
+    def _FetchRelatedTagsNew( self, file_service_key = None ):
+        
+        def do_it( file_service_key, tag_service_key, search_tags ):
+            
+            def qt_code( predicates ):
+                
+                if not self or not QP.isValid( self ):
+                    
+                    return
+                    
+                
+                self._last_fetched_predicates = predicates
+                
+                self._UpdateTagDisplay()
+                
+                self._have_fetched = True
+                
+            
+            predicates = HG.client_controller.Read( 'related_tags_new', file_service_key, tag_service_key, search_tags )
+            
+            predicates = ClientSearch.SortPredicates( predicates )
+            
+            QP.CallAfter( qt_code, predicates )
+            
+        
+        self._related_tags.SetPredicates( [] )
+        
+        if len( self._selected_tags ) == 0:
+            
+            search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+            
+        else:
+            
+            search_tags = self._selected_tags
+            
+        
+        if file_service_key is None:
+            
+            file_service_key = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+            
+        
+        tag_service_key = self._service_key
+        
+        HG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags )
         
     
     def _QuickSuggestedRelatedTags( self ):
@@ -424,6 +520,16 @@ class RelatedTagsPanel( QW.QWidget ):
         self._FetchRelatedTags( max_time_to_take )
         
     
+    def RefreshNew( self ):
+        
+        self._FetchRelatedTagsNew()
+        
+    
+    def RefreshNew2( self ):
+        
+        self._FetchRelatedTagsNew( file_service_key = CC.COMBINED_FILE_SERVICE_KEY )
+        
+    
     def MediaUpdated( self ):
         
         self._UpdateTagDisplay()
@@ -433,7 +539,19 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._media = media
         
-        self._QuickSuggestedRelatedTags()
+        if len( self._media ) == 1:
+            
+            self._QuickSuggestedRelatedTags()
+            
+        else:
+            
+            self._related_tags.SetPredicates( [] )
+            
+        
+    
+    def SetSelectedTags( self, tags ):
+        
+        self._selected_tags = tags
         
     
     def TakeFocusForUser( self ):
@@ -682,7 +800,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         self._related_tags = None
         
-        if self._new_options.GetBoolean( 'show_related_tags' ) and len( media ) == 1:
+        if self._new_options.GetBoolean( 'show_related_tags' ):
             
             self._related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable )
             
@@ -793,6 +911,14 @@ class SuggestedTagsPanel( QW.QWidget ):
         if self._related_tags is not None:
             
             self._related_tags.SetMedia( media )
+            
+        
+    
+    def SetSelectedTags( self, tags ):
+        
+        if self._related_tags is not None:
+            
+            self._related_tags.SetSelectedTags( tags )
             
         
     

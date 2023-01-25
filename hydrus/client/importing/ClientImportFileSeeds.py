@@ -1,4 +1,3 @@
-import bisect
 import collections
 import itertools
 import os
@@ -1921,7 +1920,60 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
         self._latest_added_time = latest_added_time
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE_STATUS ] = FileSeedCacheStatus
+
+def WalkToNextFileSeed( status, starting_file_seed, file_seeds, file_seeds_to_indices, statuses_to_file_seeds ):
+    
+    # the file seed given is the starting point and can be the answer
+    # but if it is wrong, or no longer tracked, then let's walk through them until we get one, or None
+    # along the way, we'll note what's in the wrong place
+    
+    wrong_file_seeds = set()
+    
+    if starting_file_seed in file_seeds_to_indices:
+        
+        index = file_seeds_to_indices[ starting_file_seed ]
+        
+    else:
+        
+        index = 0
+        
+    
+    file_seed = starting_file_seed
+    
+    while True:
+        
+        # no need to walk further, we are good
+        
+        if file_seed.status == status:
+            
+            result = file_seed
+            
+            break
+            
+        
+        # this file seed has the wrong status, move on
+        
+        if file_seed in statuses_to_file_seeds[ status ]:
+            
+            wrong_file_seeds.add( file_seed )
+            
+        
+        index += 1
+        
+        if index >= len( file_seeds ):
+            
+            result = None
+            
+            break
+            
+        
+        file_seed = file_seeds[ index ]
+        
+    
+    return ( result, wrong_file_seeds )
+    
 
 class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
@@ -1939,14 +1991,21 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         self._file_seeds_to_indices = {}
         
-        self._statuses_to_indexed_file_seeds = collections.defaultdict( list )
+        # if there's a file seed here, it is the earliest
+        # if there's none in here, we know the count is 0
+        # if status is absent, we don't know
+        self._observed_statuses_to_next_file_seeds = {}
+        
+        self._file_seeds_to_observed_statuses = {}
+        self._statuses_to_file_seeds = collections.defaultdict( set )
         
         self._file_seed_cache_key = HydrusData.GenerateKey()
         
         self._status_cache = FileSeedCacheStatus()
         
         self._status_dirty = True
-        self._statuses_to_indexed_file_seeds_dirty = True
+        self._statuses_to_file_seeds_dirty = True
+        self._file_seeds_to_indices_dirty = True
         
         self._lock = threading.Lock()
         
@@ -1956,56 +2015,88 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( self._file_seeds )
         
     
-    def _FileSeedIndicesJustChanged( self ):
+    def _FixStatusesToFileSeeds( self, file_seeds: typing.Collection[ FileSeed ] ):
         
-        self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
+        if self._statuses_to_file_seeds_dirty:
+            
+            return
+            
         
-        self._SetStatusesToFileSeedsDirty()
+        file_seeds_to_indices = self._GetFileSeedsToIndices()
+        statuses_to_file_seeds = self._GetStatusesToFileSeeds()
         
-    
-    def _FixFileSeedsStatusPosition( self, file_seeds ):
+        if len( file_seeds ) == 0:
+            
+            return
+            
         
-        indices_and_file_seeds_affected = []
+        outstanding_others_to_fix = set()
         
         for file_seed in file_seeds:
             
-            if file_seed in self._file_seeds_to_indices:
-                
-                indices_and_file_seeds_affected.append( ( self._file_seeds_to_indices[ file_seed ], file_seed ) )
-                
-            else:
-                
-                self._SetStatusesToFileSeedsDirty()
-                
-                return
-                
+            want_a_record = file_seed in file_seeds_to_indices
+            record_exists = file_seed in self._file_seeds_to_observed_statuses
             
-        
-        for row in indices_and_file_seeds_affected:
-            
-            correct_status = row[1].status
-            
-            if row in self._statuses_to_indexed_file_seeds[ correct_status ]:
+            if not want_a_record and not record_exists:
                 
                 continue
                 
             
-            for ( status, indices_and_file_seeds ) in self._statuses_to_indexed_file_seeds.items():
+            correct_status = file_seed.status
+            
+            if record_exists:
                 
-                if status == correct_status:
+                set_status = self._file_seeds_to_observed_statuses[ file_seed ]
+                
+                if set_status != correct_status or not want_a_record:
                     
-                    continue
+                    if set_status in self._observed_statuses_to_next_file_seeds:
+                        
+                        if self._observed_statuses_to_next_file_seeds[ set_status ] == file_seed:
+                            
+                            # this 'next' is now wrong, so fast forward to the correct one, or None
+                            ( result, wrong_file_seeds ) = WalkToNextFileSeed( set_status, file_seed, self._file_seeds, file_seeds_to_indices, statuses_to_file_seeds )
+                            
+                            self._observed_statuses_to_next_file_seeds[ set_status ] = result
+                            
+                            outstanding_others_to_fix.update( wrong_file_seeds )
+                            
+                        
+                    
+                    statuses_to_file_seeds[ set_status ].discard( file_seed )
+                    
+                    del self._file_seeds_to_observed_statuses[ file_seed ]
+                    
+                    record_exists = False
                     
                 
-                if row in indices_and_file_seeds:
+            
+            if want_a_record:
+                
+                if not record_exists:
                     
-                    indices_and_file_seeds.remove( row )
+                    statuses_to_file_seeds[ correct_status ].add( file_seed )
                     
-                    bisect.insort( self._statuses_to_indexed_file_seeds[ correct_status ], row )
-                    
-                    break
+                    self._file_seeds_to_observed_statuses[ file_seed ] = correct_status
                     
                 
+                if correct_status in self._observed_statuses_to_next_file_seeds:
+                    
+                    current_next_file_seed = self._observed_statuses_to_next_file_seeds[ correct_status ]
+                    
+                    if current_next_file_seed is None or file_seeds_to_indices[ file_seed ] < file_seeds_to_indices[ current_next_file_seed ]:
+                        
+                        self._observed_statuses_to_next_file_seeds[ correct_status ] = file_seed
+                        
+                    
+                
+            
+        
+        outstanding_others_to_fix.difference_update( file_seeds )
+        
+        if len( outstanding_others_to_fix ) > 0:
+            
+            self._FixStatusesToFileSeeds( outstanding_others_to_fix )
             
         
     
@@ -2029,13 +2120,23 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            if self._statuses_to_indexed_file_seeds_dirty:
-                
-                self._RegenerateStatusesToFileSeeds()
-                
+            statuses_to_file_seeds = self._GetStatusesToFileSeeds()
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
             
-            return [ file_seed for ( index, file_seed ) in self._statuses_to_indexed_file_seeds[ status ] ]
+            return sorted( statuses_to_file_seeds[ status ], key = lambda f_s: file_seeds_to_indices[ f_s ] )
             
+        
+    
+    def _GetFileSeedsToIndices( self ) -> typing.Dict[ FileSeed, int ]:
+        
+        if self._file_seeds_to_indices_dirty:
+            
+            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
+            
+            self._file_seeds_to_indices_dirty = False
+            
+        
+        return self._file_seeds_to_indices
         
     
     def _GetLatestAddedTime( self ):
@@ -2069,36 +2170,41 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _GetNextFileSeed( self, status: int ) -> typing.Optional[ FileSeed ]:
         
+        statuses_to_file_seeds = self._GetStatusesToFileSeeds()
+        file_seeds_to_indices = self._GetFileSeedsToIndices()
+        
         # the problem with this is if a file seed recently changed but 'notifyupdated' hasn't had a chance to go yet
         # there could be a FS in a list other than the one we are looking at that has the status we want
-        # _however_, it seems like I do not do any async calls to notifyupdated in the actual FSC, only from notifyupdated to GUI elements, so we _seem_ to be good
+        # _however_, it seems like I do not do any async calls to notifyupdated in the actual FSC, only from notifyupdated to GUI elements, so we _seem_ to be good to talk to this in this way
         
-        if self._statuses_to_indexed_file_seeds_dirty:
+        if status not in self._observed_statuses_to_next_file_seeds:
             
-            self._RegenerateStatusesToFileSeeds()
+            file_seeds = statuses_to_file_seeds[ status ]
             
-        
-        indexed_file_seeds = self._statuses_to_indexed_file_seeds[ status ]
-        
-        while len( indexed_file_seeds ) > 0:
-            
-            row = indexed_file_seeds[ 0 ]
-            
-            file_seed = row[1]
-            
-            if file_seed.status == status:
+            if len( file_seeds ) == 0:
                 
-                return file_seed
+                self._observed_statuses_to_next_file_seeds[ status ] = None
                 
             else:
                 
-                self._FixFileSeedsStatusPosition( ( file_seed, ) )
+                self._observed_statuses_to_next_file_seeds[ status ] = min( file_seeds, key = lambda f_s: file_seeds_to_indices[ f_s ] )
                 
             
-            indexed_file_seeds = self._statuses_to_indexed_file_seeds[ status ]
+        
+        file_seed = self._observed_statuses_to_next_file_seeds[ status ]
+        
+        if file_seed is None:
+            
+            return None
             
         
-        return None
+        ( result, wrong_file_seeds ) = WalkToNextFileSeed( status, file_seed, self._file_seeds, file_seeds_to_indices, statuses_to_file_seeds )
+        
+        self._observed_statuses_to_next_file_seeds[ status ] = result
+        
+        self._FixStatusesToFileSeeds( wrong_file_seeds )
+        
+        return file_seed
         
     
     def _GetSerialisableInfo( self ):
@@ -2125,14 +2231,11 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         statuses_to_counts = collections.Counter()
         
-        if self._statuses_to_indexed_file_seeds_dirty:
-            
-            self._RegenerateStatusesToFileSeeds()
-            
+        statuses_to_file_seeds = self._GetStatusesToFileSeeds()
         
-        for ( status, indexed_file_seeds ) in self._statuses_to_indexed_file_seeds.items():
+        for ( status, file_seeds ) in statuses_to_file_seeds.items():
             
-            count = len( indexed_file_seeds )
+            count = len( file_seeds )
             
             if count > 0:
                 
@@ -2143,11 +2246,51 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return statuses_to_counts
         
     
+    def _GetStatusesToFileSeeds( self ) -> typing.Dict[ int, typing.Set[ FileSeed ] ]:
+        
+        file_seeds_to_indices = self._GetFileSeedsToIndices()
+        
+        if self._statuses_to_file_seeds_dirty:
+            
+            self._file_seeds_to_observed_statuses = {}
+            self._statuses_to_file_seeds = collections.defaultdict( set )
+            self._observed_statuses_to_next_file_seeds = {}
+            
+            for ( file_seed, index ) in file_seeds_to_indices.items():
+                
+                status = file_seed.status
+                
+                self._statuses_to_file_seeds[ status ].add( file_seed )
+                self._file_seeds_to_observed_statuses[ file_seed ] = status
+                
+                if status not in self._observed_statuses_to_next_file_seeds:
+                    
+                    self._observed_statuses_to_next_file_seeds[ status ] = file_seed
+                    
+                else:
+                    
+                    current_next = self._observed_statuses_to_next_file_seeds[ status ]
+                    
+                    if current_next is not None and index < file_seeds_to_indices[ current_next ]:
+                        
+                        self._observed_statuses_to_next_file_seeds[ status ] = file_seed
+                        
+                    
+                
+            
+            self._statuses_to_file_seeds_dirty = False
+            
+        
+        return self._statuses_to_file_seeds
+        
+    
     def _HasFileSeed( self, file_seed: FileSeed ):
+        
+        file_seeds_to_indices = self._GetFileSeedsToIndices()
         
         search_file_seeds = file_seed.GetSearchFileSeeds()
         
-        has_file_seed = True in ( search_file_seed in self._file_seeds_to_indices for search_file_seed in search_file_seeds )
+        has_file_seed = True in ( search_file_seed in file_seeds_to_indices for search_file_seed in search_file_seeds )
         
         return has_file_seed
         
@@ -2158,30 +2301,30 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             self._file_seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
             
-            self._FileSeedIndicesJustChanged()
-            
         
     
-    def _RegenerateStatusesToFileSeeds( self ):
+    def _NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):
         
-        self._statuses_to_indexed_file_seeds = collections.defaultdict( list )
-        
-        for ( file_seed, index ) in self._file_seeds_to_indices.items():
+        if len( file_seeds ) == 0:
             
-            self._statuses_to_indexed_file_seeds[ file_seed.status ].append( ( index, file_seed ) )
+            return
             
         
-        for indexed_file_seeds in self._statuses_to_indexed_file_seeds.values():
-            
-            indexed_file_seeds.sort()
-            
+        HG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
         
-        self._statuses_to_indexed_file_seeds_dirty = False
+    
+    def _SetFileSeedsToIndicesDirty( self ):
+        
+        self._file_seeds_to_indices_dirty = True
+        
+        self._observed_statuses_to_next_file_seeds = {}
         
     
     def _SetStatusesToFileSeedsDirty( self ):
         
-        self._statuses_to_indexed_file_seeds_dirty = True
+        # this is never actually called, which is neat! I think we are 'perfect' on this thing maintaining itself after inital generation
+        
+        self._statuses_to_file_seeds_dirty = True
         
     
     def _SetStatusDirty( self ):
@@ -2406,6 +2549,8 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
+            
             for file_seed in file_seeds:
                 
                 if self._HasFileSeed( file_seed ):
@@ -2445,42 +2590,50 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 index = len( self._file_seeds ) - 1
                 
-                self._file_seeds_to_indices[ file_seed ] = index
+                file_seeds_to_indices[ file_seed ] = index
                 
-                if not self._statuses_to_indexed_file_seeds_dirty:
-                    
-                    self._statuses_to_indexed_file_seeds[ file_seed.status ].append( ( index, file_seed ) )
-                    
-                
+            
+            self._FixStatusesToFileSeeds( updated_or_new_file_seeds )
             
             self._SetStatusDirty()
             
         
-        self.NotifyFileSeedsUpdated( updated_or_new_file_seeds )
+        self._NotifyFileSeedsUpdated( updated_or_new_file_seeds )
         
         return len( updated_or_new_file_seeds )
         
     
     def AdvanceFileSeed( self, file_seed: FileSeed ):
         
+        updated_file_seeds = []
+        
         with self._lock:
             
-            if file_seed in self._file_seeds_to_indices:
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
+            
+            if file_seed in file_seeds_to_indices:
                 
-                index = self._file_seeds_to_indices[ file_seed ]
+                index = file_seeds_to_indices[ file_seed ]
                 
                 if index > 0:
+                    
+                    swapped_file_seed = self._file_seeds[ index - 1 ]
                     
                     self._file_seeds.remove( file_seed )
                     
                     self._file_seeds.insert( index - 1, file_seed )
                     
-                
-                self._FileSeedIndicesJustChanged()
+                    file_seeds_to_indices[ file_seed ] = index - 1
+                    file_seeds_to_indices[ swapped_file_seed ] = index
+                    
+                    updated_file_seeds = [ file_seed, swapped_file_seed ]
+                    
+                    self._FixStatusesToFileSeeds( updated_file_seeds )
+                    
                 
             
         
-        self.NotifyFileSeedsUpdated( ( file_seed, ) )
+        self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
     def CanCompact( self, compact_before_this_source_time: int ):
@@ -2518,49 +2671,54 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            new_file_seeds = HydrusSerialisable.SerialisableList()
+            removee_file_seeds = set()
             
             for file_seed in self._file_seeds[:-self.COMPACT_NUMBER]:
                 
                 still_to_do = file_seed.status == CC.STATUS_UNKNOWN
                 still_relevant = self._GetSourceTimestampForVelocityCalculations( file_seed ) > compact_before_this_source_time
                 
-                if still_to_do or still_relevant:
+                if not ( still_to_do or still_relevant ):
                     
-                    new_file_seeds.append( file_seed )
+                    removee_file_seeds.add( file_seed )
                     
                 
             
-            new_file_seeds.extend( self._file_seeds[-self.COMPACT_NUMBER:] )
-            
-            self._file_seeds = new_file_seeds
-            
-            self._FileSeedIndicesJustChanged()
-            
-            self._SetStatusDirty()
-            
+        
+        self.RemoveFileSeeds( removee_file_seeds )
         
     
     def DelayFileSeed( self, file_seed: FileSeed ):
         
+        updated_file_seeds = []
+        
         with self._lock:
             
-            if file_seed in self._file_seeds_to_indices:
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
+            
+            if file_seed in file_seeds_to_indices:
                 
-                index = self._file_seeds_to_indices[ file_seed ]
+                index = file_seeds_to_indices[ file_seed ]
                 
                 if index < len( self._file_seeds ) - 1:
+                    
+                    swapped_file_seed = self._file_seeds[ index + 1 ]
                     
                     self._file_seeds.remove( file_seed )
                     
                     self._file_seeds.insert( index + 1, file_seed )
                     
-                
-                self._FileSeedIndicesJustChanged()
+                    file_seeds_to_indices[ swapped_file_seed ] = index
+                    file_seeds_to_indices[ file_seed ] = index + 1
+                    
+                    updated_file_seeds = [ file_seed, swapped_file_seed ]
+                    
+                    self._FixStatusesToFileSeeds( updated_file_seeds )
+                    
                 
             
         
-        self.NotifyFileSeedsUpdated( ( file_seed, ) )
+        self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
     def GetAPIInfoDict( self, simple: bool ):
@@ -2656,8 +2814,6 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def GetFileSeedCount( self, status: int = None ):
         
-        result = 0
-        
         with self._lock:
             
             if status is None:
@@ -2666,12 +2822,9 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                if self._statuses_to_indexed_file_seeds_dirty:
-                    
-                    self._RegenerateStatusesToFileSeeds()
-                    
+                statuses_to_file_seeds = self._GetStatusesToFileSeeds()
                 
-                return len( self._statuses_to_indexed_file_seeds[ status ] )
+                return len( statuses_to_file_seeds[ status ] )
                 
             
         
@@ -2690,7 +2843,9 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_seeds_to_indices[ file_seed ]
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
+            
+            return file_seeds_to_indices[ file_seed ]
             
         
     
@@ -2793,74 +2948,100 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def InsertFileSeeds( self, index: int, file_seeds: typing.Collection[ FileSeed ] ):
         
-        if len( file_seeds ) == 0:
-            
-            return 0 
-            
-        
-        new_file_seeds = set()
+        file_seeds = HydrusData.DedupeList( file_seeds )
         
         with self._lock:
             
-            index = min( index, len( self._file_seeds ) )
+            new_file_seeds = []
             
             for file_seed in file_seeds:
                 
-                if self._HasFileSeed( file_seed ) or file_seed in new_file_seeds:
+                file_seed.Normalise()
+                
+                if self._HasFileSeed( file_seed ):
                     
                     continue
                     
                 
-                file_seed.Normalise()
+                new_file_seeds.append( file_seed )
                 
-                new_file_seeds.add( file_seed )
+            
+            if len( file_seeds ) == 0:
+                
+                return 0
+                
+            
+            index = min( index, len( self._file_seeds ) )
+            
+            original_insertion_index = index
+            
+            for file_seed in new_file_seeds:
                 
                 self._file_seeds.insert( index, file_seed )
                 
                 index += 1
                 
             
-            self._FileSeedIndicesJustChanged()
+            self._SetFileSeedsToIndicesDirty()
             
             self._SetStatusDirty()
             
+            self._FixStatusesToFileSeeds( new_file_seeds )
+            
+            updated_file_seeds = self._file_seeds[ original_insertion_index : ]
+            
         
-        self.NotifyFileSeedsUpdated( new_file_seeds )
+        self._NotifyFileSeedsUpdated( updated_file_seeds )
         
         return len( new_file_seeds )
         
     
     def NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):
         
+        if len( file_seeds ) == 0:
+            
+            return
+            
+        
         with self._lock:
             
-            if not self._statuses_to_indexed_file_seeds_dirty:
-                
-                self._FixFileSeedsStatusPosition( file_seeds )
-                
-            
-            #
+            self._FixStatusesToFileSeeds( file_seeds )
             
             self._SetStatusDirty()
             
         
-        HG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
+        self._NotifyFileSeedsUpdated( file_seeds )
         
     
-    def RemoveFileSeeds( self, file_seeds: typing.Iterable[ FileSeed ] ):
+    def RemoveFileSeeds( self, file_seeds_to_delete: typing.Iterable[ FileSeed ] ):
         
         with self._lock:
             
-            file_seeds_to_delete = set( file_seeds )
+            file_seeds_to_indices = self._GetFileSeedsToIndices()
+            
+            file_seeds_to_delete = { file_seed for file_seed in file_seeds_to_delete if file_seed in file_seeds_to_indices }
+            
+            if len( file_seeds_to_delete ) == 0:
+                
+                return
+                
+            
+            earliest_affected_index = min( ( file_seeds_to_indices[ file_seed ] for file_seed in file_seeds_to_delete ) )
             
             self._file_seeds = HydrusSerialisable.SerialisableList( [ file_seed for file_seed in self._file_seeds if file_seed not in file_seeds_to_delete ] )
             
-            self._FileSeedIndicesJustChanged()
+            self._SetFileSeedsToIndicesDirty()
             
             self._SetStatusDirty()
             
+            self._FixStatusesToFileSeeds( file_seeds_to_delete )
+            
+            index_shuffled_file_seeds = self._file_seeds[ earliest_affected_index : ]
+            
         
-        self.NotifyFileSeedsUpdated( file_seeds_to_delete )
+        updated_file_seeds = file_seeds_to_delete.union( index_shuffled_file_seeds )
+        
+        self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
     def RemoveFileSeedsByStatus( self, statuses_to_remove: typing.Collection[ int ] ):
@@ -2894,8 +3075,12 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 file_seed.SetStatus( CC.STATUS_UNKNOWN )
                 
             
+            self._FixStatusesToFileSeeds( failed_file_seeds )
+            
+            self._SetStatusDirty()
+            
         
-        self.NotifyFileSeedsUpdated( failed_file_seeds )
+        self._NotifyFileSeedsUpdated( failed_file_seeds )
         
     
     def RetryIgnored( self, ignored_regex = None ):
@@ -2917,8 +3102,12 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 file_seed.SetStatus( CC.STATUS_UNKNOWN )
                 
             
+            self._FixStatusesToFileSeeds( ignored_file_seeds )
+            
+            self._SetStatusDirty()
+            
         
-        self.NotifyFileSeedsUpdated( ignored_file_seeds )
+        self._NotifyFileSeedsUpdated( ignored_file_seeds )
         
     
     def Reverse( self ):
@@ -2927,10 +3116,12 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             self._file_seeds.reverse()
             
-            self._FileSeedIndicesJustChanged()
+            self._SetFileSeedsToIndicesDirty()
+            
+            updated_file_seeds = list( self._file_seeds )
             
         
-        self.NotifyFileSeedsUpdated( list( self._file_seeds ) )
+        self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
     def WorkToDo( self ):

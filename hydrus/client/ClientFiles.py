@@ -51,8 +51,8 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL : 'regenerate thumbnail if incorrect size',
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES : 'regenerate non-standard hashes',
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES : 'delete duplicate neighbours with incorrect file extension',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'if file is missing, remove record (no delete record)',
-    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD : 'if file is missing, remove record (leave delete record)',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD : 'if file is missing, remove record (leave no delete record)',
+    REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD : 'if file is missing, remove record (leave a delete record)',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL : 'if file is missing, then if has URL try to redownload',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing, then if has URL try to redownload, else remove record',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY : 'if file is missing, note it in log',
@@ -185,6 +185,8 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
     
     file_paths = []
     
+    num_sidecars = 0
+    
     paths_to_process = list( raw_paths )
     
     while len( paths_to_process ) > 0:
@@ -230,24 +232,49 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
         HydrusData.HumanTextSort( file_paths )
         
     
+    num_files_with_sidecars = len( file_paths )
+    
     if clear_out_sidecars:
         
         exts = [ '.txt', '.json', '.xml' ]
         
-        def not_a_sidecar( p ):
+        def has_sidecar_ext( p ):
             
             if True in ( p.endswith( ext ) for ext in exts ):
                 
-                return False
+                return True
                 
             
-            return True
+            return False
             
         
-        file_paths = [ path for path in file_paths if not_a_sidecar( path ) ]
+        def get_base_prefix_component( p ):
+            
+            base_prefix = os.path.basename( p )
+            
+            if '.' in base_prefix:
+                
+                base_prefix = base_prefix.split( '.', 1 )[0]
+                
+            
+            return base_prefix
+            
+        
+        # let's get all the 'Image123' in our 'path/to/Image123.jpg' list
+        all_non_ext_prefix_components = { get_base_prefix_component( file_path ) for file_path in file_paths if not has_sidecar_ext( file_path ) }
+        
+        def looks_like_a_sidecar( p ):
+            
+            # if we have Image123.txt, that's probably a sidecar!
+            return has_sidecar_ext( p ) and get_base_prefix_component( p ) in all_non_ext_prefix_components
+            
+        
+        file_paths = [ path for path in file_paths if not looks_like_a_sidecar( path ) ]
         
     
-    return file_paths
+    num_sidecars = num_files_with_sidecars - len( file_paths )
+    
+    return ( file_paths, num_sidecars )
     
 class ClientFilesManager( object ):
     
@@ -259,7 +286,7 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = {}
         
-        self._new_physical_file_deletes = threading.Event()
+        self._physical_file_delete_wait = threading.Event()
         
         self._locations_to_free_space = {}
         
@@ -1172,10 +1199,10 @@ class ClientFilesManager( object ):
     
     def DoDeferredPhysicalDeletes( self ):
         
+        wait_period = self._controller.new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) / 1000
+        
         num_files_deleted = 0
         num_thumbnails_deleted = 0
-        
-        pauser = HydrusData.BigJobPauser()
         
         while not HG.started_shutdown:
             
@@ -1190,9 +1217,18 @@ class ClientFilesManager( object ):
                 
                 if file_hash is not None:
                     
+                    media_result = self._controller.Read( 'media_result', file_hash )
+                    
+                    expected_mime = media_result.GetMime()
+                    
                     try:
                         
-                        ( path, mime ) = self._LookForFilePath( file_hash )
+                        path = self._GenerateExpectedFilePath( file_hash, expected_mime )
+                        
+                        if not os.path.exists( path ):
+                            
+                            ( path, actual_mime ) = self._LookForFilePath( file_hash )
+                            
                         
                         ClientPaths.DeletePath( path )
                         
@@ -1200,7 +1236,7 @@ class ClientFilesManager( object ):
                         
                     except HydrusExceptions.FileMissingException:
                         
-                        pass
+                        HydrusData.Print( 'Wanted to physically delete the "{}" file, with expected mime "{}", but it was not found!'.format( file_hash.hex(), expected_mime ) )
                         
                     
                 
@@ -1214,6 +1250,10 @@ class ClientFilesManager( object ):
                         
                         num_thumbnails_deleted += 1
                         
+                    else:
+                        
+                        HydrusData.Print( 'Wanted to physically delete the "{}" thumbnail, but it was not found!'.format( file_hash.hex() ) )
+                        
                     
                 
                 self._controller.WriteSynchronous( 'clear_deferred_physical_delete', file_hash = file_hash, thumbnail_hash = thumbnail_hash )
@@ -1224,7 +1264,9 @@ class ClientFilesManager( object ):
                     
                 
             
-            pauser.Pause()
+            self._physical_file_delete_wait.wait( wait_period )
+            
+            self._physical_file_delete_wait.clear()
             
         
         if num_files_deleted > 0 or num_thumbnails_deleted > 0:
@@ -1333,11 +1375,6 @@ class ClientFilesManager( object ):
             
         
         return os.path.exists( path )
-        
-    
-    def NotifyNewPhysicalFileDeletes( self ):
-        
-        self._new_physical_file_deletes.set()
         
     
     def Rebalance( self, job_key ):
@@ -1502,7 +1539,7 @@ class ClientFilesManager( object ):
     
     def shutdown( self ):
         
-        self._new_physical_file_deletes.set()
+        self._physical_file_delete_wait.set()
         
     
 class FilesMaintenanceManager( object ):
