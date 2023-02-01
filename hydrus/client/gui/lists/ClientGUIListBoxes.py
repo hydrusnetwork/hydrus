@@ -1132,6 +1132,8 @@ class ListBox( QW.QScrollArea ):
         
         self.listBoxChanged.emit()
         
+        self._SelectionChanged()
+        
     
     def _Deselect( self, index ):
         
