@@ -143,16 +143,25 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         
         menu = QW.QMenu()
         
+        last_seen_service_type = None
+        
         for service in services:
+            
+            if last_seen_service_type is not None and last_seen_service_type != service.GetServiceType():
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
             
             ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to {}.'.format( service.GetName() ), self.SetValue, location_context )
             
+            last_seen_service_type = service.GetServiceType()
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'multiple locations', 'Change the current file domain to something with multiple locations.', self._EditMultipleLocationContext )
+        ClientGUIMenus.AppendMenuItem( menu, 'multiple/deleted locations', 'Change the current file domain to something with multiple locations.', self._EditMultipleLocationContext )
         
         CGC.core().PopupMenu( self, menu )
         

@@ -353,7 +353,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class FileSystemPredicates( object ):
     
-    def __init__( self, system_predicates: typing.Collection[ "Predicate" ], apply_implicit_limit = True ):
+    def __init__( self, system_predicates: typing.Collection[ "Predicate" ] ):
         
         self._has_system_everything = False
         
@@ -1765,7 +1765,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_or_predicates = serialisable_value
             
-            self._value = tuple( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ) )
+            self._value = tuple( sorted( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ), key = lambda p: HydrusTags.ConvertTagToSortable( p.ToString() ) ) )
             
         else:
             

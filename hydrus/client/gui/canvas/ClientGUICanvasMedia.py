@@ -195,7 +195,10 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
             
             bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            
+            # we want the device independant size here, not actual pixels, so want to keep this 100
+            #thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            thumbnail_dpr_percent = 100
             
             ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
@@ -2732,6 +2735,13 @@ class OpenExternallyPanel( QW.QWidget ):
             
             qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
             
+            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            
+            if thumbnail_dpr_percent != 100:
+                
+                qt_pixmap.setDevicePixelRatio( thumbnail_dpr_percent / 100 )
+                
+            
             thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, qt_pixmap )
             
             QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
@@ -2739,7 +2749,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
         m_text = HC.mime_string_lookup[ media.GetMime() ]
         
-        button = QW.QPushButton( 'open ' + m_text + ' externally', self )
+        button = QW.QPushButton( 'open {} externally'.format( m_text ), self )
         
         button.setFocusPolicy( QC.Qt.NoFocus )
         

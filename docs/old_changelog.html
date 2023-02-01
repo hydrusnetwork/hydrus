@@ -35,6 +35,31 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_515"><a href="#version_515">version 515</a></h2>
+                    <ul>
+                        <li><h3>related tags</h3></li>
+                        <li>I worked on last week's related tags algorithm test, bringing it up to usable standard. the old buttons now use the new algorithm exclusively. all users now get 'related tags' showing in manage tags by default (if you don't like it, you can turn it off under _options->tag suggestions_)</li>
+                        <li>the new algorithm has new cancel tech and does a 'work for 600ms' kind of deal, like the old system, and the last-minute blocks from last week are gone--it will search as much as it has time for, including partial results. it also won't lag you out for thirty seconds (unless you tell it to in the options). it searches tags with low count first, so don't worry if it doesn't get to everything--'1girl' usually doesn't have a huge amount extra to offer once everything else has run</li>
+                        <li>it also uses 'hydev actually thought about this' statistical sampling tech to work massively faster on larger-count tags at the cost of some variance in rank and the odd false positive (considered sufficiently related when it actually shouldn't meet the threshold) nearer the bottom end of the tags result list</li>
+                        <li>rather than 'new 1' and 'new 2', there is now an on/off button for searching your local files or all known files on tag repositories. 'all known files' = great results, but very slow, which the tooltip explains</li>
+                        <li>there's also a new status label that will tell you when it is searching and how well the search went (e.g. '12/51 tags searched fully in 459ms')</li>
+                        <li>I also added the 'quick' search button back in, since we can now repeat searches for just selections of tags</li>
+                        <li>I fixed a couple typos in the algorthim that were messing some results</li>
+                        <li>in the manage tags dialog, if you have the suggested tag panels 'side-to-side', they now go in named boxes</li>
+                        <li>in the manage tags dialog, if you have suggested tag panels in a notebook, 'related tags' will only refresh its search on a media change event (including dialog initialisation) when it is the selected page. it won't lag you from the background!</li>
+                        <li>options->tag suggestions now lets you pick which notebook'd tag suggestions page you want to show by default. this defaults to 'related'</li>
+                        <li>I have more plans here. these related tags results are very cachable, so that's an obvious next step to speed up results, and when I have done some other long-term tag improvements elsewhere in the program, I'll be able to quickly filter out unhelpful sibling and parent suggestions. more immediately, I think we'll want some options for namespace weighting (e.g. 'series:' tags' suggestions could have higher rank than 'smile'), so we can tune things a bit</li>
+                        <li><h3>misc</h3></li>
+                        <li>the 'open externally' canvas widget, which shows any available thumbnail of the flash or psd or whatever, now sizes itself correctly and draws the thumbnail nicely if you set the new thumbnail supersampling option to >100%. if your thumbnail is the wrong size (and probably in a queue to be regenerated soon), I _think_ it'll still make the window too big/small, but it'll draw the thumbnail to fit</li>
+                        <li>if a tag content update comes in with an invalid tag (such as could happen with sidecars recently), the client now heals better. the bad tag is corrected live in more places, and this should be propagated to the UI. if you got a warning about 'you have invalid tags in view' recently but running the routine found no problems, please reboot, and I think you'll be fixed. I'm pretty sure the database wasn't being damaged at all here (it has cleaning safeguards, so it _shouldn't_ be possible to actually save bad tags)--it was just a thing to do with the UI not being told of the cleaned tag, and it shouldn't happen again. thank you for the reports! (issue #1324)</li>
+                        <li>export folders and the file maintenance dialog no longer apply the implicit system:limit (defaults to max 10k files) to their searches!</li>
+                        <li>old OR predicates that you load with saved searches and similar should now always have alphebetised components, and if you double-click them to remove them, they will now clear correctly (previously, they were doing something similar to the recent filetype problem, where instead of recognising themselves and deleting, they would instead duplicate a normalised (sorted) copy of themselves)</li>
+                        <li>thanks to a user, updated the recently note-and-ai-updated pixiv parser again to grab the canonical pixiv URL and translated tags, if present</li>
+                        <li>thanks to a user, updated the sankaku parser to grab some more tags</li>
+                        <li>the file location context and tag context buttons under tag autocompletes now put menu separators between each type of file/tag service in their menus. for basic users, this'll be a separator for every row, but for advanced users with multiple local domains, it will help categorise the list a bit</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_514"><a href="#version_514">version 514</a></h2>
                     <ul>
                         <li><h3>downloaders</h3></li>

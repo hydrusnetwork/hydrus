@@ -420,7 +420,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _DoExport( self ):
         
-        query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context )
+        query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context, apply_implicit_limit = False )
         
         media_results = []
         

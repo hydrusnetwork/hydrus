@@ -3778,6 +3778,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._suggested_tags_layout.addItem( 'notebook', 'notebook' )
             self._suggested_tags_layout.addItem( 'side-by-side', 'columns' )
             
+            self._default_suggested_tags_notebook_page = ClientGUICommon.BetterChoice( suggested_tags_panel )
+            
+            for item in [ 'favourites', 'related', 'file_lookup_scripts', 'recent' ]:
+                
+                self._default_suggested_tags_notebook_page.addItem( item, item )
+                
+            
             suggest_tags_panel_notebook = QW.QTabWidget( suggested_tags_panel )
             
             #
@@ -3842,6 +3849,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_tags_layout.SetValue( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
             
+            self._default_suggested_tags_notebook_page.SetValue( self._new_options.GetString( 'default_suggested_tags_notebook_page' ) )
+            
+            #
+            
             self._show_related_tags.setChecked( self._new_options.GetBoolean( 'show_related_tags' ) )
             
             self._related_tags_search_1_duration_ms.setValue( self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) )
@@ -3871,7 +3882,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Show related tags: ', self._show_related_tags ) )
-            rows.append( ( 'Initial search duration (ms): ', self._related_tags_search_1_duration_ms ) )
+            rows.append( ( 'Initial/Quick search duration (ms): ', self._related_tags_search_1_duration_ms ) )
             rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
             rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
             
@@ -3879,7 +3890,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             desc = 'This will search the database for tags statistically related to what your files already have.'
             
-            QP.AddToLayout( panel_vbox, ClientGUICommon.BetterStaticText(suggested_tags_related_panel,desc), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( panel_vbox, ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             suggested_tags_related_panel.setLayout( panel_vbox )
@@ -3922,10 +3933,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Width of suggested tags columns: ', self._suggested_tags_width ) )
             rows.append( ( 'Column layout: ', self._suggested_tags_layout ) )
+            rows.append( ( 'Default notebook page: ', self._default_suggested_tags_notebook_page ) )
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_panel, rows )
             
-            desc = 'The manage tags dialog can provide several kinds of tag suggestions. For simplicity, most are turned off by default.'
+            desc = 'The manage tags dialog can provide several kinds of tag suggestions.'
             
             suggested_tags_panel.Add( ClientGUICommon.BetterStaticText( suggested_tags_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3942,8 +3954,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._suggested_favourites_services.currentIndexChanged.connect( self.EventSuggestedFavouritesService )
+            self._suggested_tags_layout.currentIndexChanged.connect( self._NotifyLayoutChanged )
             
+            self._NotifyLayoutChanged()
             self.EventSuggestedFavouritesService( None )
+            
+        
+        def _NotifyLayoutChanged( self ):
+            
+            enable_default_page = self._suggested_tags_layout.GetValue() == 'notebook'
+            
+            self._default_suggested_tags_notebook_page.setEnabled( enable_default_page )
             
         
         def _SaveCurrentSuggestedFavourites( self ):
@@ -3981,6 +4002,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'suggested_tags_width', self._suggested_tags_width.value() )
             self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetValue() )
+            
+            self._new_options.SetString( 'default_suggested_tags_notebook_page', self._default_suggested_tags_notebook_page.GetValue() )
             
             self._SaveCurrentSuggestedFavourites()
             
