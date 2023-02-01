@@ -7,6 +7,32 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 515](https://github.com/hydrusnetwork/hydrus/releases/tag/v515)
+
+### related tags
+
+* I worked on last week's related tags algorithm test, bringing it up to usable standard. the old buttons now use the new algorithm exclusively. all users now get 'related tags' showing in manage tags by default (if you don't like it, you can turn it off under _options->tag suggestions_)
+* the new algorithm has new cancel tech and does a 'work for 600ms' kind of deal, like the old system, and the last-minute blocks from last week are gone--it will search as much as it has time for, including partial results. it also won't lag you out for thirty seconds (unless you tell it to in the options). it searches tags with low count first, so don't worry if it doesn't get to everything--'1girl' usually doesn't have a huge amount extra to offer once everything else has run
+* it also uses 'hydev actually thought about this' statistical sampling tech to work massively faster on larger-count tags at the cost of some variance in rank and the odd false positive (considered sufficiently related when it actually shouldn't meet the threshold) nearer the bottom end of the tags result list
+* rather than 'new 1' and 'new 2', there is now an on/off button for searching your local files or all known files on tag repositories. 'all known files' = great results, but very slow, which the tooltip explains
+* there's also a new status label that will tell you when it is searching and how well the search went (e.g. '12/51 tags searched fully in 459ms')
+* I also added the 'quick' search button back in, since we can now repeat searches for just selections of tags
+* I fixed a couple typos in the algorthim that were messing some results
+* in the manage tags dialog, if you have the suggested tag panels 'side-to-side', they now go in named boxes
+* in the manage tags dialog, if you have suggested tag panels in a notebook, 'related tags' will only refresh its search on a media change event (including dialog initialisation) when it is the selected page. it won't lag you from the background!
+* options->tag suggestions now lets you pick which notebook'd tag suggestions page you want to show by default. this defaults to 'related'
+* I have more plans here. these related tags results are very cachable, so that's an obvious next step to speed up results, and when I have done some other long-term tag improvements elsewhere in the program, I'll be able to quickly filter out unhelpful sibling and parent suggestions. more immediately, I think we'll want some options for namespace weighting (e.g. 'series:' tags' suggestions could have higher rank than 'smile'), so we can tune things a bit
+
+### misc
+
+* the 'open externally' canvas widget, which shows any available thumbnail of the flash or psd or whatever, now sizes itself correctly and draws the thumbnail nicely if you set the new thumbnail supersampling option to >100%. if your thumbnail is the wrong size (and probably in a queue to be regenerated soon), I _think_ it'll still make the window too big/small, but it'll draw the thumbnail to fit
+* if a tag content update comes in with an invalid tag (such as could happen with sidecars recently), the client now heals better. the bad tag is corrected live in more places, and this should be propagated to the UI. if you got a warning about 'you have invalid tags in view' recently but running the routine found no problems, please reboot, and I think you'll be fixed. I'm pretty sure the database wasn't being damaged at all here (it has cleaning safeguards, so it _shouldn't_ be possible to actually save bad tags)--it was just a thing to do with the UI not being told of the cleaned tag, and it shouldn't happen again. thank you for the reports! (issue #1324)
+* export folders and the file maintenance dialog no longer apply the implicit system:limit (defaults to max 10k files) to their searches!
+* old OR predicates that you load with saved searches and similar should now always have alphebetised components, and if you double-click them to remove them, they will now clear correctly (previously, they were doing something similar to the recent filetype problem, where instead of recognising themselves and deleting, they would instead duplicate a normalised (sorted) copy of themselves)
+* thanks to a user, updated the recently note-and-ai-updated pixiv parser again to grab the canonical pixiv URL and translated tags, if present
+* thanks to a user, updated the sankaku parser to grab some more tags
+* the file location context and tag context buttons under tag autocompletes now put menu separators between each type of file/tag service in their menus. for basic users, this'll be a separator for every row, but for advanced users with multiple local domains, it will help categorise the list a bit
+
 ## [Version 514](https://github.com/hydrusnetwork/hydrus/releases/tag/v514)
 
 ### downloaders
@@ -61,8 +87,7 @@ title: Changelog
 * **`hide_service_keys_tags` is now default true. it will be removed in 4 weeks or so. same deal as with `service_names_to_statuses_to_...`--move to `tags`**
 * **`system_inbox` and `system_archive` are removed from `/get_files/search_files`! just use 'system:inbox/archive' in the tags list**
 * **the 'set_file_relationships' command from last week has been reworked to have a nicer Object parameter with a new name. please check the updated help!** normally I wouldn't change something so quick, but we are still in early prototype, so I'm ok shifting it (and the old method still works lmao, but I'll clear that code out in a few weeks, so please move over--the Object will be much nicer to expand in future, which I forgot about in v513)
-### many Client API commands now support modern file domain objects, meaning you can search a UNION of file services and 'deleted-from' file services. affected commands are
-
+* many Client API commands now support modern file domain objects, meaning you can search a UNION of file services and 'deleted-from' file services. affected commands are
 * * /add_files/delete_files
 * * /add_files/undelete_files
 * * /add_tags/search_tags
@@ -441,81 +466,3 @@ title: Changelog
 * cleaned up some canvas zoom code
 * fixed another 'duplicates' unit test that would on rare occasion fail due to a too-specific test
 * removed a no-longer needed token declaration from the github build script that was raising a warning
-
-## [Version 505](https://github.com/hydrusnetwork/hydrus/releases/tag/v505)
-
-### exif update
-
-* the client now has the ability to check your image files for basic human-readable metadata. sometimes this is timing data for a gif, often it is something like DPI, and for many of the recent ML-generated pngs, this is the original generating prompt. this is now viewable in the same way as EXIF, on the same panel. since this (and future expansions) are not EXIF _per se_, the overarching UI around here is broadly renamed 'embedded metadata'
-* the client now scans for and remembers if files have EXIF or human-readable embedded metadata. two predicates, 'system:image has exif' and 'system:image has human-readable embedded metadata' let you search for them. the vast majority of images have some sort of human-readable embedded metadata, so 'system:no human-readable embedded metadata' may typically be the more useful predicate in the latter case
-* the system predicate parser can handle these new system preds
-* to keep the system predicate list tidy, the new system preds are wrapped with 'has icc profile' into a meta-system predicate 'system:embedded metadata', like how 'system:dimensions' works
-* the media viewer now knows ahead of time if a media has embedded metadata. the button in the media viewer's top hover window that shows this is no longer a cog but a little text-on-window image, and it now only appears if the file has data to show. the tooltip previews whether this is EXIF, other data, or both
-* this knowledge is obviously now generated on file imports going forward, and new file maintenance jobs can retroactively scan for it
-* all your existing image files and gifs/apngs are scheduled for this work. they will catch up in the background over the coming weeks
-* the duplicate filter shows if one or both files have exif or other human-readable data. I had written off adding new 'scores' to the dupe filter panel until a full overhaul, but this was a simple copy/paste of the icc profile statement, so I snuck it in. also, these statements now only appear if for one image it is true and the other is false--no more 'they both have icc profiles m8', which is not a helpful comparison statement
-* added some unit tests for this new tech
-* a future expansion here will be to record the specific keys and values into the database so you can search specifically over those values (e.g. 'EXIF ISO level > 400', or 'has "parameters" text value')
-
-### misc
-
-* the 'reverse page drop shift behaviour' checkbox in _options->gui pages_ is replaced with four checkboxes. two govern whether page drops should chase the drop, either normally or with shift held down, and two new ones govern whether hydrus should dynamically navigate tabs as you move a media or page drag and drop over the tab bar. set them how you like!
-* a new EXPERIMENTAL checkbox just beneath these lets you change what the mouse wheel does to a row of page tabs--by default, the wheel will change tab selection, but if you often have an overloaded row (i.e. they overspill the bar width and you see the left/right arrows), you can set the wheel to _scroll/pan the bar_ instead
-* the 'if file is missing, remove record' job is now split into two--one that leaves no deletion record (old behaviour), and one that does (new). this new job lets you do some 'yes and I want it to stay gone' tasks like if you are syncing an old database backup to a newer client_files structure
-* thanks to user pointing out what was needed, turned on a beta 'darkmode detection' in Qt for Windows. if you launch the client in official Windows 'Apps darkmode' (under Windows settings->Colors), it should now start with your system darkmode colours. switching between light and dark mode while the client is running is pretty buggy (also my Explorer windows are buggy at this too jej), but this is a step forward. fingers crossed this feature matures and gets reliable multiplatform support in future (issue #756)
-
-### fixes
-
-* thanks to a user, the twitter downloader is fixed. seems like twitter (maybe due to Elon's new team?) changed one tiny name in the API we use. let's see if they change anything more significant in the coming weeks (issue #1268)
-* thanks to a user the 'gelbooru 0.1.11 file page parser' stops getting borked 'Rating: ' tags, and I fixed its source time fetch too. I'm pretty sure these broke because of the multiline string processing change a couple months ago, sorry for the trouble!
-* fixed a recent stupid typo that broke the media viewer's do an edge pan' action (issue #1266)
-* fixed an issue with the furry.booru.org url classes, which were normalising URLs to http rather than https for some accidental reason
-* I finally figured out the weird bug where the colour picker dialog would sometimes treat mouse moves as mouse drags over the colour-selection gradient box. this is due to a bug in Qt6 where if you have a stylesheet with a certain hover value set, the colour picker goes bananas. I tried many things to fix this and finally settled on a sledgehammer: if you have the offending value in your stylesheet, it now does some stuff that takes a second or two of lag to launch the colour picker and a second or two of lag to exit it. sorry, but that fixes it! if you want to skip the lag in the options dialog, set your stylesheet to 'default' for the duration (issue #1260)
-* fixed an issue where the new sidecar importer system was not correctly cleaning tags (removing extra whitespace, lowercasing) before committing them to the database! if you got hit with this, a simple restart should fix the incorrect labels (it wasn't _actually_ writing bad tags to the database), but if a restart does not fix it, please run _database->check and repair->fix invalid tags_ (issue #1264)
-* fixed an issue opening the new metadata sidecar edit UI when you had removed and replaced the original 'my tags' service
-* think I fixed a bug in the duplicate filter where if a file in the current pair is deleted (and removed from view), the index/pair tracking would desynchronise and cause an error if you attempted to rewind to the first pair
-* I fixed the reported 'committable decisions' count for duplicate filters set to do no duplicate content merge at all
-
-### build version woes
-
-* all the builds now run on python 3.9 (Linux and Windows were 3.8 previously). any users on systems too old to run 3.9 are encouraged to run from source instead
-* the linux build is rolled back to the older version of python-mpv. thanks to the users who helped me test this, and the specific user who let me know about the different version incompatibilities going on. basically we can't move to the new mpv on the Linux build for a little while, so the official release is rolling back to safe and stable. if you are on a newer Linux flavour, like 22.04, I recommend you pursue running from source, which is now easy on Linux
-* I am considering, in let's say two or three months, no longer supporting the Linux build. we'll see how well the running from source easy-setup scripts work out, but if they aren't a hassle, that really is the proper way to do things on Linux, and it'll solve many crashes and mpv issues
-
-### running from source is now simple and easy for everyone
-
-* transcribed the setup .bat files in the base directory to .sh for linux users and .command for macOS users! the 'running from source' help is updated too. all users are now welcome to try it out!
-* folded the 'setup_venv_qt5.bat' script into the main 'setup_venv.bat' script as a user choice for 'advanced' setup, and expanded it with prompts for qt5, mpv, and opencv
-* the setup files now say your python version and guide you through all choices
-* as Windows 8.1 users have reported problems with Qt6, the help and script recommendations on Qt5 are now <=8.1, not just 7. but it is easy to switch now, so if you want to play around, let me know what you discover
-
-### boring running from source and help gubbins
-
-* took the 'update' option out of the 'setup-venv.bat' script. this process was not doing what I thought it would and was not particularly useful. the script now always reinstalls after user hits Enter to continue, which is very reliable, gets newer versions of libraries when available, and almost always takes less than a minute
-* updated the github readme and website index to point obviously and directly at the getting started guide
-* took out some of the bloviating from the initial introduction page
-* updated the running from source help to talk about the new advanced setup and added a couple extra warnings
-* updated the running from source help to talk about Linux and macOS
-* if qtpy is missing at the very start of the program, a new error catch asks the user if they installed and activated their venv correctly (should also catch people who run client.py right off the bat without reading the docs)
-* deleted the old user-written help document about which packages to use with which Linux flavours, as the author says it is now out of date and modern pip as used by the scripts navigates it better nowadays
-* the setup_venv.bat now checks and informs the user if they do not have python installed
-* cleaned up the flow control of the batch files. more conditionals, fewer gotos
-* to keep the base install dir clean, moved the 'advanced' setup script's cut-up requirements.txts to a new folder under static/requirements. if you are manually setting up a venv and need unusual libraries, check them out for known good specific versions, otherwise you are set with the basic requirements.txt
-* to keep the install dir clean, moved the obscure 'build' requirements.txts to a new folder under static/requirements. these are mostly just notes for me when setting up a new test dev environment
-
-### cleanup and other boring stuff
-
-* as recommended by the pyopenssl page, I moved the server self-signed cert generation routine to 'cryptography' (which I'm pretty sure pyopenssl was just wrapping anyway). cryptography is added to the requirements.txt, but you should already have it. pyopenssl is still used by twisted, so it stays in the requirements.txts. both of these libraries remain optional and are only used by people hosting https services
-* if you load up a favourite search, the focus no longer goes to the autocomplete text box right after. hydev liked most of the focus propagation changes here but found this one incredibly annoying
-* when you are in profile mode and doing repository processing, the current speed is now printed regularly to the profile log to help see how fast the profiled jobs are at each step
-* simplified some duplicate filter code
-* the 'add tags/urls with the import' window now also shows 'cleaned' tags in the preview column for sidecar routers that go to tags
-* added some extra help text and tooltips to the new sidecar exporter UI
-* removed the weird '()' empty name component in .json exporters
-* cleaned up the namespace colour list widget in options->tag presentation. it now has proper add and delete buttons
-* refactored the colour picker button significantly and moved and merged its old wx patch code into the main object
-* the duplicate filter handles 'cannot rewind' errors better, including if the first pair is no longer viewable
-* pretty sure I fixed a long-time stupid hang in the unit tests that appeared occasionally after a 'favicon' fech test. it was due to a previous network engine shutdown test applying too broadly to test objects
-* cleaned up some edge cases in the 'which account added this file/mapping to the server?' tech, where it might have been possible, when looking up deleted content, to get another janitor account (i.e. who deleted the content), although I am pretty sure this situation was never possible to actually start in UI. if I add 'who deleted this?' tech in future, it'll be a separate specific call
-* cleaned up some specifically 'Qt6' references in the build script. the build requirements.txts and spec files are also collapsed down, with old Qt5 versions removed
-* filled out some incomplete abstract class definitions

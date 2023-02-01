@@ -133,7 +133,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'activate_window_on_tag_search_page_activation' ] = False
         
-        self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
+        self._dictionary[ 'booleans' ][ 'show_related_tags' ] = True
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
         
         self._dictionary[ 'booleans' ][ 'freeze_message_manager_when_mouse_on_other_monitor' ] = False
@@ -559,6 +559,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'has_audio_label' ] = '\U0001F50A'
         self._dictionary[ 'strings' ][ 'has_duration_label' ] = ' \u23F5 '
         self._dictionary[ 'strings' ][ 'discord_dnd_filename_pattern' ] = '{hash}'
+        self._dictionary[ 'strings' ][ 'default_suggested_tags_notebook_page' ] = 'related'
         
         self._dictionary[ 'string_list' ] = {}
         

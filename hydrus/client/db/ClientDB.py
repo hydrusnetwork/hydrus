@@ -1,6 +1,7 @@
 import collections
 import hashlib
 import itertools    
+import math
 import os
 import random
 import sqlite3
@@ -5068,97 +5069,7 @@ class DB( HydrusDB.HydrusDB ):
         return sorted_recent_tags
         
     
-    def _GetRelatedTags( self, service_key, skip_hash, search_tags, max_results, max_time_to_take ):
-        
-        stop_time_for_finding_files = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
-        stop_time_for_finding_tags = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
-        
-        service_id = self.modules_services.GetServiceId( service_key )
-        
-        skip_hash_id = self.modules_hashes_local_cache.GetHashId( skip_hash )
-        
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( service_id )
-        
-        tag_ids = [ self.modules_tags.GetTagId( tag ) for tag in search_tags ]
-        
-        random.shuffle( tag_ids )
-        
-        hash_ids_counter = collections.Counter()
-        
-        with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_table_name:
-            
-            # temp tags to mappings
-            cursor = self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_table_name, current_mappings_table_name ) )
-            
-            cancelled_hook = lambda: HydrusData.TimeHasPassedPrecise( stop_time_for_finding_files )
-            
-            for ( hash_id, ) in HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ):
-                
-                hash_ids_counter[ hash_id ] += 1
-                
-            
-        
-        if skip_hash_id in hash_ids_counter:
-            
-            del hash_ids_counter[ skip_hash_id ]
-            
-        
-        #
-        
-        if len( hash_ids_counter ) == 0:
-            
-            return []
-            
-        
-        # this stuff is often 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.....
-        # the 1 stuff often produces large quantities of the same very popular tag, so your search for [ 'eva', 'female' ] will produce 'touhou' because so many 2hu images have 'female'
-        # so we want to do a 'soft' intersect, only picking the files that have the greatest number of shared search_tags
-        # this filters to only the '2' results, which gives us eva females and their hair colour and a few choice other popular tags for that particular domain
-        
-        [ ( gumpf, largest_count ) ] = hash_ids_counter.most_common( 1 )
-        
-        hash_ids = [ hash_id for ( hash_id, current_count ) in hash_ids_counter.items() if current_count > largest_count * 0.8 ]
-        
-        counter = collections.Counter()
-        
-        random.shuffle( hash_ids )
-        
-        for hash_id in hash_ids:
-            
-            for tag_id in self._STI( self._Execute( 'SELECT tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id = ?;', ( hash_id, ) ) ):
-                
-                counter[ tag_id ] += 1
-                
-            
-            if HydrusData.TimeHasPassedPrecise( stop_time_for_finding_tags ):
-                
-                break
-                
-            
-        
-        #
-        
-        for tag_id in tag_ids:
-            
-            if tag_id in counter:
-                
-                del counter[ tag_id ]
-                
-            
-        
-        results = counter.most_common( max_results )
-        
-        inclusive = True
-        pending_count = 0
-        
-        tag_ids_to_full_counts = { tag_id : ( current_count, None, pending_count, None ) for ( tag_id, current_count ) in results }
-        
-        predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_STORAGE, service_id, tag_ids_to_full_counts, inclusive )
-        
-        return predicates
-        
-    
-    def _GetRelatedTagsNewOneTag( self, tag_display_type, file_service_id, tag_service_id, search_tag_id ):
+    def _GetRelatedTagCountsForOneTag( self, tag_display_type, file_service_id, tag_service_id, search_tag_id, max_num_files_to_search, stop_time_for_finding_results = None ) -> typing.Tuple[ collections.Counter, bool ]:
         
         # a user provided the basic idea here
         
@@ -5166,9 +5077,12 @@ class DB( HydrusDB.HydrusDB ):
         # specifying namespace is critical to increase search speed, otherwise we actually are searching all tags for tags
         # we also call this with single specific file domains to keep things fast
         
-        # also this thing searches in fixed file domain to get fast
-        
         # this table selection is hacky as anything, but simpler than GetMappingAndTagTables for now
+        
+        # this would be an ideal location to have a normal-acting cache of results
+        # a two-table-per service-cross-reference thing with cache entry + a creation timestamp and the actual mappings. invalidate on age or some tag changes I guess
+        # then here we'll poll the search tag to give results, invalidate old ones, then populate as needed and return
+        # only cache what you finish though!
         
         mappings_table_names = []
         
@@ -5194,31 +5108,73 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        results = collections.Counter()
-        
-        tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
+        # note we used to filter by namespace here and needed the tags table, but no longer. might come back one day, but might be more trouble than it is worth
+        # tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
         
         # while this searches pending and current tags, it does not cross-reference current and pending on the same file, oh well!
         
+        cancelled_hook = None
+        
+        if stop_time_for_finding_results is not None:
+            
+            def cancelled_hook():
+                
+                return HydrusData.TimeHasPassedPrecise( stop_time_for_finding_results )
+                
+            
+        
+        results_dict = collections.Counter()
+        
+        we_stopped_early = False
+        
         for mappings_table_name in mappings_table_names:
             
-            search_predicate = 'hash_id IN ( SELECT hash_id FROM {} WHERE tag_id = {} )'.format( mappings_table_name, search_tag_id )
+            # if we do the straight-up 'SELECT tag_id, COUNT( * ) FROM {} WHERE hash_id IN ( SELECT hash_id FROM {} WHERE tag_id = {} ) GROUP BY tag_id;
+            # then this is not easily cancellable. since it is working by hash_id, it doesn't know any counts until it knows all of them and is finished
+            # trying to break it into two with a temp integer table runs into the same issue or needs us to pull a bunch of ( tag_id, 1 ) counts
+            # since we'll be grabbing tag_ids with 1 count anyway for cancel tech, let's count them ourselves and trust the overhead isn't killer
             
-            query = 'SELECT tag_id, COUNT( * ) FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {} GROUP BY subtag_id;'.format( mappings_table_name, tags_table_name, search_predicate )
+            # UPDATE: I added the ORDER BY RANDOM() LIMIT 1000 here as a way to better sample. We don't care about all results, we care about samples
+            # Unfortunately I think I have to do the RANDOM, since non-random search will bias the sample to early files etc...
+            # However this reduces the search space significantly, although I have to wangle some other numbers in the parent method
             
-            results.update( dict( self._Execute( query ).fetchall() ) )
+            # this may cause laggy cancel tech since I think the whole order by random has to be done before any results will come back, which for '1girl' is going to be millions of rows...
+            # we'll see how it goes
+            
+            search_predicate = 'hash_id IN ( SELECT hash_id FROM {} WHERE tag_id = {} ORDER BY RANDOM() LIMIT {} )'.format( mappings_table_name, search_tag_id, max_num_files_to_search )
+            
+            query = 'SELECT tag_id FROM {} WHERE {};'.format( mappings_table_name, search_predicate )
+            
+            cursor = self._Execute( query )
+            
+            loop_of_results = self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+            
+            # counter can just take a list of gubbins like this
+            results_dict.update( loop_of_results )
+            
+            if cancelled_hook():
+                
+                we_stopped_early = True
+                
+                break
+                
             
         
-        return results
+        return ( results_dict, we_stopped_early )
         
     
-    def _GetRelatedTagsNew( self, file_service_key, tag_service_key, search_tags, max_results = 100, concurrence_threshold = 0.04, total_search_tag_count_threshold = 25000 ):
+    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04 ):
+        
+        num_tags_searched = 0
+        num_tags_to_search = 0
+        
+        stop_time_for_finding_results = HydrusData.GetNowPrecise() + ( max_time_to_take * 0.85 )
         
         # a user provided the basic idea here
         
         if len( search_tags ) == 0:
             
-            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ]
+            return ( num_tags_searched, num_tags_to_search, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
             
         
         tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL
@@ -5242,73 +5198,82 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        search_tags = set()
+        # two things here:
+        # 1
+            # we don't really want to use '1girl' and friends as search tags here, since the search domain is so huge
+            # so, we go for the smallest count tags first. they have interesting suggestions
+        # 2
+            # namespaces tend to be richer as suggestions, so we'll do them first
         
-        for ( search_tag_id, count ) in search_tag_ids_to_total_counts.items():
+        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: ( HydrusTags.IsUnnamespaced( search_tag_ids_to_search_tags[ row[0] ] ), row[1] ) )
+        
+        search_tags_sorted_ascending = []
+        
+        for ( search_tag_id, count ) in search_tag_ids_flat_sorted_ascending:
             
-            # pending only
-            if count == 0:
+            # I had a negative count IRL, must have been some crazy miscount, caused heaps of trouble with later square root causing imaginary numbers!!!
+            # Having count 0 here is only _supposed_ to happen if the user is asking about stuff they just pended in the dialog now, before hitting ok, or if they are searching across domains
+            # _Or_ if they are tagging files they don't have and searching on local domain
+            # However I saw '10 tags had no related data' on a local file on dev machine with (+1) pending tags!!!
+            # It was evidence of some busted A/C caches, it seems. ghost tags that were present on the cache but not the base mappings tables!
+            if count <= 0:
                 
                 continue
                 
             
-            search_tags.add( search_tag_ids_to_search_tags[ search_tag_id ] )
+            search_tags_sorted_ascending.append( search_tag_ids_to_search_tags[ search_tag_id ] )
             
         
-        if len( search_tags ) == 0:
-            
-            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'not enough data in search domain' ) ]
-            
+        num_tags_to_search = len( search_tags_sorted_ascending )
         
-        #
-        
-        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: row[1] )
-        
-        search_tags = set()
-        total_count = 0
-        
-        # TODO: I think I would rather rework this into a time threshold thing like the old related tags stuff.
-        # so, should ditch the culling and instead make all the requests cancellable. just keep searching until we are out of time, then put results together
-        
-        # TODO: Another option as I vacillate on 'all my files' vs 'all known files' would be to incorporate that into the search timer
-        # do all my files first, then replace that with all known files results until we run out of time (only do this for repositories)
-        
-        # we don't really want to use '1girl' and friends as search tags here, since the search domain is so huge
-        # so, we go for the smallest count tags first. they have interesting suggestions
-        # searching all known files is gonkmode, so we curtail our max search size
-        
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+        if num_tags_to_search == 0:
             
-            total_search_tag_count_threshold /= 25
+            # all have count 0
             
-        
-        for ( search_tag_id, count ) in search_tag_ids_flat_sorted_ascending:
-            
-            # we don't want the total domain to be too large either. death by a thousand cuts
-            if total_count + count > total_search_tag_count_threshold:
-                
-                break
-                
-            
-            total_count += count
-            
-            search_tags.add( search_tag_ids_to_search_tags[ search_tag_id ] )
-            
-        
-        if len( search_tags ) == 0:
-            
-            return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'search domain too big' ) ]
+            return ( num_tags_searched, num_tags_to_search, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no related tags found!' ) ] )
             
         
         #
+        
+        # max_num_files_to_search = 1000
+        
+        # 1000 gives us a decent sample mate, no matter the population size
+        # we can probably go lower than this, or rather base it dynamically on the concurrence_threshold.
+        # if a tag t has to have 0.04 out of n to match, then can't we figure out a sample size n that is 97% likely to catch t>=1 for the least likely qualifying t?
+        #
+        # hydev attempts to do stats here, potential ruh roh
+        # what sample size do we need to have 97% liklihood of getting at least one of the least likely (how many draws of 1-in-25 to get at least one hit)
+        # this is cumulative binomial probability, maybe, with success chance 0.04 and result X >= 1. what's the n for P(X>=1) = 0.97?
+        # this is probably wrong and stupid, but whatever
+        # for difficult values of X I think we need some inverse cumulative distribution function, which is beyond my expertise
+        # but isn't p(X>=1) the same as 1 - P(X=0)? and chance of none happening is just (24/25)^n
+        # (24/25)^n = 0.03
+        # hydev last did this for real 19 years ago, but:
+        # n = log( 0.03 ) / log( 0.96 ) = 86
+        # 143 for 0.997
+        # actually sounds about right?????
+        # a secondary problem here is when we correct our scores later on, we've got some low 'count' counts causing some variance and spiky ranking, particularly at the bottom
+        # your virtual sampled x = 1.2 and 1.4 will be 1 or 2 swapped around at times, or higher like 4 and 5, and so will bump a bit
+        # also while we minimised false negatives, we get some 0.4 getting a hit and counting as 1 of course and then it counts as something, so we've introduced false positives, hooray
+        # to smooth them, we'll just multiple our n a bit. ideally we'd pick an x in P(X>=x) large enough that the granular steps reduce variance
+        # in the end we spent a bunch of brainpower rationalising a guess of 1,000 down to 429, but at least there's a framework here to iterate on
+        
+        desired_confidence = 0.997
+        chance_of_success = concurrence_threshold
+        
+        max_num_files_to_search = int( math.ceil( math.log( 1 - desired_confidence ) / math.log( 1 - chance_of_success ) ) )
+        
+        magical_later_multiplication_smoothing_coefficient = 3
+        
+        max_num_files_to_search *= magical_later_multiplication_smoothing_coefficient
         
         search_tag_ids_to_tag_ids_to_matching_counts = {}
         
-        for search_tag in search_tags:
+        for search_tag in search_tags_sorted_ascending:
             
             search_tag_id = self.modules_tags_local_cache.GetTagId( search_tag )
             
-            tag_ids_to_matching_counts = self._GetRelatedTagsNewOneTag( tag_display_type, file_service_id, tag_service_id, search_tag_id )
+            ( tag_ids_to_matching_counts, it_stopped_early ) = self._GetRelatedTagCountsForOneTag( tag_display_type, file_service_id, tag_service_id, search_tag_id, max_num_files_to_search, stop_time_for_finding_results = stop_time_for_finding_results )
             
             if search_tag_id in tag_ids_to_matching_counts:
                 
@@ -5317,15 +5282,17 @@ class DB( HydrusDB.HydrusDB ):
             
             search_tag_ids_to_tag_ids_to_matching_counts[ search_tag_id ] = tag_ids_to_matching_counts
             
+            if it_stopped_early:
+                
+                break
+                
+            
+            num_tags_searched += 1
+            
         
         #
         
         # ok we have a bunch of counts here for different search tags, so let's figure out some normalised scores and merge them all
-        #
-        # the master score is: number matching mappings found / square_root( suggestion_tag_count * search_tag_count )
-        #
-        # I don't really know what this *is*, but the user did it and it seems to make nice scores, so hooray
-        # the dude said it was arbitrary and could do with tuning, so we'll see how it goes
         
         all_tag_ids = set()
         
@@ -5345,6 +5312,13 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_scores = collections.Counter()
         
+        # the master score is: number matching mappings found / square_root( suggestion_tag_count * search_tag_count )
+        #
+        # the dude said it was mostly arbitrary but came from, I think, P-TAG: Large Scale Automatic Generation of Personalized Annotation TAGs for the Web
+        # he said it could do with tuning, so we'll see how it goes, but overall I am happy with it
+        #
+        # UPDATE: Adding the 'max_num_files_to_search' thing above skews the score here, so we need to adjust it so our score and concurrence thresholds still work!
+        
         for ( search_tag_id, tag_ids_to_matching_counts ) in search_tag_ids_to_tag_ids_to_matching_counts.items():
             
             if search_tag_id not in tag_ids_to_total_counts:
@@ -5354,23 +5328,35 @@ class DB( HydrusDB.HydrusDB ):
             
             search_tag_count = tag_ids_to_total_counts[ search_tag_id ]
             
+            matching_count_multiplier = 1.0
+            
+            if search_tag_count > max_num_files_to_search:
+                
+                # had we searched everything, how much bigger would the results probably be?
+                matching_count_multiplier = search_tag_count / max_num_files_to_search
+                
+            
             search_tag_is_unnamespaced = HydrusTags.IsUnnamespaced( search_tag_ids_to_search_tags[ search_tag_id ] )
             
-            for ( tag_id, matching_count ) in tag_ids_to_matching_counts.items():
+            for ( suggestion_tag_id, suggestion_matching_count ) in tag_ids_to_matching_counts.items():
                 
-                if matching_count / search_tag_count < concurrence_threshold:
+                suggestion_matching_count *= matching_count_multiplier
+                
+                if suggestion_matching_count / search_tag_count < concurrence_threshold:
                     
+                    # this result didn't turn up enough to be relevant
                     continue
                     
                 
-                if tag_id not in tag_ids_to_total_counts:
+                if suggestion_tag_id not in tag_ids_to_total_counts:
                     
+                    # probably a damaged A/C cache
                     continue
                     
                 
-                suggestion_tag_count = tag_ids_to_total_counts[ tag_id ]
+                suggestion_tag_count = tag_ids_to_total_counts[ suggestion_tag_id ]
                 
-                score = matching_count / ( ( abs( suggestion_tag_count ) * abs( search_tag_count ) ) ** 0.5 )
+                score = suggestion_matching_count / ( ( abs( suggestion_tag_count ) * abs( search_tag_count ) ) ** 0.5 )
                 
                 # sophisticated hydev score-tuning
                 if search_tag_is_unnamespaced:
@@ -5378,7 +5364,7 @@ class DB( HydrusDB.HydrusDB ):
                     score /= 3
                     
                 
-                tag_ids_to_scores[ tag_id ] += float( score )
+                tag_ids_to_scores[ suggestion_tag_id ] += float( score )
                 
             
         
@@ -5395,7 +5381,7 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, tag_service_id, tag_ids_to_full_counts, inclusive )
         
-        return predicates
+        return ( num_tags_searched, num_tags_to_search, predicates )
         
     
     def _GetRepositoryThumbnailHashesIDoNotHave( self, service_key ):
@@ -6797,9 +6783,20 @@ class DB( HydrusDB.HydrusDB ):
                         
                         try:
                             
+                            potentially_dirty_tag = tag
+                            
+                            tag = HydrusTags.CleanTag( potentially_dirty_tag )
+                            
+                            if tag != potentially_dirty_tag:
+                                
+                                content_update.SetRow( ( tag, hashes ) )
+                                
+                            
                             tag_id = self.modules_tags.GetTagId( tag )
                             
                         except HydrusExceptions.TagSizeException:
+                            
+                            content_update.SetRow( ( 'bad tag', set() ) )
                             
                             continue
                             
@@ -7619,7 +7616,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self.modules_services.GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self.modules_similar_files.GetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
-        elif action == 'related_tags_new': result = self._GetRelatedTagsNew( *args, **kwargs )
         elif action == 'tag_display_application': result = self.modules_tag_display.GetApplication( *args, **kwargs )
         elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
         elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
@@ -11112,6 +11108,64 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 514:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                if not new_options.GetBoolean( 'show_related_tags' ):
+                    
+                    new_options.SetBoolean( 'show_related_tags', True )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                    message = 'Hey, I made it so your manage tags dialog shows the updated "related tags" suggestion column (showing it is the new default). If you do not like it, turn it off again under _options->tag suggestions_, thanks!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options to show related tags failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'sankaku file page parser',
+                    'pixiv file page api parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
