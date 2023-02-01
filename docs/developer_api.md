@@ -1881,7 +1881,7 @@ Response:
 
 If there are no potential duplicate groups in the search, this returns an empty list.
 
-### **POST `/manage_file_relationships/set_file_relationships`** { id="manage_file_relationships_set_kings" }
+### **POST `/manage_file_relationships/set_file_relationships`** { id="manage_file_relationships_set_file_relationships" }
 
 Set the relationships to the specified file pairs.
 
