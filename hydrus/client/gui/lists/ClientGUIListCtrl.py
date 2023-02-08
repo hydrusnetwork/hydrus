@@ -34,7 +34,7 @@ class BetterListCtrl( QW.QTreeWidget ):
     columnListContentsChanged = QC.Signal()
     columnListStatusChanged = QC.Signal()
     
-    def __init__( self, parent, column_list_type, height_num_chars, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):           
+    def __init__( self, parent, column_list_type, height_num_chars, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):
         
         QW.QTreeWidget.__init__( self, parent )
         
@@ -59,6 +59,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._data_to_tuples_func = data_to_tuples_func
         
         self._use_simple_delete = use_simple_delete
+        self._can_delete_callback = can_delete_callback
         
         self._menu_callable = None
         
@@ -646,6 +647,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def ProcessDeleteAction( self ):
+        
+        if self._can_delete_callback is not None:
+            
+            if not self._can_delete_callback():
+                
+                return
+                
+            
         
         if self._use_simple_delete:
             

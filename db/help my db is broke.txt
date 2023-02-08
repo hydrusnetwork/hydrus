@@ -118,7 +118,7 @@ This instructs the database to copy itself to a new file. When it comes across d
 
 And wait a bit. It'll report its progress as it tries to copy your db. It will be slow. Remember to go '.exit' once it is done to close the shell neatly.
 
-If you get an error about a missing 'sqlite_stat1' table, don't worry about it, it is not important.
+If the clone says some errors like 'subtags_fts4_content already exists' but keeps on working, don't worry about it! That isn't a real error. Same if you get an error about a missing 'sqlite_stat1' table.
 
 Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. This means some data has been lost. If this is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data with some work once you are working again.
 

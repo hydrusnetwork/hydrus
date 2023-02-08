@@ -2162,6 +2162,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return True
         
     
+    def SetCount( self, count: PredicateCount ):
+        
+        self._count = count
+        
+    
     def SetCountTextSuffix( self, suffix: str ):
         
         self._count_text_suffix = suffix

@@ -5163,18 +5163,40 @@ class DB( HydrusDB.HydrusDB ):
         return ( results_dict, we_stopped_early )
         
     
-    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04 ):
-        
-        num_tags_searched = 0
-        num_tags_to_search = 0
-        
-        stop_time_for_finding_results = HydrusData.GetNowPrecise() + ( max_time_to_take * 0.85 )
+    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None ):
         
         # a user provided the basic idea here
         
+        def get_weight_from_dict( tag, d ):
+            
+            if d is None:
+                
+                return 1.0
+                
+            
+            ( n, s ) = HydrusTags.SplitTag( tag )
+            
+            if n in d:
+                
+                return d[ n ]
+                
+            else:
+                
+                return d[ ':' ]
+                
+            
+        
+        num_tags_searched = 0
+        num_tags_to_search = 0
+        num_skipped = 0
+        
+        stop_time_for_finding_results = HydrusData.GetNowPrecise() + ( max_time_to_take * 0.85 )
+        
+        search_tags = [ search_tag for search_tag in search_tags if get_weight_from_dict( search_tag, search_tag_slices_weight_dict ) != 0.0 ]
+        
         if len( search_tags ) == 0:
             
-            return ( num_tags_searched, num_tags_to_search, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
+            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
             
         
         tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL
@@ -5203,34 +5225,35 @@ class DB( HydrusDB.HydrusDB ):
             # we don't really want to use '1girl' and friends as search tags here, since the search domain is so huge
             # so, we go for the smallest count tags first. they have interesting suggestions
         # 2
-            # namespaces tend to be richer as suggestions, so we'll do them first
+            # we have an options structure for value of namespace, so we'll do biggest numbers first
         
-        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: ( HydrusTags.IsUnnamespaced( search_tag_ids_to_search_tags[ row[0] ] ), row[1] ) )
+        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: ( - get_weight_from_dict( search_tag_ids_to_search_tags[ row[0] ], search_tag_slices_weight_dict ), row[1] ) )
         
         search_tags_sorted_ascending = []
         
         for ( search_tag_id, count ) in search_tag_ids_flat_sorted_ascending:
             
-            # I had a negative count IRL, must have been some crazy miscount, caused heaps of trouble with later square root causing imaginary numbers!!!
-            # Having count 0 here is only _supposed_ to happen if the user is asking about stuff they just pended in the dialog now, before hitting ok, or if they are searching across domains
-            # _Or_ if they are tagging files they don't have and searching on local domain
-            # However I saw '10 tags had no related data' on a local file on dev machine with (+1) pending tags!!!
-            # It was evidence of some busted A/C caches, it seems. ghost tags that were present on the cache but not the base mappings tables!
+            # I had a negative count IRL, it was a busted A/C cache, caused heaps of trouble with later square root causing imaginary numbers!!!
+            # Having count 0 here is only _supposed_ to happen if the user is asking about stuff they just pended in the dialog now, before hitting ok, or if they are searching local domain from only all known files content etc...
             if count <= 0:
+                
+                num_skipped += 1
                 
                 continue
                 
             
-            search_tags_sorted_ascending.append( search_tag_ids_to_search_tags[ search_tag_id ] )
+            search_tag = search_tag_ids_to_search_tags[ search_tag_id ]
+            
+            search_tags_sorted_ascending.append( search_tag )
             
         
         num_tags_to_search = len( search_tags_sorted_ascending )
         
         if num_tags_to_search == 0:
             
-            # all have count 0
+            # all have count 0 or were filtered out by 0.0 weight
             
-            return ( num_tags_searched, num_tags_to_search, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no related tags found!' ) ] )
+            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no related tags found!' ) ] )
             
         
         #
@@ -5253,17 +5276,16 @@ class DB( HydrusDB.HydrusDB ):
         # 143 for 0.997
         # actually sounds about right?????
         # a secondary problem here is when we correct our scores later on, we've got some low 'count' counts causing some variance and spiky ranking, particularly at the bottom
-        # your virtual sampled x = 1.2 and 1.4 will be 1 or 2 swapped around at times, or higher like 4 and 5, and so will bump a bit
-        # also while we minimised false negatives, we get some 0.4 getting a hit and counting as 1 of course and then it counts as something, so we've introduced false positives, hooray
-        # to smooth them, we'll just multiple our n a bit. ideally we'd pick an x in P(X>=x) large enough that the granular steps reduce variance
-        # in the end we spent a bunch of brainpower rationalising a guess of 1,000 down to 429, but at least there's a framework here to iterate on
+        # figuring this out is a variance confidence problem, which is beyond me
+        # to smooth them out, we'll just multiple our n a bit. ideally we'd pick an x in P(X>=x) large enough that the granular steps reduce variance
+        # in the end we spent a bunch of brainpower rationalising a guess of 1,000 down to 500-odd, but at least there's a framework here to iterate on
         
         desired_confidence = 0.997
         chance_of_success = concurrence_threshold
         
-        max_num_files_to_search = int( math.ceil( math.log( 1 - desired_confidence ) / math.log( 1 - chance_of_success ) ) )
+        max_num_files_to_search = max( 50, int( math.ceil( math.log( 1 - desired_confidence ) / math.log( 1 - chance_of_success ) ) ) )
         
-        magical_later_multiplication_smoothing_coefficient = 3
+        magical_later_multiplication_smoothing_coefficient = 4
         
         max_num_files_to_search *= magical_later_multiplication_smoothing_coefficient
         
@@ -5336,7 +5358,7 @@ class DB( HydrusDB.HydrusDB ):
                 matching_count_multiplier = search_tag_count / max_num_files_to_search
                 
             
-            search_tag_is_unnamespaced = HydrusTags.IsUnnamespaced( search_tag_ids_to_search_tags[ search_tag_id ] )
+            weight = get_weight_from_dict( search_tag_ids_to_search_tags[ search_tag_id ], search_tag_slices_weight_dict )
             
             for ( suggestion_tag_id, suggestion_matching_count ) in tag_ids_to_matching_counts.items():
                 
@@ -5358,10 +5380,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 score = suggestion_matching_count / ( ( abs( suggestion_tag_count ) * abs( search_tag_count ) ) ** 0.5 )
                 
-                # sophisticated hydev score-tuning
-                if search_tag_is_unnamespaced:
+                if weight != 1.0:
                     
-                    score /= 3
+                    score *= weight
                     
                 
                 tag_ids_to_scores[ suggestion_tag_id ] += float( score )
@@ -5381,7 +5402,32 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, tag_service_id, tag_ids_to_full_counts, inclusive )
         
-        return ( num_tags_searched, num_tags_to_search, predicates )
+        result_predicates = []
+        
+        for predicate in predicates:
+            
+            tag = predicate.GetValue()
+            
+            weight = get_weight_from_dict( tag, result_tag_slices_weight_dict )
+            
+            if weight == 0.0:
+                
+                continue
+                
+            
+            if weight != 1.0:
+                
+                existing_count = predicate.GetCount()
+                
+                new_count = ClientSearch.PredicateCount( int( existing_count.min_current_count * weight ), 0, None, None )
+                
+                predicate.SetCount( new_count )
+                
+            
+            result_predicates.append( predicate )
+            
+        
+        return ( num_tags_searched, num_tags_to_search, num_skipped, result_predicates )
         
     
     def _GetRepositoryThumbnailHashesIDoNotHave( self, service_key ):
@@ -11166,6 +11212,37 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 515:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'deviant art file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         

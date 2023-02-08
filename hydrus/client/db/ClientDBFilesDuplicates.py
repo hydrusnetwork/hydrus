@@ -733,8 +733,33 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             if media_id is None:
                 
+                king_hash_id = hash_id
+                
+            else:
+                
+                king_hash_id = self.GetKingHashId( media_id )
+                
+            
+            if king_hash_id == hash_id:
+                
                 file_relationships_dict[ 'is_king' ] = True
                 file_relationships_dict[ 'king' ] = hash.hex()
+                
+            else:
+                
+                file_relationships_dict[ 'is_king' ] = False
+                file_relationships_dict[ 'king' ] = self.modules_hashes_local_cache.GetHash( king_hash_id ).hex()
+                
+            
+            filtered_hash_ids = self.modules_files_storage.FilterHashIds( db_location_context.location_context, { hash_id } )
+            
+            file_relationships_dict[ 'king_is_on_file_domain' ] = len( filtered_hash_ids ) > 0
+            
+            filtered_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), { hash_id } )
+            
+            file_relationships_dict[ 'king_is_local' ] = len( filtered_hash_ids ) > 0
+            
+            if media_id is None:
                 
                 for duplicate_type in duplicate_types_to_fetch:
                     
@@ -742,24 +767,6 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                     
                 
             else:
-                
-                king_hash_id = self.GetBestKingId( media_id, db_location_context )
-                
-                if king_hash_id is None:
-                    
-                    file_relationships_dict[ 'is_king' ] = False
-                    file_relationships_dict[ 'king' ] = None
-                    
-                elif king_hash_id == hash_id:
-                    
-                    file_relationships_dict[ 'is_king' ] = True
-                    file_relationships_dict[ 'king' ] = hash.hex()
-                    
-                else:
-                    
-                    file_relationships_dict[ 'is_king' ] = False
-                    file_relationships_dict[ 'king' ] = self.modules_hashes_local_cache.GetHash( king_hash_id ).hex()
-                    
                 
                 for duplicate_type in ( HC.DUPLICATE_POTENTIAL, HC.DUPLICATE_MEMBER, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                     

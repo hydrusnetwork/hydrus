@@ -127,12 +127,33 @@ def GetAPNGDuration( apng_bytes: bytes ) -> float:
     
     return total_duration
     
+
 def GetAPNGNumFrames( apng_actl_bytes: bytes ) -> int:
     
     ( num_frames, ) = struct.unpack( '>I', apng_actl_bytes[ : 4 ] )
     
     return num_frames
     
+
+def GetAPNGTimesToPlay( path: str ) -> int:
+    
+    with open( path, 'rb' ) as f:
+        
+        file_header_bytes = f.read( 256 )
+        
+    
+    apng_actl_bytes = GetAPNGACTLChunkData( file_header_bytes )
+    
+    if apng_actl_bytes is None:
+        
+        return 0
+        
+    
+    ( num_plays, ) = struct.unpack( '>I', apng_actl_bytes[ 4 : 8 ] )
+    
+    return num_plays
+    
+
 def GetFFMPEGVersion():
     
     cmd = [ FFMPEG_PATH, '-version' ]

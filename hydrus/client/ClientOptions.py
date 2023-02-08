@@ -370,6 +370,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
         self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
         self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
+        self._dictionary[ 'integers' ][ 'related_tags_concurrence_threshold_percent' ] = 8
         
         self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
         
@@ -596,6 +597,34 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_ACTUAL ) ) ) )
         
         self._dictionary[ 'default_namespace_sorts' ] = default_namespace_sorts
+        
+        #
+        
+        self._dictionary[ 'related_tags_search_tag_slices_weight_percent' ] = HydrusSerialisable.SerialisableList( [
+            [ '', 10 ],
+            [ ':', 100 ],
+            [ 'character:', 300 ],
+            [ 'creator:', 300 ],
+            [ 'series:', 300 ],
+            [ 'filename:', 0 ],
+            [ 'page:', 0 ],
+            [ 'chapter:', 0 ],
+            [ 'volume:', 0 ],
+            [ 'title:', 0 ]
+        ] )
+        
+        self._dictionary[ 'related_tags_result_tag_slices_weight_percent' ] = HydrusSerialisable.SerialisableList( [
+            [ '', 50 ],
+            [ ':', 100 ],
+            [ 'character:', 400 ],
+            [ 'creator:', 200 ],
+            [ 'series:', 200 ],
+            [ 'filename:', 0 ],
+            [ 'page:', 0 ],
+            [ 'chapter:', 0 ],
+            [ 'volume:', 0 ],
+            [ 'title:', 0 ]
+        ] )
         
         #
         
@@ -1347,6 +1376,17 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetRelatedTagsTagSliceWeights( self ):
+        
+        with self._lock:
+            
+            return (
+                [ tuple( row ) for row in self._dictionary[ 'related_tags_search_tag_slices_weight_percent' ] ],
+                [ tuple( row ) for row in self._dictionary[ 'related_tags_result_tag_slices_weight_percent' ] ]
+            )
+            
+        
+    
     def GetSimpleDownloaderFormulae( self ):
         
         with self._lock:
@@ -1710,6 +1750,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ name ] = value
+            
+        
+    
+    def SetRelatedTagsTagSliceWeights( self, related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'related_tags_search_tag_slices_weight_percent' ] = HydrusSerialisable.SerialisableList( related_tags_search_tag_slices_weight_percent )
+            self._dictionary[ 'related_tags_result_tag_slices_weight_percent' ] = HydrusSerialisable.SerialisableList( related_tags_result_tag_slices_weight_percent )
             
         
     

@@ -138,6 +138,8 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         
         self.setMinimumWidth( width )
         
+        self.AddImportExportButtons( ( ClientMetadataMigration.SingleFileMetadataRouter, ) )
+        
     
     def _AddRouter( self ):
         
@@ -154,6 +156,41 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         router = ClientMetadataMigration.SingleFileMetadataRouter( exporter = exporter )
         
         return self._EditRouter( router )
+        
+    
+    def _CheckImportObjectCustom( self, router: ClientMetadataMigration.SingleFileMetadataRouter ):
+        
+        exporter = router.GetExporter()
+        
+        router_is_exporting_to_sidecars = isinstance( router.GetExporter(), ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar )
+        i_am_exporting_to_sidecars = True in ( issubclass( c, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ) for c in self._allowed_exporter_classes )
+        
+        if router_is_exporting_to_sidecars != i_am_exporting_to_sidecars:
+            
+            if i_am_exporting_to_sidecars:
+                
+                message = 'I take routers that export to sidecars, these new router(s) import from them!'
+                
+            else:
+                
+                message = 'I take routers that import from sidecars, these new router(s) export to them!'
+                
+            
+            raise HydrusExceptions.VetoException( message )
+            
+        
+        if not isinstance( exporter, tuple( self._allowed_exporter_classes ) ):
+            
+            raise HydrusExceptions.VetoException( 'Exporter was {}, I only allow {}.'.format( type( exporter ).__name__, [ c.__name__ for c in self._allowed_exporter_classes ] ) )
+            
+        
+        for importer in router.GetImporters():
+            
+            if not isinstance( importer, tuple( self._allowed_importer_classes ) ):
+                
+                raise HydrusExceptions.VetoException( 'Importer was {}, I only allow {}.'.format( type( importer ).__name__, [ c.__name__ for c in self._allowed_importer_classes ] ) )
+                
+            
         
     
     def _EditRouter( self, router: ClientMetadataMigration.SingleFileMetadataRouter ):

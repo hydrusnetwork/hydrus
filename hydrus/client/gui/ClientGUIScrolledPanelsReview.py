@@ -256,7 +256,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     
                 
-                
             
             self._Update()
             

@@ -2026,8 +2026,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg = QW.QCheckBox( self )
             self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
-            self._always_loop_gifs = QW.QCheckBox( self )
-            self._always_loop_gifs.setToolTip( 'Some GIFS have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
+            self._always_loop_animations = QW.QCheckBox( self )
+            self._always_loop_animations.setToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
             
             self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
             
@@ -2074,7 +2074,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_cv_for_gifs.setChecked( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
-            self._always_loop_gifs.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
             self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
@@ -2109,7 +2109,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
-            rows.append( ( 'Always Loop GIFs:', self._always_loop_gifs ) )
+            rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
             rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
@@ -2337,7 +2337,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
-            self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_gifs.isChecked() )
+            self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
             self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
             
@@ -3822,6 +3822,42 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._related_tags_search_2_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
             self._related_tags_search_3_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
             
+            self._related_tags_concurrence_threshold_percent = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min = 1, max = 100 )
+            tt = 'The related tags system looks for tags that tend to be used on the same files. Here you can set how strict it is. How many percent of tag A\'s files must tag B on for tag B to be a good suggestion? Higher numbers will mean fewer but more relevant suggestions.'
+            self._related_tags_concurrence_threshold_percent.setToolTip( tt )
+            
+            #
+            
+            search_tag_slices_weight_box = ClientGUICommon.StaticBox( suggested_tags_related_panel, 'adjust scores by search tags' )
+            
+            search_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( search_tag_slices_weight_box )
+            
+            self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( search_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
+            tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
+            self._search_tag_slices_weights.setToolTip( tt )
+            
+            search_tag_slices_weight_panel.SetListCtrl( self._search_tag_slices_weights )
+            
+            search_tag_slices_weight_panel.AddButton( 'add', self._AddSearchTagSliceWeight )
+            search_tag_slices_weight_panel.AddButton( 'edit', self._EditSearchTagSliceWeight, enabled_only_on_single_selection = True )
+            search_tag_slices_weight_panel.AddDeleteButton( enabled_check_func = self._CanDeleteSearchTagSliceWeight )
+            
+            #
+            
+            result_tag_slices_weight_box = ClientGUICommon.StaticBox( suggested_tags_related_panel, 'adjust scores by suggested tags' )
+            
+            result_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( result_tag_slices_weight_box )
+            
+            self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( result_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
+            tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
+            self._result_tag_slices_weights.setToolTip( tt )
+            
+            result_tag_slices_weight_panel.SetListCtrl( self._result_tag_slices_weights )
+            
+            result_tag_slices_weight_panel.AddButton( 'add', self._AddResultTagSliceWeight )
+            result_tag_slices_weight_panel.AddButton( 'edit', self._EditResultTagSliceWeight, enabled_only_on_single_selection = True )
+            result_tag_slices_weight_panel.AddDeleteButton( enabled_check_func = self._CanDeleteResultTagSliceWeight )
+            
             #
             
             suggested_tags_file_lookup_script_panel = QW.QWidget( suggest_tags_panel_notebook )
@@ -3859,6 +3895,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._related_tags_search_2_duration_ms.setValue( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
             self._related_tags_search_3_duration_ms.setValue( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
             
+            self._related_tags_concurrence_threshold_percent.setValue( self._new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) )
+
+            ( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ) = self._new_options.GetRelatedTagsTagSliceWeights()
+            
+            self._search_tag_slices_weights.SetData( related_tags_search_tag_slices_weight_percent )
+            self._result_tag_slices_weights.SetData( related_tags_result_tag_slices_weight_percent )
+            
             self._show_file_lookup_script_tags.setChecked( self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) )
             
             self._favourite_file_lookup_script.SetValue( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
@@ -3885,13 +3928,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Initial/Quick search duration (ms): ', self._related_tags_search_1_duration_ms ) )
             rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
             rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
+            rows.append( ( 'Tag concurrence threshold %: ', self._related_tags_concurrence_threshold_percent ) )
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
             desc = 'This will search the database for tags statistically related to what your files already have.'
             
+            search_tag_slices_weight_box.Add( search_tag_slices_weight_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            result_tag_slices_weight_box.Add( result_tag_slices_weight_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             QP.AddToLayout( panel_vbox, ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( panel_vbox, search_tag_slices_weight_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( panel_vbox, result_tag_slices_weight_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             suggested_tags_related_panel.setLayout( panel_vbox )
             
@@ -3960,6 +4010,158 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.EventSuggestedFavouritesService( None )
             
         
+        def _AddResultTagSliceWeight( self ):
+            
+            self._AddTagSliceWeight( self._result_tag_slices_weights )
+            
+        
+        def _AddSearchTagSliceWeight( self ):
+            
+            self._AddTagSliceWeight( self._search_tag_slices_weights )
+            
+        
+        def _AddTagSliceWeight( self, list_ctrl ):
+            
+            message = 'enter namespace'
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    tag_slice = dlg.GetValue()
+                    
+                    if tag_slice in ( '', ':' ):
+                        
+                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, you cannot re-add unnamespaced or namespaced!' )
+                        
+                        return
+                        
+                    
+                    if not tag_slice.endswith( ':' ):
+                        
+                        tag_slice = tag_slice + ':'
+                        
+                    
+                    existing_tag_slices = { existing_tag_slice for ( existing_tag_slice, existing_weight ) in list_ctrl.GetData() }
+                    
+                    if tag_slice in existing_tag_slices:
+                        
+                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, that namespace already exists!' )
+                        
+                        return
+                        
+                    
+                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'set weight' ) as dlg:
+                        
+                        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                        
+                        control = ClientGUICommon.BetterSpinBox( panel, initial = 100, min = 0, max = 10000 )
+                        
+                        panel.SetControl( control )
+                        
+                        dlg.SetPanel( panel )
+                        
+                        if dlg.exec() == QW.QDialog.Accepted:
+                            
+                            weight = control.value()
+                            
+                            new_data = ( tag_slice, weight )
+                            
+                            list_ctrl.AddDatas( [ new_data ] )
+                            
+                            list_ctrl.Sort()
+                            
+                        
+                    
+                
+            
+        
+        def _CanDeleteResultTagSliceWeight( self ) -> bool:
+            
+            return self._CanDeleteTagSliceWeight( self._result_tag_slices_weights )
+            
+        
+        def _CanDeleteSearchTagSliceWeight( self ) -> bool:
+            
+            return self._CanDeleteTagSliceWeight( self._search_tag_slices_weights )
+            
+        
+        def _CanDeleteTagSliceWeight( self, list_ctrl ) -> bool:
+            
+            selected_tag_slices_and_weights = list_ctrl.GetData( only_selected = True )
+            
+            for ( tag_slice, weight ) in selected_tag_slices_and_weights:
+                
+                if tag_slice in ( '', ':' ):
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+        def _ConvertTagSliceAndWeightToListCtrlTuples( self, tag_slice_and_weight ):
+            
+            ( tag_slice, weight ) = tag_slice_and_weight
+            
+            pretty_tag_slice = HydrusTags.ConvertTagSliceToString( tag_slice )
+            sort_tag_slice = pretty_tag_slice
+            
+            pretty_weight = HydrusData.ToHumanInt( weight ) + '%'
+            
+            display_tuple = ( pretty_tag_slice, pretty_weight )
+            sort_tuple = ( sort_tag_slice, weight )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _EditResultTagSliceWeight( self ):
+            
+            self._EditTagSliceWeight( self._result_tag_slices_weights )
+            
+        
+        def _EditSearchTagSliceWeight( self ):
+            
+            self._EditTagSliceWeight( self._search_tag_slices_weights )
+            
+        
+        def _EditTagSliceWeight( self, list_ctrl ):
+            
+            selected_tag_slices_and_weights = list_ctrl.GetData( only_selected = True )
+            
+            if len( selected_tag_slices_and_weights ) > 0:
+                
+                original_data = selected_tag_slices_and_weights[0]
+                
+                ( tag_slice, weight ) = original_data
+                
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit weight' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                    
+                    control = ClientGUICommon.BetterSpinBox( panel, initial = weight, min = 0, max = 10000 )
+                    
+                    panel.SetControl( control )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.exec() == QW.QDialog.Accepted:
+                        
+                        edited_weight = control.value()
+                        
+                        list_ctrl.DeleteDatas( [ original_data ] )
+                        
+                        edited_data = ( tag_slice, edited_weight )
+                        
+                        list_ctrl.AddDatas( [ edited_data ] )
+                        
+                        list_ctrl.Sort()
+                        
+                    
+                
+            
+        
         def _NotifyLayoutChanged( self ):
             
             enable_default_page = self._suggested_tags_layout.GetValue() == 'notebook'
@@ -4017,6 +4219,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'related_tags_search_1_duration_ms', self._related_tags_search_1_duration_ms.value() )
             self._new_options.SetInteger( 'related_tags_search_2_duration_ms', self._related_tags_search_2_duration_ms.value() )
             self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.value() )
+            
+            self._new_options.SetInteger( 'related_tags_concurrence_threshold_percent', self._related_tags_concurrence_threshold_percent.value() )
+            
+            related_tags_search_tag_slices_weight_percent = self._search_tag_slices_weights.GetData()
+            related_tags_result_tag_slices_weight_percent = self._result_tag_slices_weights.GetData()
+            
+            self._new_options.SetRelatedTagsTagSliceWeights( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent )
             
             self._new_options.SetBoolean( 'show_file_lookup_script_tags', self._show_file_lookup_script_tags.isChecked() )
             self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetValue() )

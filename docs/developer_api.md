@@ -1705,6 +1705,8 @@ Response:
         "ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d" : {
             "is_king" : false,
             "king" : "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+            "king_is_on_file_domain" : true,
+            "king_is_local" : true,
             "0" : [
             ],
             "1" : [],
@@ -1720,11 +1722,11 @@ Response:
 }
 ```
 
-`is_king` and `king` relate to which file is the set best of a group. The king is usually the best representative of a group if you need to do comparisons between groups, and the 'get some pairs to filter'-style commands usually try to select the kings of the various to-be-compared duplicate groups.
+`king` refers to which file is set as the best of a duplicate group. If you are doing potential duplicate comparisons, the kings of your two groups are usually the ideal representatives, and the 'get some pairs to filter'-style commands try to select the kings of the various to-be-compared duplicate groups. `is_king` is a convenience bool for when a file is king of its own group.
 
-The relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files' is usually most useful.
+**It is possible for the king to not be available.** Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. A similar issue occurs when you search for filtering pairs--while it is ideal to compare kings with kings, if you set 'files must be pixel dupes', then the user will expect to see those pixel duplicates, not their champions--you may be forced to compare non-kings. `king_is_on_file_domain` lets you know if the king is on the file domain you set, and `king_is_local` lets you know if it is on the hard disk--if `king_is_local=true`, you can do a `/get_files/file` request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
 
-**It is possible for the king to not be available, in which case `king` is null.** The king can be unavailable in several duplicate search contexts, generally when it is outside of the set file domain. For the default domain, 'all my files', the king will be available unless the user has deleted it. You have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
+All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files' is usually most useful.
 
 A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.
 
@@ -1916,7 +1918,7 @@ Each Object is:
 * 4 - set A as better
 * 7 - set B as better
 
-2, 4, and 7 all make the files 'duplicates' (8 under `get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets A>B. You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.
+2, 4, and 7 all make the files 'duplicates' (8 under `/get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets something similar to A>B (but see below for more complicated outcomes). You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.
 
 `do_default_content_merge` sets whether the user's duplicate content merge options should be loaded and applied to the files along with the relationship. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.
 
@@ -1955,6 +1957,47 @@ Response:
 If you try to add an invalid or redundant relationship, for instance setting files that are already duplicates as potential duplicates, no changes are made.
 
 This is the file relationships request that is probably most likely to change in future. I may implement content merge options. I may move from file pairs to group identifiers. When I expand alternates, those file groups are going to support more variables.
+
+#### king merge rules
+
+Recall in `/get_file_relationships` that we discussed how duplicate groups have a 'king' for their best file. This file is the most useful representative when you do comparisons, since if you say "King A > King B", then we know that King A is also better than all of King B's normal duplicate group members. We can merge the group simply just by folding King B and all the other members into King A's group.
+
+So what happens if you say 'A = B'? We have to have a king, so which should it be?
+
+What happens if you say "non-king member of A > non-king member of B"? We don't want to merge all of B into A, since King B might be higher quality than King A.
+
+The logic here can get tricky, but I have tried my best to avoid overcommitting and accidentally promoting the wrong king. Here are all the possible situations ('>' means 'better than', and '=' means 'same quality as'):
+
+??? abstract "Merges" 
+    * King A > King B  
+        * Merge B into A
+        * King A is king of the new combined group
+    * Non-King A > King B
+        * Merge B into A
+        * King of A is king of the new combined group
+    * King A > Non-King B
+        * Remove Non-King B from B and merge it into A
+        * King A stays king of A
+        * King of B stays king of B
+    * Non-King A > Non-King B
+        * Remove Non-King B from B and merge it into A
+        * King of A stays king of A
+        * King of B stays king of B
+    * King A = King B
+        * Merge B into A
+        * King A is king of the new combined group
+    * Non-King A = King B
+        * Merge B into A
+        * King of A is king of the new combined group
+    * King A = Non-King B
+        * Merge A into B
+        * King of B is king of the new combined group
+    * Non-King A = Non-King B
+        * Remove Non-King B from B and merge it into A
+        * King of A stays king of A
+        * King of B stays king of B
+
+So, if you can, always present kings to your users, and action using those kings' hashes. It makes the merge logic easier in all cases. Remember that you can set `system:is the best quality file of its duplicate group` in any file search to exclude any non-kings (e.g. if you are hunting for easily actionable pixel potential duplicates).
 
 ### **POST `/manage_file_relationships/set_kings`** { id="manage_file_relationships_set_kings" }
 

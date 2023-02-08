@@ -2599,6 +2599,8 @@ class TestClientAPI( unittest.TestCase ):
                 "ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d" : {
                     "is_king" : False,
                     "king" : "8784afbfd8b59de3dcf2c13dc1be9d7cb0b3d376803c8a7a8b710c7c191bb657",
+                    "king_is_on_file_domain" : True,
+                    "king_is_local" : True,
                     "0" : [
                     ],
                     "1" : [],

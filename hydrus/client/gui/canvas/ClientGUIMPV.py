@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusVideoHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -159,7 +160,7 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._file_is_loaded = False
         self._disallow_seek_on_this_file = False
         
-        self._times_to_play_gif = 0
+        self._times_to_play_animation = 0
         
         self._current_seek_to_start_count = 0
         
@@ -294,7 +295,7 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     self.Pause()
                     
                 
-                if self._times_to_play_gif != 0 and self._current_seek_to_start_count >= self._times_to_play_gif:
+                if self._times_to_play_animation != 0 and self._current_seek_to_start_count >= self._times_to_play_animation:
                     
                     self.Pause()
                     
@@ -526,15 +527,24 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._media = media
         
-        self._times_to_play_gif = 0
+        self._times_to_play_animation = 0
         
-        if self._media is not None and self._media.GetMime() == HC.IMAGE_GIF and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+        if self._media is not None and self._media.GetMime() in HC.ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
             
             hash = self._media.GetHash()
             
-            path = HG.client_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_GIF )
+            mime = self._media.GetMime()
             
-            self._times_to_play_gif = HydrusImageHandling.GetTimesToPlayGIF( path )
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+            if mime == HC.IMAGE_GIF:
+                
+                self._times_to_play_animation = HydrusImageHandling.GetTimesToPlayGIF( path )
+                
+            elif mime == HC.IMAGE_APNG:
+                
+                self._times_to_play_animation = HydrusVideoHandling.GetAPNGTimesToPlay( path )
+                
             
         
         self._current_seek_to_start_count = 0

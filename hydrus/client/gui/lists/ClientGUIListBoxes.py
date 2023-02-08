@@ -238,7 +238,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         self._enabled_only_on_selection_buttons = []
         
-        self._permitted_object_types = []
+        self._permitted_object_types = tuple()
         
         #
         
@@ -340,6 +340,11 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
         self.listBoxChanged.emit()
+        
+    
+    def _CheckImportObjectCustom( self, obj ):
+        
+        pass
         
     
     def _Delete( self ):
@@ -553,24 +558,42 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         num_added = 0
         bad_object_type_names = set()
+        other_bad_errors = set()
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
             
             for sub_obj in obj:
                 
-                ( sub_num_added, sub_bad_object_type_names ) = self._ImportObject( sub_obj, can_present_messages = False )
+                ( sub_num_added, sub_bad_object_type_names, sub_other_bad_errors ) = self._ImportObject( sub_obj, can_present_messages = False )
                 
                 num_added += sub_num_added
                 bad_object_type_names.update( sub_bad_object_type_names )
+                other_bad_errors.update( sub_other_bad_errors )
                 
             
         else:
             
             if isinstance( obj, self._permitted_object_types ):
                 
-                self._AddData( obj, select = True )
+                import_ok = True
                 
-                num_added += 1
+                try:
+                    
+                    self._CheckImportObjectCustom( obj )
+                    
+                except HydrusExceptions.VetoException as e:
+                    
+                    import_ok = False
+                    
+                    other_bad_errors.add( str( e ) )
+                    
+                
+                if import_ok:
+                    
+                    self._AddData( obj, select = True )
+                    
+                    num_added += 1
+                    
                 
             else:
                 
@@ -578,29 +601,41 @@ class AddEditDeleteListBox( QW.QWidget ):
                 
             
         
-        if can_present_messages and len( bad_object_type_names ) > 0:
+        if can_present_messages:
             
-            message = 'The imported objects included these types:'
-            message += os.linesep * 2
-            message += os.linesep.join( bad_object_type_names )
-            message += os.linesep * 2
-            message += 'Whereas this control only allows:'
-            message += os.linesep * 2
-            message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+            if len( bad_object_type_names ) > 0:
+                
+                message = 'The imported objects included these types:'
+                message += os.linesep * 2
+                message += os.linesep.join( bad_object_type_names )
+                message += os.linesep * 2
+                message += 'Whereas this control only allows:'
+                message += os.linesep * 2
+                message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                
+                QW.QMessageBox.critical( self, 'Error', message )
+                
             
-            QW.QMessageBox.critical( self, 'Error', message )
+            if len( other_bad_errors ) > 0:
+                
+                message = 'The imported objects were wrong for this control:'
+                message += os.linesep * 2
+                message += os.linesep.join( other_bad_errors )
+                
+                QW.QMessageBox.critical( self, 'Error', message )
+                
             
-        
-        if can_present_messages and num_added > 0:
-            
-            message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
-            
-            QW.QMessageBox.information( self, 'Success', message )
+            if num_added > 0:
+                
+                message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
+                
+                QW.QMessageBox.information( self, 'Success', message )
+                
             
         
         self.listBoxChanged.emit()
         
-        return ( num_added, bad_object_type_names )
+        return ( num_added, bad_object_type_names, other_bad_errors )
         
     
     def _SetNonDupeName( self, obj ):
@@ -659,7 +694,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def AddImportExportButtons( self, permitted_object_types ):
         
-        self._permitted_object_types = permitted_object_types
+        self._permitted_object_types = tuple( permitted_object_types )
         
         export_menu_items = []
         

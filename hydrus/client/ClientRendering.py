@@ -476,7 +476,7 @@ class RasterContainerVideo( RasterContainer ):
         self._buffer_start_index = -1
         self._buffer_end_index = -1
         
-        self._times_to_play_gif = 0
+        self._times_to_play_animation = 0
         
         self._stop = False
         
@@ -561,18 +561,20 @@ class RasterContainerVideo( RasterContainer ):
     
     def THREADRender( self ):
         
-        hash = self._media.GetHash()
         mime = self._media.GetMime()
         duration = self._media.GetDuration()
         num_frames_in_video = self._media.GetNumFrames()
         
-        client_files_manager = HG.client_controller.client_files_manager
-        
         time.sleep( 0.00001 )
+        
+        if self._media.GetMime() == HC.IMAGE_APNG:
+            
+            self._times_to_play_animation = HydrusVideoHandling.GetAPNGTimesToPlay( self._path )
+            
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             
-            ( self._durations, self._times_to_play_gif ) = HydrusImageHandling.GetGIFFrameDurations( self._path )
+            ( self._durations, self._times_to_play_animation ) = HydrusImageHandling.GetGIFFrameDurations( self._path )
             
             self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
             
@@ -863,9 +865,9 @@ class RasterContainerVideo( RasterContainer ):
         return self._target_resolution
         
     
-    def GetTimesToPlayGIF( self ):
+    def GetTimesToPlayAnimation( self ):
         
-        return self._times_to_play_gif
+        return self._times_to_play_animation
         
     
     def GetFrameIndex( self, timestamp_ms ):

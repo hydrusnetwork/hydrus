@@ -35,6 +35,26 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_516"><a href="#version_516">version 516</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the 'manage sidecar routers' control, which is on manage import folders, manage export folders, path-tagging-before-manual-import, and manual export files, now has import/export/duplicate buttons. you can save and transfer your work now! if you try to import 'export to sidecar' routers to an 'import from sidecar' context or _vice versa_, it should give you a nicely worded error</li>
+                        <li>fixed the error that was raising when you turn related tags off with the suggestions set to side-by-side layout. very sorry for the trouble!</li>
+                        <li>apngs that are set to 'loop x times' (usually once) now only loop that many times, on both mpv and my native renderer! like gifs, the 'always loop animations' setting under _options->media_ overrides it!</li>
+                        <li>fixed an issue with my native renderer not updating on scanbar scrubs very well. should be back to nice smooth instant draw as you scrub</li>
+                        <li>thanks to a user, folded in another deviant art parser update to the defaults</li>
+                        <li>updated the setuptools version in the requirements.txt due to a security note--I don't think the problem (which was about some vulnerable regex when fetching malicious package info) applies to us, but running from source users might like to run setup_venv again this week anyway</li>
+                        <li><h3>related tags</h3></li>
+                        <li>a new 'concurrence threshold' setting under _options->tag suggestions_ allows you to set how 'strict' the related tags search is. a higher percentage causes fewer but more relevant results. I'm doubling the default this week from 4% to 8%</li>
+                        <li>two new 'namespace to weight' settings under _options->tag suggestions_ now manage how much weight the 'search' and 'suggestion' sides of related tags have. you can say 'rank the suggestions from character tags highly' or 'rank unnamespaced suggestions lower', and 'do not search x tags' and 'do not suggest y tags'. I have prepped it with some 'creator/character/series namespaces are better than unnamespaced, and title/filename/page/chapter/volume are useless' defaults, but feel free to play around with it</li>
+                        <li>the related tags algorithm takes a larger sample now, resulting in a _little_ less ranking-variability</li>
+                        <li><h3>client api</h3></li>
+                        <li>changed and fixed an issue in the client api's new `get_file_relationships` call. previously, I said 'king' would be null if it was not on the given file domain, but this was not working correctly--it was giving pseudorandom 'fallback' kings. now it always gives the king, no matter what! a new param, `king_is_on_file_domain` says whether the king is on the given domain. `king_is_local` says whether the king is available on disk</li>
+                        <li>added some discussion and a list of the 8 possible 'better than' and 'same quality' logical combinations to the `set_file_relationships` help so you can see how group merge involving non-kings works</li>
+                        <li>client api is now version 42</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_515"><a href="#version_515">version 515</a></h2>
                     <ul>
                         <li><h3>related tags</h3></li>

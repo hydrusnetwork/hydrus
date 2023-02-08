@@ -485,17 +485,9 @@ class Animation( QW.QWidget ):
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
         
-        ( frame_width, frame_height ) = current_frame.GetSize()
-        
-        scale = my_raw_width / frame_width
-        
-        painter.setTransform( QG.QTransform().scale( scale, scale ) )
-        
         current_frame_image = current_frame.GetQtImage()
         
-        painter.drawImage( 0, 0, current_frame_image )
-        
-        painter.setTransform( QG.QTransform().scale( 1.0, 1.0 ) )
+        painter.drawImage( self.rect(), current_frame_image )
         
         self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
         
@@ -572,6 +564,8 @@ class Animation( QW.QWidget ):
                 
                 self._current_frame_drawn = False
                 
+                self.update()
+                
             
             if pause_afterwards:
                 
@@ -630,7 +624,7 @@ class Animation( QW.QWidget ):
             
         else:
             
-            painter.drawPixmap( 0, 0, self._canvas_qt_pixmap )
+            painter.drawPixmap( self.rect(), self._canvas_qt_pixmap )
             
         
     
@@ -802,20 +796,20 @@ class Animation( QW.QWidget ):
                             
                             self._playthrough_count += 1
                             
-                            do_times_to_play_gif_pause = False
+                            do_times_to_play_animation_pause = False
                             
-                            if self._media.GetMime() == HC.IMAGE_GIF and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                            if self._media.GetMime() in HC.ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                                 
-                                times_to_play_gif = self._video_container.GetTimesToPlayGIF()
+                                times_to_play_animation = self._video_container.GetTimesToPlayAnimation()
                                 
                                 # 0 is infinite
-                                if times_to_play_gif != 0 and self._playthrough_count >= times_to_play_gif:
+                                if times_to_play_animation != 0 and self._playthrough_count >= times_to_play_animation:
                                     
-                                    do_times_to_play_gif_pause = True
+                                    do_times_to_play_animation_pause = True
                                     
                                 
                             
-                            if self._stop_for_slideshow or do_times_to_play_gif_pause:
+                            if self._stop_for_slideshow or do_times_to_play_animation_pause:
                                 
                                 self._paused = True
                                 

@@ -1481,3 +1481,18 @@ register_column_type( COLUMN_LIST_EXIF_DATA.ID, COLUMN_LIST_EXIF_DATA.EXIF_LABEL
 register_column_type( COLUMN_LIST_EXIF_DATA.ID, COLUMN_LIST_EXIF_DATA.VALUE, 'value', False, 20, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_EXIF_DATA.ID ] = ( COLUMN_LIST_EXIF_DATA.EXIF_ID, True )
+
+class COLUMN_LIST_TAG_SLICE_WEIGHT( COLUMN_LIST_DEFINITION ):
+    
+    ID = 68
+    
+    TAG_SLICE = 0
+    WEIGHT = 1
+    
+
+column_list_type_name_lookup[ COLUMN_LIST_TAG_SLICE_WEIGHT.ID ] = 'tag slice weight'
+
+register_column_type( COLUMN_LIST_TAG_SLICE_WEIGHT.ID, COLUMN_LIST_TAG_SLICE_WEIGHT.TAG_SLICE, 'namespace', False, 20, True )
+register_column_type( COLUMN_LIST_TAG_SLICE_WEIGHT.ID, COLUMN_LIST_TAG_SLICE_WEIGHT.WEIGHT, 'weight', False, 8, True )
+
+default_column_list_sort_lookup[ COLUMN_LIST_TAG_SLICE_WEIGHT.ID ] = ( COLUMN_LIST_TAG_SLICE_WEIGHT.TAG_SLICE, True )

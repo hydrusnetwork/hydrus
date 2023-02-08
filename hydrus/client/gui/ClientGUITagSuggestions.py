@@ -395,27 +395,23 @@ class RelatedTagsPanel( QW.QWidget ):
         
         def do_it( file_service_key, tag_service_key, search_tags ):
             
-            def qt_code( predicates, num_done, num_to_do, total_time_took ):
+            def qt_code( predicates, num_done, num_to_do, num_skipped, total_time_took ):
                 
                 if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                if num_to_do == len( search_tags ):
+                if num_skipped == 0:
                     
                     tags_s = 'tags'
                     
                 else:
                     
-                    tags_s = 'tags ({} had no relations)'.format( HydrusData.ToHumanInt( len( search_tags ) - num_to_do ) )
+                    tags_s = 'tags ({} skipped)'.format( HydrusData.ToHumanInt( num_skipped ) )
                     
                 
-                if num_done == len( search_tags ):
-                    
-                    num_done_s = 'Searched all {} {} in '.format( HydrusData.ToHumanInt( num_done ), tags_s )
-                    
-                elif num_done == num_to_do:
+                if num_done == num_to_do:
                     
                     num_done_s = 'Searched {} {} in '.format( HydrusData.ToHumanInt( num_done ), tags_s )
                     
@@ -437,13 +433,54 @@ class RelatedTagsPanel( QW.QWidget ):
             
             start_time = HydrusData.GetNowPrecise()
             
-            ( num_done, num_to_do, predicates ) = HG.client_controller.Read( 'related_tags', file_service_key, tag_service_key, search_tags, max_time_to_take = max_time_to_take )
+            concurrence_threshold = HG.client_controller.new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) / 100
+            search_tag_slices_weight_dict = { ':' : 1.0, '' : 1.0 }
+            result_tag_slices_weight_dict = { ':' : 1.0, '' : 1.0 }
+            
+            ( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ) = HG.client_controller.new_options.GetRelatedTagsTagSliceWeights()
+            
+            for ( tag_slice, weight_percent ) in related_tags_search_tag_slices_weight_percent:
+                
+                if tag_slice not in ( ':', '' ):
+                    
+                    if tag_slice.endswith( ':' ):
+                        
+                        tag_slice = tag_slice[ : -1 ]
+                        
+                    
+                
+                search_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100
+                
+            
+            for ( tag_slice, weight_percent ) in related_tags_result_tag_slices_weight_percent:
+                
+                if tag_slice not in ( ':', '' ):
+                    
+                    if tag_slice.endswith( ':' ):
+                        
+                        tag_slice = tag_slice[ : -1 ]
+                        
+                    
+                
+                result_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100
+                
+            
+            ( num_done, num_to_do, num_skipped, predicates ) = HG.client_controller.Read(
+                'related_tags',
+                file_service_key,
+                tag_service_key,
+                search_tags,
+                max_time_to_take = max_time_to_take,
+                concurrence_threshold = concurrence_threshold,
+                search_tag_slices_weight_dict = search_tag_slices_weight_dict,
+                result_tag_slices_weight_dict = result_tag_slices_weight_dict
+            )
             
             total_time_took = HydrusData.GetNowPrecise() - start_time
             
             predicates = ClientSearch.SortPredicates( predicates )
             
-            QP.CallAfter( qt_code, predicates, num_done, num_to_do, total_time_took )
+            QP.CallAfter( qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
             
         
         self._related_tags.SetPredicates( [] )
@@ -871,18 +908,21 @@ class SuggestedTagsPanel( QW.QWidget ):
     
     def _PageChanged( self ):
         
-        if self._notebook is None:
+        if self._related_tags is not None:
             
-            self._related_tags.NotifyUserLooking()
+            if self._notebook is None:
+                
+                self._related_tags.NotifyUserLooking()
+                
+                return
+                
             
-            return
+            current_page = self._notebook.currentWidget()
             
-        
-        current_page = self._notebook.currentWidget()
-        
-        if current_page == self._related_tags:
-            
-            self._related_tags.NotifyUserLooking()
+            if current_page == self._related_tags:
+                
+                self._related_tags.NotifyUserLooking()
+                
             
         
     
