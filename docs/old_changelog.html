@@ -45,7 +45,7 @@
                         <li>thanks to a user, folded in another deviant art parser update to the defaults</li>
                         <li>updated the setuptools version in the requirements.txt due to a security note--I don't think the problem (which was about some vulnerable regex when fetching malicious package info) applies to us, but running from source users might like to run setup_venv again this week anyway</li>
                         <li><h3>related tags</h3></li>
-                        <li>a new 'concurrence threshold' setting under _options->tag suggestions_ allows you to set how 'strict' the related tags search is. a higher percentage causes fewer but more relevant results. I'm doubling the default this week from 4% to 8%</li>
+                        <li>a new 'concurrence threshold' setting under _options->tag suggestions_ allows you to set how 'strict' the related tags search is. a higher percentage causes fewer but more relevant results. I'm increasing the default this week from 4% to 6%</li>
                         <li>two new 'namespace to weight' settings under _options->tag suggestions_ now manage how much weight the 'search' and 'suggestion' sides of related tags have. you can say 'rank the suggestions from character tags highly' or 'rank unnamespaced suggestions lower', and 'do not search x tags' and 'do not suggest y tags'. I have prepped it with some 'creator/character/series namespaces are better than unnamespaced, and title/filename/page/chapter/volume are useless' defaults, but feel free to play around with it</li>
                         <li>the related tags algorithm takes a larger sample now, resulting in a _little_ less ranking-variability</li>
                         <li><h3>client api</h3></li>

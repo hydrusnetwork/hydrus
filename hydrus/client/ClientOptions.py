@@ -370,7 +370,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
         self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
         self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
-        self._dictionary[ 'integers' ][ 'related_tags_concurrence_threshold_percent' ] = 8
+        self._dictionary[ 'integers' ][ 'related_tags_concurrence_threshold_percent' ] = 6
         
         self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
         
