@@ -1669,7 +1669,7 @@ class ReviewServicePanel( QW.QWidget ):
             job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
             job_key.SetStatusTitle( self._service.GetName() + ': immediate sync' )
-            job_key.SetVariable( 'popup_text_1', 'downloading' )
+            job_key.SetStatusText( 'downloading' )
             
             self._controller.pub( 'message', job_key )
             
@@ -1682,7 +1682,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
             
-            job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
+            job_key.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
             
             job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
             
@@ -1699,7 +1699,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
-                job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
+                job_key.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
                 
                 job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                 
@@ -1720,7 +1720,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service.SyncThumbnails( job_key )
             
-            job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
+            job_key.SetStatusText( 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
             
             job_key.Finish()
             
@@ -2833,7 +2833,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                             
                             if should_quit:
                                 
-                                job_key.SetVariable( 'popup_text_1', 'Cancelled!' )
+                                job_key.SetStatusText( 'Cancelled!' )
                                 
                                 return
                                 
@@ -2852,12 +2852,12 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                                 
                             finally:
                                 
-                                job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                                job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
                                 job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                                 
                             
                         
-                        job_key.SetVariable( 'popup_text_1', 'Done!' )
+                        job_key.SetStatusText( 'Done!' )
                         
                     finally:
                         

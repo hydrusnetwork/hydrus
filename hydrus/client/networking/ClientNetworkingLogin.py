@@ -942,7 +942,7 @@ class LoginProcessDomain( LoginProcess ):
         
         HydrusData.Print( 'Finished login for ' + self.network_context.context_data + '. Result was: ' + result )
         
-        job_key.SetVariable( 'popup_text_1', result )
+        job_key.SetStatusText( result )
         
         job_key.Finish()
         
@@ -1387,7 +1387,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
                     return message
                     
                 
-                job_key.SetVariable( 'popup_text_1', login_step.GetName() )
+                job_key.SetStatusText( login_step.GetName() )
                 
             
             try:

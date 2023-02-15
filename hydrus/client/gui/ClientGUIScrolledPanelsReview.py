@@ -933,25 +933,25 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     try:
         
-        job_key.SetVariable( 'popup_text_1', 'waiting for db shutdown' )
+        job_key.SetStatusText( 'waiting for db shutdown' )
         
         while not db.LoopIsFinished():
             
             time.sleep( 1 )
             
         
-        job_key.SetVariable( 'popup_text_1', 'doing the move' )
+        job_key.SetStatusText( 'doing the move' )
         
         def text_update_hook( text ):
             
-            job_key.SetVariable( 'popup_text_1', text )
+            job_key.SetStatusText( text )
             
         
         for filename in os.listdir( source ):
             
             if filename.startswith( 'client' ) and filename.endswith( '.db' ):
                 
-                job_key.SetVariable( 'popup_text_1', 'moving ' + filename )
+                job_key.SetStatusText( 'moving ' + filename )
                 
                 source_path = os.path.join( source, filename )
                 dest_path = os.path.join( dest, filename )
@@ -968,13 +968,13 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
             HydrusPaths.MergeTree( source_path, dest_path, text_update_hook = text_update_hook )
             
         
-        job_key.SetVariable( 'popup_text_1', 'done!' )
+        job_key.SetStatusText( 'done!' )
         
     except:
         
         QP.CallAfter( QW.QMessageBox.critical, None, 'Error', traceback.format_exc() )
         
-        job_key.SetVariable( 'popup_text_1', 'error!' )
+        job_key.SetStatusText( 'error!' )
         
     finally:
         

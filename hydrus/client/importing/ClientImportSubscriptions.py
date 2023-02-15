@@ -248,7 +248,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', message )
+        job_key.SetStatusText( message )
         job_key.SetUserCallable( call )
         
         HG.client_controller.pub( 'message', job_key )
@@ -388,7 +388,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         stop_reason = 'unknown stop reason'
         
-        job_key.SetVariable( 'popup_text_1', status_prefix )
+        job_key.SetStatusText( status_prefix )
         
         initial_search_urls = gug.GenerateGalleryURLs( query_text )
         
@@ -460,7 +460,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         text = text.splitlines()[0]
                         
                     
-                    job_key.SetVariable( 'popup_text_1', status_prefix + ': ' + text )
+                    job_key.SetStatusText( status_prefix + ': ' + text )
                     
                 
                 def title_hook( text ):
@@ -614,7 +614,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )
                     
                 
-                job_key.SetVariable( 'popup_text_1', status_prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
+                job_key.SetStatusText( status_prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
                 
                 try:
                     
@@ -886,7 +886,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             text_1 += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
-            job_key.SetVariable( 'popup_text_1', text_1 )
+            job_key.SetStatusText( text_1 )
             
             try:
                 
@@ -920,9 +920,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        job_key.DeleteVariable( 'popup_files' )
-        job_key.DeleteVariable( 'popup_text_1' )
-        job_key.DeleteVariable( 'popup_text_2' )
+        job_key.DeleteFiles()
+        job_key.DeleteStatusText()
+        job_key.DeleteStatusText( 2 )
         job_key.DeleteVariable( 'popup_gauge_2' )
         
     
@@ -1017,7 +1017,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if p3 and this_query_has_done_work:
                         
-                        job_key.SetVariable( 'popup_text_2', 'domain had errors, will try again later' )
+                        job_key.SetStatusText( 'domain had errors, will try again later', 2 )
                         
                         self._DelayWork( 3600, 'domain errors, will try again later' )
                         
@@ -1026,7 +1026,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if p4 and this_query_has_done_work:
                         
-                        job_key.SetVariable( 'popup_text_2', 'no more bandwidth to download files, will do some more later' )
+                        job_key.SetStatusText( 'no more bandwidth to download files, will do some more later', 2 )
                         
                         time.sleep( 5 )
                         
@@ -1074,7 +1074,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             text = text.splitlines()[0]
                             
                         
-                        job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
+                        job_key.SetStatusText( x_out_of_y + text, 2 )
                         
                     
                     file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET, self._tag_import_options, self._note_import_options )
@@ -1140,7 +1140,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     status = CC.STATUS_ERROR
                     
-                    job_key.SetVariable( 'popup_text_2', x_out_of_y + 'file failed' )
+                    job_key.SetStatusText( x_out_of_y + 'file failed', 2 )
                     
                     file_seed.SetStatus( status, exception = e )
                     
@@ -1170,12 +1170,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if len( presentation_hashes ) > 0:
                     
-                    job_key.SetVariable( 'popup_files', ( list( presentation_hashes ), query_summary_name ) )
+                    job_key.SetFiles( list( presentation_hashes ), query_summary_name )
                     
                 else:
                     
                     # although it is nice to have the file popup linger a little once a query is done, if the next query has 15 'already in db', it has outstayed its welcome
-                    job_key.DeleteVariable( 'popup_files' )
+                    job_key.DeleteFiles()
                     
                 
                 time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
@@ -1689,7 +1689,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 HydrusData.Print( e )
                 
-                job_key.SetVariable( 'popup_text_1', 'Encountered a network error, will retry again later' )
+                job_key.SetStatusText( 'Encountered a network error, will retry again later' )
                 
                 self._DelayWork( delay, 'network error: ' + str( e ) )
                 
@@ -1709,7 +1709,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 job_key.DeleteNetworkJob()
                 
             
-            if job_key.HasVariable( 'popup_files' ):
+            if job_key.GetFiles() is not None:
                 
                 job_key.Finish()
                 

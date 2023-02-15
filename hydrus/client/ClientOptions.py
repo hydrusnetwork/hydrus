@@ -268,6 +268,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'start_note_editing_at_end' ] = True
         
+        self._dictionary[ 'booleans' ][ 'draw_transparency_checkerboard_media_canvas' ] = False
+        self._dictionary[ 'booleans' ][ 'draw_transparency_checkerboard_media_canvas_duplicates' ] = True
+        
         self._dictionary[ 'booleans' ][ 'menu_choice_buttons_can_mouse_scroll' ] = True
         
         self._dictionary[ 'booleans' ][ 'focus_preview_on_ctrl_click' ] = False
@@ -503,7 +506,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         
-        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
+        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity_a' ] = 0
+        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity_b' ] = 3
         
         self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
         

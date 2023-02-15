@@ -136,7 +136,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExportingFiles.ExportFolder ):
         
-        ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
         
         pretty_export_type = 'regular'
         
@@ -244,7 +244,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folder = export_folder
         
-        ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, self._last_checked, paused, run_now ) = self._export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, self._last_checked, paused, run_now ) = self._export_folder.ToTuple()
         
         self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
         
@@ -261,6 +261,15 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._type.addItem( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
         
         self._delete_from_client_after_export = QW.QCheckBox( self._type_box )
+        self._delete_from_client_after_export.setObjectName( 'HydrusWarning' )
+        
+        self._export_symlinks = QW.QCheckBox( self._type_box )
+        self._export_symlinks.setObjectName( 'HydrusWarning' )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._export_symlinks.setToolTip( 'You probably need to run hydrus as Admin for this to work on Windows.')
+            
         
         #
         
@@ -310,6 +319,8 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._delete_from_client_after_export.setChecked( delete_from_client_after_export )
         
+        self._export_symlinks.setChecked( export_symlinks )
+        
         self._period.SetValue( period )
         
         self._run_regularly.setChecked( run_regularly )
@@ -348,6 +359,7 @@ If you select synchronise, be careful!'''
         rows = []
         
         rows.append( ( 'delete files from client after export: ', self._delete_from_client_after_export ) )
+        rows.append( ( 'EXPERIMENTAL: export symlinks', self._export_symlinks ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._type_box, rows )
         
@@ -444,6 +456,8 @@ If you select synchronise, be careful!'''
         export_type = self._type.GetValue()
         
         delete_from_client_after_export = self._delete_from_client_after_export.isChecked()
+
+        export_symlinks = self._export_symlinks.isChecked()
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
@@ -480,6 +494,7 @@ If you select synchronise, be careful!'''
             path = path,
             export_type = export_type,
             delete_from_client_after_export = delete_from_client_after_export,
+            export_symlinks = export_symlinks,
             file_search_context = file_search_context,
             metadata_routers = metadata_routers,
             run_regularly = run_regularly,
@@ -545,6 +560,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._export_symlinks = QW.QCheckBox( 'EXPERIMENTAL: export symlinks', self )
         self._export_symlinks.setObjectName( 'HydrusWarning' )
         
+        if HC.PLATFORM_WINDOWS:
+            
+            self._export_symlinks.setToolTip( 'You probably need to run hydrus as Admin for this to work on Windows.')
+            
+        
         metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
@@ -571,11 +591,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._delete_files_after_export.setChecked( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
         self._delete_files_after_export.clicked.connect( self.EventDeleteFilesChanged )
-        
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            self._export_symlinks.setVisible( False )
-            
         
         #
         
@@ -794,7 +809,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             pauser = HydrusData.BigJobPauser()
             
-            for ( index, ( media, path ) ) in enumerate( to_do ):
+            for ( index, ( media, dest_path ) ) in enumerate( to_do ):
                 
                 number = self._media_to_number_indices[ media ]
                 
@@ -807,7 +822,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     x_of_y = HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do )
                     
-                    job_key.SetVariable( 'popup_text_1', 'Done {}'.format( x_of_y ) )
+                    job_key.SetStatusText( 'Done {}'.format( x_of_y ) )
                     job_key.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )
                     
                     QP.CallAfter( qt_update_label, x_of_y )
@@ -815,38 +830,51 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     hash = media.GetHash()
                     mime = media.GetMime()
                     
-                    path = os.path.normpath( path )
+                    dest_path = os.path.normpath( dest_path )
                     
-                    if not path.startswith( directory ):
+                    if not dest_path.startswith( directory ):
                         
-                        raise Exception( 'It seems a destination path was above the main export directory! The file was "{}" and its destination path was "{}".'.format( hash.hex(), path ) )
+                        raise Exception( 'It seems a destination path was above the main export directory! The file was "{}" and its destination path was "{}".'.format( hash.hex(), dest_path ) )
                         
                     
-                    path_dir = os.path.dirname( path )
+                    path_dir = os.path.dirname( dest_path )
                     
                     HydrusPaths.MakeSureDirectoryExists( path_dir )
                     
                     for metadata_router in metadata_routers:
                         
-                        metadata_router.Work( media.GetMediaResult(), path )
+                        metadata_router.Work( media.GetMediaResult(), dest_path )
                         
                     
                     source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
                     
                     if export_symlinks:
                         
-                        os.symlink( source_path, path )
-                        
+                        try:
+                            
+                            os.symlink( source_path, dest_path )
+                            
+                        except OSError as e:
+                            
+                            if HC.PLATFORM_WINDOWS:
+                                
+                                raise Exception( 'The symlink creation failed. It may be you need to run hydrus as Admin for this to work!' ) from e
+                                
+                            else:
+                                
+                                raise
+                                
+                            
                     else:
                         
-                        HydrusPaths.MirrorFile( source_path, path )
+                        HydrusPaths.MirrorFile( source_path, dest_path )
                         
-                        HydrusPaths.TryToGiveFileNicePermissionBits( path )
+                        HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                         
                     
                 except:
                     
-                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file with index {}:'.format( HydrusData.ToHumanInt( number + 1 ) ) + os.linesep * 2 + traceback.format_exc() )
+                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file #{}:'.format( HydrusData.ToHumanInt( number ) ) + os.linesep * 2 + traceback.format_exc() )
                     
                     break
                     
@@ -890,7 +918,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
             job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetVariable( 'popup_text_1', 'Done!' )
+            job_key.SetStatusText( 'Done!' )
             
             job_key.Finish()
             

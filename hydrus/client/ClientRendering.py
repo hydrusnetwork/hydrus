@@ -392,6 +392,16 @@ class ImageRenderer( object ):
         return pixmap
         
     
+    def HasTransparency( self ):
+        
+        if not self.IsReady():
+            
+            raise Exception( 'I cannot know this yet--the image is not ready!' )
+            
+        
+        return HydrusImageHandling.NumPyImageHasAlphaChannel( self._numpy_image )
+        
+    
     def IsReady( self ):
         
         return self._numpy_image is not None

@@ -296,15 +296,15 @@ class PopupMessage( PopupWindow ):
     
     def ShowFiles( self ):
         
-        result = self._job_key.GetIfHasVariable( 'popup_files' )
+        result = self._job_key.GetFiles()
         
         if result is not None:
             
-            ( popup_files, popup_files_name ) = result
+            ( hashes, attached_files_label ) = result
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = popup_files, page_name = popup_files_name )
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = attached_files_label )
             
         
     
@@ -369,7 +369,7 @@ class PopupMessage( PopupWindow ):
         
         paused = self._job_key.IsPaused()
         
-        popup_text_1 = self._job_key.GetIfHasVariable( 'popup_text_1' )
+        popup_text_1 = self._job_key.GetStatusText()
         
         if popup_text_1 is not None or paused:
             
@@ -411,7 +411,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_text_2 = self._job_key.GetIfHasVariable( 'popup_text_2' )
+        popup_text_2 = self._job_key.GetStatusText( 2 )
         
         if popup_text_2 is not None and not paused:
             
@@ -513,15 +513,13 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        result = self._job_key.GetIfHasVariable( 'popup_files' )
+        result = self._job_key.GetFiles()
         
         if result is not None:
             
-            ( popup_files, popup_files_name ) = result
+            ( hashes, attached_files_label ) = result
             
-            hashes = popup_files
-            
-            text = '{} - show {} files'.format( popup_files_name, HydrusData.ToHumanInt( len( hashes ) ) )
+            text = '{} - show {} files'.format( attached_files_label, HydrusData.ToHumanInt( len( hashes ) ) )
             
             if self._show_files_button.text() != text:
                 
@@ -645,7 +643,7 @@ class PopupMessageManager( QW.QFrame ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
+        job_key.SetStatusText( 'initialising popup message manager\u2026' )
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
         
@@ -856,30 +854,30 @@ class PopupMessageManager( QW.QFrame ):
     
     def _TryToMergeMessage( self, job_key ):
         
-        if not job_key.HasVariable( 'popup_files_mergable' ):
+        if not job_key.HasVariable( 'attached_files_mergable' ):
             
             return False
             
         
-        result = job_key.GetIfHasVariable( 'popup_files' )
+        result = job_key.GetFiles()
         
         if result is not None:
             
-            ( hashes, name ) = result
+            ( hashes, label ) = result
             
             existing_job_keys = self._GetAllMessageJobKeys()
             
             for existing_job_key in existing_job_keys:
                 
-                if existing_job_key.HasVariable( 'popup_files_mergable' ):
+                if existing_job_key.HasVariable( 'attached_files_mergable' ):
                     
-                    result = existing_job_key.GetIfHasVariable( 'popup_files' )
+                    result = existing_job_key.GetFiles()
                     
                     if result is not None:
                         
-                        ( existing_hashes, existing_name ) = result
+                        ( existing_hashes, existing_label ) = result
                         
-                        if existing_name == name:
+                        if existing_label == label:
                             
                             if isinstance( existing_hashes, list ):
                                 

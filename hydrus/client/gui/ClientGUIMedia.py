@@ -79,7 +79,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
+        job_key.SetStatusText( '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
         
         HG.client_controller.pub( 'message', job_key )
         
@@ -304,7 +304,7 @@ def OpenURLs( urls ):
                         return
                         
                     
-                    job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_urls ) )
+                    job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_urls ) )
                     job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_urls ) )
                     
                 

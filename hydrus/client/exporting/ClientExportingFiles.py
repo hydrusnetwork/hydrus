@@ -278,7 +278,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__(
         self,
@@ -286,6 +286,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         path = '',
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR,
         delete_from_client_after_export = False,
+        export_symlinks = False,
         file_search_context = None,
         metadata_routers = None,
         run_regularly = True,
@@ -324,6 +325,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path = path
         self._export_type = export_type
         self._delete_from_client_after_export = delete_from_client_after_export
+        self._export_symlinks = export_symlinks
         self._file_search_context = file_search_context
         self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         self._run_regularly = run_regularly
@@ -340,12 +342,12 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         serialisable_metadata_routers = self._metadata_routers.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
+        return ( self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
+        ( self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
@@ -415,6 +417,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
             
             return ( 6, new_serialisable_info )
+            
+
+        if version == 6:
+            
+            ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error ) = old_serialisable_info
+
+            export_symlinks = False
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -499,7 +512,37 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if dest_path not in sync_paths:
                 
-                copied = HydrusPaths.MirrorFile( source_path, dest_path )
+                if self._export_symlinks:
+                    
+                    if not os.path.exists( dest_path ):
+                        
+                        try:
+                            
+                            os.symlink( source_path, dest_path )
+                            
+                        except OSError as e:
+                            
+                            if HC.PLATFORM_WINDOWS:
+                                
+                                raise Exception( 'The symlink creation failed. It may be you need to run hydrus as Admin for this to work!' ) from e
+                                
+                            else:
+                                
+                                raise
+                                
+                            
+                        
+                        copied = True
+                        
+                    else:
+                        
+                        copied = False
+                        
+                    
+                else:
+                    
+                    copied = HydrusPaths.MirrorFile( source_path, dest_path )
+                    
                 
                 if copied:
                     
@@ -674,7 +717,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
+        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, self._file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder

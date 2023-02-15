@@ -757,6 +757,8 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             
             self._dropdown_window.hide()
             
+            self._dropdown_window.setFocusProxy( self._text_ctrl )
+            
         else:
             
             self._dropdown_window = QW.QWidget( self )
@@ -973,13 +975,9 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         i_am_active_and_focused = self.window() == current_active_window and self._text_ctrl.hasFocus() and not self.visibleRegion().isEmpty()
         
-        dropdown_is_active = self._dropdown_window == current_active_window
-        
-        focus_or_active_good = i_am_active_and_focused or dropdown_is_active
-        
         visible = self.isVisible()
         
-        return focus_or_active_good and visible
+        return i_am_active_and_focused and visible
         
     
     def _ShouldTakeResponsibilityForEnter( self ):

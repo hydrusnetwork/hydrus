@@ -16,7 +16,7 @@ MIN_UPDATE_PERIOD = 600
 MAX_UPDATE_PERIOD = 100000 * 100 # three months or so jej
 
 MIN_NULLIFICATION_PERIOD = 86400
-MAX_NULLIFICATION_PERIOD = 86400 * 365
+MAX_NULLIFICATION_PERIOD = 86400 * 365 * 5
 
 def GenerateDefaultServiceDictionary( service_type ):
     

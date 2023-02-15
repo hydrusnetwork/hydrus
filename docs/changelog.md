@@ -7,6 +7,33 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 517](https://github.com/hydrusnetwork/hydrus/releases/tag/v517)
+
+### misc
+
+* thanks to a user, export folders finally support exporting to symlinks!
+* if a symlink export-create fails on Windows, the error now tells you to try again in 'run as Admin' mode--seems like this is needed in Win 10+ unless you mess with Group Policy Editor
+* 'related tags' should no longer suggest sibling ideals or parents of existing tags! I think!
+* when a thumbnail fails to load, the error popup now has a button to open the specific problem-causing file in a new page
+* generation of video thumbnails is faster, should fail less in odd cases, and when it completely fails, it now gives the hydrus icon as a final fallback
+* generation of image thumbnails now falls back to the hydrus icon as a final fallback
+* I think I fixed a focus logic problem where the autocomplete dropdowns on the duplicate filter page would hide if you clicked a results/favourites tab or greyspace
+* fixed an error when seeking an mpv video while the video was loading or unloading
+* the max 'nullification period' (after which uploads to a hydrus repository are anonymised) is raised from 1 year to 5 (needs server and client update to work)
+
+### transparency and duplicate filter
+
+* two new options, under _media_ and _duplicates_, now control if you would like transpararency-having images to have a checkerboard background rather than the normal media canvas background! you can have it on all the time or just under the duplicate filter. it uses the same style of grid as MPV
+* I have a plan for proper native (non-MPV) transparency for gifs and apng, but I think I'll wait for an imagemagick plugin I am planning first
+* if you have a white/black media viewer background and prefer not to use the checkerboard, the duplicate filter can now adjust the background colour, either lighter or darker, for both A and B of the pair. altering A as well exposes truly transparent-having images vs ones with opaque white/black fill, which will otherwise blend into a purely white/black background colour. these options are available in the options dialog and the duplicate filter right-hand hover window cog button
+* the native image window, embed button, and animation window (with PIL gif rendering) now all adjust their background colour to any odd changes like the duplicate filter's A/B lighten/darken adjustment
+
+### boring cleanup
+
+* cleaned up how popup file buttons are set and cleared
+* cleaned up how popup main and secondary texts are set and cleared
+* misc linting cleanup
+
 ## [Version 516](https://github.com/hydrusnetwork/hydrus/releases/tag/v516)
 
 ### misc
@@ -390,44 +417,3 @@ title: Changelog
 * cleaned up how the service options are delivered to the client. previously, there would have been a version desync pain if I had ever updated the tag filter internal version. now, the service options delivered to the client are limited to python primitives, atm just update period and nullification period, and tag filter and other complex objects will have their own get calls and fail in quiet isolation
 * I fixed some borked nullification period initialisation serverside
 * whenever a tag filter describes itself, if either black or whitelist have more than 12 rules, it now summarises rather than listing every single one
-
-## [Version 507](https://github.com/hydrusnetwork/hydrus/releases/tag/v507)
-
-### misc
-
-* fixed an issue where you could set 'all known tags' in the media-tag exporter box in the sidecars system
-* if a media-tag exporter in the sidecars system is set to an invalid (missing) tag service, the dialog now protests when you try to OK it. also, when you boot into this dialog, it will now moan about the invalid service. also, new media-tag exporters will always start with a valid local tag service.
-* Qt import error states are handled better. when the client boots, the various 'could not find Qt' errors at different qtpy and QtCore import stages are now handled separately. the Qt selected by qtpy, if any, is reported, as is the state of QT_API and whether hydrus thought it was importable. it seems like there have been a couple of users caught by something like system-wide QT_API env variables here, which this should reveal better in boot-crash logs from now on
-* all the new setup scripts in the base directory now push their location as the new CWD when they start, and they pop back to your original when they exit. you should be able to call them from anywhere now!
-* I've written a 'setup_desktop.sh' install script for Linux users to 'install' a hydrus.desktop file for the current install location to your applications directory. thanks to the user who made the original hydrus.desktop file for the help here
-* I fixed the focus when you open a 'edit predicate' panel that only has buttons, like 'has audio'/'no audio'. top button should have focus again, so you can hit enter quick
-* added updated link to hydownloader on the client api page
-
-### dupes apply better to groups of thumbs
-
-* tl;dr: when the user sets a 'copy both ways' duplicate file status on more than two thumbnails, the duplicate metadata merge options are applied better now
-* advanced explanation: previously, all merge updates were calculated before applying the updates, so when applied to a group of interconnected relationships, the nodes that were not directly connected to each other were not syncing data. now, all merge updates are calculated and applied to each pair in turn, and then the whole batch is repeated once more, ensuring two-way transitivity. for instance, if you are set to copy tags in both directions and set 'A is the best' of three files 'ABC', and B has tag 'x' and C has 'y', then previously A would get 'x' and 'y', but B would not get 'y' and C would not get 'x'. now, A gets 'x' before the AC merge is calculated, so A and C get x, and then the whole operation is repeated, so when AB is re-calculated, B now gets 'y' from the updated A. same thing if you set to archive if either file is archived--now that archived status will propagate across the whole group in one action
-
-### client api
-
-* the new 'tags' structure in `/get_files/file_metadata` now has the 'all known tags' service's tags
-* the 'file_services' structure in `/get_files/file_metadata` now states service name, type, and pretty type, like 'tags'
-* `/get_services` now says the service `type` and `type_pretty`, like 'tags'. `/get_services` may be reformatted to a service_key key'd Object at some point, since it uses an old custom human-readable service type as Object key atm and I'd rather we move to the same labels and references for everything, but we'll see
-* updated the client api help with more example result data for the above changes (and other stuff like 'all my files')
-* updated the client api unit tests to deal with the above changes
-* client api version is now 36
-
-### server/janitor improvements
-
-* I recommend server admins update their servers this week! everything old still works, but jannies who update have new abilities that won't work until you update
-* the petition processing page now has an 'account id' text field. paste an account id in there, and you'll get the petition counts just for that account! the petitions requested will also only be for that account!
-* if you get a 404 on a 'get petition' call (either due to another janitor clearing the last, or from a server count cache miscount), it no longer throws an error. instead, a popup appears for five seconds saying 'hey, there wasn't one after all, please hit refresh counts'
-
-### boring server improvements
-
-* refactored the account-fetching routine a little. some behind the scenes account identifier code, which determines an account from a mapping or file record, is now cleaner and more cleanly separated from the 'fetch account from account key' calls. account key is the master account identifier henceforth, and any content lookups will look up the account key and then do normal account lookup after. I will clean this further in the near future
-* a new server call looks up the account key from a content object explicitly; this will get more use in future
-* all the 'get number of x' server calls now support 'get number of x made by y' for account-specific counting. these numbers aren't cached, but should be fairly quick for janitorial purposes
-* same deal for petitions, the server can now fetch petitions by a particular user, if any
-* added/updated unit tests for these changes
-* general server code cleanup

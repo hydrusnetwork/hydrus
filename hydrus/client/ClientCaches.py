@@ -17,6 +17,7 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientRendering
+from hydrus.client import ClientThreading
 
 class DataCache( object ):
     
@@ -683,11 +684,13 @@ class ThumbnailCache( object ):
                 
                 summary = 'Unable to get thumbnail for file {}.'.format( hash.hex() )
                 
-                self._HandleThumbnailException( e, summary )
+                self._HandleThumbnailException( hash, e, summary )
                 
             
             return self._special_thumbs[ 'hydrus' ]
             
+        
+        thumbnail_mime = HC.IMAGE_JPEG
         
         try:
             
@@ -706,7 +709,7 @@ class ThumbnailCache( object ):
                 
                 summary = 'The thumbnail for file {} was not loadable. An attempt to regenerate it failed.'.format( hash.hex() )
                 
-                self._HandleThumbnailException( e, summary )
+                self._HandleThumbnailException( hash, e, summary )
                 
                 return self._special_thumbs[ 'hydrus' ]
                 
@@ -719,7 +722,7 @@ class ThumbnailCache( object ):
                 
                 summary = 'The thumbnail for file {} was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'.format( hash.hex() )
                 
-                self._HandleThumbnailException( e, summary )
+                self._HandleThumbnailException( hash, e, summary )
                 
                 return self._special_thumbs[ 'hydrus' ]
                 
@@ -782,7 +785,7 @@ class ThumbnailCache( object ):
         return hydrus_bitmap
         
     
-    def _HandleThumbnailException( self, e, summary ):
+    def _HandleThumbnailException( self, hash, e, summary ):
         
         if self._thumbnail_error_occurred:
             
@@ -798,7 +801,12 @@ class ThumbnailCache( object ):
             message += os.linesep * 2
             message += summary
             
-            HydrusData.ShowText( message )
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetStatusText( message )
+            job_key.SetFiles( { hash }, 'broken thumbnail' )
+            
+            HG.client_controller.pub( 'message', job_key )
             
         
     
@@ -1226,7 +1234,7 @@ class ThumbnailCache( object ):
                 
                 summary = 'The thumbnail for file {} was incorrect, but a later attempt to regenerate it or load the new file back failed.'.format( hash.hex() )
                 
-                self._HandleThumbnailException( e, summary )
+                self._HandleThumbnailException( hash, e, summary )
                 
             
         

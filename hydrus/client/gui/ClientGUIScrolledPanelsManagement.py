@@ -691,6 +691,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( batches_panel, min = 5, max = 1024 )
             
+            colours_panel = ClientGUICommon.StaticBox( self, 'colours' )
+            
+            self._duplicate_background_switch_intensity_a = ClientGUICommon.NoneableSpinCtrl( colours_panel, none_phrase = 'do not change', min = 1, max = 9 )
+            self._duplicate_background_switch_intensity_a.setToolTip( 'This changes the background colour when you are looking at A. If you have a pure white/black background and do not have transparent images to show with checkerboard, it helps to highlight transparency vs opaque white/black image background.' )
+            
+            self._duplicate_background_switch_intensity_b = ClientGUICommon.NoneableSpinCtrl( colours_panel, none_phrase = 'do not change', min = 1, max = 9 )
+            self._duplicate_background_switch_intensity_b.setToolTip( 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.' )
+            
+            self._draw_transparency_checkerboard_media_canvas_duplicates = QW.QCheckBox( colours_panel )
+            self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( 'Same as the setting in _media_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' )
+            
             #
             
             self._duplicate_comparison_score_higher_jpeg_quality.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' ) )
@@ -704,6 +715,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_nicer_ratio.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_nicer_ratio' ) )
             
             self._duplicate_filter_max_batch_size.setValue( self._new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
+            
+            self._duplicate_background_switch_intensity_a.SetValue( self._new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_a' ) )
+            self._duplicate_background_switch_intensity_b.SetValue( self._new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_b' ) )
+            self._draw_transparency_checkerboard_media_canvas_duplicates.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' ) )
             
             #
             
@@ -733,10 +748,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            vbox = QP.VBoxLayout()
-            
-            QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
             rows = []
             
             rows.append( ( 'Max size of duplicate filter pair batches:', self._duplicate_filter_max_batch_size ) )
@@ -745,7 +756,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             batches_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            #
+            
+            st = ClientGUICommon.BetterStaticText( colours_panel, label = 'The duplicate filter can darken/lighten your normal background colour. This highlights the transitions between A and B and, if your background colour is normally pure white or black, can differentiate transparency vs white/black opaque image background.' )
+            st.setWordWrap( True )
+            
+            colours_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'background light/dark switch intensity for A:', self._duplicate_background_switch_intensity_a ) )
+            rows.append( ( 'background light/dark switch intensity for B:', self._duplicate_background_switch_intensity_b ) )
+            rows.append( ( 'draw image transparency as checkerboard in the duplicate filter:', self._draw_transparency_checkerboard_media_canvas_duplicates ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( batches_panel, rows )
+            
+            colours_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, batches_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, colours_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -764,6 +799,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'duplicate_comparison_score_nicer_ratio', self._duplicate_comparison_score_nicer_ratio.value() )
             
             self._new_options.SetInteger( 'duplicate_filter_max_batch_size', self._duplicate_filter_max_batch_size.value() )
+            
+            self._new_options.SetNoneableInteger( 'duplicate_background_switch_intensity_a', self._duplicate_background_switch_intensity_a.GetValue() )
+            self._new_options.SetNoneableInteger( 'duplicate_background_switch_intensity_b', self._duplicate_background_switch_intensity_b.GetValue() )
+            self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates', self._draw_transparency_checkerboard_media_canvas_duplicates.isChecked() )
             
         
     
@@ -2029,6 +2068,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_loop_animations = QW.QCheckBox( self )
             self._always_loop_animations.setToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
             
+            self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( self )
+            self._draw_transparency_checkerboard_media_canvas.setToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' )
+            
             self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
             
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
@@ -2075,6 +2117,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
             self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
@@ -2110,6 +2153,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
+            rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
@@ -2338,6 +2382,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
+            self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
             self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
             

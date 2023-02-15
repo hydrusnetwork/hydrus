@@ -50,7 +50,7 @@ def CatchExceptionClient( etype, value, tb ):
             try: job_key.SetStatusTitle( str( etype.__name__ ) )
             except: job_key.SetStatusTitle( str( etype ) )
             
-            job_key.SetVariable( 'popup_text_1', first_line )
+            job_key.SetStatusText( first_line )
             job_key.SetTraceback( trace )
             
         
@@ -266,7 +266,7 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         
         job_key.SetStatusTitle( title )
         
-        job_key.SetVariable( 'popup_text_1', first_line )
+        job_key.SetStatusText( first_line )
         job_key.SetTraceback( trace )
         
     
@@ -287,7 +287,7 @@ def ShowTextClient( text ):
     
     job_key = ClientThreading.JobKey()
     
-    job_key.SetVariable( 'popup_text_1', str( text ) )
+    job_key.SetStatusText( str( text ) )
     
     text = job_key.ToString()
     

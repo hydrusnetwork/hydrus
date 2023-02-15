@@ -530,7 +530,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 break
                 
             
-            job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+            job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
             job_key.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
             
             content_updates = []

@@ -136,6 +136,58 @@ def AddAudioVolumeMenu( menu, canvas_type ):
     
     ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
     
+
+class CanvasBackgroundColourGenerator( object ):
+    
+    def GetColour( self ) -> QG.QColor:
+        
+        return HG.client_controller.new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+        
+    
+    def CanDoTransparencyCheckerboard( self ) -> bool:
+        
+        return HG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' )
+        
+    
+
+class CanvasBackgroundColourGeneratorDuplicates( CanvasBackgroundColourGenerator ):
+    
+    def __init__( self, duplicate_canvas ):
+        
+        CanvasBackgroundColourGenerator.__init__( self )
+        
+        self._duplicate_canvas = duplicate_canvas
+        
+    
+    def CanDoTransparencyCheckerboard( self ) -> bool:
+        
+        return HG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) or HG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' )
+        
+    
+    def GetColour( self ) -> QG.QColor:
+        
+        new_options = HG.client_controller.new_options
+        
+        normal_colour = new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+        
+        if self._duplicate_canvas.IsShowingAPair():
+            
+            if self._duplicate_canvas.IsShowingFileA():
+                
+                duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_a' )
+                
+            else:
+                
+                duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_b' )
+                
+            
+            return ClientGUIFunctions.GetLighterDarkerColour( normal_colour, duplicate_intensity )
+            
+        
+        return normal_colour
+        
+    
+
 # cribbing from here https://doc.qt.io/qt-5/layout.html#how-to-write-a-custom-layout-manager
 # not finished, but a start as I continue to refactor. might want to rename to 'draggable layout' or something too, since it doesn't actually care about media container that much, and instead subclass vboxlayout?
 class CanvasLayout( QW.QLayout ):
@@ -257,6 +309,8 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self._location_context = location_context
         
+        self._background_colour_generator = CanvasBackgroundColourGenerator()
+        
         self._current_media_start_time = HydrusData.GetNow()
         
         self._new_options = HG.client_controller.new_options
@@ -283,7 +337,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         self.installEventFilter( self._click_drag_reporting_filter )
         
-        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self.CANVAS_TYPE, self._click_drag_reporting_filter )
+        self._media_container = ClientGUICanvasMedia.MediaContainer( self, self.CANVAS_TYPE, self._background_colour_generator, self._click_drag_reporting_filter )
         
         self._last_drag_pos = None
         self._current_drag_is_touch = False
@@ -423,7 +477,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def _DrawBackgroundBitmap( self, painter: QG.QPainter ):
         
-        background_colour = self._GetBackgroundColour()
+        background_colour = self._background_colour_generator.GetColour()
         
         painter.setBackground( QG.QBrush( background_colour ) )
         
@@ -435,11 +489,6 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     def _DrawBackgroundDetails( self, painter ):
         
         pass
-        
-    
-    def _GetBackgroundColour( self ):
-        
-        return self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
     
     def _GetIndexString( self ):
@@ -2232,6 +2281,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._hovers.append( hover )
         
+        self._background_colour_generator = CanvasBackgroundColourGeneratorDuplicates( self )
+        
+        self._media_container.SetBackgroundColourGenerator( self._background_colour_generator )
+        
         self._my_shortcuts_handler.AddWindowToFilter( hover )
         
         self._file_search_context_1 = file_search_context_1
@@ -2503,31 +2556,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     def _GenerateHoverTopFrame( self ):
         
         return ClientGUICanvasHoverFrames.CanvasHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
-        
-    
-    def _GetBackgroundColour( self ):
-        
-        normal_colour = self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
-        
-        if self._current_media is None or len( self._media_list ) == 0:
-            
-            return normal_colour
-            
-        else:
-            
-            if self._current_media == self._media_list.GetFirst():
-                
-                return normal_colour
-                
-            else:
-                
-                new_options = HG.client_controller.new_options
-                
-                duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
-                
-                return ClientGUIFunctions.GetLighterDarkerColour( normal_colour, duplicate_intensity )
-                
-            
         
     
     def _GetIndexString( self ):
@@ -3078,6 +3106,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._Inbox()
             
+        
+    
+    def IsShowingAPair( self ):
+        
+        return self._current_media is not None and len( self._media_list ) > 1
+        
+    
+    def IsShowingFileA( self ):
+        
+        if not self.IsShowingAPair():
+            
+            return False
+            
+        
+        return self._current_media == self._media_list.GetFirst()
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):

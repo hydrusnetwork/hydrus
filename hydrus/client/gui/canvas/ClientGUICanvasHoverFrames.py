@@ -1789,19 +1789,33 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         new_options = HG.client_controller.new_options
         
-        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
+        for ( message, tooltip, variable_name ) in [
+            ( 'intensity for A', 'This changes the background colour when you are looking at A. If you have a pure white/black background, it helps to highlight transparency vs opaque white/black image background.', 'duplicate_background_switch_intensity_a' ),
+            ( 'intensity for B', 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.', 'duplicate_background_switch_intensity_b' )
+        ]:
             
-            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
+            value = new_options.GetNoneableInteger( variable_name )
             
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
                 
-                new_value = panel.GetValue()
+                panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = message, none_phrase = 'do not change', min = 1, max = 9 )
                 
-                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
+                panel.setToolTip( tooltip )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    new_value = panel.GetValue()
+                    
+                    new_options.SetNoneableInteger( variable_name, new_value )
+                    
+                    self.window().update()
+                    
+                else:
+                    
+                    return
+                    
                 
             
         

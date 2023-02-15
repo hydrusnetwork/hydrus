@@ -208,7 +208,7 @@ def THREADUploadPending( service_key ):
                 
                 unauthorised_job_key.SetStatusTitle( 'some data was not uploaded!' )
                 
-                unauthorised_job_key.SetVariable( 'popup_text_1', message )
+                unauthorised_job_key.SetStatusText( message )
                 
                 if len( content_types_to_request ) > 0:
                     
@@ -269,7 +269,7 @@ def THREADUploadPending( service_key ):
             
             num_done = num_to_do - remaining_num_pending
             
-            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+            job_key.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
             job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
             
             while job_key.IsPaused() or job_key.IsCancelled():
@@ -279,7 +279,7 @@ def THREADUploadPending( service_key ):
                 if job_key.IsCancelled():
                     
                     job_key.DeleteVariable( 'popup_gauge_1' )
-                    job_key.SetVariable( 'popup_text_1', 'cancelled' )
+                    job_key.SetStatusText( 'cancelled' )
                     
                     HydrusData.Print( job_key.ToString() )
                     
@@ -366,7 +366,7 @@ def THREADUploadPending( service_key ):
                 
             except HydrusExceptions.ServerBusyException:
                 
-                job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
+                job_key.SetStatusText( service.GetName() + ' was busy. please try again in a few minutes' )
                 
                 job_key.Cancel()
                 
@@ -399,7 +399,7 @@ def THREADUploadPending( service_key ):
             
         
         job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'upload done!' )
+        job_key.SetStatusText( 'upload done!' )
         
     except Exception as e:
         
@@ -414,7 +414,7 @@ def THREADUploadPending( service_key ):
             HG.client_controller.pub( 'imported_files_to_page', [ possible_hash ], 'files that did not upload right' )
             
         
-        job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
+        job_key.SetStatusText( service.GetName() + ' error' )
         
         job_key.Cancel()
         
@@ -1321,7 +1321,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
+                job_key.SetStatusText( 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
                 job_key.SetVariable( 'popup_gauge_1', ( i, 10 ) )
                 
                 time.sleep( 1 )
@@ -1341,7 +1341,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', text )
+        job_key.SetStatusText( text )
         
         self._controller.pub( 'message', job_key )
         
@@ -1353,7 +1353,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             t += 0.2
             
-            self._controller.CallLater( t, job_key.SetVariable, 'popup_text_1', text )
+            self._controller.CallLater( t, job_key.SetStatusText, text )
             
         
         words = [ 'test', 'a', 'longish', 'statictext', 'm8' ]
@@ -1362,7 +1362,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', 'test long title' )
+        job_key.SetStatusText( 'test long title' )
         
         self._controller.pub( 'message', job_key )
         
@@ -1411,7 +1411,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key.SetStatusTitle( 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
         
-        job_key.SetVariable( 'popup_text_1', 'test' )
+        job_key.SetStatusText( 'test' )
         
         self._controller.pub( 'message', job_key )
         
@@ -1421,7 +1421,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key.SetStatusTitle( 'user call test' )
         
-        job_key.SetVariable( 'popup_text_1', 'click the button m8' )
+        job_key.SetStatusText( 'click the button m8' )
         
         call = HydrusData.Call( HydrusData.ShowText, 'iv damke' )
         
@@ -1487,8 +1487,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key.SetStatusTitle( '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
         
-        job_key.SetVariable( 'popup_text_1', '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
-        job_key.SetVariable( 'popup_text_2', 'p\u0250\u05df \u028d\u01dd\u028d' )
+        job_key.SetStatusText( '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
+        job_key.SetStatusText( 'p\u0250\u05df \u028d\u01dd\u028d', 2 )
         
         self._controller.pub( 'message', job_key )
         
@@ -1498,12 +1498,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key.SetStatusTitle( 'test job' )
         
-        job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
+        job_key.SetStatusText( 'Currently processing test job 5/8' )
         job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
         
         self._controller.pub( 'message', job_key )
         
-        self._controller.CallLater( 2.0, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
+        self._controller.CallLater( 2.0, job_key.SetStatusText, 'Pulsing subjob', 2 )
         
         self._controller.CallLater( 2.0, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
         
@@ -2048,7 +2048,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                     if should_quit:
                         
-                        job_key.SetVariable( 'popup_text_1', 'Cancelled!' )
+                        job_key.SetStatusText( 'Cancelled!' )
                         
                         return
                         
@@ -2096,18 +2096,18 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                     finally:
                         
-                        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                        job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
                         job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                         
                     
                 
                 if num_errors == 0:
                     
-                    job_key.SetVariable( 'popup_text_1', 'Done!' )
+                    job_key.SetStatusText( 'Done!' )
                     
                 else:
                     
-                    job_key.SetVariable( 'popup_text_1', 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
+                    job_key.SetStatusText( 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
                     
                 
             finally:
@@ -2325,7 +2325,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_text_1', 'Loading Statistics\u2026' )
+            job_key.SetStatusText( 'Loading Statistics\u2026' )
             
             HG.client_controller.pub( 'message', job_key )
             
@@ -2361,7 +2361,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_text_1', 'Loading File History\u2026' )
+            job_key.SetStatusText( 'Loading File History\u2026' )
             
             HG.client_controller.pub( 'message', job_key )
             
@@ -3827,7 +3827,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', 'loading account types\u2026' )
+        job_key.SetStatusText( 'loading account types\u2026' )
         
         self._controller.pub( job_key )
         
@@ -4024,7 +4024,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         try:
                             
-                            job_key.SetVariable( 'popup_text_1', 'Waiting for export folders to finish.' )
+                            job_key.SetStatusText( 'Waiting for export folders to finish.' )
                             
                             controller.pub( 'message', job_key )
                             
@@ -4143,7 +4143,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         try:
                             
-                            job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
+                            job_key.SetStatusText( 'Waiting for import folders to finish.' )
                             
                             controller.pub( 'message', job_key )
                             
@@ -4433,7 +4433,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting anonymisation period' )
-                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading\u2026' )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -4446,7 +4446,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    job_key.SetStatusText( 'done!' )
                     
                     job_key.Finish()
                     
@@ -4457,7 +4457,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    job_key.SetStatusText( 'error!' )
                     
                     job_key.Finish()
                     
@@ -4492,7 +4492,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting tag filter' )
-                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading\u2026' )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -4505,7 +4505,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    job_key.SetStatusText( 'done!' )
                     
                     job_key.Finish()
                     
@@ -4516,7 +4516,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    job_key.SetStatusText( 'error!' )
                     
                     job_key.Finish()
                     
@@ -4562,7 +4562,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting update period' )
-                job_key.SetVariable( 'popup_text_1', 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading\u2026' )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -4575,7 +4575,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetVariable( 'popup_text_1', 'done!' )
+                    job_key.SetStatusText( 'done!' )
                     
                     job_key.Finish()
                     
@@ -4588,7 +4588,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetVariable( 'popup_text_1', 'error!' )
+                    job_key.SetStatusText( 'error!' )
                     
                     job_key.Finish()
                     
@@ -4706,7 +4706,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_text_1', 'Waiting for current subscription work to finish.' )
+            job_key.SetStatusText( 'Waiting for current subscription work to finish.' )
             
             controller.pub( 'message', job_key )
             
@@ -4754,7 +4754,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                         
                         ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names )
                         
-                        done_job_key.SetVariable( 'popup_text_1', 'Saving subscription changes.' )
+                        done_job_key.SetStatusText( 'Saving subscription changes.' )
                         
                         controller.pub( 'message', done_job_key )
                         
@@ -5495,7 +5495,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', 'loading accounts\u2026' )
+        job_key.SetStatusText( 'loading accounts\u2026' )
         
         self._controller.pub( job_key )
         
@@ -5625,7 +5625,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             job_key.Delete()
             
         
-        job_key.SetVariable( 'popup_text_1', 'loading database data' )
+        job_key.SetStatusText( 'loading database data' )
         
         self._controller.pub( 'message', job_key )
         
@@ -5741,7 +5741,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 #
                 
-                job_key.SetVariable( 'popup_text_1', 'add url test' )
+                job_key.SetStatusText( 'add url test' )
                 
                 local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
                 
@@ -5774,7 +5774,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 #
                 
-                job_key.SetVariable( 'popup_text_1', 'get session test' )
+                job_key.SetStatusText( 'get session test' )
                 
                 def get_client_api_page():
                     

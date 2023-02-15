@@ -180,7 +180,7 @@ def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_tim
     popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
     HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
-    job_key.SetVariable( 'popup_text_2', popup_message )
+    job_key.SetStatusText( popup_message, 2 )
     
 def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     
@@ -191,7 +191,7 @@ def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
     HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
-    job_key.SetVariable( 'popup_text_2', popup_message )
+    job_key.SetStatusText( popup_message, 2 )
     
 def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
@@ -434,7 +434,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
-            job_key.SetVariable( 'popup_text_1', 'closing db' )
+            job_key.SetStatusText( 'closing db' )
             
             HydrusPaths.MakeSureDirectoryExists( path )
             
@@ -445,7 +445,7 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'copying ' + filename )
+                job_key.SetStatusText( 'copying ' + filename )
                 
                 source = os.path.join( self._db_dir, filename )
                 dest = os.path.join( path, filename )
@@ -473,7 +473,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def text_update_hook( text ):
                 
-                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetStatusText( text )
                 
             
             client_files_default = os.path.join( self._db_dir, 'client_files' )
@@ -487,7 +487,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBConnection()
             
-            job_key.SetVariable( 'popup_text_1', 'backup complete!' )
+            job_key.SetStatusText( 'backup complete!' )
             
             job_key.Finish()
             
@@ -713,6 +713,8 @@ class DB( HydrusDB.HydrusDB ):
             
             some_removee_sibling_rows = HydrusData.SampleSetByGettingFirst( sibling_rows_to_remove, 20 )
             some_removee_parent_rows = HydrusData.SampleSetByGettingFirst( parent_rows_to_remove, 20 )
+            
+            possibly_affected_tag_ids = set()
             
             if len( some_removee_sibling_rows ) + len( some_removee_parent_rows ) > 0:
                 
@@ -1052,7 +1054,7 @@ class DB( HydrusDB.HydrusDB ):
             num_errors = 0
             
             job_key.SetStatusTitle( prefix_string + 'running' )
-            job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+            job_key.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
             
             db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
             
@@ -1065,7 +1067,7 @@ class DB( HydrusDB.HydrusDB ):
                     if should_quit:
                         
                         job_key.SetStatusTitle( prefix_string + 'cancelled' )
-                        job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+                        job_key.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
                         
                         return
                         
@@ -1082,14 +1084,14 @@ class DB( HydrusDB.HydrusDB ):
                         num_errors += 1
                         
                     
-                    job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+                    job_key.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
                     
                 
             
         finally:
             
             job_key.SetStatusTitle( prefix_string + 'completed' )
-            job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+            job_key.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
             
             HydrusData.Print( job_key.ToString() )
             
@@ -1118,7 +1120,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_text_1', 'looking for orphans' )
+            job_key.SetStatusText( 'looking for orphans' )
             
             jobs = [
                 ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'my files umbrella' ),
@@ -1146,7 +1148,7 @@ class DB( HydrusDB.HydrusDB ):
                     return
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'deleting orphans' )
+                job_key.SetStatusText( 'deleting orphans' )
                 
                 if len( in_components_not_in_master ) > 0:
                     
@@ -1206,7 +1208,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -2417,7 +2419,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'fixing {}'.format( tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 
                 time.sleep( 0.01 )
                 
@@ -2463,9 +2465,9 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.ShowText( 'Found {} bad mappings! They _should_ be deleted, and your pending counts should be updated.'.format( HydrusData.ToHumanInt( total_fixed ) ) )
                 
             
-            job_key.DeleteVariable( 'popup_text_2' )
+            job_key.DeleteStatusText( 2 )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -5163,7 +5165,7 @@ class DB( HydrusDB.HydrusDB ):
         return ( results_dict, we_stopped_early )
         
     
-    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None ):
+    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None, other_tags_to_exclude = None ):
         
         # a user provided the basic idea here
         
@@ -5310,6 +5312,50 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             num_tags_searched += 1
+            
+        
+        #
+        
+        # now let's filter stuff we don't want
+        
+        # we don't want to suggest ourselves
+        tag_ids_to_exclude = set( search_tag_ids_to_search_tags.keys() )
+        
+        if other_tags_to_exclude is not None:
+            
+            # this is the list of all tags in the list, don't want them either
+            other_tag_ideals = self.modules_tag_siblings.GetIdeals( tag_display_type, tag_service_key, other_tags_to_exclude )
+            
+            other_tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = other_tag_ideals ).keys() )
+            
+            tag_ids_to_exclude.update( other_tag_ids )
+            
+        
+        for ( search_tag_id, parent_tag_ids ) in self.modules_tag_parents.GetTagsToAncestors( tag_display_type, tag_service_id, set( tag_ids_to_exclude ) ).items():
+            
+            # we don't want any of their parents either!
+            tag_ids_to_exclude.update( parent_tag_ids )
+            
+        
+        unfiltered_search_tag_ids_to_tag_ids_to_matching_counts = search_tag_ids_to_tag_ids_to_matching_counts
+        
+        search_tag_ids_to_tag_ids_to_matching_counts = {}
+        
+        for ( search_tag_id, unfiltered_tag_ids_to_matching_counts ) in unfiltered_search_tag_ids_to_tag_ids_to_matching_counts.items():
+            
+            tag_ids_to_matching_counts = {}
+            
+            for ( suggestion_tag_id, suggestion_matching_count ) in unfiltered_tag_ids_to_matching_counts.items():
+                
+                if suggestion_tag_id in tag_ids_to_exclude:
+                    
+                    continue
+                    
+                
+                tag_ids_to_matching_counts[ suggestion_tag_id ] = suggestion_matching_count
+                
+            
+            search_tag_ids_to_tag_ids_to_matching_counts[ search_tag_id ] = tag_ids_to_matching_counts
             
         
         #
@@ -7782,14 +7828,14 @@ class DB( HydrusDB.HydrusDB ):
             
             message = 'generating local hash cache'
             
-            job_key.SetVariable( 'popup_text_1', message )
+            job_key.SetStatusText( message )
             self._controller.frame_splash_status.SetSubtext( message )
             
             self.modules_hashes_local_cache.Repopulate()
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -7809,14 +7855,14 @@ class DB( HydrusDB.HydrusDB ):
             
             message = 'generating local tag cache'
             
-            job_key.SetVariable( 'popup_text_1', message )
+            job_key.SetStatusText( message )
             self._controller.frame_splash_status.SetSubtext( message )
             
             self.modules_tags_local_cache.Repopulate()
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -7850,7 +7896,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def status_hook( s ):
                 
-                job_key.SetVariable( 'popup_text_2', s )
+                job_key.SetStatusText( s, 2 )
                 
             
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
@@ -7862,7 +7908,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'repopulating specific cache {}_{}'.format( file_service_id, tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -7879,7 +7925,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'repopulating combined cache {}'.format( tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -7889,9 +7935,9 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.DeleteVariable( 'popup_text_2' )
+            job_key.DeleteStatusText( 2 )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -7922,7 +7968,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def status_hook( s ):
                 
-                job_key.SetVariable( 'popup_text_2', s )
+                job_key.SetStatusText( s, 2 )
                 
             
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
@@ -7934,7 +7980,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'generating specific cache {}_{}'.format( file_service_id, tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -7955,7 +8001,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'generating combined cache {}'.format( tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -7969,9 +8015,9 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.DeleteVariable( 'popup_text_2' )
+            job_key.DeleteStatusText( 2 )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8030,11 +8076,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_1( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 status_hook_1( 'dropping old data' )
@@ -8044,7 +8090,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_mappings_cache_specific_display.Generate( file_service_id, tag_service_id, populate_from_storage = True, status_hook = status_hook_1 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
             for tag_service_id in tag_service_ids:
@@ -8058,11 +8104,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_2( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 status_hook_2( 'dropping old data' )
@@ -8072,12 +8118,12 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_mappings_cache_combined_files_display.Generate( tag_service_id, status_hook = status_hook_2 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8120,17 +8166,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_1( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 self.modules_mappings_cache_specific_display.RegeneratePending( file_service_id, tag_service_id, status_hook = status_hook_1 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
             for tag_service_id in tag_service_ids:
@@ -8144,22 +8190,22 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_2( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 self.modules_mappings_cache_combined_files_display.RegeneratePending( tag_service_id, status_hook = status_hook_2 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8208,7 +8254,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'generating specific cache {}_{}'.format( file_service_id, tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -8235,7 +8281,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'generating combined cache {}'.format( tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -8254,7 +8300,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'generating local tag cache'
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 self.modules_tags_local_cache.Repopulate()
@@ -8262,7 +8308,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8324,17 +8370,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_1( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 self.modules_mappings_cache_specific_storage.RegeneratePending( file_service_id, tag_service_id, status_hook = status_hook_1 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
             for tag_service_id in tag_service_ids:
@@ -8348,22 +8394,22 @@ class DB( HydrusDB.HydrusDB ):
                 
                 def status_hook_2( s: str ):
                     
-                    job_key.SetVariable( 'popup_text_2', s )
+                    job_key.SetStatusText( s, 2 )
                     self._controller.frame_splash_status.SetSubtext( '{} - {}'.format( message, s ) )
                     
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 self.modules_mappings_cache_combined_files_storage.RegeneratePending( tag_service_id, status_hook = status_hook_2 )
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8596,7 +8642,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), HydrusData.ToHumanInt( bad_tag_count ) )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 
             
             for tag_id in group_of_tag_ids:
@@ -8639,7 +8685,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'Fixing bad tags: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, bad_tag_count ) )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 
             
             # now find an entirely new namespace_id, subtag_id pair for this tag
@@ -8701,7 +8747,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.Print( message )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 
             
             job_key.Finish()
@@ -8745,7 +8791,7 @@ class DB( HydrusDB.HydrusDB ):
                     message += os.linesep * 2
                     message += 'Total rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) )
                     
-                    job_key.SetVariable( 'popup_text_1', message )
+                    job_key.SetStatusText( message )
                     
                     if job_key.IsCancelled():
                         
@@ -8775,7 +8821,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_key is not None:
             
-            job_key.SetVariable( 'popup_text_1', 'Done! Rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) ) )
+            job_key.SetStatusText( 'Done! Rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) ) )
             
             job_key.Finish()
             
@@ -8804,7 +8850,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def status_hook( s ):
                 
-                job_key.SetVariable( 'popup_text_2', s )
+                job_key.SetStatusText( s, 2 )
                 
             
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
@@ -8816,7 +8862,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'repopulating specific cache {}_{}'.format( file_service_id, tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -8833,7 +8879,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 message = 'repopulating combined cache {}'.format( tag_service_id )
                 
-                job_key.SetVariable( 'popup_text_1', message )
+                job_key.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
                 time.sleep( 0.01 )
@@ -8843,9 +8889,9 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.DeleteVariable( 'popup_text_2' )
+            job_key.DeleteStatusText( 2 )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8887,7 +8933,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'repopulating {} {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_service_ids ) ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
                     
-                    job_key.SetVariable( 'popup_text_1', message )
+                    job_key.SetStatusText( message )
                     self._controller.frame_splash_status.SetSubtext( message )
                     
                     with self._MakeTemporaryIntegerTable( group_of_ids, 'hash_id' ) as temp_hash_id_table_name:
@@ -8901,12 +8947,12 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            job_key.SetVariable( 'popup_text_2', '' )
+            job_key.SetStatusText( '', 2 )
             self._controller.frame_splash_status.SetSubtext( '' )
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -8942,13 +8988,13 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_key.SetVariable( 'popup_text_1', prefix + ': deleting service' )
+            job_key.SetStatusText( prefix + ': deleting service' )
             
             self._controller.pub( 'modal_message', job_key )
             
             self._DeleteService( service_id )
             
-            job_key.SetVariable( 'popup_text_1', prefix + ': recreating service' )
+            job_key.SetStatusText( prefix + ': recreating service' )
             
             self._AddService( service_key, service_type, name, dictionary )
             
@@ -8957,7 +9003,7 @@ class DB( HydrusDB.HydrusDB ):
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_data' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_gui' )
             
-            job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
+            job_key.SetStatusText( prefix + ': done!' )
             
         finally:
             
@@ -8981,7 +9027,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_info_types_to_delete = []
             
-            job_key.SetVariable( 'popup_text_1', '{}: calculating'.format( prefix ) )
+            job_key.SetStatusText( '{}: calculating'.format( prefix ) )
             
             self._controller.pub( 'modal_message', job_key )
             
@@ -9072,7 +9118,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            job_key.SetVariable( 'popup_text_1', '{}: recalculating'.format( prefix ) )
+            job_key.SetStatusText( '{}: recalculating'.format( prefix ) )
             
             if HC.CONTENT_TYPE_TAG_PARENTS in content_types or HC.CONTENT_TYPE_TAG_SIBLINGS in content_types:
                 
@@ -9091,7 +9137,7 @@ class DB( HydrusDB.HydrusDB ):
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_data' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_gui' )
             
-            job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
+            job_key.SetStatusText( prefix + ': done!' )
             
         finally:
             
@@ -9132,7 +9178,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'resyncing caches for {}_{}'.format( file_service_id, tag_service_id )
                     
-                    job_key.SetVariable( 'popup_text_1', message )
+                    job_key.SetStatusText( message )
                     self._controller.frame_splash_status.SetSubtext( message )
                     
                     if job_key.IsCancelled():
@@ -9198,7 +9244,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -11670,7 +11716,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                     self._controller.frame_splash_status.SetText( 'vacuuming ' + name )
-                    job_key.SetVariable( 'popup_text_1', 'vacuuming ' + name )
+                    job_key.SetStatusText( 'vacuuming ' + name )
                     
                     started = HydrusData.GetNowPrecise()
                     
@@ -11698,7 +11744,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            job_key.SetVariable( 'popup_text_1', 'cleaning up' )
+            job_key.SetStatusText( 'cleaning up' )
             
         finally:
             
@@ -11706,7 +11752,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self.modules_db_maintenance.RegisterSuccessfulVacuum( name )
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             

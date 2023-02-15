@@ -57,6 +57,11 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
             st = BetterStaticText( parent, text )
             
         
+        if control.objectName() == 'HydrusWarning':
+            
+            st.setObjectName( 'HydrusWarning' )
+            
+        
         possible_tooltip_widget = None
         
         if isinstance( control, QW.QLayout ):

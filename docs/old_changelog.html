@@ -35,6 +35,30 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_517"><a href="#version_517">version 517</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, export folders finally support exporting to symlinks!</li>
+                        <li>if a symlink export-create fails on Windows, the error now tells you to try again in 'run as Admin' mode--seems like this is needed in Win 10+ unless you mess with Group Policy Editor</li>
+                        <li>'related tags' should no longer suggest sibling ideals or parents of existing tags! I think!</li>
+                        <li>when a thumbnail fails to load, the error popup now has a button to open the specific problem-causing file in a new page</li>
+                        <li>generation of video thumbnails is faster, should fail less in odd cases, and when it completely fails, it now gives the hydrus icon as a final fallback</li>
+                        <li>generation of image thumbnails now falls back to the hydrus icon as a final fallback</li>
+                        <li>I think I fixed a focus logic problem where the autocomplete dropdowns on the duplicate filter page would hide if you clicked a results/favourites tab or greyspace</li>
+                        <li>fixed an error when seeking an mpv video while the video was loading or unloading</li>
+                        <li>the max 'nullification period' (after which uploads to a hydrus repository are anonymised) is raised from 1 year to 5 (needs server and client update to work)</li>
+                        <li><h3>transparency and duplicate filter</h3></li>
+                        <li>two new options, under _media_ and _duplicates_, now control if you would like transpararency-having images to have a checkerboard background rather than the normal media canvas background! you can have it on all the time or just under the duplicate filter. it uses the same style of grid as MPV</li>
+                        <li>I have a plan for proper native (non-MPV) transparency for gifs and apng, but I think I'll wait for an imagemagick plugin I am planning first</li>
+                        <li>if you have a white/black media viewer background and prefer not to use the checkerboard, the duplicate filter can now adjust the background colour, either lighter or darker, for both A and B of the pair. altering A as well exposes truly transparent-having images vs ones with opaque white/black fill, which will otherwise blend into a purely white/black background colour. these options are available in the options dialog and the duplicate filter right-hand hover window cog button</li>
+                        <li>the native image window, embed button, and animation window (with PIL gif rendering) now all adjust their background colour to any odd changes like the duplicate filter's A/B lighten/darken adjustment</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>cleaned up how popup file buttons are set and cleared</li>
+                        <li>cleaned up how popup main and secondary texts are set and cleared</li>
+                        <li>misc linting cleanup</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_516"><a href="#version_516">version 516</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

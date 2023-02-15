@@ -137,16 +137,29 @@ class JobKey( object ):
             
         
     
+    def DeleteFiles( self ):
+        
+        self.DeleteVariable( 'attached_files' )
+        
+    
     def DeleteNetworkJob( self ):
         
         self.DeleteVariable( 'network_job' )
+        
+    
+    def DeleteStatusText( self, level = 1 ):
+        
+        self.DeleteVariable( 'status_text_{}'.format( level ) )
         
     
     def DeleteVariable( self, name ):
         
         with self._variable_lock:
             
-            if name in self._variables: del self._variables[ name ]
+            if name in self._variables:
+                
+                del self._variables[ name ]
+                
             
         
         if HydrusData.TimeHasPassedFloat( self._next_ui_update_pause ):
@@ -186,6 +199,11 @@ class JobKey( object ):
             
         
     
+    def GetFiles( self ):
+        
+        return self.GetIfHasVariable( 'attached_files' )
+        
+    
     def GetIfHasVariable( self, name ):
         
         with self._variable_lock:
@@ -209,6 +227,11 @@ class JobKey( object ):
     def GetNetworkJob( self ):
         
         return self.GetIfHasVariable( 'network_job' )
+        
+    
+    def GetStatusText( self, level = 1 ) -> typing.Optional[ str ]:
+        
+        return self.GetIfHasVariable( 'status_text_{}'.format( level ) )
         
     
     def GetStatusTitle( self ) -> typing.Optional[ str ]:
@@ -311,12 +334,22 @@ class JobKey( object ):
         self.Cancel()
         
     
+    def SetFiles( self, hashes, label ):
+        
+        self.SetVariable( 'attached_files', ( list( hashes ), label ) )
+        
+    
     def SetNetworkJob( self, network_job ):
         
         self.SetVariable( 'network_job', network_job )
         
     
     def SetPausable( self, value ): self._pausable = value
+    
+    def SetStatusText( self, text: str, level = 1 ):
+        
+        self.SetVariable( 'status_text_{}'.format( level ), text )
+        
     
     def SetStatusTitle( self, title: str ):
         
@@ -361,11 +394,18 @@ class JobKey( object ):
             stuff_to_print.append( status_title )
             
         
-        with self._variable_lock:
+        status_text_1 = self.GetStatusText()
+        
+        if status_text_1 is not None:
             
-            if 'popup_text_1' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_1' ] )
+            stuff_to_print.append( status_text_1 )
             
-            if 'popup_text_2' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_2' ] )
+        
+        status_text_2 = self.GetStatusText( 2 )
+        
+        if status_text_2 is not None:
+            
+            stuff_to_print.append( status_text_2 )
             
         
         trace = self.GetTraceback()

@@ -1143,7 +1143,7 @@ def VideoHasAudio( path, info_lines ) -> bool:
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
-    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24", clip_rect = None ):
+    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24", clip_rect = None, start_pos = None ):
         
         self._path = path
         self._mime = mime
@@ -1174,7 +1174,12 @@ class VideoRendererFFMPEG( object ):
         
         self.bufsize = bufsize
         
-        self.initialize()
+        if start_pos is None:
+            
+            start_pos = 0
+            
+        
+        self.initialize( start_index = start_pos )
         
     
     def close( self ) -> None:

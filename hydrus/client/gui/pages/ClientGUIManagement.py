@@ -4871,7 +4871,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
                 job_key = ClientThreading.JobKey()
                 
-                job_key.SetVariable( 'popup_text_1', 'Hey, the server did not have a petition after all. Please hit refresh counts.' )
+                job_key.SetStatusText( 'Hey, the server did not have a petition after all. Please hit refresh counts.' )
                 
                 job_key.Delete( 5 )
                 

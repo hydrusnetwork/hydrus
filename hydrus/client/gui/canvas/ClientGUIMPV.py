@@ -484,6 +484,11 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         current_timestamp_s = self._player.time_pos
         
+        if current_timestamp_s is None:
+            
+            return
+            
+        
         new_timestamp_ms = max( 0, ( current_timestamp_s * 1000 ) + ( direction * duration_ms ) )
         
         if new_timestamp_ms > self._media.GetDuration():

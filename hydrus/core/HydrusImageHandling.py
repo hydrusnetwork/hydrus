@@ -508,7 +508,7 @@ def GenerateThumbnailBytesPIL( pil_image: PILImage.Image ) -> bytes:
     
     f = io.BytesIO()
     
-    if PILImageHasAlpha( pil_image ):
+    if PILImageHasTransparency( pil_image ):
         
         pil_image.save( f, 'PNG' )
         
@@ -1051,7 +1051,7 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.I
             
         else:
             
-            if PILImageHasAlpha( pil_image ):
+            if PILImageHasTransparency( pil_image ):
                 
                 outputMode = 'RGBA'
                 
@@ -1082,7 +1082,7 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.I
     
 def NormalisePILImageToRGB( pil_image: PILImage.Image ) -> PILImage.Image:
     
-    if PILImageHasAlpha( pil_image ):
+    if PILImageHasTransparency( pil_image ):
         
         desired_mode = 'RGBA'
         
@@ -1118,30 +1118,25 @@ def NumPyImageHasAllCellsTheSame( numpy_image: numpy.array, value: int ):
 
 def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.array ) -> bool:
     
-    shape = numpy_image.shape
-    
-    if len( shape ) <= 2:
+    if not NumPyImageHasAlphaChannel( numpy_image ):
         
         return False
         
     
-    if shape[2] == 4:
+    # RGBA image
+    
+    alpha_channel = numpy_image[:,:,3].copy()
+    
+    if NumPyImageHasAllCellsTheSame( alpha_channel, 255 ): # all opaque
         
-        # RGBA image
+        return True
         
-        alpha_channel = numpy_image[:,:,3].copy()
+    
+    if NumPyImageHasAllCellsTheSame( alpha_channel, 0 ): # all transparent
         
-        if NumPyImageHasAllCellsTheSame( alpha_channel, 255 ): # all opaque
-            
-            return True
-            
+        underlying_image_is_black = NumPyImageHasAllCellsTheSame( numpy_image, 0 )
         
-        if NumPyImageHasAllCellsTheSame( alpha_channel, 0 ): # all transparent
-            
-            underlying_image_is_black = NumPyImageHasAllCellsTheSame( numpy_image, 0 )
-            
-            return not underlying_image_is_black
-            
+        return not underlying_image_is_black
         
     
     return False
@@ -1149,6 +1144,23 @@ def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.array ) -> bool:
 
 def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
     
+    if not NumPyImageHasAlphaChannel( numpy_image ):
+        
+        return False
+        
+    
+    # RGBA image
+    # opaque means 255
+    
+    alpha_channel = numpy_image[:,:,3].copy()
+    
+    return NumPyImageHasAllCellsTheSame( alpha_channel, 255 )
+    
+
+def NumPyImageHasAlphaChannel( numpy_image: numpy.array ) -> bool:
+    
+    # note this does not test how useful the channel is, just if it exists
+    
     shape = numpy_image.shape
     
     if len( shape ) <= 2:
@@ -1156,44 +1168,30 @@ def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
         return False
         
     
-    if shape[2] == 4:
-        
-        # RGBA image
-        # opaque means 255
-        
-        alpha_channel = numpy_image[:,:,3].copy()
-        
-        return NumPyImageHasAllCellsTheSame( alpha_channel, 255 )
-        
-    
-    return False
+    # 2 for LA? think this works
+    return shape[2] in ( 2, 4 )
     
 
 def NumPyImageHasTransparentAlphaChannel( numpy_image: numpy.array ) -> bool:
     
-    shape = numpy_image.shape
-    
-    if len( shape ) <= 2:
+    if not NumPyImageHasAlphaChannel( numpy_image ):
         
         return False
         
     
-    if shape[2] == 4:
-        
-        # RGBA image
-        # transparent means 0
-        
-        alpha_channel = numpy_image[:,:,3].copy()
-        
-        return NumPyImageHasAllCellsTheSame( alpha_channel, 0 )
-        
+    # RGBA image
+    # transparent means 0
     
-    return False
+    alpha_channel = numpy_image[:,:,3].copy()
     
-def PILImageHasAlpha( pil_image: PILImage.Image ) -> bool:
+    return NumPyImageHasAllCellsTheSame( alpha_channel, 0 )
+    
+
+def PILImageHasTransparency( pil_image: PILImage.Image ) -> bool:
     
     return pil_image.mode in ( 'LA', 'RGBA' ) or ( pil_image.mode == 'P' and 'transparency' in pil_image.info )
     
+
 def RawOpenPILImage( path ) -> PILImage.Image:
     
     try:
@@ -1207,6 +1205,7 @@ def RawOpenPILImage( path ) -> PILImage.Image:
     
     return pil_image
     
+
 def ResizeNumPyImage( numpy_image: numpy.array, target_resolution ) -> numpy.array:
     
     ( target_width, target_height ) = target_resolution

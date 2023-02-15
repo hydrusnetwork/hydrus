@@ -309,7 +309,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         self.TouchTimestamp( 'now_awake' )
                         
-                        job_key.SetVariable( 'popup_text_1', 'enabling I/O now' )
+                        job_key.SetStatusText( 'enabling I/O now' )
                         
                         job_key.Delete()
                         
@@ -327,7 +327,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 else:
                     
-                    job_key.SetVariable( 'popup_text_1', 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
+                    job_key.SetStatusText( 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
                     
                 
                 time.sleep( 0.5 )
@@ -1820,6 +1820,10 @@ class Controller( HydrusController.HydrusController ):
                             
                             http_factory = ClientLocalServer.HydrusServiceClientAPI( service, allow_non_local_connections = allow_non_local_connections )
                             
+                        else:
+                            
+                            raise NotImplementedError( 'Unknown service type!' )
+                            
                         
                         ipv6_port = None
                         
@@ -1889,18 +1893,18 @@ class Controller( HydrusController.HydrusController ):
                 
                 deferreds = []
                 
-                for ( ipv4_port, ipv6_port ) in self._service_keys_to_connected_ports.values():
+                for ( existing_ipv4_port, existing_ipv6_port ) in self._service_keys_to_connected_ports.values():
                     
-                    if ipv4_port is not None:
+                    if existing_ipv4_port is not None:
                         
-                        deferred = defer.maybeDeferred( ipv4_port.stopListening )
+                        deferred = defer.maybeDeferred( existing_ipv4_port.stopListening )
                         
                         deferreds.append( deferred )
                         
                     
-                    if ipv6_port is not None:
+                    if existing_ipv6_port is not None:
                         
-                        deferred = defer.maybeDeferred( ipv6_port.stopListening )
+                        deferred = defer.maybeDeferred( existing_ipv6_port.stopListening )
                         
                         deferreds.append( deferred )
                         

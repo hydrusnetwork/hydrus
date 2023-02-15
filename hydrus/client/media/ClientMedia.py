@@ -167,11 +167,11 @@ def ReportDeleteLockFailures( medias: typing.Collection[ "Media" ] ):
     
     message = 'Was unable to delete one or more files because of a delete lock!'
     
-    job_key.SetVariable( 'popup_text_1', message )
+    job_key.SetStatusText( message )
     
     hashes = list( itertools.chain.from_iterable( ( media.GetHashes() for media in medias ) ) )
     
-    job_key.SetVariable( 'popup_files', ( hashes, 'see them' ) )
+    job_key.SetFiles( hashes, 'see them' )
     
     HG.client_controller.pub( 'message', job_key )
     

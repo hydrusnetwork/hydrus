@@ -690,7 +690,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 file_seeds.append( file_seed )
                 
             
-            job_key.SetVariable( 'popup_text_1', 'checking: found ' + HydrusData.ToHumanInt( len( file_seeds ) ) + ' new files' )
+            job_key.SetStatusText( 'checking: found ' + HydrusData.ToHumanInt( len( file_seeds ) ) + ' new files' )
             
         
         self._file_seed_cache.AddFileSeeds( file_seeds )
@@ -754,7 +754,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             gauge_num_done = num_files_imported + 1
             
-            job_key.SetVariable( 'popup_text_1', 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
+            job_key.SetStatusText( 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
             job_key.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
             
             path = file_seed.file_seed_data

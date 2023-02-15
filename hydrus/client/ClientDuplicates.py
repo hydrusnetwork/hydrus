@@ -707,7 +707,7 @@ class DuplicatesManager( object ):
                     
                 
                 text = 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
-                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetStatusText( text )
                 job_key.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
                 
                 if job_key.IsCancelled() or HG.model_shutdown:

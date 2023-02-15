@@ -353,15 +353,15 @@ class MigrationJob( object ):
         
         self._controller.pub( 'message', job_key )
         
-        job_key.SetVariable( 'popup_text_1', 'preparing source' )
+        job_key.SetStatusText( 'preparing source' )
         
         self._source.Prepare()
         
-        job_key.SetVariable( 'popup_text_1', 'preparing destination' )
+        job_key.SetStatusText( 'preparing destination' )
         
         self._destination.Prepare()
         
-        job_key.SetVariable( 'popup_text_1', 'beginning work' )
+        job_key.SetStatusText( 'beginning work' )
         
         try:
             
@@ -369,7 +369,7 @@ class MigrationJob( object ):
                 
                 progress_statement = self._destination.DoSomeWork( self._source )
                 
-                job_key.SetVariable( 'popup_text_1', progress_statement )
+                job_key.SetStatusText( progress_statement )
                 
                 job_key.WaitIfNeeded()
                 
@@ -381,15 +381,15 @@ class MigrationJob( object ):
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done, cleaning up source' )
+            job_key.SetStatusText( 'done, cleaning up source' )
             
             self._source.CleanUp()
             
-            job_key.SetVariable( 'popup_text_1', 'done, cleaning up destination' )
+            job_key.SetStatusText( 'done, cleaning up destination' )
             
             self._destination.CleanUp()
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             

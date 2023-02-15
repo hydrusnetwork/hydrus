@@ -348,11 +348,12 @@ class Animation( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     
-    def __init__( self, parent, canvas_type ):
+    def __init__( self, parent, canvas_type, background_colour_generator ):
         
         QW.QWidget.__init__( self, parent )
         
         self._canvas_type = canvas_type
+        self._background_colour_generator = background_colour_generator
         
         # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
         self.setMouseTracking( True )
@@ -361,7 +362,7 @@ class Animation( QW.QWidget ):
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
-        self._something_valid_has_been_drawn = False
+        self._have_drawn_background_once = False
         self._playthrough_count = 0
         
         self._num_frames = 1
@@ -417,7 +418,7 @@ class Animation( QW.QWidget ):
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
         self._current_frame_drawn = False
-        self._something_valid_has_been_drawn = False
+        self._have_drawn_background_once = False
         
         self.update()
         
@@ -478,10 +479,18 @@ class Animation( QW.QWidget ):
             
             self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( my_raw_width, my_raw_height )
             
-        
-        self._canvas_qt_pixmap.setDevicePixelRatio( 1.0 )
-        
-        painter = QG.QPainter( self._canvas_qt_pixmap )
+            self._canvas_qt_pixmap.setDevicePixelRatio( 1.0 )
+            
+            painter = QG.QPainter( self._canvas_qt_pixmap )
+            
+            self._DrawABlankFrame( painter )
+            
+        else:
+            
+            self._canvas_qt_pixmap.setDevicePixelRatio( 1.0 )
+            
+            painter = QG.QPainter( self._canvas_qt_pixmap )
+            
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
         
@@ -506,18 +515,69 @@ class Animation( QW.QWidget ):
             self._next_frame_due_at = next_frame_ideally_due
             
         
-        self._something_valid_has_been_drawn = True
-        
     
     def _DrawABlankFrame( self, painter ):
         
-        new_options = HG.client_controller.new_options
+        if self._background_colour_generator.CanDoTransparencyCheckerboard():
+            
+            light_grey = QG.QColor( 237, 237, 237 )
+            dark_grey = QG.QColor( 222, 222, 222 )
+            
+            painter.setBackground( QG.QBrush( light_grey ) )
+            
+            painter.eraseRect( painter.viewport() )
+            
+            # 16x16 boxes, light grey in top right
+            BOX_LENGTH = int( 16 * self.devicePixelRatio() )
+            
+            painter_width = painter.viewport().width()
+            painter_height = painter.viewport().height()
+            
+            num_cols = painter_width // BOX_LENGTH
+            
+            if painter_width % BOX_LENGTH > 0:
+                
+                num_cols += 1
+                
+            
+            num_rows = painter_height // BOX_LENGTH
+            
+            if painter_height % BOX_LENGTH > 0:
+                
+                num_rows += 1
+                
+            
+            painter.setBrush( QG.QBrush( dark_grey ) )
+            painter.setPen( QG.QPen( QC.Qt.NoPen ) )
+            
+            for y_index in range( num_rows ):
+                
+                for x_index in range( num_cols ):
+                    
+                    if ( x_index + y_index ) % 2 == 1:
+                        
+                        rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
+                        
+                        if painter.viewport().intersects( rect ):
+                            
+                            painter.drawRect( rect )
+                            
+                        
+                    
+                
+            
+            self._have_drawn_background_once = True
+            
+            return
+            
         
-        painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        colour = self._background_colour_generator.GetColour()
+        
+        painter.setBackground( QG.QBrush( colour ) )
         
         painter.eraseRect( painter.viewport() )
         
-        self._something_valid_has_been_drawn = True
+        self._have_drawn_background_once = True
         
     
     def ClearMedia( self ):
@@ -721,6 +781,11 @@ class Animation( QW.QWidget ):
             
         
     
+    def SetBackgroundColourGenerator( self, background_colour_generator ):
+        
+        self._background_colour_generator = background_colour_generator
+        
+    
     def StopForSlideshow( self, value ):
         
         self._stop_for_slideshow = value
@@ -737,7 +802,7 @@ class Animation( QW.QWidget ):
         
         self._ClearCanvasBitmap()
         
-        self._something_valid_has_been_drawn = False
+        self._have_drawn_background_once = False
         self._playthrough_count = 0
         
         self._stop_for_slideshow = False
@@ -1294,7 +1359,7 @@ class MediaContainer( QW.QWidget ):
     
     zoomChanged = QC.Signal( float )
     
-    def __init__( self, parent, canvas_type, additional_event_filter: QC.QObject ):
+    def __init__( self, parent, canvas_type, background_colour_generator, additional_event_filter: QC.QObject ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -1309,6 +1374,8 @@ class MediaContainer( QW.QWidget ):
             self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
             
         
+        self._background_colour_generator = background_colour_generator
+        
         self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
         
         self._media = None
@@ -1322,7 +1389,7 @@ class MediaContainer( QW.QWidget ):
         
         self._media_window = None
         
-        self._embed_button = EmbedButton( self )
+        self._embed_button = EmbedButton( self, self._background_colour_generator )
         self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
         self._embed_button_widget_event_filter.EVT_LEFT_DOWN( self.EventEmbedButton )
         
@@ -1331,9 +1398,9 @@ class MediaContainer( QW.QWidget ):
         
         self._additional_event_filter = additional_event_filter
         
-        self._animation_window = Animation( self, self._canvas_type )
+        self._animation_window = Animation( self, self._canvas_type, self._background_colour_generator )
         
-        self._static_image_window = StaticImage( self, self._canvas_type )
+        self._static_image_window = StaticImage( self, self._canvas_type, self._background_colour_generator )
         
         self._static_image_window.readyForNeighbourPrefetch.connect( self.readyForNeighbourPrefetch )
         
@@ -2084,6 +2151,15 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def SetBackgroundColourGenerator( self, background_colour_generator ):
+        
+        self._background_colour_generator = background_colour_generator
+        
+        self._embed_button.SetBackgroundColourGenerator( self._background_colour_generator )
+        self._animation_window.SetBackgroundColourGenerator( self._background_colour_generator )
+        self._static_image_window.SetBackgroundColourGenerator( self._background_colour_generator )
+        
+    
     def SetMedia( self, media: ClientMedia.MediaSingleton, maintain_zoom, maintain_pan ):
         
         previous_media = self._media
@@ -2592,9 +2668,11 @@ class MediaContainer( QW.QWidget ):
     
 class EmbedButton( QW.QWidget ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, background_colour_generator ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._background_colour_generator = background_colour_generator
         
         self._media = None
         
@@ -2618,7 +2696,9 @@ class EmbedButton( QW.QWidget ):
         
         new_options = HG.client_controller.new_options
         
-        painter.setBackground( QG.QBrush( new_options.GetColour(CC.COLOUR_MEDIA_BACKGROUND) ) )
+        colour = self._background_colour_generator.GetColour()
+        
+        painter.setBackground( QG.QBrush( colour ) )
         
         painter.eraseRect( painter.viewport() )
         
@@ -2678,6 +2758,11 @@ class EmbedButton( QW.QWidget ):
         painter = QG.QPainter( self )
         
         self._Redraw( painter )
+        
+    
+    def SetBackgroundColourGenerator( self, background_colour_generator ):
+        
+        self._background_colour_generator = background_colour_generator
         
     
     def SetMedia( self, media ):
@@ -2787,12 +2872,13 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     launchMediaViewer = QC.Signal()
     readyForNeighbourPrefetch = QC.Signal()
     
-    def __init__( self, parent, canvas_type ):
+    def __init__( self, parent, canvas_type, background_colour_generator ):
         
         CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
         
         self._canvas_type = canvas_type
+        self._background_colour_generator = background_colour_generator
         
         if HC.PLATFORM_MACOS and not HG.macos_antiflicker_test:
             
@@ -2803,6 +2889,8 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self.setMouseTracking( True )
         
         self._media = None
+        self._i_know_if_media_has_transparency = False
+        self._media_has_transparency = False
         
         self._image_renderer = None
         
@@ -2890,11 +2978,89 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._is_rendered = False
         
     
-    def _DrawBackground( self, painter ):
+    def _DrawBackground( self, painter, topLeftOffset = None ):
         
-        new_options = HG.client_controller.new_options
+        if not self._i_know_if_media_has_transparency:
+            
+            if self._image_renderer is not None and self._image_renderer.IsReady():
+                
+                self._media_has_transparency = self._image_renderer.HasTransparency()
+                self._i_know_if_media_has_transparency = True
+                
+            
         
-        painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._i_know_if_media_has_transparency and self._media_has_transparency:
+            
+            light_grey = QG.QColor( 237, 237, 237 )
+            dark_grey = QG.QColor( 222, 222, 222 )
+            
+            painter.setBackground( QG.QBrush( light_grey ) )
+            
+            painter.eraseRect( painter.viewport() )
+            
+            # 16x16 boxes, light grey in top right
+            BOX_LENGTH = int( 16 * self.devicePixelRatio() )
+            
+            # there's a way to do this with viewports or transforms or something, but I don't know mate
+            if topLeftOffset is None:
+                
+                rectTopLeftAdjust = QC.QPoint( 0, 0 )
+                
+            else:
+                
+                x = topLeftOffset.x() % ( BOX_LENGTH * 2 )
+                y = topLeftOffset.y() % ( BOX_LENGTH * 2 )
+                
+                x_adjust = - x if x > 0 else 0
+                y_adjust = - y if y > 0 else 0
+                
+                rectTopLeftAdjust = QC.QPoint( x_adjust, y_adjust )
+                
+            
+            painter_width = painter.viewport().width() + abs( rectTopLeftAdjust.x() )
+            painter_height = painter.viewport().height() + abs( rectTopLeftAdjust.y() )
+            
+            num_cols = painter_width // BOX_LENGTH
+            
+            if painter_width % BOX_LENGTH > 0:
+                
+                num_cols += 1
+                
+            
+            num_rows = painter_height // BOX_LENGTH
+            
+            if painter_height % BOX_LENGTH > 0:
+                
+                num_rows += 1
+                
+            
+            painter.setBrush( QG.QBrush( dark_grey ) )
+            painter.setPen( QG.QPen( QC.Qt.NoPen ) )
+            
+            for y_index in range( num_rows ):
+                
+                for x_index in range( num_cols ):
+                    
+                    if ( x_index + y_index ) % 2 == 1:
+                        
+                        rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
+                        
+                        rect.moveTo( rect.topLeft() + rectTopLeftAdjust )
+                        
+                        if painter.viewport().intersects( rect ):
+                            
+                            painter.drawRect( rect )
+                            
+                        
+                    
+                
+            
+            return
+            
+        
+        colour = self._background_colour_generator.GetColour()
+        
+        painter.setBackground( QG.QBrush( colour ) )
         
         painter.eraseRect( painter.viewport() )
         
@@ -2910,7 +3076,7 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         painter = QG.QPainter( tile_pixmap )
         
-        self._DrawBackground( painter )
+        self._DrawBackground( painter, topLeftOffset = raw_canvas_clip_rect.topLeft() )
         
         tile = self._tile_cache.GetTile( self._image_renderer, self._media, native_clip_rect, raw_canvas_clip_rect.size() )
         
@@ -3197,6 +3363,11 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         return command_processed
         
     
+    def SetBackgroundColourGenerator( self, background_colour_generator ):
+        
+        self._background_colour_generator = background_colour_generator
+        
+    
     def SetMedia( self, media ):
         
         if media == self._media:
@@ -3207,6 +3378,8 @@ class StaticImage( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._ClearCanvasTileCache()
         
         self._media = media
+        self._i_know_if_media_has_transparency = False
+        self._media_has_transparency = False
         
         image_cache = HG.client_controller.GetCache( 'images' )
         

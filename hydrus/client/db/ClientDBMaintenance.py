@@ -73,7 +73,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 for name in names_to_analyze:
                     
                     HG.client_controller.frame_splash_status.SetText( 'analyzing ' + name )
-                    job_key.SetVariable( 'popup_text_1', 'analyzing ' + name )
+                    job_key.SetStatusText( 'analyzing ' + name )
                     
                     time.sleep( 0.02 )
                     
@@ -99,7 +99,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 self._Execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
                 
-                job_key.SetVariable( 'popup_text_1', 'done!' )
+                job_key.SetStatusText( 'done!' )
                 
                 HydrusData.Print( job_key.ToString() )
                 

@@ -466,6 +466,10 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             serialisable_data = ( service_key.hex(), content_type, action, value )
             
+        else:
+            
+            raise NotImplementedError( 'Unknown command type!' )
+            
         
         return ( self._command_type, serialisable_data )
         
@@ -655,7 +659,9 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
             elif action == SIMPLE_MEDIA_SEEK_DELTA:
                 
-                ( direction, ms ) = self.GetSimpleData()
+                data = self.GetSimpleData()
+                
+                ( direction, ms ) = data
                 
                 direction_s = 'back' if direction == -1 else 'forwards'
                 

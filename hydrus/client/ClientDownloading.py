@@ -225,7 +225,7 @@ class QuickDownloadManager( object ):
                         
                         job_key.SetStatusTitle( 'downloading' )
                         
-                        job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
+                        job_key.SetStatusText( 'initialising downloader' )
                         
                         job_key_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_key )
                         
@@ -267,7 +267,7 @@ class QuickDownloadManager( object ):
             
             total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
             
-            job_key.SetVariable( 'popup_text_1', 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
+            job_key.SetStatusText( 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
             job_key.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
             
             try:
@@ -390,12 +390,12 @@ class QuickDownloadManager( object ):
                 
                 if len( hashes_still_to_download_in_this_run ) == 0:
                     
-                    job_key.DeleteVariable( 'popup_text_1' )
+                    job_key.DeleteStatusText()
                     job_key.DeleteVariable( 'popup_gauge_1' )
                     
                     if total_successful_hashes_in_this_run > 0:
                         
-                        job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
+                        job_key.SetStatusText( HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
                         
                     
                     job_key_pub_job.Cancel()

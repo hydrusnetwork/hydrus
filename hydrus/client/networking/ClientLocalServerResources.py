@@ -3076,7 +3076,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetVariable( 'popup_text_1', message )
+            job_key.SetStatusText( message )
             
             job_key.Delete( 5 )
             

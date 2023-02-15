@@ -393,7 +393,7 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def _FetchRelatedTagsNew( self, max_time_to_take ):
         
-        def do_it( file_service_key, tag_service_key, search_tags ):
+        def do_it( file_service_key, tag_service_key, search_tags, other_tags_to_exclude ):
             
             def qt_code( predicates, num_done, num_to_do, num_skipped, total_time_took ):
                 
@@ -473,7 +473,8 @@ class RelatedTagsPanel( QW.QWidget ):
                 max_time_to_take = max_time_to_take,
                 concurrence_threshold = concurrence_threshold,
                 search_tag_slices_weight_dict = search_tag_slices_weight_dict,
-                result_tag_slices_weight_dict = result_tag_slices_weight_dict
+                result_tag_slices_weight_dict = result_tag_slices_weight_dict,
+                other_tags_to_exclude = other_tags_to_exclude
             )
             
             total_time_took = HydrusData.GetNowPrecise() - start_time
@@ -488,10 +489,12 @@ class RelatedTagsPanel( QW.QWidget ):
         if len( self._selected_tags ) == 0:
             
             search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+            other_tags_to_exclude = None
             
         else:
             
             search_tags = self._selected_tags
+            other_tags_to_exclude = set( ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ) ).difference( self._selected_tags )
             
         
         if len( search_tags ) == 0:
@@ -516,7 +519,7 @@ class RelatedTagsPanel( QW.QWidget ):
         
         tag_service_key = self._service_key
         
-        HG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags )
+        HG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags, other_tags_to_exclude )
         
     
     def _UpdateTagDisplay( self ):

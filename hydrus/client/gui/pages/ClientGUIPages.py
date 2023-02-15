@@ -2117,7 +2117,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', 'loading session "{}"\u2026'.format( name ) )
+        job_key.SetStatusText( 'loading session "{}"\u2026'.format( name ) )
         
         HG.client_controller.pub( 'message', job_key )
         

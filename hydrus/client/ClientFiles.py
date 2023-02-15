@@ -989,7 +989,7 @@ class ClientFilesManager( object ):
             job_key = ClientThreading.JobKey( cancellable = True )
             
             job_key.SetStatusTitle( 'clearing orphans' )
-            job_key.SetVariable( 'popup_text_1', 'preparing' )
+            job_key.SetStatusText( 'preparing' )
             
             self._controller.pub( 'message', job_key )
             
@@ -1009,7 +1009,7 @@ class ClientFilesManager( object ):
                     
                     status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
                     
-                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetStatusText( status )
                     
                 
                 try:
@@ -1063,7 +1063,7 @@ class ClientFilesManager( object ):
                     
                     status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
                     
-                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetStatusText( status )
                     
                 
                 try:
@@ -1095,7 +1095,7 @@ class ClientFilesManager( object ):
                 
                 status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans, now deleting'
                 
-                job_key.SetVariable( 'popup_text_1', status )
+                job_key.SetStatusText( status )
                 
                 time.sleep( 5 )
                 
@@ -1112,7 +1112,7 @@ class ClientFilesManager( object ):
                     
                     status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
                     
-                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetStatusText( status )
                     
                     ClientPaths.DeletePath( path )
                     
@@ -1122,7 +1122,7 @@ class ClientFilesManager( object ):
                 
                 status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                 
-                job_key.SetVariable( 'popup_text_1', status )
+                job_key.SetStatusText( status )
                 
                 time.sleep( 5 )
                 
@@ -1137,7 +1137,7 @@ class ClientFilesManager( object ):
                     
                     status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
                     
-                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetStatusText( status )
                     
                     HydrusData.Print( 'Deleting the orphan ' + path )
                     
@@ -1154,7 +1154,7 @@ class ClientFilesManager( object ):
                 final_text = HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
                 
             
-            job_key.SetVariable( 'popup_text_1', final_text )
+            job_key.SetStatusText( final_text )
             
             HydrusData.Print( job_key.ToString() )
             
@@ -1405,7 +1405,7 @@ class ClientFilesManager( object ):
                     
                     HydrusData.Print( text )
                     
-                    job_key.SetVariable( 'popup_text_1', text )
+                    job_key.SetStatusText( text )
                     
                     # these two lines can cause a deadlock because the db sometimes calls stuff in here.
                     self._controller.WriteSynchronous( 'relocate_client_files', prefix, overweight_location, underweight_location )
@@ -1432,7 +1432,7 @@ class ClientFilesManager( object ):
                     
                     HydrusData.Print( text )
                     
-                    job_key.SetVariable( 'popup_text_1', text )
+                    job_key.SetStatusText( text )
                     
                     recoverable_path = os.path.join( recoverable_location, prefix )
                     correct_path = os.path.join( correct_location, prefix )
@@ -1447,7 +1447,7 @@ class ClientFilesManager( object ):
             
         finally:
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetStatusText( 'done!' )
             
             job_key.Finish()
             
@@ -2283,7 +2283,7 @@ class FilesMaintenanceManager( object ):
                             job_key.SetVariable( 'num_thumb_refits', num_thumb_refits )
                             
                         
-                        job_key.SetVariable( 'popup_text_2', 'thumbs needing regen: {}'.format( HydrusData.ToHumanInt( num_thumb_refits ) ) )
+                        job_key.SetStatusText( 'thumbs needing regen: {}'.format( HydrusData.ToHumanInt( num_thumb_refits ) ), 2 )
                         
                     elif job_type == REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES:
                         
@@ -2319,7 +2319,7 @@ class FilesMaintenanceManager( object ):
                             job_key.SetVariable( 'num_bad_files', num_bad_files ) 
                             
                         
-                        job_key.SetVariable( 'popup_text_2', 'missing or invalid files: {}'.format( HydrusData.ToHumanInt( num_bad_files ) ) )
+                        job_key.SetStatusText( 'missing or invalid files: {}'.format( HydrusData.ToHumanInt( num_bad_files ) ), 2 )
                         
                     
                 except HydrusExceptions.ShutdownException:
@@ -2402,7 +2402,7 @@ class FilesMaintenanceManager( object ):
             
             status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
             
-            job_key.SetVariable( 'popup_text_1', status_text )
+            job_key.SetStatusText( status_text )
             
             job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
             
@@ -2461,7 +2461,7 @@ class FilesMaintenanceManager( object ):
                 
             finally:
                 
-                job_key.SetVariable( 'popup_text_1', 'done!' )
+                job_key.SetStatusText( 'done!' )
                 
                 job_key.DeleteVariable( 'popup_gauge_1' )
                 
@@ -2633,7 +2633,7 @@ class FilesMaintenanceManager( object ):
             
             status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
             
-            job_key.SetVariable( 'popup_text_1', status_text )
+            job_key.SetStatusText( status_text )
             
             job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
             
@@ -2655,7 +2655,7 @@ class FilesMaintenanceManager( object ):
                 
             finally:
                 
-                job_key.SetVariable( 'popup_text_1', 'done!' )
+                job_key.SetStatusText( 'done!' )
                 
                 job_key.DeleteVariable( 'popup_gauge_1' )
                 
