@@ -7,6 +7,45 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 518](https://github.com/hydrusnetwork/hydrus/releases/tag/v518)
+
+### autocomplete improvements
+
+* tl;dr: I went through the whole tag autocomplete search pipeline, cleaned out the cruft, and made the pre-fetch results more sensible. searching for tags on thumbnails isn't horrible any more!
+* -
+* when you type a tag search, either in search or edit autocomplete contexts, and it needs to spend some time reading from the database, the search now always does the 'exact match' search first on what you typed. if you type in 'cat', it will show 'cat' and 'species:cat' and 'character:cat' and anything else that matches 'cat' exactly, with counts, and easy to select, while you are waiting for the full autocomplete results to come back
+* in edit contexts, this exact-matching pre-fetch results here now include sibling suggestions, even if the results have no count
+* in edit contexts, the full results should more reliably include sibling suggestions, including those with no count. in some situations ('all known tags'), there may be too many siblings, so let me know!
+* the main predicate sorting method now sorts by string secondarily, stabilising the sort between same-count preds
+* when the results list transitions from pre-fetch results to full results, your current selection is now preserved!!! selecting and then hitting enter right when the full results come in should be safe now!
+* when you type on a set of full results and it quickly filters down on the results cache to a smaller result, it now preserves selection. I'm not sure how totally useful this will be, but I did it anyway. hitting backspace and filtering 'up' will reset selection
+* when you search for tags on a page of thumbnails, you should now get some early results super fast! these results are lacking sibling data and will be replaced with the better answer soon after, but if you want something simple, they'll work! no more waiting ages for anything on thumbnail tag searches!
+* fixed an issue where the edit autocomplete was not caching results properly when you had the 'unnamespaced input gives (any namespace) wildcard results' option on
+* the different loading states of autocomplete all now have clear 'loading...' labels, and each label is a little different based on what it is doing, like 'loading sibling data...'
+* I generally cleared out jank. as the results move from one type to another, or as they filter down as you type, they _should_ flicker less
+* added a new gui debug mode to force a three second delay on all autocomplete database jobs, to help simulate slow searches and play with the above
+* NOTE: autocomplete has a heap of weird options under _tags->manage tag display and search_. I'm really happy with the above changes, but I messed around with the result injection rules, so I may have broken one of the combinations of wildcard rules here. let me know how you get on and I'll fix anything that I busted.
+
+### pympler
+
+* hydrus now optionally uses 'pympler', a python memory profiling library. for now, it replaces my old python gc (garbage collection) summarising commands under _help->debug->memory actions_, and gives much nicer formatting and now various estimates of actual memory use. this is a first version that mostly just replicates old behaviour, but I added a 'spam a more accurate total mem size of all the Qt widgets' in there too. I will keep developing this in future. we should be able to track some memory leaks better in future
+* pympler is now in all the requirements.txts, so if you run from source and want to play with it, please reinstall your venv and you'll be sorted. _help->about_ says whether you have it or not
+
+### misc
+
+* the system:time predicates now allow you to specify the hh:mm time on the calendar control. if needed, you can now easily search for files viewed between 10pm-11:30pm yesterday. all existing 'date' system predicates will update to midnight. if you are a time-search nerd, note this changes the precision of existing time predicates--previously they searched _before/after_ the given date, but now they search including the given date, pivoting around the minute (default: 0:00am) rather than the integer calendar day! 'same day as' remains the same, though--midnight to midnight of the given calendar day
+* if hydrus has previously initial-booted without mpv available and so set the media view options for video/animations/audio to 'show with native viewer', and you then boot with mpv available, hydrus now sets your view options to use mpv and gives a popup saying so. trying to get mpv to work should be a bit easier to test now, since it'll popup and fix itself as soon as you get it working, and people who never realised it was missing and fix it accidentally will now get sorted without having to do anything extra
+* made some small speed and memory optimisations to content processing for busy clients with large sessions, particularly those with large collect-by'd pages
+* also boosted the speed of the content update pipeline as it consults which files are affected by which update object
+* the migrate tags dialog now lets you filter the tag source by pending only on tag repositories
+* cleaned up some calendar/time code
+* updated the Client API help on how Hydrus-Client-API-Access-Key works in GET vs POST arguments
+* patched the legacy use of 'service_names_to_tags' in `/add_urls/add_url` in the client api. this parameter is more obsolete than the other legacy names (it got renamed a while ago to 'service_names_to_additional_tags'), but I'm supporting it again, just for a bit, for Hydrus Companion users stuck on an older version. sorry for the trouble here, this missed my legacy checks!
+
+### windows mpv test
+
+* hey, if you are an advanced windows user and want to run a test for me, please rename your mpv-2.dll to .old and then get this https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z/download . extract the libmpv-2.dll and rename it to mpv-2.dll. does it work for you, showing api v2.1 in _help->about_? are you running the built windows release, or from source? it runs great for me from source, but I'd like to get a wider canvas before I update it for everyone. if it doesn't work, then delete the new dll and rename the .old back, and then let me know your windows version etc.., thank you!
+
 ## [Version 517](https://github.com/hydrusnetwork/hydrus/releases/tag/v517)
 
 ### misc
@@ -377,43 +416,3 @@ title: Changelog
 * fixed the main thumbnail loader being confused at times about which thumbnail mime to load with. the check I have added is ultra-fast on data we are loading anyway, so we shouldn't notice a difference, but if you get slow thumb loads, let me know
 * fixed the media container embed buttons using the file mime rather than the thumb mime when loading thumbnails (again causing transparency issues)
 * fixed more generally bad mime handling in the thumbnail generation routine that could have caused more unusual transparency handling for clip, psd, or flash files
-
-## [Version 508](https://github.com/hydrusnetwork/hydrus/releases/tag/v508)
-
-### misc
-
-* added a shortcut action to the 'media' set for 'file relationships: show x', where x is duplicates, potential duplicates, alternates, or false positives, just like the action buried in the thumbnail right-click menu. this actually works in both thumbs and the canvas.
-* fixed file deletes not getting processed in the duplicate filter when there were no normal duplicate actions committed in a batch. sorry for the trouble here--duplicate decisions and deletes are now counted and reported in the confirmation dialogs as separate numbers
-* as an experiment, the duplicate filter now says (+50%, -33%) percentage differences in the file size comparison statement. while the numbers here are correct, I'm not sure if this is helpful or awkward. maybe it should be phrased differently--let me know
-* url classes get two new checkboxes this week: 'do not allow any extra path components/parameters', which will stop a match if the testee URL is 'longer' than the url class's definition. this should help with some difficult 'path-nested URLs aren't matching to the right URL Class' problems
-* when you import hard drive files manually or in an import folder, files with .txt, .json, or .xml suffixes are now ignored in the file scanning phase. when hydrus eventually supports text files and arbitrary files, the solution will be nicer here, but this patch makes the new sidecar system nicer to work with in the meantime without, I hope, causing too much other fuss
-* the 'tags' button in the advanced-mode 'sort files' control now hides/shows based on the sort type. also, the asc/desc button now hides/shows when it is invalid (filetype, hash, random), rather than disable/enable. there was a bit more signals-cleanup behind the scenes here too
-* updated the 'could not set up qtpy/QtCore' error handling yet again to try to figure out this macOS App boot problem some users are getting. the error handling now says what the initial QT_API env variable was and tries to import every possible Qt and prints the whole error for each. hopefully we'll now see why PySide6 is not loading
-* cleaned up the 'old changelog' page. all the '.' separators are replaced with proper header tags and I rejiggered some of the ul and li elements to interleave better. its favicon is also fixed. btw if you want to edit 500-odd elements at a time in a 2MB document, PyCharm is mostly great. multi-hundred simultaneous edit hung for about five minutes per character, but multiline regex Find and Replace was instant
-* added a link to a user-written guide for running Hydrus on Windows in Anaconda to the 'installing' help
-* fixed some old/invalid dialog locations in the 'how to build a downloader' help
-
-### client api
-
-* a new `/get_files/file_hashes` command lets you look up any of the sha256, md5, sha1, sha512 hashes that hydrus knows about using any of the other hashes. if you have a bunch of md5 and want to figure out if you have them, or if you want to get the md5s of your files and run them against an external check, this is now possible
-* added help and unit tests for this new command
-* added a service enum to the `/get_services` Client API help
-* client api version is now 37
-* as a side thing, I rejiggered the 'what non-sha256 hash do these sha256 hashes have?' test here. it now returns a mapping, allowing for more efficient mass lookups, and it no longer creates new sha256 records for novel hashes. feel free to spam this on new sha256 hashes if you like
-
-### interesting serverside
-
-* the tag repository now manages a tag filter. admins with 'modify options' permission can alter it under the new menu command _services->administrate services->tag repo->edit tag filter_.
-* any time new tags are pended to the tag repository, they are now washed through the tag filter. any that don't pass are silently discarded
-* normal users will regularly fetch the tag filter as long as their client is relatively new. they can review it under a new read-only Tag Filter panel from _review services_. if their client is super old (or the server), account sync and the UI should fail gracefully
-* if you are in advanced mode and your client account-syncs and discovers the tag filter has changed, it will make a popup with a summary of the changes. I am not sure how spammy/annoying this will be, so let me know if you'd rather turn them off or auto-hide after two hours or something
-* future updates will have more feedback on _manage tags_ dialog and similar, just to let you know there and then if an entered tag is not wanted. also, admins who change the tag filter will be able to retroactively remove tags that apply to the filter, not just stop new ones. I'd also like some sibling hard-replace to go along with this, so we don't accidentalyl remove tags that are otherwise sibling'd to be good--we'll see
-* the hydrus server won't bug out so much at unusual errors now. previously, I ingrained that any error during any request would kick off automatic delays, but I have rejiggered it a bit so this mostly just happens during automatic work like update downloading
-
-### boring serverside
-
-* added get/set and similar to the tag repo's until-now-untouched tag filter
-* wrote a nice helper method that splays two tag filters into their added/changed/deleted rules and another that can present that in human-readable format. it prints to the server log whenever a human changes the tag filter, and will be used in future retroactive syncing
-* cleaned up how the service options are delivered to the client. previously, there would have been a version desync pain if I had ever updated the tag filter internal version. now, the service options delivered to the client are limited to python primitives, atm just update period and nullification period, and tag filter and other complex objects will have their own get calls and fail in quiet isolation
-* I fixed some borked nullification period initialisation serverside
-* whenever a tag filter describes itself, if either black or whitelist have more than 12 rules, it now summarises rather than listing every single one

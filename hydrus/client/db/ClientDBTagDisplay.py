@@ -1,12 +1,14 @@
 import collections
 import itertools
 import sqlite3
+import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
@@ -316,6 +318,21 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
     
     def GetMediaPredicates( self, tag_context: ClientSearch.TagContext, tags_to_counts, inclusive, job_key = None ):
+        
+        if HG.autocomplete_delay_mode:
+            
+            time_to_stop = HydrusData.GetNowFloat() + 3.0
+            
+            while not HydrusData.TimeHasPassedFloat( time_to_stop ):
+                
+                time.sleep( 0.1 )
+                
+                if job_key.IsCancelled():
+                    
+                    return []
+                    
+                
+            
         
         display_tag_service_id = self.modules_services.GetServiceId( tag_context.display_service_key )
         

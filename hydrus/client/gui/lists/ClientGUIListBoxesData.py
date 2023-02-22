@@ -490,16 +490,9 @@ class ListBoxItemPredicate( ListBoxItem ):
         return text
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetPredicate( self ) -> ClientSearch.Predicate:
         
-        if self._predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
-            
-            return []
-            
-        else:
-            
-            return [ self._predicate ]
-            
+        return self._predicate
         
     
     def GetRowCount( self, show_parent_rows: bool ):
@@ -555,6 +548,18 @@ class ListBoxItemPredicate( ListBoxItem ):
         return rows_of_texts_and_namespaces
         
     
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+        
+        if self._predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
+            
+            return []
+            
+        else:
+            
+            return [ self._predicate ]
+            
+        
+    
     def GetTags( self ) -> typing.Set[ str ]:
         
         if self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
@@ -573,3 +578,4 @@ class ListBoxItemPredicate( ListBoxItem ):
         
         self._i_am_an_or_under_construction = value
         
+    

@@ -249,7 +249,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         serialisable_source_urls = list( self._source_urls )
         serialisable_tags = list( self._tags )
         serialisable_names_and_notes_dict = list( self._names_and_notes_dict.items() )
-        serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in list(self._hashes.items()) if hash is not None ]
+        serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in self._hashes.items() if hash is not None ]
         
         return (
             self.file_seed_type,

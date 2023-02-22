@@ -278,6 +278,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click' ] = False
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click_only_static' ] = False
         
+        from hydrus.client.gui.canvas import ClientGUIMPV
+        
+        self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()

@@ -116,7 +116,7 @@ class Value( Enum ):
     HASHLIST_WITH_ALGORITHM = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is one of 'sha256', 'md5', 'sha1', 'sha512'
     FILETYPE_LIST = auto()  # A set of file types using the enum set in InitialiseFiletypes as defined in FILETYPES
     # Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
-    # a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
+    # a datetime.datetime object. For the latter, only the YYYY-MM-DD format is accepted.
     # dateutils has a function to try to guess and parse arbitrary date formats but I didn't use it here since it would be an additional dependency.
     DATE_OR_TIME_INTERVAL = auto()
     TIME_SEC_MSEC = auto()  # A tuple of two non-negative integers: (seconds, milliseconds) where the latter is <1000
@@ -321,7 +321,8 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], (years, months, days, hours)
         match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
         if match:
-            return string[ len( match[ 0 ] ): ], datetime.date( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
+            # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
+            return string[ len( match[ 0 ] ): ], datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
         raise ValueError( "Invalid value, expected a date or a time interval" )
     elif spec == Value.TIME_SEC_MSEC:
         match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )

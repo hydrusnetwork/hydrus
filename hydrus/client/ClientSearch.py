@@ -234,11 +234,12 @@ def IsComplexWildcard( search_text ):
     
 def SortPredicates( predicates ):
     
-    key = lambda p: p.GetCount().GetMinCount()
+    key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )
     
-    predicates.sort( key = key, reverse = True )
+    predicates.sort( key = key )
     
     return predicates
+    
 
 NUMBER_TEST_OPERATOR_LESS_THAN = 0
 NUMBER_TEST_OPERATOR_GREATER_THAN = 1
@@ -482,12 +483,16 @@ class FileSystemPredicates( object ):
                     
                 elif age_type == 'date':
                     
-                    ( year, month, day ) = age_value
+                    ( year, month, day, hour, minute ) = age_value
                     
-                    dt = ClientTime.GetDateTime( year, month, day )
+                    dt = ClientTime.GetDateTime( year, month, day, hour, minute )
                     
                     time_pivot = ClientTime.CalendarToTimestamp( dt )
-                    next_day_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, day_delta = 1 ) )
+                    
+                    dt_day_of_start = ClientTime.GetDateTime( year, month, day, 0, 0 )
+                    
+                    day_of_start = ClientTime.CalendarToTimestamp( dt_day_of_start )
+                    day_of_end = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
                     
                     # the before/since semantic logic is:
                     # '<' 2022-05-05 means 'before that date'
@@ -499,12 +504,12 @@ class FileSystemPredicates( object ):
                         
                     elif operator == '>':
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = next_day_timestamp
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
                         
                     elif operator == '=':
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_day_timestamp
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = day_of_start
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = day_of_end
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
@@ -1564,7 +1569,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__(
         self,
@@ -1874,6 +1879,32 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
             
             return ( 5, new_serialisable_info )
+            
+        
+        if version == 5:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+                
+                ( operator, age_type, age_value ) = serialisable_value
+                
+                if age_type == 'date':
+                    
+                    ( year, month, day ) = age_value
+                    
+                    hour = 0
+                    minute = 0
+                    
+                    age_value = ( year, month, day, hour, minute )
+                    
+                    serialisable_value = ( operator, age_type, age_value )
+                    
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 6, new_serialisable_info )
             
         
     
@@ -2463,19 +2494,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     elif age_type == 'date':
                         
-                        ( year, month, day ) = age_value
+                        ( year, month, day, hour, minute ) = age_value
                         
-                        dt = datetime.datetime( year, month, day )
+                        dt = datetime.datetime( year, month, day, hour, minute )
                         
-                        try:
-                            
-                            # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
-                            timestamp = int( time.mktime( dt.timetuple() ) )
-                            
-                        except:
-                            
-                            timestamp = HydrusData.GetNow()
-                            
+                        timestamp = ClientTime.CalendarToTimestamp( dt )
                         
                         if operator == '<':
                             
@@ -2494,8 +2517,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             pretty_operator = 'a month either side of '
                             
                         
+                        include_24h_time = operator != '=' and ( hour > 0 or minute > 0 )
+                        
                         # convert this GMT TIMESTAMP to a pretty local string
-                        base += ': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = False )
+                        base += ': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = include_24h_time )
                         
                     
                 
@@ -3339,7 +3364,7 @@ class PredicateResultsCache( object ):
         self._predicates = list( predicates )
         
     
-    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool ):
+    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool, allow_auto_wildcard_conversion = True ):
         
         return False
         
@@ -3383,9 +3408,9 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
         self._exact_match = exact_match
         
     
-    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool ):
+    def CanServeTagResults( self, parsed_autocomplete_text: ParsedAutocompleteText, exact_match: bool, allow_auto_wildcard_conversion = True ):
         
-        strict_search_text = parsed_autocomplete_text.GetSearchText( False )
+        strict_search_text = parsed_autocomplete_text.GetSearchText( False, allow_auto_wildcard_conversion = allow_auto_wildcard_conversion )
         
         if self._exact_match:
             

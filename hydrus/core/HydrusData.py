@@ -1829,6 +1829,7 @@ class ContentUpdate( object ):
         self._action = action
         self._row = row
         self._reason = reason
+        self._hashes = None
         
     
     def __eq__( self, other ):
@@ -1862,6 +1863,11 @@ class ContentUpdate( object ):
         
     
     def GetHashes( self ):
+        
+        if self._hashes is not None:
+            
+            return self._hashes
+            
         
         hashes = set()
         
@@ -1953,6 +1959,8 @@ class ContentUpdate( object ):
             hashes = set( hashes )
             
         
+        self._hashes = hashes
+        
         return hashes
         
     
@@ -1996,6 +2004,8 @@ class ContentUpdate( object ):
     def SetRow( self, row ):
         
         self._row = row
+        
+        self._hashes = None
         
     
     def ToTuple( self ):

@@ -46,9 +46,9 @@ def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> da
         
     
 
-def GetDateTime( year: int, month: int, day: int ) -> datetime.datetime:
+def GetDateTime( year: int, month: int, day: int, hour: int, minute: int ) -> datetime.datetime:
     
-    return datetime.datetime( year, month, day )
+    return datetime.datetime( year, month, day, hour, minute )
     
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:
     

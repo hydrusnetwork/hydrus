@@ -72,10 +72,10 @@ def date_pred_generator( pred_type, o, v ):
     #Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
     #a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
     
-    if isinstance( v, datetime.date ):
+    if isinstance( v, datetime.datetime ):
         
         date_type = 'date'
-        v = ( v.year, v.month, v.day )
+        v = ( v.year, v.month, v.day, v.hour, v.minute )
         
     else:
         

@@ -32,6 +32,7 @@ except Exception as e:
     mpv_failed_reason = traceback.format_exc()
     
     MPV_IS_AVAILABLE = False
+    
 
 def GetClientAPIVersionString():
     

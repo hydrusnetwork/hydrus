@@ -1,5 +1,6 @@
 cbor2
 cryptography
+pympler
 python-dateutil
 
 beautifulsoup4>=4.0.0

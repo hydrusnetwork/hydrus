@@ -343,7 +343,7 @@ class PanelPredicateSystemSingle( PanelPredicateSystem ):
         return len( custom_defaults ) > 0
         
     
-class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
+class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
@@ -353,11 +353,13 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         self._date = QW.QCalendarWidget( self )
         
+        self._time = QW.QTimeEdit( self )
+        
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
+        ( sign, age_type, ( years, months, days, hours, minutes ) ) = predicate.GetValue()
         
         self._sign.SetValue( sign )
         
@@ -365,17 +367,34 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         
         self._date.setSelectedDate( qt_dt )
         
+        qt_t = QC.QTime( hours, minutes )
+        
+        self._time.setTime( qt_t )
+        
         #
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:import time'), CC.FLAGS_CENTER_PERPENDICULAR )
+        system_pred_label = self._GetSystemPredicateLabel()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, system_pred_label ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._time, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+    
+    def _GetSystemPredicateLabel( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+    def _GetPredicateType( self ) -> int:
+        
+        raise NotImplementedError()
         
     
     def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
@@ -388,7 +407,12 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         month = qt_dt.month()
         day = qt_dt.day()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'date', ( year, month, day ) ) )
+        hour = 0
+        minute = 0
+        
+        predicate_type = self._GetPredicateType()
+        
+        return ClientSearch.Predicate( predicate_type, ( '>', 'date', ( year, month, day, hour, minute ) ) )
         
     
     def GetPredicates( self ):
@@ -399,11 +423,76 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemSingle ):
         month = qt_dt.month()
         day = qt_dt.day()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
+        qt_t = self._time.time()
+        
+        hour = qt_t.hour()
+        minute = qt_t.minute()
+        
+        predicate_type = self._GetPredicateType()
+        
+        predicates = ( ClientSearch.Predicate( predicate_type, ( self._sign.GetValue(), 'date', ( year, month, day, hour, minute ) ) ), )
         
         return predicates
         
     
+
+class PanelPredicateSystemAgeDate( PanelPredicateSystemDate ):
+    
+    def _GetSystemPredicateLabel( self ) -> str:
+        
+        return 'system:import time'
+        
+    
+    def _GetPredicateType( self ) -> int:
+        
+        return ClientSearch.PREDICATE_TYPE_SYSTEM_AGE
+        
+    
+    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+        
+        qt_dt = QC.QDate.currentDate()
+        
+        qt_dt.addDays( -7 )
+        
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
+        
+        hour = 0
+        minute = 0
+        
+        predicate_type = self._GetPredicateType()
+        
+        return ClientSearch.Predicate( predicate_type, ( '<', 'date', ( year, month, day, hour, minute ) ) )
+        
+    
+
+class PanelPredicateSystemLastViewedDate( PanelPredicateSystemDate ):
+    
+    def _GetSystemPredicateLabel( self ) -> str:
+        
+        return 'system:last viewed date'
+        
+    
+    def _GetPredicateType( self ) -> int:
+        
+        return ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME
+        
+    
+
+class PanelPredicateSystemModifiedDate( PanelPredicateSystemDate ):
+    
+    def _GetSystemPredicateLabel( self ) -> str:
+        
+        return 'system:modified date'
+        
+    
+    def _GetPredicateType( self ) -> int:
+        
+        return ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+        
+    
+
 class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -412,10 +501,10 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         self._sign = TimeDeltaOperator( self )
         
-        self._years = ClientGUICommon.BetterSpinBox( self, max=30, width = 60 )
-        self._months = ClientGUICommon.BetterSpinBox( self, max=60, width = 60 )
-        self._days = ClientGUICommon.BetterSpinBox( self, max=90, width = 60 )
-        self._hours = ClientGUICommon.BetterSpinBox( self, max=24, width = 60 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max = 30, width = 60 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max = 60, width = 60 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max = 90, width = 60 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max = 24, width = 60 )
         
         #
         
@@ -458,67 +547,6 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
-        
-        return predicates
-        
-    
-class PanelPredicateSystemLastViewedDate( PanelPredicateSystemSingle ):
-    
-    def __init__( self, parent, predicate ):
-        
-        PanelPredicateSystemSingle.__init__( self, parent )
-        
-        self._sign = TimeDateOperator( self )
-        
-        self._date = QW.QCalendarWidget( self )
-        
-        #
-        
-        predicate = self._GetPredicateToInitialisePanelWith( predicate )
-        
-        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
-        
-        self._sign.SetValue( sign )
-        
-        qt_dt = QC.QDate( years, months, days )
-        
-        self._date.setSelectedDate( qt_dt )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed date'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
-        
-        self.setLayout( hbox )
-        
-    
-    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
-        
-        qt_dt = QC.QDate.currentDate()
-        
-        qt_dt.addDays( -7 )
-        
-        year = qt_dt.year()
-        month = qt_dt.month()
-        day = qt_dt.day()
-        
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '>', 'date', ( year, month, day ) ) )
-        
-    
-    def GetPredicates( self ):
-        
-        qt_dt = self._date.selectedDate()
-        
-        year = qt_dt.year()
-        month = qt_dt.month()
-        day = qt_dt.day()
-        
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
         
         return predicates
         
@@ -577,67 +605,6 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
     def GetPredicates( self ):
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
-        
-        return predicates
-        
-    
-class PanelPredicateSystemModifiedDate( PanelPredicateSystemSingle ):
-    
-    def __init__( self, parent, predicate ):
-        
-        PanelPredicateSystemSingle.__init__( self, parent )
-        
-        self._sign = TimeDateOperator( self )
-        
-        self._date = QW.QCalendarWidget( self )
-        
-        #
-        
-        predicate = self._GetPredicateToInitialisePanelWith( predicate )
-        
-        ( sign, age_type, ( years, months, days ) ) = predicate.GetValue()
-        
-        self._sign.SetValue( sign )
-        
-        qt_dt = QC.QDate( years, months, days )
-        
-        self._date.setSelectedDate( qt_dt )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
-        
-        self.setLayout( hbox )
-        
-    
-    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
-        
-        qt_dt = QC.QDate.currentDate()
-        
-        qt_dt.addDays( -7 )
-        
-        year = qt_dt.year()
-        month = qt_dt.month()
-        day = qt_dt.day()
-        
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'date', ( year, month, day ) ) )
-        
-    
-    def GetPredicates( self ):
-        
-        qt_dt = self._date.selectedDate()
-        
-        year = qt_dt.year()
-        month = qt_dt.month()
-        day = qt_dt.day()
-        
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetValue(), 'date', ( year, month, day ) ) ), )
         
         return predicates
         

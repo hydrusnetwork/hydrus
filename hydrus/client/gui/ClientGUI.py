@@ -27,9 +27,10 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusImageHandling
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusMemory
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
@@ -506,8 +507,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
-        self._garbage_snapshot = collections.Counter()
-        
         self._currently_uploading_pending = set()
         
         self._last_clipboard_watched_text = ''
@@ -641,6 +640,65 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         self._locator_widget.setEscapeShortcuts( [ QG.QKeySequence( QC.Qt.Key_Escape ) ] )
         # self._locator_widget.setQueryTimeout( 100 ) # how much to wait before starting a search after user edit. default 0
         
+        #
+        
+        try:
+            
+            mpv_available_at_start = self._controller.new_options.GetBoolean( 'mpv_available_at_start' )
+            
+            if not mpv_available_at_start and ClientGUIMPV.MPV_IS_AVAILABLE:
+                
+                # ok, mpv has started working!
+                
+                self._controller.new_options.SetBoolean( 'mpv_available_at_start', True )
+                
+                original_mimes_to_view_options = self._new_options.GetMediaViewOptions()
+                
+                edited_mimes_to_view_options = dict( original_mimes_to_view_options )
+                
+                we_done_it = False
+                
+                for general_mime in ( HC.GENERAL_VIDEO, HC.GENERAL_ANIMATION, HC.GENERAL_AUDIO ):
+                    
+                    if general_mime in original_mimes_to_view_options:
+                        
+                        view_options = original_mimes_to_view_options[ general_mime ]
+                        
+                        ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = view_options
+                        
+                        if media_show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
+                            
+                            media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV
+                            preview_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV
+                            
+                            view_options = ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info )
+                            
+                            edited_mimes_to_view_options[ general_mime ] = view_options
+                            
+                            we_done_it = True
+                            
+                        
+                    
+                
+                if we_done_it:
+                    
+                    self._controller.new_options.SetMediaViewOptions( edited_mimes_to_view_options )
+                    
+                    HydrusData.ShowText( 'Hey, MPV was not working on a previous boot, but it looks like it is now. I have updated your media view settings to use MPV.')
+                    
+                else:
+                    
+                    HydrusData.ShowText( 'Hey, MPV was not working on a previous boot, but it looks like it is now. You might like to check your file view settings under options->media.')
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Hey, while trying to check some MPV stuff on boot, I encountered an error. Please let hydev know.' )
+            
+            HydrusData.ShowException( e )
+            
+        
     
     def _AboutWindow( self ):
         
@@ -755,6 +813,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
+        library_versions.append( ( 'pympler present:', str( HydrusMemory.PYMPLER_OK ) ) )
         library_versions.append( ( 'pyopenssl present:', str( HydrusEncryption.OPENSSL_OK ) ) )
         library_versions.append( ( 'speedcopy present:', str( HydrusFileHandling.SPEEDCOPY_OK ) ) )
         library_versions.append( ( 'install dir', HC.BASE_DIR ) )
@@ -1084,11 +1143,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _ClearOrphanFiles( self ):
         
-        text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
+        text = 'This job will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
         text += os.linesep * 2
         text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'get started', no_label = 'forget it' )
         
         if result == QW.QDialog.Accepted:
             
@@ -1535,144 +1594,40 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         self._controller.column_list_manager.ResetToDefaults()
         
     
-    def _DebugShowGarbageDifferences( self ):
+    def _DebugShowMemoryUseDifferences( self ):
         
-        count = collections.Counter()
-        
-        for o in gc.get_objects():
+        if not HydrusMemory.PYMPLER_OK:
             
-            count[ type( o ) ] += 1
+            HydrusData.ShowText( 'Sorry, you need pympler for this!' )
             
-        
-        count.subtract( self._garbage_snapshot )
-        
-        text = 'Garbage differences start here:'
-        
-        to_print = list( count.items() )
-        
-        to_print.sort( key = lambda pair: -pair[1] )
-        
-        for ( t, count ) in to_print:
-            
-            if count == 0:
-                
-                continue
-                
-            
-            text += os.linesep + '{}: {}'.format( t, HydrusData.ToHumanInt( count ) )
+            return
             
         
-        HydrusData.ShowText( text )
+        HydrusMemory.PrintSnapshotDiff()
         
     
-    def _DebugTakeGarbageSnapshot( self ):
+    def _DebugTakeMemoryUseSnapshot( self ):
         
-        count = collections.Counter()
-        
-        for o in gc.get_objects():
+        if not HydrusMemory.PYMPLER_OK:
             
-            count[ type( o ) ] += 1
+            HydrusData.ShowText( 'Sorry, you need pympler for this!' )
+            
+            return
             
         
-        self._garbage_snapshot = count
+        HydrusMemory.TakeMemoryUseSnapshot()
         
     
-    def _DebugPrintGarbage( self ):
+    def _DebugPrintMemoryUse( self ):
         
-        HydrusData.ShowText( 'Printing garbage to log' )
-        
-        HydrusData.Print( 'uncollectable gc.garbage:' )
-        
-        count = collections.Counter()
-        
-        for o in gc.garbage:
+        if not HydrusMemory.PYMPLER_OK:
             
-            count[ type( o ) ] += 1
+            HydrusData.ShowText( 'Sorry, you need pympler for this!' )
+            
+            return
             
         
-        to_print = list( count.items() )
-        
-        to_print.sort( key = lambda pair: -pair[1] )
-        
-        for ( k, v ) in to_print:
-            
-            HydrusData.Print( ( k, v ) )
-            
-        
-        del gc.garbage[:]
-        
-        old_debug = gc.get_debug()
-        
-        HydrusData.Print( 'running a collect with stats on:' )
-        
-        gc.set_debug( gc.DEBUG_LEAK | gc.DEBUG_STATS )
-        
-        gc.collect()
-        
-        del gc.garbage[:]
-        
-        gc.set_debug( old_debug )
-        
-        #
-        
-        count = collections.Counter()
-        
-        objects_to_inspect = set()
-        
-        for o in gc.get_objects():
-            
-            # add objects to inspect here
-            
-            count[ type( o ) ] += 1
-            
-        
-        current_frame = sys._getframe( 0 )
-        
-        for o in objects_to_inspect:
-            
-            HydrusData.Print( o )
-            
-            parents = gc.get_referrers( o )
-            
-            for parent in parents:
-                
-                if parent == current_frame or parent == objects_to_inspect:
-                    
-                    continue
-                    
-                
-                HydrusData.Print( 'parent {}'.format( parent ) )
-                
-                grandparents = gc.get_referrers( parent )
-                
-                for gp in grandparents:
-                    
-                    if gp == current_frame or gp == parents:
-                        
-                        continue
-                        
-                    
-                    HydrusData.Print( 'grandparent {}'.format( gp ) )
-                    
-                
-            
-            
-        
-        HydrusData.Print( 'currently tracked types:' )
-        
-        to_print = list( count.items() )
-        
-        to_print.sort( key = lambda pair: -pair[1] )
-        
-        for ( k, v ) in to_print:
-            
-            if v > 15:
-                
-                HydrusData.Print( ( k, v ) )
-                
-            
-        
-        HydrusData.DebugPrint( 'garbage printing finished' )
+        HydrusMemory.PrintCurrentMemoryUse( ( QW.QWidget, ) )
         
     
     def _DebugShowScheduledJobs( self ):
@@ -3351,6 +3306,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             ClientGUIMenus.AppendMenuItem( gui_actions, 'macos anti-flicker test', 'Try it out, let me know how it goes.', flip_macos_antiflicker )
             
         
+        ClientGUIMenus.AppendMenuCheckItem( gui_actions, 'autocomplete delay mode', 'Delay all autocomplete requests at the database level by three seconds.', HG.autocomplete_delay_mode, self._SwitchBoolean, 'autocomplete_delay_mode' )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
@@ -3385,9 +3341,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'clear all rendering caches', 'Tell the image rendering system to forget all current images, tiles, and thumbs. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
-        ClientGUIMenus.AppendMenuItem( memory_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
-        ClientGUIMenus.AppendMenuItem( memory_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
-        ClientGUIMenus.AppendMenuItem( memory_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
+        
+        if HydrusMemory.PYMPLER_OK:
+            
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'print memory-use summary', 'Print some information about the python memory use to the log.', self._DebugPrintMemoryUse )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'take memory-use snapshot', 'Capture current memory use.', self._DebugTakeMemoryUseSnapshot )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'print memory-use snapshot diff', 'Show memory use differences since the last snapshot.', self._DebugShowMemoryUseDifferences )
+            
         
         ClientGUIMenus.AppendMenu( debug, memory_actions, 'memory actions' )
         
@@ -6588,7 +6548,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SwitchBoolean( self, name ):
         
-        if name == 'cache_report_mode':
+        if name == 'autocomplete_delay_mode':
+            
+            HG.autocomplete_delay_mode = not HG.autocomplete_delay_mode
+            
+        elif name == 'cache_report_mode':
             
             HG.cache_report_mode = not HG.cache_report_mode
             

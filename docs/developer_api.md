@@ -94,17 +94,26 @@ Access is required for every request. You can provide this as an http header, li
 Hydrus-Client-API-Access-Key : 0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
 ```    
 
-Or you can include it as a GET or POST parameter on any request (except _POST /add\_files/add\_file_, which uses the entire POST body for the file's bytes). Use the same name for your GET or POST argument, such as:
+Or you can include it in the normal parameters of any request (except _POST /add\_files/add\_file_, which uses the entire POST body for the file's bytes). For GET, this means including it into the URL parameters:
 
 ```
 /get_files/thumbnail?file_id=452158&Hydrus-Client-API-Access-Key=0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
 ```    
 
-There is now a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the [/session_key](#session_key) command and thereafter use it just as you would an access key, just with _Hydrus-Client-API-Session-Key_ instead.
+For POST, this means in the JSON body parameters, like so:
+
+```
+{
+    "hash_id" : 123456,
+    "Hydrus-Client-API-Access-Key" : "0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae"
+}
+```
+
+There is also a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the [/session_key](#session_key) command and thereafter use it just as you would an access key, just with _Hydrus-Client-API-Session-Key_ instead.
 
 Session keys will expire if they are not used within 24 hours, or if the client is restarted, or if the underlying access key is deleted. An invalid/expired session key will give a **419** result with an appropriate error text.
 
-Bear in mind the Client API is still under construction. Setting up the Client API to be accessible across the internet requires technical experience to be convenient. HTTPS is available for encrypted comms, but the default certificate is self-signed (which basically means an eavesdropper can't see through it, but your ISP/government could if they decided to target you). If you have your own domain and SSL cert, you can replace them though (check the db directory for client.crt and client.key). Otherwise, be careful about transmitting sensitive content outside of your localhost/network.
+Bear in mind the Client API is still under construction. Setting up the Client API to be accessible across the internet requires technical experience to be convenient. HTTPS is available for encrypted comms, but the default certificate is self-signed (which basically means an eavesdropper can't see through it, but your ISP/government could if they decided to target you). If you have your own domain to host from and an SSL cert, you can replace them and it'll use them instead (check the db directory for client.crt and client.key). Otherwise, be careful about transmitting sensitive content outside of your localhost/network.
 
 ## Common Complex Parameters
 

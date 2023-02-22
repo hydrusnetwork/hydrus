@@ -223,6 +223,12 @@ def ParseClientLegacyArgs( args: dict ):
         
         new_service_dict_param_name = ConvertLegacyServiceNameParamToKey( legacy_service_dict_param_name )
         
+        # little hack for a super old obsolete thing, it got renamed more significantly
+        if new_service_dict_param_name == 'service_keys_to_tags':
+            
+            parsed_request_args[ 'service_keys_to_additional_tags' ] = service_keys_to_gubbins
+            
+        
         parsed_request_args[ new_service_dict_param_name ] = service_keys_to_gubbins
         
     

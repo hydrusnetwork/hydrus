@@ -22,24 +22,16 @@ from hydrus.client.metadata import ClientTags
 
 def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, hashes ):
     
+    filtered_service_keys_to_content_updates = {}
+    
     if not isinstance( hashes, set ):
         
         hashes = set( hashes )
         
     
-    filtered_service_keys_to_content_updates = collections.defaultdict( list )
-    
     for ( service_key, full_content_updates ) in full_service_keys_to_content_updates.items():
         
-        filtered_content_updates = []
-        
-        for content_update in full_content_updates:
-            
-            if not hashes.isdisjoint( content_update.GetHashes() ):
-                
-                filtered_content_updates.append( content_update )
-                
-            
+        filtered_content_updates = [ content_update for content_update in full_content_updates if not hashes.isdisjoint( content_update.GetHashes() ) ]
         
         if len( filtered_content_updates ) > 0:
             
@@ -48,6 +40,7 @@ def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, has
         
     
     return filtered_service_keys_to_content_updates
+    
 
 def FlattenMedia( media_list ):
     
@@ -1288,6 +1281,11 @@ class MediaList( object ):
         
     
     def ProcessContentUpdates( self, full_service_keys_to_content_updates ):
+        
+        if len( full_service_keys_to_content_updates ) == 0:
+            
+            return
+            
         
         service_keys_to_content_updates = FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, self._hashes )
         

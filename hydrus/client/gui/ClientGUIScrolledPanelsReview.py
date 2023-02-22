@@ -1221,19 +1221,20 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         extra_info = ''
         
-        source_content_statuses_strings = {}
+        source_content_statuses_strings = {
+            ( HC.CONTENT_STATUS_CURRENT, ) : 'current',
+            ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) : 'current and pending',
+            ( HC.CONTENT_STATUS_PENDING, ) : 'pending',
+            ( HC.CONTENT_STATUS_DELETED, ) : 'deleted'
+        }
         
-        source_content_statuses_strings[ ( HC.CONTENT_STATUS_CURRENT, ) ] = 'current'
-        source_content_statuses_strings[ ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ] = 'current and pending'
-        source_content_statuses_strings[ ( HC.CONTENT_STATUS_DELETED, ) ] = 'deleted'
-        
-        destination_action_strings = {}
-        
-        destination_action_strings[ HC.CONTENT_UPDATE_ADD ] = 'adding them to'
-        destination_action_strings[ HC.CONTENT_UPDATE_DELETE ] = 'deleting them from'
-        destination_action_strings[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clearing their deletion record from'
-        destination_action_strings[ HC.CONTENT_UPDATE_PEND ] = 'pending them to'
-        destination_action_strings[ HC.CONTENT_UPDATE_PETITION ] = 'petitioning them for removal from'
+        destination_action_strings = {
+            HC.CONTENT_UPDATE_ADD : 'adding them to',
+            HC.CONTENT_UPDATE_DELETE : 'deleting them from',
+            HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'clearing their deletion record from',
+            HC.CONTENT_UPDATE_PEND : 'pending them to',
+            HC.CONTENT_UPDATE_PETITION : 'petitioning them for removal from'
+        }
         
         content_type = self._migration_content_type.GetValue()
         content_statuses = self._migration_source_content_status_filter.GetValue()
@@ -1703,6 +1704,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if source_service_type == HC.TAG_REPOSITORY:
                 
                 self._migration_source_content_status_filter.addItem( 'current and pending', ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+                self._migration_source_content_status_filter.addItem( 'current and pending', ( HC.CONTENT_STATUS_PENDING, ) )
                 
             
             self._migration_source_content_status_filter.addItem( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
