@@ -674,6 +674,7 @@ class TestClientDB( unittest.TestCase ):
         
         services.append( ClientServices.GenerateService( TestController.LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'test like rating service' ) )
         services.append( ClientServices.GenerateService( TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'test numerical rating service' ) )
+        services.append( ClientServices.GenerateService( TestController.LOCAL_RATING_INCDEC_SERVICE_KEY, HC.LOCAL_RATING_INCDEC, 'test inc/dec rating service' ) )
         
         self._write( 'update_services', services )
         
@@ -697,6 +698,16 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 3, ( hash, ) ) ) )
+        
+        service_keys_to_content_updates[ TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
         tests = []
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
@@ -708,8 +719,17 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '<', 0.7, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '<', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 3, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 3, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 2, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '<', 3, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( '<', 4, TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ), 1 ) )
         
         run_system_predicate_tests( tests )
         

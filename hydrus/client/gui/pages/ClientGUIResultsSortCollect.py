@@ -104,11 +104,11 @@ class CollectComboCtrl( QW.QComboBox ):
         
         text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
         
-        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        star_ratings_services = HG.client_controller.services_manager.GetServices( HC.STAR_RATINGS_SERVICES )
         
-        for ratings_service in ratings_services:
+        for star_ratings_service in star_ratings_services:
             
-            text_and_data_tuples.append( ( ratings_service.GetName(), ('rating', ratings_service.GetServiceKey() ) ) )
+            text_and_data_tuples.append( ( star_ratings_service.GetName(), ( 'rating', star_ratings_service.GetServiceKey() ) ) )
             
         
         current_text_and_data_tuples = []
@@ -655,7 +655,7 @@ class MediaSortControl( QW.QWidget ):
             ClientGUIMenus.AppendMenuItem( submenu, 'custom', 'Set a custom namespace sort', self._SetCustomNamespaceSortFromUser )
             
         
-        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
         
         if len( rating_service_keys ) > 0:
             

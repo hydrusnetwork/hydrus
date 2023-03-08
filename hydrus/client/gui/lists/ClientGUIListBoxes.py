@@ -1032,7 +1032,6 @@ class ListBox( QW.QScrollArea ):
         self._pending_async_text_info_terms = set()
         self._currently_fetching_async_text_info_terms = set()
         self._async_text_info_lock = threading.Lock()
-        self._async_text_info_shared_data = dict()
         self._async_text_info_updater = self._InitialiseAsyncTextInfoUpdater()
         
     
@@ -1560,14 +1559,42 @@ class ListBox( QW.QScrollArea ):
             
         
     
+    def _InitialiseAsyncTextInfoUpdaterWorkCallables( self ):
+        
+        def pre_work_callable():
+            
+            return ( self._async_text_info_lock, self._currently_fetching_async_text_info_terms, self._pending_async_text_info_terms )
+            
+        
+        def work_callable( args ):
+            
+            ( async_lock, currently_fetching, pending ) = args
+            
+            with async_lock:
+                
+                to_lookup = set( pending )
+                
+                pending.clear()
+                
+                currently_fetching.update( to_lookup )
+                
+            
+            terms_to_info = { term : None for term in to_lookup }
+            
+            return terms_to_info
+            
+        
+        return ( pre_work_callable, work_callable )
+        
+    
     def _InitialiseAsyncTextInfoUpdater( self ):
         
         def loading_callable():
             
             pass
-            
-        
-        work_callable = self._InitialiseAsyncTextInfoUpdaterWorkCallable()
+
+
+        ( pre_work_callable, work_callable ) = self._InitialiseAsyncTextInfoUpdaterWorkCallables()
         
         def publish_callable( terms_to_info ):
             
@@ -1615,32 +1642,7 @@ class ListBox( QW.QScrollArea ):
             self._DataHasChanged()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
-        
-    
-    def _InitialiseAsyncTextInfoUpdaterWorkCallable( self ):
-        
-        async_lock = self._async_text_info_lock
-        currently_fetching = self._currently_fetching_async_text_info_terms
-        pending = self._pending_async_text_info_terms
-        
-        def work_callable():
-            
-            with async_lock:
-                
-                to_lookup = set( pending )
-                
-                pending.clear()
-                
-                currently_fetching.update( to_lookup )
-                
-            
-            terms_to_info = { term : None for term in to_lookup }
-            
-            return terms_to_info
-            
-        
-        return work_callable
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _LogicalIndexIsSelected( self, logical_index ):
@@ -3457,21 +3459,21 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         return ( sort_info_changed, num_rows_changed )
         
     
-    def _InitialiseAsyncTextInfoUpdaterWorkCallable( self ):
+    def _InitialiseAsyncTextInfoUpdaterWorkCallables( self ):
         
         if not self._has_async_text_info:
             
-            return ListBoxTags._InitialiseAsyncTextInfoUpdaterWorkCallable( self )
+            return ListBoxTags._InitialiseAsyncTextInfoUpdaterWorkCallables( self )
             
         
-        self._async_text_info_shared_data[ 'service_key' ] = self._service_key
+        def pre_work_callable():
+            
+            return ( self._service_key, self._async_text_info_lock, self._currently_fetching_async_text_info_terms, self._pending_async_text_info_terms )
+            
         
-        async_text_info_shared_data = self._async_text_info_shared_data
-        async_lock = self._async_text_info_lock
-        currently_fetching = self._currently_fetching_async_text_info_terms
-        pending = self._pending_async_text_info_terms
-        
-        def work_callable():
+        def work_callable( args ):
+            
+            ( service_key, async_lock, currently_fetching, pending ) = args
             
             with async_lock:
                 
@@ -3480,8 +3482,6 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
                 pending.clear()
                 
                 currently_fetching.update( to_lookup )
-                
-                service_key = async_text_info_shared_data[ 'service_key' ]
                 
             
             terms_to_info = { term : None for term in to_lookup }
@@ -3500,7 +3500,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             return terms_to_info
             
         
-        return work_callable
+        return ( pre_work_callable, work_callable )
         
     
     def _SelectFilesWithTags( self, and_or_or ):
@@ -3523,8 +3523,6 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         self._service_key = service_key
         
         with self._async_text_info_lock:
-            
-            self._async_text_info_shared_data[ 'service_key' ] = self._service_key
             
             self._pending_async_text_info_terms.clear()
             self._currently_fetching_async_text_info_terms.clear()

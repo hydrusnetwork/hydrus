@@ -60,25 +60,41 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
         
     else:
         
+        content_updates = []
+        
         if service_type in HC.REAL_TAG_SERVICES:
             
             tag = value
             
             content_updates = GetContentUpdatesForAppliedContentApplicationCommandTags( parent, service_key, service_type, action, media, tag )
             
-        elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+        elif service_type in HC.RATINGS_SERVICES:
             
             if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
                 
-                rating = value
+                if action == HC.CONTENT_UPDATE_FLIP and service_type == HC.LOCAL_RATING_INCDEC:
+                    
+                    pass
+                    
+                else:
+                    
+                    rating = value
+                    
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key, action, media, rating )
+                    
                 
-                content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key, action, media, rating )
+            elif action in ( HC.CONTENT_UPDATE_INCREMENT, HC.CONTENT_UPDATE_DECREMENT ):
                 
-            elif action in ( HC.CONTENT_UPDATE_INCREMENT, HC.CONTENT_UPDATE_DECREMENT ) and service_type == HC.LOCAL_RATING_NUMERICAL:
-                
-                one_star_value = service.GetOneStarValue()
-                
-                content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key, one_star_value, action, media )
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    one_star_value = service.GetOneStarValue()
+                    
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key, one_star_value, action, media )
+                    
+                elif service_type == HC.LOCAL_RATING_INCDEC:
+                    
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key, action, media )
+                    
                 
             else:
                 
@@ -94,6 +110,7 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
             
             HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
             
+        
     
     return True
     
@@ -199,7 +216,40 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_
     return content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, one_star_value: float, action: int, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, action: int, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
+    
+    if action == HC.CONTENT_UPDATE_INCREMENT:
+        
+        direction = 1
+        
+    elif action == HC.CONTENT_UPDATE_DECREMENT:
+        
+        direction = -1
+        
+    else:
+        
+        return []
+        
+    
+    ratings_to_hashes = collections.defaultdict( set )
+    
+    for m in media:
+        
+        ratings_manager = m.GetRatingsManager()
+        
+        current_rating = ratings_manager.GetRating( service_key )
+        
+        new_rating = current_rating + direction
+        
+        ratings_to_hashes[ new_rating ].add( m.GetHash() )
+        
+    
+    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+    
+    return content_updates
+    
+
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key: bytes, one_star_value: float, action: int, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
     if action == HC.CONTENT_UPDATE_INCREMENT:
         

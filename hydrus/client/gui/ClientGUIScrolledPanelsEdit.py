@@ -1313,7 +1313,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         choice_tuples = []
         
-        for service in services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ):
+        for service in services_manager.GetServices( HC.RATINGS_SERVICES ):
             
             service_key = service.GetServiceKey()
             
@@ -1344,16 +1344,24 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                 
                 service = services_manager.GetService( service_key )
                 
-                if service.GetServiceType() == HC.TAG_REPOSITORY:
+                service_type = service.GetServiceType()
+                
+                if service_type == HC.LOCAL_RATING_INCDEC:
                     
-                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                    str_lookup_dict = HC.content_number_merge_string_lookup
+                    
+                elif service_type in HC.STAR_RATINGS_SERVICES:
+                    
+                    str_lookup_dict = HC.content_merge_string_lookup
                     
                 else:
                     
-                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                    return
                     
                 
-                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                
+                choice_tuples = [ ( str_lookup_dict[ action ], action ) for action in possible_actions ]
                 
                 try:
                     
@@ -1469,14 +1477,28 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         try:
             
-            service_name = HG.client_controller.services_manager.GetName( service_key )
+            service = HG.client_controller.services_manager.GetService( service_key )
+            
+            service_name = service.GetName()
+            
+            service_type = service.GetServiceType()
             
         except HydrusExceptions.DataMissing:
             
             service_name = 'missing service!'
+            service_type = HC.LOCAL_RATING_LIKE
             
         
-        pretty_action = HC.content_merge_string_lookup[ action ]
+        if service_type == HC.LOCAL_RATING_INCDEC:
+            
+            str_lookup_dict = HC.content_number_merge_string_lookup
+            
+        else:
+            
+            str_lookup_dict = HC.content_merge_string_lookup
+            
+        
+        pretty_action = str_lookup_dict[ action ]
         
         display_tuple = ( service_name, pretty_action )
         sort_tuple = ( service_name, pretty_action )
@@ -1563,9 +1585,26 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
+                service = HG.client_controller.services_manager.GetService( service_key )
+                
+                service_type = service.GetServiceType()
+                
+                if service_type == HC.LOCAL_RATING_INCDEC:
+                    
+                    str_lookup_dict = HC.content_number_merge_string_lookup
+                    
+                elif service_type in HC.STAR_RATINGS_SERVICES:
+                    
+                    str_lookup_dict = HC.content_merge_string_lookup
+                    
+                else:
+                    
+                    return
+                    
+                
                 possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
                 
-                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                choice_tuples = [ ( str_lookup_dict[ action ], action ) for action in possible_actions ]
                 
                 try:
                     

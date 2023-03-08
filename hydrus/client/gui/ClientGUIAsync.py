@@ -123,7 +123,7 @@ class AsyncQtJob( object ):
 # this can refresh dirty stuff n times and won't spam work
 class AsyncQtUpdater( object ):
     
-    def __init__( self, win, loading_callable, work_callable, publish_callable ):
+    def __init__( self, win, loading_callable, work_callable, publish_callable, pre_work_callable = None ):
         
         # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
         
@@ -132,6 +132,7 @@ class AsyncQtUpdater( object ):
         self._loading_callable = loading_callable
         self._work_callable = work_callable
         self._publish_callable = publish_callable
+        self._pre_work_callable = pre_work_callable
         
         self._calllater_waiting = False
         self._work_needs_to_restart = False
@@ -163,7 +164,25 @@ class AsyncQtUpdater( object ):
         
         try:
             
-            result = self._work_callable()
+            if self._pre_work_callable is None:
+                
+                pre_work_args = 1
+                
+            else:
+                
+                try:
+                    
+                    pre_work_args = HG.client_controller.CallBlockingToQt( self._win, self._pre_work_callable )
+                    
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    
+                    self._win = None
+                    
+                    return
+                    
+                
+            
+            result = self._work_callable( pre_work_args )
             
             try:
                 

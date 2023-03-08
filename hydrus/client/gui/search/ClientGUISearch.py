@@ -615,7 +615,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             services_manager = HG.client_controller.services_manager
             
-            ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            ratings_services = services_manager.GetServices( HC.RATINGS_SERVICES )
             
             if len( ratings_services ) > 0:
                 

@@ -506,7 +506,7 @@ class MediaList( object ):
             
             if len( ratings_to_collect_by ) > 0:
                 
-                rating_key = media.GetRatingsManager().GetRatingSlice( ratings_to_collect_by )
+                rating_key = media.GetRatingsManager().GetStarRatingSlice( ratings_to_collect_by )
                 
             else:
                 

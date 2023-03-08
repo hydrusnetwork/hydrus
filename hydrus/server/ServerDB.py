@@ -129,6 +129,7 @@ class DB( HydrusDB.HydrusDB ):
             'maintenance_regen_service_info' : self._RepositoryRegenerateServiceInfoServiceKey,
             'modify_account_account_type' : self._ModifyAccountAccountType,
             'modify_account_ban' : self._ModifyAccountBan,
+            'modify_account_delete_all_content' : self._ModifyAccountDeleteAllContent,
             'modify_account_expires' : self._ModifyAccountExpires,
             'modify_account_set_message' : self._ModifyAccountSetMessage,
             'modify_account_unban' : self._ModifyAccountUnban,
@@ -1461,6 +1462,40 @@ class DB( HydrusDB.HydrusDB ):
         )
         
     
+    def _ModifyAccountDeleteAllContent( self, service_key, admin_account: HydrusNetwork.Account, subject_account_key ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        subject_account_id = self._GetAccountId( subject_account_key )
+        
+        if self._IsNullAccount( service_id, subject_account_id ):
+            
+            raise HydrusExceptions.BadRequestException( 'You cannot ban the null account!' )
+            
+        
+        service_type = self._GetServiceType( service_id )
+        
+        admin_account_key = admin_account.GetAccountKey()
+        
+        admin_account_id = self._GetAccountId( admin_account_key )
+        
+        if service_type in HC.REPOSITORIES:
+            
+            self._DeleteRepositoryPetitions( service_id, ( subject_account_id, ) )
+            
+            self._RepositoryDeleteAllCurrentContent( service_id, admin_account_id, subject_account_id )
+            
+        
+        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        
+        HydrusData.Print(
+            'Account {} deleted all content by {}.'.format(
+                admin_account_key.hex(),
+                subject_account_key.hex()
+            )
+        )
+        
+    
     def _ModifyAccountExpires( self, service_key, admin_account, subject_account_key, new_expires ):
         
         service_id = self._GetServiceId( service_key )
@@ -2042,6 +2077,58 @@ class DB( HydrusDB.HydrusDB ):
         return update_hashes
         
     
+    def _RepositoryDeleteAllCurrentContent( self, service_id, admin_account_id, subject_account_id ):
+        
+        now = HydrusData.GetNow()
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        
+        service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} WHERE account_id = ?;'.format( current_files_table_name ), ( subject_account_id, ) ) )
+        
+        if len( service_hash_ids ) > 0:
+            
+            self._RepositoryDeleteFiles( service_id, admin_account_id, service_hash_ids, now )
+            
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+        
+        mappings_dict = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT service_tag_id, service_hash_id FROM {} WHERE account_id = ?;'.format( current_mappings_table_name ), ( subject_account_id, ) ) )
+        
+        if len( mappings_dict ) > 0:
+            
+            for ( service_tag_id, service_hash_ids ) in mappings_dict.items():
+                
+                self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids, now )
+                
+            
+        
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+        
+        pairs = self._Execute( 'SELECT child_service_tag_id, parent_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_parents_table_name ), ( subject_account_id, ) ).fetchall()
+        
+        if len( pairs ) > 0:
+            
+            for ( child_service_tag_id, parent_service_tag_id ) in pairs:
+                
+                self._RepositoryDeleteTagParent( service_id, admin_account_id, child_service_tag_id, parent_service_tag_id, now )
+                
+            
+        
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+        
+        select_statement = 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name )
+        
+        pairs = self._Execute( 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name ), ( subject_account_id, ) ).fetchall()
+        
+        if len( pairs ) > 0:
+            
+            for ( bad_service_tag_id, good_service_tag_id ) in pairs:
+                
+                self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id, now )
+                
+            
+        
+    
     def _RepositoryDeleteFiles( self, service_id, account_id, service_hash_ids, timestamp ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
@@ -2521,31 +2608,68 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGetAccountInfo( self, service_id, account_id ):
         
+        service_type = self._GetServiceType( service_id )
+        
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-        
-        table_join = 'files_info NATURAL JOIN ' + hash_id_map_table_name + ' NATURAL JOIN ' + current_files_table_name
-        
-        ( num_files, num_files_bytes ) = self._Execute( 'SELECT COUNT( * ), SUM( size ) FROM ' + table_join + ' WHERE account_id = ?;', ( account_id, ) ).fetchone()
-        
-        if num_files_bytes is None:
-            
-            num_files_bytes = 0
-            
         
         account_info = {}
         
-        account_info[ 'num_files' ] = num_files
-        account_info[ 'num_files_bytes' ] = num_files_bytes
-        
-        #
-        
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-        
-        num_mappings = len( self._Execute( 'SELECT 1 FROM ' + current_mappings_table_name + ' WHERE account_id = ? LIMIT 5000;', ( account_id, ) ).fetchall() )
-        
-        account_info[ 'num_mappings' ] = num_mappings
+        if service_type == HC.FILE_REPOSITORY:
+            
+            ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+            
+            table_join = 'files_info NATURAL JOIN {} NATURAL JOIN {}'.format( hash_id_map_table_name, current_files_table_name )
+            
+            ( num_files, num_files_bytes ) = self._Execute( 'SELECT COUNT( * ), SUM( size ) FROM ' + table_join + ' WHERE account_id = ?;', ( account_id, ) ).fetchone()
+            
+            if num_files_bytes is None:
+                
+                num_files_bytes = 0
+                
+            
+            account_info[ 'num_files' ] = num_files
+            account_info[ 'num_files_bytes' ] = num_files_bytes
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+            
+            num_mappings = len( self._Execute( 'SELECT 1 FROM {} WHERE account_id = ? LIMIT 5000;'.format( current_mappings_table_name ), ( account_id, ) ).fetchall() )
+            
+            account_info[ 'num_mappings' ] = num_mappings
+            
+            num_petitioned_mappings = len( self._Execute( 'SELECT 1 FROM {} WHERE account_id = ? LIMIT 5000;'.format( petitioned_mappings_table_name ), ( account_id, ) ).fetchall() )
+            
+            account_info[ 'num_mappings_petitioned' ] = num_petitioned_mappings
+            
+            ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+
+            ( num_siblings, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_siblings' ] = num_siblings
+            
+            ( num_pending_siblings, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_siblings_pending' ] = num_pending_siblings
+            
+            ( num_petitioned_siblings, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_siblings_petitioned' ] = num_petitioned_siblings
+            
+            ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+            
+            ( num_parents, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( current_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_parents' ] = num_parents
+            
+            ( num_pending_parents, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( pending_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_parents_pending' ] = num_pending_parents
+            
+            ( num_petitioned_parents, ) = self._Execute( 'SELECT COUNT( * ) FROM {} WHERE account_id = ?;'.format( petitioned_tag_parents_table_name ), ( account_id, ) ).fetchone()
+            
+            account_info[ 'num_parents_petitioned' ] = num_petitioned_parents
+            
         
         #
         
@@ -4466,65 +4590,6 @@ class DB( HydrusDB.HydrusDB ):
             return True
             
         
-    
-    def _RepositorySuperBan( self, service_id, admin_account_id, subject_account_ids, timestamp ):
-        
-        # this is pending a rewrite, nothing calls it atm, executemanysingleparam no longer exists
-        pass
-        '''
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-        
-        select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE account_id = ?;'
-        
-        service_hash_ids = self._STL( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
-        
-        if len( service_hash_ids ) > 0:
-            
-            self._RepositoryDeleteFiles( service_id, admin_account_id, service_hash_ids, timestamp )
-            
-        
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-        
-        select_statement = 'SELECT service_tag_id, service_hash_id FROM ' + current_mappings_table_name + ' WHERE account_id = ?;'
-        
-        mappings_dict = HydrusData.BuildKeyToListDict( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
-        
-        if len( mappings_dict ) > 0:
-            
-            for ( service_tag_id, service_hash_ids ) in mappings_dict.items():
-                
-                self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids, timestamp )
-                
-            
-        
-        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
-        
-        select_statement = 'SELECT child_service_tag_id, parent_service_tag_id FROM ' + current_tag_parents_table_name + ' WHERE account_id = ?;'
-        
-        pairs = list( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
-        
-        if len( pairs ) > 0:
-            
-            for ( child_service_tag_id, parent_service_tag_id ) in pairs:
-                
-                self._RepositoryDeleteTagParent( service_id, admin_account_id, child_service_tag_id, parent_service_tag_id, timestamp )
-                
-            
-        
-        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
-        
-        select_statement = 'SELECT bad_service_tag_id, good_service_tag_id FROM ' + current_tag_siblings_table_name + ' WHERE account_id = ?;'
-        
-        pairs = list( self._ExecuteManySelectSingleParam( select_statement, subject_account_ids ) )
-        
-        if len( pairs ) > 0:
-            
-            for ( bad_service_tag_id, good_service_tag_id ) in pairs:
-                
-                self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id, timestamp )
-                
-            
-        '''
     
     def _RepositoryUpdateServiceInfo( self, service_id: int, info_type: int, delta: int ):
         

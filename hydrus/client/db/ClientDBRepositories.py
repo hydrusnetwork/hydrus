@@ -262,7 +262,14 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.local_update_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
         
-        update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
+        update_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {};'.format( table_join ) ) )
+        
+        # so we are also going to pull from here in case there are orphan records!!!
+        other_table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
+        
+        other_update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( other_table_join ) ) )
+        
+        update_hash_ids.update( other_update_hash_ids )
         
         self.modules_files_maintenance_queue.AddJobs( update_hash_ids, job_type )
         

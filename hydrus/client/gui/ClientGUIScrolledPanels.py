@@ -2,6 +2,8 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusData
+
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 
@@ -54,6 +56,9 @@ class ResizingScrolledPanel( QW.QScrollArea ):
         self.setWidgetResizable( True )
         
         self.widget().installEventFilter( ResizingEventFilter( self ) )
+        
+        self._last_just_sized_cascade_start_time = 0.0
+        self._number_of_just_sizedes = 0
         
     
     def _OKParent( self ):
@@ -119,6 +124,27 @@ class ResizingScrolledPanel( QW.QScrollArea ):
     
     def WidgetJustSized( self, width_larger, height_larger ):
         
+        if width_larger or height_larger:
+            
+            # ok this is a stupid sizing hack to stop the ever-growing window that has a sizeHint three pixels bigger than its current size causing a resize growth loop
+            # if we get a bunch of resizes real quick, we cut them off, hopefully breaking the cycle
+            if not HydrusData.TimeHasPassedFloat( self._last_just_sized_cascade_start_time + 1.0 ):
+                
+                self._number_of_just_sizedes += 1
+                
+                if self._number_of_just_sizedes >= 5:
+                    
+                    return
+                    
+                
+            else:
+                
+                self._last_just_sized_cascade_start_time = HydrusData.GetNowFloat()
+                
+                self._number_of_just_sizedes = 1
+                
+            
+        
         widget_minimum_size_hint = self.widget().minimumSizeHint()
         widget_normal_size_hint = self.widget().sizeHint()
         
@@ -129,16 +155,14 @@ class ResizingScrolledPanel( QW.QScrollArea ):
         width_increase = 0
         height_increase = 0
         
-        # + 2 because it is late and that seems to stop scrollbars lmao
-        
         if width_larger:
             
-            width_increase = max( 0, widget_size_hint.width() - my_size.width() + 2 )
+            width_increase = max( 0, widget_size_hint.width() - my_size.width() )
             
         
         if height_larger:
             
-            height_increase = max( 0, widget_size_hint.height() - my_size.height() + 2 )
+            height_increase = max( 0, widget_size_hint.height() - my_size.height() )
             
         
         if width_increase > 0 or height_increase > 0:

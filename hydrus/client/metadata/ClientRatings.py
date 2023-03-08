@@ -12,6 +12,28 @@ SQUARE = 1
 FAT_STAR = 2
 PENTAGRAM_STAR = 3
 
+def GetIncDecStateFromMedia( media, service_key ):
+    
+    values_seen = { m.GetRatingsManager().GetRating( service_key ) for m in media }
+    
+    if len( values_seen ) == 0:
+        
+        return ( SET, 0 )
+        
+    elif len( values_seen ) == 1:
+        
+        ( value, ) = values_seen
+        
+        return ( SET, value )
+        
+    else:
+        
+        average_int = int( sum( ( m.GetRatingsManager().GetRating( service_key ) for m in media ) ) // len( media ) )
+        
+        return ( MIXED, average_int )
+        
+    
+
 def GetLikeStateFromMedia( media, service_key ):
     
     on_exists = False

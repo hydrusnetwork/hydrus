@@ -105,20 +105,29 @@ def GenerateDefaultServiceDictionary( service_type ):
     
     if service_type in HC.RATINGS_SERVICES:
         
-        dictionary[ 'shape' ] = ClientRatings.CIRCLE
-        dictionary[ 'colours' ] = []
-        
         from hydrus.client.gui import ClientGUIRatings
         
-        if service_type == HC.LOCAL_RATING_LIKE:
+        dictionary[ 'colours' ] = []
+        
+        if service_type in HC.STAR_RATINGS_SERVICES:
             
-            dictionary[ 'colours' ] = list( ClientGUIRatings.default_like_colours.items() )
+            dictionary[ 'shape' ] = ClientRatings.CIRCLE
             
-        elif service_type == HC.LOCAL_RATING_NUMERICAL:
+            if service_type == HC.LOCAL_RATING_LIKE:
+                
+                dictionary[ 'colours' ] = list( ClientGUIRatings.default_like_colours.items() )
+                
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                dictionary[ 'colours' ] = list( ClientGUIRatings.default_numerical_colours.items() )
+                dictionary[ 'num_stars' ] = 5
+                dictionary[ 'allow_zero' ]= True
+                
             
-            dictionary[ 'colours' ] = list( ClientGUIRatings.default_numerical_colours.items() )
-            dictionary[ 'num_stars' ] = 5
-            dictionary[ 'allow_zero' ]= True
+        
+        if service_type == HC.LOCAL_RATING_INCDEC:
+            
+            dictionary[ 'colours' ] = list( ClientGUIRatings.default_incdec_colours.items() )
             
         
     
@@ -142,6 +151,10 @@ def GenerateService( service_key, service_type, name, dictionary = None ):
     elif service_type == HC.LOCAL_RATING_NUMERICAL:
         
         cl = ServiceLocalRatingNumerical
+        
+    elif service_type == HC.LOCAL_RATING_INCDEC:
+        
+        cl = ServiceLocalRatingIncDec
         
     elif service_type in HC.REPOSITORIES:
         
@@ -555,17 +568,18 @@ class ServiceClientAPI( ServiceLocalServerService ):
     
     pass
     
+
 class ServiceLocalTag( Service ):
     
     pass
     
+
 class ServiceLocalRating( Service ):
     
     def _GetSerialisableDictionary( self ):
         
         dictionary = Service._GetSerialisableDictionary( self )
         
-        dictionary[ 'shape' ] = self._shape
         dictionary[ 'colours' ] = list(self._colours.items())
         
         return dictionary
@@ -575,13 +589,7 @@ class ServiceLocalRating( Service ):
         
         Service._LoadFromDictionary( self, dictionary )
         
-        self._shape = dictionary[ 'shape' ]
         self._colours = dict( dictionary[ 'colours' ] )
-        
-    
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
-        
-        raise NotImplementedError()
         
     
     def GetColour( self, rating_state ):
@@ -592,6 +600,72 @@ class ServiceLocalRating( Service ):
             
         
     
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        raise NotImplementedError()
+        
+    
+
+class ServiceLocalRatingIncDec( ServiceLocalRating ):
+    
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ int ] ):
+        
+        if rating is None:
+            
+            return 'not set'
+            
+        elif isinstance( rating, int ):
+            
+            return HydrusData.ToHumanInt( rating )
+            
+        
+        return 'unknown'
+        
+    
+    def ConvertRatingStateAndRatingToString( self, rating_state: int, rating: float ):
+        
+        if rating_state == ClientRatings.SET:
+            
+            return HydrusData.ToHumanInt( rating )
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
+        
+    
+
+class ServiceLocalRatingStars( ServiceLocalRating ):
+    
+    def _GetSerialisableDictionary( self ):
+        
+        dictionary = ServiceLocalRating._GetSerialisableDictionary( self )
+        
+        dictionary[ 'shape' ] = self._shape
+        
+        return dictionary
+        
+    
+    def _LoadFromDictionary( self, dictionary ):
+        
+        ServiceLocalRating._LoadFromDictionary( self, dictionary )
+        
+        self._shape = dictionary[ 'shape' ]
+        
+    
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        raise NotImplementedError()
+        
+    
     def GetShape( self ):
         
         with self._lock:
@@ -600,7 +674,7 @@ class ServiceLocalRating( Service ):
             
         
     
-class ServiceLocalRatingLike( ServiceLocalRating ):
+class ServiceLocalRatingLike( ServiceLocalRatingStars ):
     
     def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
         
@@ -647,11 +721,11 @@ class ServiceLocalRatingLike( ServiceLocalRating ):
             
         
     
-class ServiceLocalRatingNumerical( ServiceLocalRating ):
+class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
     
     def _GetSerialisableDictionary( self ):
         
-        dictionary = ServiceLocalRating._GetSerialisableDictionary( self )
+        dictionary = ServiceLocalRatingStars._GetSerialisableDictionary( self )
         
         dictionary[ 'num_stars' ] = self._num_stars
         dictionary[ 'allow_zero' ] = self._allow_zero
@@ -661,7 +735,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRating ):
     
     def _LoadFromDictionary( self, dictionary ):
         
-        ServiceLocalRating._LoadFromDictionary( self, dictionary )
+        ServiceLocalRatingStars._LoadFromDictionary( self, dictionary )
         
         self._num_stars = dictionary[ 'num_stars' ]
         self._allow_zero = dictionary[ 'allow_zero' ]
@@ -1980,7 +2054,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a definition update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. I recommend you run _database->maintenance->clear orphan file records_ too. Please then permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( definition_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:
@@ -2107,7 +2181,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD )
                         
-                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
+                        raise Exception( 'An unusual error has occured during repository processing: a content update file ({}) was missing. Your repository should be paused, and all update files have been scheduled for a presence check. I recommend you run _database->maintenance->clear orphan file records_ too. Please then permit file maintenance under _database->file maintenance->manage scheduled jobs_ to finish its new work, which should fix this, before unpausing your repository.'.format( content_hash.hex() ) )
                         
                     
                     with open( update_path, 'rb' ) as f:

@@ -3102,7 +3102,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3122,7 +3122,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3169,7 +3169,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
         
@@ -3230,7 +3230,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
         
@@ -3291,7 +3291,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3332,7 +3332,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3373,7 +3373,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3419,7 +3419,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearReads( 'file_query_ids' )
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3466,7 +3466,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # this just tests if it parses, we don't have a full test for read params yet
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
@@ -3492,7 +3492,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # empty
         
-        sample_hash_ids = set( random.sample( hash_ids, 3 ) )
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         # set it, just to check we aren't ever asking
         HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )

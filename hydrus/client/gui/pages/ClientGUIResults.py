@@ -3674,7 +3674,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
             
-            local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+            local_ratings_services = [ service for service in services if service.GetServiceType() in HC.RATINGS_SERVICES ]
             
             local_booru_service = [ service for service in services if service.GetServiceType() == HC.LOCAL_BOORU ][0]
             

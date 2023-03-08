@@ -354,7 +354,7 @@ class TestMigration( unittest.TestCase ):
         run_test( source, expected_data )
         
         # not all hashes, since hash type lookup only available for imported files
-        hashes = random.sample( self._my_files_sha256, 25 )
+        hashes = random.sample( list( self._my_files_sha256 ), 25 )
         
         source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', hashes, tag_filter )
         
@@ -383,7 +383,7 @@ class TestMigration( unittest.TestCase ):
         
         # do a test with specific hashes, so md5->sha1 does interim sha256 conversion
         # not all hashes, since hash type lookup only available for imported files
-        hashes = random.sample( self._my_files_sha256, 25 )
+        hashes = random.sample( list( self._my_files_sha256 ), 25 )
         
         expected_data = [ ( self._sha256_to_sha1[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
@@ -501,7 +501,7 @@ class TestMigration( unittest.TestCase ):
         run_test( source, expected_data )
         
         # not all hashes, since hash type lookup only available for imported files
-        hashes = random.sample( self._my_files_sha256, 25 )
+        hashes = random.sample( list( self._my_files_sha256 ), 25 )
         
         source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
@@ -666,7 +666,7 @@ class TestMigration( unittest.TestCase ):
         
         # local delete
         
-        data = [ ( hash, set( random.sample( tags, 2 ) ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
+        data = [ ( hash, set( random.sample( list( tags ), 2 ) ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         
         source = ClientMigration.MigrationSourceList( self, data )
         
@@ -674,7 +674,7 @@ class TestMigration( unittest.TestCase ):
         
         # local clear deletion record
         
-        data = [ ( hash, set( random.sample( tags, 2 ) ) ) for ( hash, tags ) in self._hashes_to_deleted_tags.items() ]
+        data = [ ( hash, set( random.sample( list( tags ), 2 ) ) ) for ( hash, tags ) in self._hashes_to_deleted_tags.items() ]
         
         source = ClientMigration.MigrationSourceList( self, data )
         
@@ -690,7 +690,7 @@ class TestMigration( unittest.TestCase ):
         
         # tag repo petition
         
-        data = [ ( hash, set( random.sample( tags, 2 ) ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
+        data = [ ( hash, set( random.sample( list( tags ), 2 ) ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         
         source = ClientMigration.MigrationSourceList( self, data )
         

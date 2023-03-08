@@ -1063,13 +1063,23 @@ class RatingsManager( object ):
             
         else:
             
-            return None
+            service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+            
+            if service_type == HC.LOCAL_RATING_INCDEC:
+                
+                return 0
+                
+            else:
+                
+                return None
+                
             
         
     
-    def GetRatingSlice( self, service_keys ): return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )
-    
-    def GetServiceKeysToRatings( self ): return self._service_keys_to_ratings
+    def GetStarRatingSlice( self, service_keys ):
+        
+        return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )
+        
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
@@ -1079,16 +1089,26 @@ class RatingsManager( object ):
             
             ( rating, hashes ) = row
             
-            if rating is None and service_key in self._service_keys_to_ratings: del self._service_keys_to_ratings[ service_key ]
-            else: self._service_keys_to_ratings[ service_key ] = rating
+            if rating is None and service_key in self._service_keys_to_ratings:
+                
+                del self._service_keys_to_ratings[ service_key ]
+                
+            else:
+                
+                self._service_keys_to_ratings[ service_key ] = rating
+                
             
         
     
     def ResetService( self, service_key ):
         
-        if service_key in self._service_keys_to_ratings: del self._service_keys_to_ratings[ service_key ]
+        if service_key in self._service_keys_to_ratings:
+            
+            del self._service_keys_to_ratings[ service_key ]
+            
         
     
+
 class TagsManager( object ):
     
     def __init__(

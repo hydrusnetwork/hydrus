@@ -24,6 +24,7 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root.putChild( b'modify_account_account_type', ServerServerResources.HydrusResourceRestrictedAccountModifyAccountType( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'modify_account_ban', ServerServerResources.HydrusResourceRestrictedAccountModifyBan( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'modify_account_delete_all_content', ServerServerResources.HydrusResourceRestrictedAccountModifyDeleteAllContent( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'modify_account_expires', ServerServerResources.HydrusResourceRestrictedAccountModifyExpires( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'modify_account_set_message', ServerServerResources.HydrusResourceRestrictedAccountModifySetMessage( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'modify_account_unban', ServerServerResources.HydrusResourceRestrictedAccountModifyUnban( self._service, HydrusServer.REMOTE_DOMAIN ) )

@@ -579,7 +579,18 @@ class ReviewAccountsPanel( QW.QWidget ):
                 
                 if account_key in self._account_keys_to_account_info:
                     
-                    account_info_components.append( self._account_keys_to_account_info[ account_key ] )
+                    account_info = self._account_keys_to_account_info[ account_key ]
+                    
+                    if isinstance( account_info, dict ):
+                        
+                        keys_in_order = sorted( account_info.keys() )
+                        
+                        account_info_components.append( os.linesep.join( ( '{}: {}'.format( key, account_info[ key ] ) for key in keys_in_order ) ) )
+                        
+                    else:
+                        
+                        account_info_components.append( str( account_info ) )
+                        
                     
                 else:
                     
@@ -622,7 +633,9 @@ class ReviewAccountsPanel( QW.QWidget ):
         account_identifiers = self._account_identifiers
         service = self._service
         
-        selected_account_keys = self.GetCheckedAccountKeys()
+        pre_refresh_selected_account_keys = { item.data( QC.Qt.UserRole ) for item in self._account_list.selectedItems() }
+        
+        checked_account_keys = self.GetCheckedAccountKeys()
         
         def work_callable():
             
@@ -668,9 +681,9 @@ class ReviewAccountsPanel( QW.QWidget ):
                         continue
                         
                     
-                    account_string = str( response[ 'account_info' ] )
+                    account_info = response[ 'account_info' ]
                     
-                    account_keys_to_account_info[ subject_account_key ] = account_string
+                    account_keys_to_account_info[ subject_account_key ] = account_info
                     
                 
             
@@ -723,7 +736,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                 
                 item.setText( text )
                 
-                if not self._done_first_fetch or account_key in selected_account_keys:
+                if not self._done_first_fetch or account_key in checked_account_keys:
                     
                     item.setCheckState( QC.Qt.Checked )
                     
@@ -736,6 +749,11 @@ class ReviewAccountsPanel( QW.QWidget ):
                 
                 self._account_list.addItem( item )
                 
+                if account_key in pre_refresh_selected_account_keys:
+                    
+                    item.setSelected( True )
+                    
+                
             
             #
             
@@ -744,7 +762,10 @@ class ReviewAccountsPanel( QW.QWidget ):
             
             if self._account_list.count() > 0:
                 
-                self._account_list.item( 0 ).setSelected( True )
+                if len( self._account_list.selectedItems() ) == 0:
+                    
+                    self._account_list.item( 0 ).setSelected( True )
+                    
                 
                 self._AccountClicked()
                 
@@ -884,8 +905,6 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._add_to_expires_button = ClientGUICommon.BetterButton( self._expiration_panel, 'ok', self._AddToExpires )
         
-        self._add_to_expires_button.SetYesNoText( 'Add time to account expiration?' )
-        
         self._set_expires = ClientGUICommon.BetterChoice( self._expiration_panel )
         
         for ( label, value ) in HC.lifetimes:
@@ -895,17 +914,13 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._set_expires_button = ClientGUICommon.BetterButton( self._expiration_panel, 'ok', self._SetExpires )
         
-        self._set_expires_button.SetYesNoText( 'Set new account expiration?' )
-        
         #
         
-        self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
+        self._account_types_panel = ClientGUICommon.StaticBox( self, 'set to account type' )
         
         self._account_types_choice = ClientGUICommon.BetterChoice( self._account_types_panel )
         
-        self._account_types_button = ClientGUICommon.BetterButton( self._account_types_panel, 'ok', self._DoAccountType )
-        
-        self._account_types_button.SetYesNoText( 'Set new account type?' )
+        self._account_types_button = ClientGUICommon.BetterButton( self._account_types_panel, 'set to type', self._DoAccountType )
         
         #
         
@@ -923,7 +938,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._ban_button = ClientGUICommon.BetterButton( self._ban_panel, 'ban account', self._DoBan )
         self._unban_button = ClientGUICommon.BetterButton( self._ban_panel, 'unban account', self._DoUnban )
         
-        self._unban_button.SetYesNoText( 'Unban the account(s)?' )
+        self._delete_all_account_content_button = ClientGUICommon.BetterButton( self._ban_panel, '! delete all account content !', self._DoDeleteAllAccountContent )
         
         #
         
@@ -959,7 +974,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         account_types_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( account_types_hbox, self._account_types_choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( account_types_hbox, self._account_types_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( account_types_hbox, self._account_types_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._account_types_panel.Add( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -974,6 +989,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._ban_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._ban_panel.Add( self._ban_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._ban_panel.Add( self._unban_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._ban_panel.Add( self._delete_all_account_content_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -1020,9 +1036,28 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        QW.QMessageBox.information( self, 'Information', '{} accounts do not expire, so could not have time added!'.format( HydrusData.ToHumanInt( num_unchecked ) ) )
+        if num_unchecked > 0:
+            
+            QW.QMessageBox.information( self, 'Information', '{} accounts do not expire, so could not have time added!'.format( HydrusData.ToHumanInt( num_unchecked ) ) )
+            
         
         subject_accounts = self._account_panel.GetCheckedAccounts()
+        
+        if len( subject_accounts ) == 0:
+            
+            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            
+            return
+            
+        
+        message = 'Add {} to expiry for {} accounts?'.format( HydrusData.TimeDeltaToPrettyTimeDelta( expires_delta ), HydrusData.ToHumanInt( len( subject_accounts ) ) )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
         
         subject_account_keys_and_current_expires = [ ( subject_account.GetAccountKey(), subject_account.GetExpires() ) for subject_account in subject_accounts ]
         
@@ -1061,6 +1096,15 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         service = self._service
         
         account_type = self._account_types_choice.GetValue()
+        
+        message = 'Set {} accounts to "{}" type?'.format( HydrusData.ToHumanInt( len( subject_account_keys ) ), account_type.GetTitle() )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
         
         account_type_key = account_type.GetAccountTypeKey()
         
@@ -1126,7 +1170,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        message = 'Ban these user(s)? All of their pending petitions will be deleted serverside.'
+        message = 'Ban {} account(s)? All of their pending petitions will be deleted serverside.'.format( HydrusData.ToHumanInt( len( subject_account_keys ) ) )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -1162,6 +1206,62 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self._DisableUIForJob( 'banning\u2026' )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
+        
+    
+    def _DoDeleteAllAccountContent( self ):
+        
+        self._account_panel.UncheckNullAccount()
+        
+        subject_accounts = self._account_panel.GetCheckedAccounts()
+        
+        if len( subject_accounts ) == 0:
+            
+            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            
+            return
+            
+        
+        subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
+        
+        message = 'Are you absolutely sure you want to delete all uploads for {} accounts? This will delete everything the user(s) have uploaded since the anonymisation date.'.format( HydrusData.ToHumanInt( len( subject_account_keys ) ) )
+        
+        if self._service.GetServiceType() == HC.TAG_REPOSITORY:
+            
+            message += os.linesep * 2
+            message += 'Note that if the user never had permission to add siblings and parents on their own (i.e. they could only ever _petition_ to add them), then their petitioned siblings and parents will not be deleted (janitor accounts take ownership of siblings and parents when they approve them).'
+            
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
+        
+        service = self._service
+        
+        def work_callable():
+            
+            for subject_account_key in subject_account_keys:
+                
+                service.Request( HC.POST, 'modify_account_delete_all_content', { 'subject_account_key' : subject_account_key } )
+                
+            
+            return 1
+            
+        
+        def publish_callable( gumpf ):
+            
+            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            
+            self._account_panel.RefreshAccounts()
+            
+        
+        self._DisableUIForJob( 'deleting\u2026' )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1220,11 +1320,11 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if message == '':
             
-            yn_message = 'Clear message for the selected accounts?'
+            yn_message = 'Clear message for {} accounts?'.format( HydrusData.ToHumanInt( len( subject_accounts ) ) )
             
         else:
             
-            yn_message = 'Set this message for the selected accounts?'
+            yn_message = 'Set this message for {} accounts?'.format( HydrusData.ToHumanInt( len( subject_accounts ) ) )
             
         
         result = ClientGUIDialogsQuick.GetYesNo( self, yn_message )
@@ -1286,6 +1386,15 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
         
+        message = 'Unban {} accounts?'.format( HydrusData.ToHumanInt( len( subject_account_keys ) ) )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
+        
         service = self._service
         
         def work_callable():
@@ -1345,6 +1454,11 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for account_type in self._account_types:
                 
+                if account_type.IsNullAccount():
+                    
+                    continue
+                    
+                
                 self._account_types_choice.addItem( str( account_type ), account_type )
                 
             
@@ -1369,6 +1483,22 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         subject_account_keys_and_new_expires = [ ( subject_account_key, expires ) for subject_account_key in self._account_panel.GetCheckedAccountKeys() ]
+        
+        if len( subject_account_keys_and_new_expires ) == 0:
+            
+            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            
+            return
+            
+        
+        message = 'Set expiry to {} for {} accounts?'.format( HydrusData.ConvertTimestampToPrettyExpires( expires ), HydrusData.ToHumanInt( len( subject_account_keys_and_new_expires ) ) )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
         
         self._DoExpires( subject_account_keys_and_new_expires )
         

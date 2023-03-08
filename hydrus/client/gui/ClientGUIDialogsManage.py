@@ -43,6 +43,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProces
         
         like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
         self._panels = []
         
@@ -54,6 +55,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProces
         if len( numerical_services ) > 0:
             
             self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
+            
+        
+        if len( incdec_services ) > 0:
+            
+            self._panels.append( self._IncDecPanel( self, incdec_services, media ) )
             
         
         self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
@@ -197,6 +203,123 @@ class DialogManageRatings( ClientGUIDialogs.Dialog, CAC.ApplicationCommandProces
             
         
         return command_processed
+        
+    
+    class _IncDecPanel( QW.QWidget ):
+        
+        def __init__( self, parent, services, media ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._services = services
+            
+            self._media = media
+            
+            self._service_keys_to_controls = {}
+            self._service_keys_to_original_ratings_states = {}
+            
+            rows = []
+            
+            for service in self._services:
+                
+                name = service.GetName()
+                
+                service_key = service.GetServiceKey()
+                
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( self._media, service_key )
+                
+                control = ClientGUIRatings.RatingIncDecDialog( self, service_key )
+                
+                if rating_state != ClientRatings.SET:
+                    
+                    control.SetRatingState( rating_state, rating )
+                    
+                else:
+                    
+                    control.SetRating( rating )
+                    
+                
+                self._service_keys_to_controls[ service_key ] = control
+                self._service_keys_to_original_ratings_states[ service_key ] = ( rating_state, rating )
+                
+                rows.append( ( name + ': ', control ) )
+                
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
+            
+            self.setLayout( gridbox )
+            
+        
+        def GetContentUpdates( self ):
+            
+            service_keys_to_content_updates = {}
+            
+            hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
+            
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
+                
+                rating_state = control.GetRatingState()
+                
+                if rating_state == ClientRatings.MIXED:
+                    
+                    continue
+                    
+                else:
+                    
+                    rating = control.GetRating()
+                    
+                
+                if rating != original_rating:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+                    
+                    service_keys_to_content_updates[ service_key ] = ( content_update, )
+                    
+                
+            
+            return service_keys_to_content_updates
+            
+        
+        def GetRatingClipboardPairs( self ):
+            
+            rating_clipboard_pairs = []
+            
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                rating_state = control.GetRatingState()
+                
+                if rating_state == ClientRatings.SET:
+                    
+                    rating = control.GetRating()
+                    
+                else:
+                    
+                    continue
+                    
+                
+                rating_clipboard_pairs.append( ( service_key, rating ) )
+                
+            
+            return rating_clipboard_pairs
+            
+        
+        def SetRatingClipboardPairs( self, rating_clipboard_pairs ):
+            
+            for ( service_key, rating ) in rating_clipboard_pairs:
+                
+                if service_key in self._service_keys_to_controls:
+                    
+                    control = self._service_keys_to_controls[ service_key ]
+                    
+                    if isinstance( rating, ( int, float ) ):
+                        
+                        control.SetRating( rating )
+                        
+                    
+                
+            
         
     
     class _LikePanel( QW.QWidget ):

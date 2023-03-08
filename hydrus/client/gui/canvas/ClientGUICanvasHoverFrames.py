@@ -29,8 +29,102 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientRatings
+
+class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
+
+    def __init__( self, parent, service_key, canvas_key ):
+        
+        ClientGUIRatings.RatingIncDec.__init__( self, parent, service_key )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        self._rating_state = None
+        self._rating = None
+        
+        self._hashes = set()
+        
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self._current_media is not None:
+            
+            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
+            
+            ClientGUIRatings.DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            
+        
+    
+    def _SetRating( self, rating ):
+        
+        ClientGUIRatings.RatingIncDec._SetRating( self, rating )
+        
+        if self._current_media is not None and rating is not None:
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        if HydrusData.SetsIntersect( self._hashes, hashes ):
+                            
+                            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
+                            
+                            self.update()
+                            
+                            self._UpdateTooltip()
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            if self._current_media is None:
+                
+                self._hashes = set()
+                
+            else:
+                
+                self._hashes = self._current_media.GetHashes()
+                
+            
+            self.update()
+            
+            self._UpdateTooltip()
+            
+        
+    
 
 class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
     
@@ -55,8 +149,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
             ClientGUIRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
             
-        
-        self._dirty = False
         
     
     def EventLeftDown( self, event ):
@@ -103,8 +195,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                             
                             self._SetRatingFromCurrentMedia()
                             
-                            self._dirty = True
-                            
                             self.update()
                             
                             return
@@ -145,8 +235,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                 
             
             self._SetRatingFromCurrentMedia()
-            
-            self._dirty = True
             
             self.update()
             
@@ -196,8 +284,6 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             ClientGUIRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
             
         
-        self._dirty = False
-        
     
     def _SetRating( self, rating ):
         
@@ -227,7 +313,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
                         
                         if HydrusData.SetsIntersect( self._hashes, hashes ):
                             
-                            self._dirty = True
+                            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
                             
                             self.update()
                             
@@ -255,8 +341,6 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
                 
                 self._hashes = self._current_media.GetHashes()
                 
-            
-            self._dirty = True
             
             self.update()
             
@@ -1125,9 +1209,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             QP.AddToLayout( like_hbox, control, CC.FLAGS_NONE )
             
         
-        # each numerical one in turn
-        
         QP.AddToLayout( vbox, like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        # each numerical one in turn
         
         numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
@@ -1141,6 +1225,30 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             vbox.setAlignment( control, QC.Qt.AlignRight )
             
+        
+        # now incdec
+        
+        incdec_hbox = QP.HBoxLayout( spacing = 0 )
+        
+        incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        
+        if len( incdec_services ) > 0:
+            
+            incdec_hbox.addStretch( 1 )
+            
+        
+        for service in incdec_services:
+            
+            service_key = service.GetServiceKey()
+            
+            control = RatingIncDecCanvas( self, service_key, canvas_key )
+            
+            QP.AddToLayout( incdec_hbox, control, CC.FLAGS_NONE )
+            
+        
+        QP.AddToLayout( vbox, incdec_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        #
         
         QP.AddToLayout( vbox, self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )

@@ -1273,6 +1273,10 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
         self._CreateIndex( 'local_ratings', [ 'rating' ] )
         
+        self._Execute( 'CREATE TABLE IF NOT EXISTS local_incdec_ratings ( service_id INTEGER, hash_id INTEGER, rating INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        self._CreateIndex( 'local_incdec_ratings', [ 'hash_id' ] )
+        self._CreateIndex( 'local_incdec_ratings', [ 'rating' ] )
+        
         self._Execute( 'CREATE TABLE IF NOT EXISTS file_modified_timestamps ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );' )
         self._CreateIndex( 'file_modified_timestamps', [ 'file_modified_timestamp' ] )
         
@@ -3612,44 +3616,74 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service = HG.client_controller.services_manager.GetService( rating_service_key )
                 
-                if service.GetServiceType() == HC.LOCAL_RATING_LIKE:
-                    
-                    half_a_star_value = 0.5
-                    
-                else:
-                    
-                    one_star_value = service.GetOneStarValue()
-                    
-                    half_a_star_value = one_star_value / 2
-                    
+                service_type = service.GetServiceType()
                 
-                if isinstance( value, str ):
+                if service_type in HC.STAR_RATINGS_SERVICES:
                     
-                    value = float( value )
+                    if service.GetServiceType() == HC.LOCAL_RATING_LIKE:
+                        
+                        half_a_star_value = 0.5
+                        
+                    else:
+                        
+                        one_star_value = service.GetOneStarValue()
+                        
+                        half_a_star_value = one_star_value / 2
+                        
                     
-                
-                # floats are a pain! as is storing rating as 0.0-1.0 and then allowing number of stars to change!
-                
-                if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    if isinstance( value, str ):
+                        
+                        value = float( value )
+                        
                     
-                    predicate = str( ( value - half_a_star_value ) * 0.8 ) + ' < rating AND rating < ' + str( ( value + half_a_star_value ) * 1.2 )
+                    # floats are a pain! as is storing rating as 0.0-1.0 and then allowing number of stars to change!
                     
-                elif operator == '<':
+                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                        
+                        predicate = str( ( value - half_a_star_value ) * 0.8 ) + ' < rating AND rating < ' + str( ( value + half_a_star_value ) * 1.2 )
+                        
+                    elif operator == '<':
+                        
+                        predicate = 'rating <= ' + str( value - half_a_star_value )
+                        
+                    elif operator == '>':
+                        
+                        predicate = 'rating > ' + str( value + half_a_star_value )
+                        
+                    elif operator == '=':
+                        
+                        predicate = str( value - half_a_star_value ) + ' < rating AND rating <= ' + str( value + half_a_star_value )
+                        
                     
-                    predicate = 'rating <= ' + str( value - half_a_star_value )
+                    rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
                     
-                elif operator == '>':
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                     
-                    predicate = 'rating > ' + str( value + half_a_star_value )
+                elif service_type == HC.LOCAL_RATING_INCDEC:
                     
-                elif operator == '=':
+                    if operator == '<' or ( operator == '=' and value == 0 ):
+                        
+                        continue
+                        
+                    else:
+                        
+                        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                            
+                            min_value = max( value - 1, int( value * 0.8 ) )
+                            max_value = min( value + 1, int( value * 1.2 ) )
+                            
+                            predicate = '{} < rating AND rating < {}'.format( min_value, max_value )
+                            
+                        else:
+                            
+                            predicate = 'rating {} {}'.format( operator, value )
+                            
+                        
+                        rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
+                        
+                        query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
+                        
                     
-                    predicate = str( value - half_a_star_value ) + ' < rating AND rating <= ' + str( value + half_a_star_value )
-                    
-                
-                rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
-                
-                query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                 
             
         
@@ -3701,6 +3735,51 @@ class DB( HydrusDB.HydrusDB ):
                 viewing_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, viewing_hash_ids )
+                
+            
+        
+        #
+        
+        # last shot before tags and stuff to try to do these. we can only do them if query hash ids has stuff in
+        done_tricky_incdec_ratings = False
+        
+        if query_hash_ids is not None:
+            
+            done_tricky_incdec_ratings = True
+            
+            for ( operator, value, rating_service_key ) in system_predicates.GetRatingsPredicates():
+                
+                if isinstance( value, int ):
+                    
+                    service_id = self.modules_services.GetServiceId( rating_service_key )
+                    
+                    service = HG.client_controller.services_manager.GetService( rating_service_key )
+                    
+                    service_type = service.GetServiceType()
+                    
+                    if service_type == HC.LOCAL_RATING_INCDEC:
+                        
+                        if operator == '<' or ( operator == '=' and value == 0 ):
+                            
+                            rated_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ?;', ( service_id, ) ) )
+                            
+                            not_rated_hash_ids = query_hash_ids.difference( rated_hash_ids )
+                            
+                            # 'no rating' for incdec = 0
+                            
+                            rating_hash_ids = not_rated_hash_ids
+                            
+                            if operator == '<' and value > 1:
+                                
+                                less_than_rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ? AND rating < ?;', ( service_id, value ) ) )
+                                
+                                rating_hash_ids.update( less_than_rating_hash_ids )
+                                
+                            
+                            query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
+                            
+                        
+                    
                 
             
         
@@ -3892,6 +3971,47 @@ class DB( HydrusDB.HydrusDB ):
             
         
         # at this point, query_hash_ids has something in it
+        
+        # if we couldn't do them earlier, now we can
+        if not done_tricky_incdec_ratings:
+            
+            done_tricky_incdec_ratings = True
+            
+            for ( operator, value, rating_service_key ) in system_predicates.GetRatingsPredicates():
+                
+                if isinstance( value, int ):
+                    
+                    service_id = self.modules_services.GetServiceId( rating_service_key )
+                    
+                    service = HG.client_controller.services_manager.GetService( rating_service_key )
+                    
+                    service_type = service.GetServiceType()
+                    
+                    if service_type == HC.LOCAL_RATING_INCDEC:
+                        
+                        if operator == '<' or ( operator == '=' and value == 0 ):
+                            
+                            rated_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ?;', ( service_id, ) ) )
+                            
+                            not_rated_hash_ids = query_hash_ids.difference( rated_hash_ids )
+                            
+                            # 'no rating' for incdec = 0
+                            
+                            rating_hash_ids = not_rated_hash_ids
+                            
+                            if operator == '<' and value > 1:
+                                
+                                less_than_rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ? AND rating < ?;', ( service_id, value ) ) )
+                                
+                                rating_hash_ids.update( less_than_rating_hash_ids )
+                                
+                            
+                            query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
+                            
+                        
+                    
+                
+            
         
         if 'hash' in simple_preds:
             
@@ -4519,7 +4639,20 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_service_ids_and_filenames = self.modules_service_paths.GetHashIdsToServiceIdsAndFilenames( temp_table_name )
                 
-                hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._Execute( 'SELECT service_id, hash_id, rating FROM {} CROSS JOIN local_ratings USING ( hash_id );'.format( temp_table_name ) ) ) )
+                hash_ids_to_local_star_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._Execute( 'SELECT service_id, hash_id, rating FROM {} CROSS JOIN local_ratings USING ( hash_id );'.format( temp_table_name ) ) ) )
+                hash_ids_to_local_incdec_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._Execute( 'SELECT service_id, hash_id, rating FROM {} CROSS JOIN local_incdec_ratings USING ( hash_id );'.format( temp_table_name ) ) ) )
+                
+                hash_ids_to_local_ratings = collections.defaultdict( list )
+                
+                for ( hash_id, info_list ) in hash_ids_to_local_star_ratings.items():
+                    
+                    hash_ids_to_local_ratings[ hash_id ].extend( info_list )
+                    
+                
+                for ( hash_id, info_list ) in hash_ids_to_local_incdec_ratings.items():
+                    
+                    hash_ids_to_local_ratings[ hash_id ].extend( info_list )
+                    
                 
                 hash_ids_to_names_and_notes = self.modules_notes_map.GetHashIdsToNamesAndNotes( temp_table_name )
                 
@@ -4615,9 +4748,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
+                service_keys_to_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
                 
-                ratings_manager = ClientMediaManagers.RatingsManager( local_ratings )
+                ratings_manager = ClientMediaManagers.RatingsManager( service_keys_to_ratings )
                 
                 #
                 
@@ -5540,7 +5673,7 @@ class DB( HydrusDB.HydrusDB ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS }
             
-        elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+        elif service_type in HC.RATINGS_SERVICES:
             
             info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES }
             
@@ -5667,11 +5800,18 @@ class DB( HydrusDB.HydrusDB ):
                         ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchone()
                         
                     
-                elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                elif service_type in HC.STAR_RATINGS_SERVICES:
                     
                     if info_type == HC.SERVICE_INFO_NUM_FILE_HASHES:
                         
                         ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM local_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                        
+                    
+                elif service_type == HC.LOCAL_RATING_INCDEC:
+                    
+                    if info_type == HC.SERVICE_INFO_NUM_FILE_HASHES:
+                        
+                        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM local_incdec_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
                         
                     
                 elif service_type == HC.LOCAL_BOORU:
@@ -7183,9 +7323,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                         
-                        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
-                        
-                        if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                        if service_type in HC.STAR_RATINGS_SERVICES:
                             
                             ratings_added = 0
                             
@@ -7202,36 +7340,85 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._Execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
                             
+                        elif service_type == HC.LOCAL_RATING_INCDEC:
+                            
+                            ratings_added = 0
+                            
+                            self._ExecuteMany( 'DELETE FROM local_incdec_ratings WHERE service_id = ? AND hash_id = ?;', ( ( service_id, hash_id ) for hash_id in hash_ids ) )
+                            
+                            ratings_added -= self._GetRowCount()
+                            
+                            if rating != 0:
+                                
+                                self._ExecuteMany( 'INSERT INTO local_incdec_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
+                                
+                                ratings_added += self._GetRowCount()
+                                
+                            
+                            self._Execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                            
                         
                     elif action == HC.CONTENT_UPDATE_ADVANCED:
                         
                         action = row
                         
-                        if action == 'delete_for_deleted_files':
+                        if service_type in HC.STAR_RATINGS_SERVICES:
                             
-                            deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                            if action == 'delete_for_deleted_files':
+                                
+                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                                
+                                self._Execute( 'DELETE FROM local_ratings WHERE service_id = ? and hash_id IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name ), ( service_id, ) )
+                                
+                                ratings_deleted = self._GetRowCount()
+                                
+                                self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
+                            elif action == 'delete_for_non_local_files':
+                                
+                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+                                
+                                self._Execute( 'DELETE FROM local_ratings WHERE local_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ), ( service_id, ) )
+                                
+                                ratings_deleted = self._GetRowCount()
+                                
+                                self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
+                            elif action == 'delete_for_all_files':
+                                
+                                self._Execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
+                                
+                                self._Execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
                             
-                            self._Execute( 'DELETE FROM local_ratings WHERE service_id = ? and hash_id IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name ), ( service_id, ) )
+                        elif service_type == HC.LOCAL_RATING_INCDEC:
                             
-                            ratings_deleted = self._GetRowCount()
-                            
-                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
-                            
-                        elif action == 'delete_for_non_local_files':
-                            
-                            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
-                            
-                            self._Execute( 'DELETE FROM local_ratings WHERE local_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ), ( service_id, ) )
-                            
-                            ratings_deleted = self._GetRowCount()
-                            
-                            self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
-                            
-                        elif action == 'delete_for_all_files':
-                            
-                            self._Execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
-                            
-                            self._Execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                            if action == 'delete_for_deleted_files':
+                                
+                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                                
+                                self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id = ? and hash_id IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name ), ( service_id, ) )
+                                
+                                ratings_deleted = self._GetRowCount()
+                                
+                                self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
+                            elif action == 'delete_for_non_local_files':
+                                
+                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+                                
+                                self._Execute( 'DELETE FROM local_incdec_ratings WHERE local_incdec_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ), ( service_id, ) )
+                                
+                                ratings_deleted = self._GetRowCount()
+                                
+                                self._Execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
+                            elif action == 'delete_for_all_files':
+                                
+                                self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id = ?;', ( service_id, ) )
+                                
+                                self._Execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILE_HASHES ) )
+                                
                             
                         
                     
@@ -11287,6 +11474,18 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 518:
+            
+            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'local_incdec_ratings', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS local_incdec_ratings ( service_id INTEGER, hash_id INTEGER, rating INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+                self._CreateIndex( 'local_incdec_ratings', [ 'hash_id' ] )
+                self._CreateIndex( 'local_incdec_ratings', [ 'rating' ] )
                 
             
         

@@ -2276,7 +2276,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        def work_callable():
+        def work_callable( args ):
             
             job_key = ClientThreading.JobKey()
             
@@ -2312,7 +2312,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        def work_callable():
+        def work_callable( args ):
             
             job_key = ClientThreading.JobKey()
             
@@ -2350,7 +2350,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        def work_callable():
+        def work_callable( args ):
             
             all_locations_are_default = HG.client_controller.client_files_manager.AllLocationsAreDefault()
             
@@ -2403,7 +2403,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._menubar_file_export_submenu.setEnabled( False )
             
         
-        def work_callable():
+        def work_callable( args ):
             
             import_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
             export_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
@@ -2474,7 +2474,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        def work_callable():
+        def work_callable( args ):
             
             return 1
             
@@ -2504,7 +2504,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._menubar_pages_petition_submenu.setEnabled( False )
             
         
-        def work_callable():
+        def work_callable( args ):
             
             gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
             
@@ -2673,7 +2673,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        def work_callable():
+        def work_callable( args ):
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
             
@@ -2816,7 +2816,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._menubar_services_admin_submenu.setEnabled( False )
             
         
-        def work_callable():
+        def work_callable( args ):
             
             return 1
             
@@ -2928,7 +2928,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             self._menubar_undo_closed_pages_submenu.setEnabled( False )
             
         
-        def work_callable():
+        def work_callable( args ):
             
             return 1
             

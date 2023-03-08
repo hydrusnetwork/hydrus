@@ -14,6 +14,94 @@ from hydrus.client.gui.search import ClientGUIPredicatesSingle
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientRatings
 
+class PredicateSystemRatingIncDecControl( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearch.Predicate ] ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._service_key = service_key
+        
+        service = HG.client_controller.services_manager.GetService( self._service_key )
+        
+        name = service.GetName()
+        
+        name_st = ClientGUICommon.BetterStaticText( self, name )
+        
+        name_st.setAlignment( QC.Qt.AlignLeft | QC.Qt.AlignVCenter )
+        
+        choices = [
+            ( 'more than', '>' ),
+            ( 'less than', '<' ),
+            ( 'is', '=' ),
+            ( 'is about', CC.UNICODE_ALMOST_EQUAL_TO ),
+            ( 'do not search', '' )
+        ]
+        
+        self._choice = QP.DataRadioBox( self, choices, vertical = True )
+        
+        self._rating_value = ClientGUICommon.BetterSpinBox( self, initial = 0, min = 0, max = 1000000 )
+        
+        self._choice.SetValue( '' )
+        
+        #
+        
+        if predicate is not None:
+            
+            value = predicate.GetValue()
+            
+            if value is not None:
+                
+                ( operator, rating, service_key ) = value
+                
+                self._choice.SetValue( operator )
+                
+                self._rating_value.setValue( rating )
+                
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._rating_value, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        
+        self._UpdateControls()
+        
+    
+    def _UpdateControls( self ):
+        
+        choice = self._choice.GetValue()
+        
+        spinctrl_matters = choice != ''
+        
+        self._rating_value.setEnabled( spinctrl_matters )
+        
+    
+    def GetPredicates( self ):
+        
+        choice = self._choice.GetValue()
+        
+        if choice == '':
+            
+            return []
+            
+        
+        operator = choice
+        
+        rating = self._rating_value.value()
+        
+        predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, ( operator, rating, self._service_key ) )
+        
+        return [ predicate ]
+        
+    
 class PredicateSystemRatingLikeControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearch.Predicate ] ):
@@ -155,8 +243,6 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        
-        self._old_rating = None
         
         service = HG.client_controller.services_manager.GetService( self._service_key )
         
@@ -332,11 +418,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         #
         
-        local_like_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, ) )
-        
-        self._like_checkboxes_to_info = {}
-        
-        self._like_rating_ctrls = []
+        local_like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         gridbox = QP.GridLayout( cols = 5 )
         
@@ -348,7 +430,9 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         self._rating_panels = []
         
-        for service_key in local_like_service_keys:
+        for service in local_like_services:
+            
+            service_key = service.GetServiceKey()
             
             if service_key in service_keys_to_predicates:
                 
@@ -366,13 +450,11 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         #
         
-        local_numerical_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        local_numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
-        self._numerical_checkboxes_to_info = {}
-        
-        self._numerical_rating_ctrls_to_info = {}
-        
-        for service_key in local_numerical_service_keys:
+        for service in local_numerical_services:
+            
+            service_key = service.GetServiceKey()
             
             if service_key in service_keys_to_predicates:
                 
@@ -384,6 +466,28 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
                 
             
             panel = PredicateSystemRatingNumericalControl( self, service_key, predicate )
+            
+            self._rating_panels.append( panel )
+            
+        
+        #
+        
+        local_incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        
+        for service in local_incdec_services:
+            
+            service_key = service.GetServiceKey()
+            
+            if service_key in service_keys_to_predicates:
+                
+                predicate = service_keys_to_predicates[ service_key ]
+                
+            else:
+                
+                predicate = None
+                
+            
+            panel = PredicateSystemRatingIncDecControl( self, service_key, predicate )
             
             self._rating_panels.append( panel )
             
@@ -402,7 +506,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
     
     def _FilterWhatICanEdit( self, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.Collection[ ClientSearch.Predicate ]:
         
-        local_rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        local_rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
         
         good_predicates = []
         

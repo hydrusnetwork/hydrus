@@ -1193,6 +1193,17 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
             
         
+        if media is not None:
+            
+            if self.CANVAS_TYPE == CC.CANVAS_PREVIEW:
+                
+                if not ClientGUICanvasMedia.UserWantsUsToDisplayMedia( media, self.CANVAS_TYPE ):
+                    
+                    media = None
+                    
+                
+            
+        
         if media != self._current_media:
             
             self.EndDrag()
@@ -1377,7 +1388,7 @@ class CanvasPanel( Canvas ):
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+            local_ratings_services = [ service for service in services if service.GetServiceType() in HC.RATINGS_SERVICES ]
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             
@@ -1883,6 +1894,30 @@ class CanvasWithDetails( Canvas ):
             numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
             
             ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
+            
+            current_y += 18
+            
+        
+        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        
+        incdec_services.reverse()
+        
+        control_width = ClientGUIRatings.INCDEC_SIZE.width()
+        
+        incdec_rating_current_x = my_width - control_width - 2 # -2 to line up exactly with the floating panel
+        
+        for incdec_service in incdec_services:
+            
+            service_key = incdec_service.GetServiceKey()
+            
+            ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
+            
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
+            
+            incdec_rating_current_x -= control_width
+            
+        
+        if len( incdec_services ) > 0:
             
             current_y += 18
             
@@ -4272,7 +4307,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             services = HG.client_controller.services_manager.GetServices()
             
-            local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+            local_ratings_services = [ service for service in services if service.GetServiceType() in HC.RATINGS_SERVICES ]
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             

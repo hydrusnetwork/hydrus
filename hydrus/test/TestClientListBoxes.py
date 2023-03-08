@@ -148,7 +148,7 @@ class TestListBoxes( unittest.TestCase ):
                 
                 if len( list(all_clickable_indices.keys()) ) > 2:
                     
-                    indices = random.sample( list(all_clickable_indices.keys()), len( list(all_clickable_indices.keys()) ) - 1 )
+                    indices = random.sample( list( all_clickable_indices.keys() ), len( list( all_clickable_indices.keys() ) ) - 1 )
                     
                     for index in indices:
                         

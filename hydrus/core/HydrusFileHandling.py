@@ -174,28 +174,49 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         
     else:
         
+        renderer = None
+        
         desired_thumb_frame = int( ( percentage_in / 100.0 ) * num_frames )
         
-        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, clip_rect = clip_rect, start_pos = desired_thumb_frame )
-        
-        numpy_image = renderer.read_frame()
-        
-        if numpy_image is None:
+        try:
             
-            renderer.Stop()
-            
-            del renderer
-            
-            # try first frame instead
-            
-            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, clip_rect = clip_rect )
+            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, clip_rect = clip_rect, start_pos = desired_thumb_frame )
             
             numpy_image = renderer.read_frame()
             
+        except Exception as e:
+            
+            HydrusData.Print( 'Problem generating thumbnail for "{}" at frame {} ({})--FFMPEG could not render it.'.format( path, desired_thumb_frame, HydrusData.ConvertFloatToPercentage( percentage_in / 100.0 ) ) )
+            HydrusData.PrintException( e )
+            
+            numpy_image = None
+            
+        
+        if numpy_image is None and desired_thumb_frame != 0:
+            
+            if renderer is not None:
+                
+                renderer.Stop()
+                
+            
+            # try first frame instead
+            
+            try:
+                
+                renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, clip_rect = clip_rect )
+                
+                numpy_image = renderer.read_frame()
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Problem generating thumbnail for "{}" at first frame--FFMPEG could not render it.'.format( path ) )
+                HydrusData.PrintException( e )
+                
+                numpy_image = None
+                
+            
         
         if numpy_image is None:
-            
-            HydrusData.Print( 'Problem generating thumbnail for "{}"--FFMPEG could not render it.'.format( path ) )
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
             
@@ -208,9 +229,10 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image )
             
         
-        renderer.Stop()
-        
-        del renderer
+        if renderer is not None:
+            
+            renderer.Stop()
+            
         
     
     return thumbnail_bytes

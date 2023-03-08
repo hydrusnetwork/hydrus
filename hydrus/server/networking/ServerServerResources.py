@@ -576,6 +576,20 @@ class HydrusResourceRestrictedAccountModifyBan( HydrusResourceRestrictedAccountM
         return response_context
         
     
+
+class HydrusResourceRestrictedAccountModifyDeleteAllContent( HydrusResourceRestrictedAccountModify ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        subject_account_key = request.parsed_request_args[ 'subject_account_key' ]
+        
+        HG.server_controller.WriteSynchronous( 'modify_account_delete_all_content', self._service_key, request.hydrus_account, subject_account_key )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceRestrictedAccountModifyExpires( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):

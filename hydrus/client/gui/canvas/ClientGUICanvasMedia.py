@@ -266,13 +266,6 @@ def CanDisplayMedia( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bo
         return False
         
     
-    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
-    
-    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
-        
-        return False
-        
-    
     return True
     
 
@@ -344,6 +337,19 @@ def ShouldHaveAnimationBar( media, show_action ):
     
     return False
     
+
+def UserWantsUsToDisplayMedia( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
+    
+    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
+    
+    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+        
+        return False
+        
+    
+    return True
+    
+
 class Animation( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
@@ -479,7 +485,7 @@ class Animation( QW.QWidget ):
             
             self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( my_raw_width, my_raw_height )
             
-            self._canvas_qt_pixmap.setDevicePixelRatio( 1.0 )
+            self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
             
             painter = QG.QPainter( self._canvas_qt_pixmap )
             
@@ -487,7 +493,7 @@ class Animation( QW.QWidget ):
             
         else:
             
-            self._canvas_qt_pixmap.setDevicePixelRatio( 1.0 )
+            self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
             
             painter = QG.QPainter( self._canvas_qt_pixmap )
             
@@ -496,9 +502,8 @@ class Animation( QW.QWidget ):
         
         current_frame_image = current_frame.GetQtImage()
         
+        # note we draw to self.rect(), which is in DPR coordinates. the pixmap needs to be DPR'd by here mate, this caught us up before
         painter.drawImage( self.rect(), current_frame_image )
-        
-        self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
         
         self._current_frame_drawn = True
         
@@ -2168,6 +2173,11 @@ class MediaContainer( QW.QWidget ):
         
         ( self._show_action, self._start_paused, self._start_with_embed ) = GetShowAction( self._media, self._canvas_type )
         
+        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+        
         if self._start_with_embed:
             
             self._animation_bar.ClearMedia()
@@ -2326,9 +2336,19 @@ class MediaContainer( QW.QWidget ):
         
         ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( previous_media, self._canvas_type )
         
+        if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+        
         ( previous_default_zoom, previous_canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, previous_media, media_show_action )
         
         ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( self._media, self._canvas_type )
+        
+        if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
         
         ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, media_show_action )
         

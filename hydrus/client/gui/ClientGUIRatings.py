@@ -4,10 +4,12 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientRatings
 
 default_like_colours = {}
@@ -23,6 +25,13 @@ default_numerical_colours[ ClientRatings.LIKE ] = ( ( 0, 0, 0 ), ( 80, 200, 120 
 default_numerical_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 255 ) )
 default_numerical_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
 default_numerical_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
+
+default_incdec_colours = {}
+
+default_incdec_colours[ ClientRatings.LIKE ] = ( ( 0, 0, 0 ), ( 80, 200, 120 ) )
+default_incdec_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 255 ) )
+default_incdec_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
+default_incdec_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 
 PENTAGRAM_STAR_COORDS = [
     QC.QPointF( 6, 0 ), # top
@@ -50,7 +59,53 @@ FAT_STAR_COORDS = [
     QC.QPointF( 4.2, 4.1 )
 ]
 
-def DrawLike( painter, x, y, service_key, rating_state ):
+INCDEC_SIZE = QC.QSize( 32, 16 )
+
+def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
+    
+    painter.setRenderHint( QG.QPainter.Antialiasing, True )
+    
+    if rating is None:
+        
+        rating = 0
+        
+    
+    text = HydrusData.ToHumanInt( rating )
+    
+    original_font = painter.font()
+    
+    incdec_font = painter.font()
+    
+    incdec_font.setPixelSize( 11 )
+    
+    incdec_font.setStyleHint( QG.QFont.Monospace )
+    
+    painter.setFont( incdec_font )
+    
+    if rating_state == ClientRatings.SET:
+        
+        colour_rating_state = ClientRatings.LIKE
+        
+    else:
+        
+        colour_rating_state = ClientRatings.MIXED
+        
+    
+    ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, colour_rating_state )
+    
+    painter.setPen( pen_colour )
+    painter.setBrush( brush_colour )
+    
+    painter.drawRect( x, y, INCDEC_SIZE.width(), INCDEC_SIZE.height() )
+    
+    text_rect = QC.QRect( QC.QPoint( x + 1, y + 1 ), INCDEC_SIZE - QC.QSize( 4, 4 ) )
+    
+    painter.drawText( text_rect, QC.Qt.AlignRight | QC.Qt.AlignVCenter, text )
+    
+    painter.setFont( original_font )
+    
+
+def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
     
     painter.setRenderHint( QG.QPainter.Antialiasing, True )
     
@@ -82,7 +137,8 @@ def DrawLike( painter, x, y, service_key, rating_state ):
         painter.translate( -offset )
         
     
-def DrawNumerical( painter, x, y, service_key, rating_state, rating ):
+
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     painter.setRenderHint( QG.QPainter.Antialiasing, True )
     
@@ -199,6 +255,198 @@ def GetStars( service_key, rating_state, rating ):
     return ( shape, stars )
     
 
+class RatingIncDec( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent, service_key ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._service_key = service_key
+        
+        self._service = HG.client_controller.services_manager.GetService( self._service_key )
+        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        
+        # middle down too? brings up a dialog for manual entry, sounds good
+        
+        self.setMinimumSize( INCDEC_SIZE )
+        
+        self._rating_state = ClientRatings.SET
+        self._rating = 0
+        
+    
+    def _Draw( self, painter ):
+        
+        raise NotImplementedError()
+        
+    
+    def _SetRating( self, rating ):
+        
+        self._rating_state = ClientRatings.SET
+        self._rating = rating
+        
+        self.update()
+        
+        self._UpdateTooltip()
+        
+        self.valueChanged.emit()
+        
+    
+    def _UpdateTooltip( self ):
+        
+        if self.isEnabled():
+            
+            text = HG.client_controller.services_manager.GetName( self._service_key )
+            
+            try:
+                
+                service = HG.client_controller.services_manager.GetService( self._service_key )
+                
+                tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
+                
+            except HydrusExceptions.DataMissing:
+                
+                tt = 'service missing'
+                
+            
+        else:
+            
+            tt = ''
+            
+        
+        self.setToolTip( tt )
+        
+    
+    def mouseDoubleClickEvent( self, event ):
+        
+        self.mousePressEvent( event )
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if self.isEnabled():
+            
+            button = event.button()
+            
+            if button == QC.Qt.LeftButton:
+                
+                self._SetRating( self._rating + 1 )
+                
+                event.accept()
+                
+                return
+                
+            elif button == QC.Qt.RightButton:
+                
+                if self._rating > 0:
+                    
+                    self._SetRating( self._rating - 1 )
+                    
+                    event.accept()
+                    
+                    return
+                    
+                
+            elif button == QC.Qt.MiddleButton:
+                
+                from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+                from hydrus.client.gui import ClientGUIScrolledPanels
+                
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                    
+                    control = ClientGUICommon.BetterSpinBox( self, initial = self._rating, min = 0, max = 1000000 )
+                    
+                    panel.SetControl( control )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.exec() == QW.QDialog.Accepted:
+                        
+                        new_rating = control.value()
+                        
+                        self._SetRating( new_rating )
+                        
+                        event.accept()
+                        
+                        return
+                        
+                    
+                
+            
+        
+        QW.QWidget.mousePressEvent( self, event )
+        
+    
+    def GetServiceKey( self ):
+        
+        return self._service_key
+        
+    
+    def paintEvent( self, event ):
+        
+        painter = QG.QPainter( self )
+        
+        self._Draw( painter )
+        
+    
+    def setEnabled( self, value: bool ):
+        
+        QW.QWidget.setEnabled( self, value )
+        
+        self.update()
+        
+        self._UpdateTooltip()
+        
+    
+
+class RatingIncDecDialog( RatingIncDec ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            
+        else:
+            
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0 )
+            
+        
+    
+    def GetRating( self ):
+        
+        return self._rating
+        
+    
+    def GetRatingState( self ):
+        
+        return self._rating_state
+        
+    
+    def SetRating( self, rating ):
+        
+        self._SetRating( rating )
+        
+    
+    def SetRatingState( self, rating_state, rating ):
+        
+        self._rating_state = rating_state
+        self._rating = rating
+        
+        self.update()
+        
+        self._UpdateTooltip()
+        
+    
+
 class RatingLike( QW.QWidget ):
     
     valueChanged = QC.Signal()
@@ -219,8 +467,6 @@ class RatingLike( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
         self.setMinimumSize( QC.QSize( 16, 16 ) )
-        
-        self._dirty = True
         
         self._UpdateTooltip()
         
@@ -295,8 +541,6 @@ class RatingLike( QW.QWidget ):
         
         QW.QWidget.setEnabled( self, value )
         
-        self._dirty = True
-        
         self.update()
         
         self._UpdateTooltip()
@@ -320,8 +564,6 @@ class RatingLikeDialog( RatingLike ):
             DrawLike( painter, 0, 0, self._service_key, ClientRatings.NULL )
             
         
-        self._dirty = False
-        
     
     def EventLeftDown( self, event ):
         
@@ -332,8 +574,6 @@ class RatingLikeDialog( RatingLike ):
         
         if self._rating_state == ClientRatings.LIKE: self._SetRating( ClientRatings.NULL )
         else: self._SetRating( ClientRatings.LIKE )
-        
-        self._dirty = True
         
         self.update()
         
@@ -348,16 +588,12 @@ class RatingLikeDialog( RatingLike ):
         if self._rating_state == ClientRatings.DISLIKE: self._SetRating( ClientRatings.NULL )
         else: self._SetRating( ClientRatings.DISLIKE )
         
-        self._dirty = True
-        
         self.update()
         
     
     def SetRatingState( self, rating_state ):
         
         self._SetRating( rating_state )
-        
-        self._dirty = True
         
         self.update()
         
@@ -390,8 +626,6 @@ class RatingNumerical( QW.QWidget ):
         
         self._rating_state = ClientRatings.NULL
         self._rating = 0.0
-        
-        self._dirty = True
         
     
     def _ClearRating( self ):
@@ -556,8 +790,6 @@ class RatingNumerical( QW.QWidget ):
         
         QW.QWidget.setEnabled( self, value )
         
-        self._dirty = True
-        
         self.update()
         
         self._UpdateTooltip()
@@ -570,8 +802,6 @@ class RatingNumericalDialog( RatingNumerical ):
         RatingNumerical._ClearRating( self )
         
         self._rating_state = ClientRatings.NULL
-        
-        self._dirty = True
         
         self.update()
         
@@ -591,8 +821,6 @@ class RatingNumericalDialog( RatingNumerical ):
             DrawNumerical( painter, 0, 0, self._service_key, ClientRatings.NULL, 0.0 )
             
         
-        self._dirty = False
-        
     
     def _SetRating( self, rating ):
         
@@ -607,8 +835,6 @@ class RatingNumericalDialog( RatingNumerical ):
             self._rating_state = ClientRatings.SET
             
             self._rating = rating
-            
-            self._dirty = True
             
             self.update()
             
@@ -632,8 +858,6 @@ class RatingNumericalDialog( RatingNumerical ):
     def SetRatingState( self, rating_state ):
         
         self._rating_state = rating_state
-        
-        self._dirty = True
         
         self.update()
         

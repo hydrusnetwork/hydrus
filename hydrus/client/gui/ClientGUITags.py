@@ -3,6 +3,7 @@ import itertools
 import os
 import random
 import re
+import threading
 import time
 import typing
 
@@ -3034,6 +3035,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
             self._show_all = QW.QCheckBox( self )
+            self._pursue_whole_chain = QW.QCheckBox( self )
+            
+            tt = 'When you enter tags in the bottom boxes, the upper list is filtered to pertinent related relationships.'
+            tt += os.linesep * 2
+            tt += 'With this off, it will show all (grand)children and (grand)parents. With it on, it shows the full chain, including cousins. This can be overwhelming!'
+            
+            self._pursue_whole_chain.setToolTip( tt )
             
             # leave up here since other things have updates based on them
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
@@ -3116,6 +3124,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._sync_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._pursue_whole_chain,self,'show whole chains'), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3127,6 +3136,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children.listBoxChanged.connect( self._UpdateListCtrlData )
             self._parents.listBoxChanged.connect( self._UpdateListCtrlData )
             self._show_all.clicked.connect( self._UpdateListCtrlData )
+            self._pursue_whole_chain.clicked.connect( self._UpdateListCtrlData )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
@@ -3619,49 +3629,135 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             children = self._children.GetTags()
             parents = self._parents.GetTags()
             
-            pertinent_tags = children.union( parents )
-            
-            self._tag_parents.DeleteDatas( self._tag_parents.GetData() )
-            
-            all_pairs = set()
+            pertinent_pairs = set()
             
             show_all = self._show_all.isChecked()
+            pursue_whole_chain = self._pursue_whole_chain.isChecked()
             
-            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+            if len( children ) + len( parents ) == 0 or show_all:
                 
-                if status == HC.CONTENT_STATUS_DELETED:
+                for ( status, pairs ) in self._current_statuses_to_pairs.items():
                     
-                    continue
-                    
-                
-                if len( pertinent_tags ) == 0:
+                    if status == HC.CONTENT_STATUS_DELETED:
+                        
+                        continue
+                        
                     
                     if status == HC.CONTENT_STATUS_CURRENT and not show_all:
                         
                         continue
                         
                     
-                    # show all pending/petitioned
+                    # always show all pending/petitioned on empty
                     
-                    all_pairs.update( pairs )
+                    pertinent_pairs.update( pairs )
+                    
+                
+            else:
+                
+                if pursue_whole_chain:
+                    
+                    next_pertinent_tags = children.union( parents )
+                    
+                    seen_pertinent_tags = set()
+                    
+                    while len( next_pertinent_tags ) > 0:
+                        
+                        current_pertinent_tags = next_pertinent_tags
+                        
+                        seen_pertinent_tags.update( current_pertinent_tags )
+                        
+                        next_pertinent_tags = set()
+                        
+                        for ( status, pairs ) in self._current_statuses_to_pairs.items():
+                            
+                            if status == HC.CONTENT_STATUS_DELETED:
+                                
+                                continue
+                                
+                            
+                            # show all appropriate
+                            
+                            for pair in pairs:
+                                
+                                ( a, b ) = pair
+                                
+                                if a in current_pertinent_tags or b in current_pertinent_tags:
+                                    
+                                    pertinent_pairs.add( pair )
+                                    
+                                    if a not in seen_pertinent_tags:
+                                        
+                                        next_pertinent_tags.add( a )
+                                        
+                                    
+                                    if b not in seen_pertinent_tags:
+                                        
+                                        next_pertinent_tags.add( b )
+                                        
+                                    
+                                
+                            
+                        
                     
                 else:
                     
-                    # show all appropriate
+                    # start off searching in all directions, even if we disallow cousins later
+                    next_pertinent_children = children.union( parents )
+                    next_pertinent_parents = children.union( parents )
                     
-                    for pair in pairs:
+                    seen_pertinent_tags = set()
+                    
+                    while len( next_pertinent_children ) + len( next_pertinent_parents ) > 0:
                         
-                        ( a, b ) = pair
+                        current_pertinent_children = next_pertinent_children
+                        current_pertinent_parents = next_pertinent_parents
                         
-                        if a in pertinent_tags or b in pertinent_tags or show_all:
+                        seen_pertinent_tags.update( current_pertinent_children )
+                        seen_pertinent_tags.update( current_pertinent_parents )
+                        
+                        next_pertinent_children = set()
+                        next_pertinent_parents = set()
+                        
+                        for ( status, pairs ) in self._current_statuses_to_pairs.items():
                             
-                            all_pairs.add( pair )
+                            if status == HC.CONTENT_STATUS_DELETED:
+                                
+                                continue
+                                
+                            
+                            # show all appropriate
+                            
+                            for pair in pairs:
+                                
+                                ( a, b ) = pair
+                                
+                                if a in current_pertinent_parents:
+                                    
+                                    pertinent_pairs.add( pair )
+                                    
+                                    if b not in seen_pertinent_tags:
+                                        
+                                        next_pertinent_parents.add( b )
+                                        
+                                    
+                                
+                                if b in current_pertinent_children:
+                                    
+                                    pertinent_pairs.add( pair )
+                                    
+                                    if a not in seen_pertinent_tags:
+                                        
+                                        next_pertinent_children.add( a )
+                                        
+                                    
+                                
                             
                         
                     
                 
             
-            self._tag_parents.AddDatas( all_pairs )
+            self._tag_parents.SetData( pertinent_pairs )
             
             self._tag_parents.Sort()
             
@@ -4037,6 +4133,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._original_statuses_to_pairs = collections.defaultdict( set )
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
+            self._current_pairs_lock = threading.Lock()
+            
             self._pairs_to_reasons = {}
             
             self._current_new = None
@@ -4136,6 +4234,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
+            self._listctrl_async_updater = self._InitialiseListCtrlAsyncUpdater()
+            
         
         def _AddButton( self ):
             
@@ -4173,14 +4273,20 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             for pair in pairs:
                 
-                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                with self._current_pairs_lock:
+                    
+                    in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                    in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                    
+                
+                if in_pending:
                     
                     if not add_only:
                         
                         pending_pairs.append( pair )
                         
                     
-                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                elif in_petitioned:
                     
                     if not remove_only:
                         
@@ -4282,7 +4388,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
+                    with self._current_pairs_lock:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
+                        
                     
                 
             else:
@@ -4374,7 +4483,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                                 
                             
                         
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                        with self._current_pairs_lock:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                            
                         
                     
                 
@@ -4402,7 +4514,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if result == QW.QDialog.Accepted:
                         
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                        with self._current_pairs_lock:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                            
                         
                     
                 
@@ -4430,7 +4545,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if result == QW.QDialog.Accepted:
                         
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                        with self._current_pairs_lock:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                            
                         
                     
                 
@@ -4438,7 +4556,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AutoPetitionConflicts( self, pairs ):
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            with self._current_pairs_lock:
+                
+                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                
             
             current_olds_to_news = dict( current_pairs )
             
@@ -4471,7 +4592,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AutoPetitionLoops( self, pairs ):
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            with self._current_pairs_lock:
+                
+                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                
             
             current_dict = dict( current_pairs )
             
@@ -4508,7 +4632,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
                             
-                            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                            with self._current_pairs_lock:
+                                
+                                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                                
                             
                             current_dict = dict( current_pairs )
                             
@@ -4526,7 +4653,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             ( potential_old, potential_new ) = potential_pair
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            with self._current_pairs_lock:
+                
+                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                
             
             current_dict = dict( current_pairs )
             
@@ -4592,8 +4722,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             note = ''
             
-            in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-            in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+            with self._current_pairs_lock:
+                
+                in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                
             
             if in_pending or in_petitioned:
                 
@@ -4782,7 +4915,125 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateListCtrlData()
             
         
+        def _InitialiseListCtrlAsyncUpdater( self ) -> ClientGUIAsync.AsyncQtUpdater:
+            
+            def loading_callable():
+                
+                pass
+                
+            
+            def pre_work_callable():
+                
+                olds = self._old_siblings.GetTags()
+                
+                pertinent_tags = set( olds )
+                
+                if self._current_new is not None:
+                    
+                    pertinent_tags.add( self._current_new )
+                    
+                
+                show_all = self._show_all.isChecked()
+                
+                return ( pertinent_tags, show_all, self._current_pairs_lock, self._current_statuses_to_pairs )
+                
+            
+            def work_callable( args ):
+                
+                # and ultimately we replace this with a db call or whatever
+                # although to keep things synced we might want to delay UI updates on the ultimate fetch so we know logic on adds etc... is not on imperfect data
+                # also rather than this looped gubbins, it prob makes sense to make and maintain the full TagSiblingsStructure of what we fetch and just ask for full chain members etc... efficiently
+                
+                ( next_pertinent_tags, show_all, async_lock, current_statuses_to_pairs ) = args
+                
+                pertinent_pairs = set()
+                
+                with async_lock:
+                    
+                    if len( next_pertinent_tags ) == 0 or show_all:
+                        
+                        for ( status, pairs ) in current_statuses_to_pairs.items():
+                            
+                            if status == HC.CONTENT_STATUS_DELETED:
+                                
+                                continue
+                                
+                            
+                            if status == HC.CONTENT_STATUS_CURRENT and not show_all:
+                                
+                                continue
+                                
+                            
+                            # always show all pending/petitioned on empty
+                            
+                            pertinent_pairs.update( pairs )
+                            
+                        
+                    else:
+                        
+                        seen_pertinent_tags = set()
+                        
+                        while len( next_pertinent_tags ) > 0:
+                            
+                            current_pertinent_tags = next_pertinent_tags
+                            
+                            seen_pertinent_tags.update( current_pertinent_tags )
+                            
+                            next_pertinent_tags = set()
+                            
+                            for ( status, pairs ) in current_statuses_to_pairs.items():
+                                
+                                if status == HC.CONTENT_STATUS_DELETED:
+                                    
+                                    continue
+                                    
+                                
+                                # show all appropriate
+                                
+                                for pair in pairs:
+                                    
+                                    ( a, b ) = pair
+                                    
+                                    if a in current_pertinent_tags or b in current_pertinent_tags:
+                                        
+                                        pertinent_pairs.add( pair )
+                                        
+                                        if a not in seen_pertinent_tags:
+                                            
+                                            next_pertinent_tags.add( a )
+                                            
+                                        
+                                        if b not in seen_pertinent_tags:
+                                            
+                                            next_pertinent_tags.add( b )
+                                            
+                                        
+                                    
+                                
+                            
+                        
+                    
+                
+                return pertinent_pairs
+                
+            
+            def publish_callable( result ):
+                
+                pairs = result
+                
+                self._tag_siblings.SetData( pairs )
+                
+                self._tag_siblings.Sort()
+                
+            
+            return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+            
+        
         def _UpdateListCtrlData( self ):
+            
+            self._listctrl_async_updater.update()
+            
+            return
             
             olds = self._old_siblings.GetTags()
             
@@ -5240,7 +5491,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
-            def work_callable():
+            def work_callable( args ):
                 
                 status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
                 

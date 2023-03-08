@@ -447,6 +447,7 @@ Response:
     * 19 - all deleted files -- you can ignore this
     * 20 - local updates -- a file domain to store repository update files in
     * 21 - all my files -- union of all local file domains
+    * 22 - a 'inc/dec' rating service with positive integer rating
     * 99 - server administration
     
     `type_pretty` is something you can show users if you like. Hydrus uses the same labels in _manage services_ and so on.

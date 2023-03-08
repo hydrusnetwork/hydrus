@@ -762,7 +762,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             services_manager = HG.client_controller.services_manager
             
             self._tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, action, tag_filter ) in self._tag_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in HC.REAL_TAG_SERVICES ]
-            self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+            self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in HC.RATINGS_SERVICES ]
             
         
         serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
@@ -1035,7 +1035,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                services_manager.GetService( service_key )
+                service = services_manager.GetService( service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -1045,35 +1045,76 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             first_current_value = first_media.GetRatingsManager().GetRating( service_key )
             second_current_value = second_media.GetRatingsManager().GetRating( service_key )
             
-            if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+            service_type = service.GetServiceType()
+            
+            if service_type in HC.STAR_RATINGS_SERVICES:
                 
-                if worth_updating_rating( first_current_value, second_current_value ):
+                if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
+                    if worth_updating_rating( first_current_value, second_current_value ):
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
+                        
+                    elif worth_updating_rating( second_current_value, first_current_value ):
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                        
                     
-                elif worth_updating_rating( second_current_value, first_current_value ):
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
-                    
-                
-            elif action == HC.CONTENT_MERGE_ACTION_COPY:
-                
-                if worth_updating_rating( second_current_value, first_current_value ):
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
-                    
-                
-            elif action == HC.CONTENT_MERGE_ACTION_MOVE:
-                
-                if second_current_value is not None:
+                elif action == HC.CONTENT_MERGE_ACTION_COPY:
                     
                     if worth_updating_rating( second_current_value, first_current_value ):
                         
                         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                         
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, second_hashes ) ) )
+                elif action == HC.CONTENT_MERGE_ACTION_MOVE:
                     
+                    if second_current_value is not None:
+                        
+                        if worth_updating_rating( second_current_value, first_current_value ):
+                            
+                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                            
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, second_hashes ) ) )
+                        
+                    
+                
+            elif service_type == HC.LOCAL_RATING_INCDEC:
+                
+                sum_value = first_current_value + second_current_value
+                
+                if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                    
+                    if second_current_value > 0:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        
+                    
+                    if first_current_value > 0:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, second_hashes ) ) )
+                        
+                    
+                elif action == HC.CONTENT_MERGE_ACTION_COPY:
+                    
+                    if second_current_value > 0:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        
+                    
+                elif action == HC.CONTENT_MERGE_ACTION_MOVE:
+                    
+                    if second_current_value > 0:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, second_hashes ) ) )
+                        
+                    
+                
+            else:
+                
+                continue
                 
             
             if len( content_updates ) > 0:
