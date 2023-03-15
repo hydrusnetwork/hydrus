@@ -278,6 +278,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click' ] = False
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click_only_static' ] = False
         
+        self._dictionary[ 'booleans' ][ 'fade_sibling_connector' ] = True
+        
         from hydrus.client.gui.canvas import ClientGUIMPV
         
         self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE
@@ -558,6 +560,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'strings' ][ 'app_display_name' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
+        self._dictionary[ 'strings' ][ 'sibling_connector' ] = ' \u2192 '
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'

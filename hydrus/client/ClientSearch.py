@@ -1941,14 +1941,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( namespace, subtag ) = HydrusTags.SplitTag( tag_analogue )
             
-            if namespace == '*':
+            if '*' in namespace:
                 
-                return ''
+                return '*'
                 
-            else:
-                
-                return namespace
-                
+            
+            return namespace
             
         else:
             

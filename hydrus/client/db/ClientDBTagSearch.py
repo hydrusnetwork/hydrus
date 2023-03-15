@@ -641,9 +641,10 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             tag_ids = set( tag_ids )
             
         
-        tag_ids_without_siblings = list( tag_ids )
+        # for now, this thing can fetch an absolute ton of stuff. you type in '1 female', you are getting a lot of tags, often with no count
+        # not a very nice simple way to clear the chaff since in smaller cases those related siblings are useful, including those with no count, so no worries
         
-        seen_ideal_tag_ids = collections.defaultdict( set )
+        tag_ids_without_siblings = list( tag_ids )
         
         for batch_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
             

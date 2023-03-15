@@ -1462,7 +1462,7 @@ class DB( HydrusDB.HydrusDB ):
         )
         
     
-    def _ModifyAccountDeleteAllContent( self, service_key, admin_account: HydrusNetwork.Account, subject_account_key ):
+    def _ModifyAccountDeleteAllContent( self, service_key, admin_account: HydrusNetwork.Account, subject_account_key ) -> bool:
         
         service_id = self._GetServiceId( service_key )
         
@@ -1470,7 +1470,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if self._IsNullAccount( service_id, subject_account_id ):
             
-            raise HydrusExceptions.BadRequestException( 'You cannot ban the null account!' )
+            raise HydrusExceptions.BadRequestException( 'You cannot delete the null account\'s content!' )
             
         
         service_type = self._GetServiceType( service_id )
@@ -1479,11 +1479,13 @@ class DB( HydrusDB.HydrusDB ):
         
         admin_account_id = self._GetAccountId( admin_account_key )
         
+        we_deleted_everything = True
+        
         if service_type in HC.REPOSITORIES:
             
             self._DeleteRepositoryPetitions( service_id, ( subject_account_id, ) )
             
-            self._RepositoryDeleteAllCurrentContent( service_id, admin_account_id, subject_account_id )
+            we_deleted_everything = self._RepositoryDeleteAllCurrentContent( service_id, admin_account_id, subject_account_id )
             
         
         HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
@@ -1494,6 +1496,8 @@ class DB( HydrusDB.HydrusDB ):
                 subject_account_key.hex()
             )
         )
+        
+        return we_deleted_everything
         
     
     def _ModifyAccountExpires( self, service_key, admin_account, subject_account_key, new_expires ):
@@ -2079,54 +2083,99 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryDeleteAllCurrentContent( self, service_id, admin_account_id, subject_account_id ):
         
+        we_deleted_everything = False
+        
+        time_started = HydrusData.GetNowFloat()
+        time_to_stop = time_started + 20
+        
+        num_rows_do_delete_at_a_time = 500
+        
         now = HydrusData.GetNow()
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        service_hash_ids = self._STL( self._Execute( 'SELECT service_hash_id FROM {} WHERE account_id = ?;'.format( current_files_table_name ), ( subject_account_id, ) ) )
+        query = 'SELECT service_hash_id FROM {} WHERE account_id = ? LIMIT {};'.format( current_files_table_name, num_rows_do_delete_at_a_time )
         
-        if len( service_hash_ids ) > 0:
+        service_hash_ids = self._STL( self._Execute( query, ( subject_account_id, ) ) )
+        
+        while len( service_hash_ids ) > 0:
             
             self._RepositoryDeleteFiles( service_id, admin_account_id, service_hash_ids, now )
+            
+            if HydrusData.TimeHasPassedFloat( time_to_stop ):
+                
+                return we_deleted_everything
+                
+            
+            service_hash_ids = self._STL( self._Execute( query, ( subject_account_id, ) ) )
             
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        mappings_dict = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT service_tag_id, service_hash_id FROM {} WHERE account_id = ?;'.format( current_mappings_table_name ), ( subject_account_id, ) ) )
+        query = 'SELECT service_tag_id, service_hash_id FROM {} WHERE account_id = ? LIMIT {};'.format( current_mappings_table_name, num_rows_do_delete_at_a_time )
         
-        if len( mappings_dict ) > 0:
+        mappings_dict = HydrusData.BuildKeyToListDict( self._Execute( query, ( subject_account_id, ) ) )
+        
+        while len( mappings_dict ) > 0:
             
             for ( service_tag_id, service_hash_ids ) in mappings_dict.items():
                 
                 self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids, now )
                 
             
+            if HydrusData.TimeHasPassedFloat( time_to_stop ):
+                
+                return we_deleted_everything
+                
+            
+            mappings_dict = HydrusData.BuildKeyToListDict( self._Execute( query, ( subject_account_id, ) ) )
+            
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        pairs = self._Execute( 'SELECT child_service_tag_id, parent_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_parents_table_name ), ( subject_account_id, ) ).fetchall()
+        query = 'SELECT child_service_tag_id, parent_service_tag_id FROM {} WHERE account_id = ? LIMIT {};'.format( current_tag_parents_table_name, num_rows_do_delete_at_a_time )
         
-        if len( pairs ) > 0:
+        pairs = self._Execute( query, ( subject_account_id, ) ).fetchall()
+        
+        while len( pairs ) > 0:
             
             for ( child_service_tag_id, parent_service_tag_id ) in pairs:
                 
                 self._RepositoryDeleteTagParent( service_id, admin_account_id, child_service_tag_id, parent_service_tag_id, now )
                 
             
+            if HydrusData.TimeHasPassedFloat( time_to_stop ):
+                
+                return we_deleted_everything
+                
+            
+            pairs = self._Execute( query, ( subject_account_id, ) ).fetchall()
+            
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        select_statement = 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name )
+        query = 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ? LIMIT {};'.format( current_tag_siblings_table_name, num_rows_do_delete_at_a_time )
         
-        pairs = self._Execute( 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ?;'.format( current_tag_siblings_table_name ), ( subject_account_id, ) ).fetchall()
+        pairs = self._Execute( query, ( subject_account_id, ) ).fetchall()
         
-        if len( pairs ) > 0:
+        while len( pairs ) > 0:
             
             for ( bad_service_tag_id, good_service_tag_id ) in pairs:
                 
                 self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id, now )
                 
             
+            if HydrusData.TimeHasPassedFloat( time_to_stop ):
+                
+                return we_deleted_everything
+                
+            
+            pairs = self._Execute( query, ( subject_account_id, ) ).fetchall()
+            
+        
+        we_deleted_everything = True
+        
+        return we_deleted_everything
         
     
     def _RepositoryDeleteFiles( self, service_id, account_id, service_hash_ids, timestamp ):

@@ -1,5 +1,4 @@
 import collections
-import os
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -97,9 +96,8 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
             notes_manager = media_result.GetNotesManager()
             
             existing_names_to_notes = dict( notes_manager.GetNamesToNotes() )
-            names_to_notes = dict( names_and_notes )
             
-            updatee_names_to_notes = self.GetUpdateeNamesToNotes( existing_names_to_notes, names_to_notes )
+            updatee_names_to_notes = self.GetUpdateeNamesToNotes( existing_names_to_notes, names_and_notes )
             
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in updatee_names_to_notes.items() ]
             
@@ -147,7 +145,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
-    def GetUpdateeNamesToNotes( self, existing_names_to_notes, names_to_notes ):
+    def GetUpdateeNamesToNotes( self, existing_names_to_notes, names_and_notes ):
         
         updatee_names_to_notes = {}
         
@@ -160,7 +158,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         # we can have a complex-ish default, but someone is going to want different, so add options
         
         existing_names_to_notes = dict( existing_names_to_notes )
-        names_and_notes = sorted( names_to_notes.items() )
+        names_and_notes = sorted( names_and_notes )
         
         for ( name, note ) in names_and_notes:
             

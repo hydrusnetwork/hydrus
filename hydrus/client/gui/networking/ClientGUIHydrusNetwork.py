@@ -1246,17 +1246,38 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
+            all_deleted_ok = True
+            
             for subject_account_key in subject_account_keys:
                 
-                service.Request( HC.POST, 'modify_account_delete_all_content', { 'subject_account_key' : subject_account_key } )
+                response = service.Request( HC.POST, 'modify_account_delete_all_content', { 'subject_account_key' : subject_account_key } )
+                
+                if response is not None and isinstance( response, dict ) and 'everything_was_deleted' in response:
+                    
+                    everything_was_deleted = response[ 'everything_was_deleted' ]
+                    
+                    if not everything_was_deleted:
+                        
+                        all_deleted_ok = False
+                        
+                    
                 
             
-            return 1
+            return all_deleted_ok
             
         
-        def publish_callable( gumpf ):
+        def publish_callable( all_deleted_ok ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            if all_deleted_ok:
+                
+                message = 'Everything deleted!'
+                
+            else:
+                
+                message = 'Not everything was deleted--this may be a big account. You can keep trying to chip away at what needs to be deleted, or wait for hydev to figure out a solution for big accounts.'
+                
+            
+            QW.QMessageBox.information( self, 'Information', message )
             
             self._account_panel.RefreshAccounts()
             

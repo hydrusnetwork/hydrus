@@ -1561,6 +1561,8 @@ class FilesMaintenanceManager( object ):
         self._maintenance_lock = threading.Lock()
         self._lock = threading.Lock()
         
+        self._serious_error_encountered = False
+        
         self._wake_background_event = threading.Event()
         self._reset_background_event = threading.Event()
         self._shutdown = False
@@ -2197,6 +2199,11 @@ class FilesMaintenanceManager( object ):
     
     def _RunJob( self, media_results, job_type, job_key, job_done_hook = None ):
         
+        if self._serious_error_encountered:
+            
+            return
+            
+        
         next_gc_collect = HydrusData.GetNow() + 10
         
         try:
@@ -2219,7 +2226,7 @@ class FilesMaintenanceManager( object ):
                 
                 hash = media_result.GetHash()
                 
-                if job_key.IsCancelled():
+                if job_key.IsCancelled() or self._shutdown:
                     
                     return
                     
@@ -2228,6 +2235,8 @@ class FilesMaintenanceManager( object ):
                     
                     job_done_hook( job_type )
                     
+                
+                clear_job = True
                 
                 additional_data = None
                 
@@ -2326,13 +2335,30 @@ class FilesMaintenanceManager( object ):
                     
                     # no worries
                     
-                    pass
+                    clear_job = False
+                    
+                    return
+                    
+                except IOError as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into a serious I/O Error! This is a significant hard drive problem, and as such you should shut the client down and check your hard drive health immediately. No more file maintenance jobs will be run this boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
+                    message += os.linesep * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                    self._serious_error_encountered = True
+                    self._shutdown = True
+                    
+                    return
                     
                 except Exception as e:
                     
                     HydrusData.PrintException( e )
                     
-                    message = 'There was a problem performing maintenance task "{}" on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
+                    message = 'There was an unexpected problem performing maintenance task "{}" on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
                     message += os.linesep * 2
                     message += str( e )
                     
@@ -2342,7 +2368,10 @@ class FilesMaintenanceManager( object ):
                     
                     self._work_tracker.ReportRequestUsed( num_requests = regen_file_enum_to_job_weight_lookup[ job_type ] )
                     
-                    cleared_jobs.append( ( hash, job_type, additional_data ) )
+                    if clear_job:
+                        
+                        cleared_jobs.append( ( hash, job_type, additional_data ) )
+                        
                     
                 
                 if HydrusData.TimeHasPassed( last_time_jobs_were_cleared + 10 ) or len( cleared_jobs ) > 256:
@@ -2383,6 +2412,11 @@ class FilesMaintenanceManager( object ):
         
     
     def ForceMaintenance( self, mandated_job_types = None ):
+        
+        if self._serious_error_encountered:
+            
+            return
+            
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
@@ -2483,7 +2517,7 @@ class FilesMaintenanceManager( object ):
         
         def check_shutdown():
             
-            if HydrusThreading.IsThreadShuttingDown() or self._shutdown:
+            if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:
                 
                 raise HydrusExceptions.ShutdownException()
                 
@@ -2557,7 +2591,10 @@ class FilesMaintenanceManager( object ):
                             
                             missing_hashes = [ hash for hash in hashes if hash not in hashes_to_media_results ]
                             
-                            self._ClearJobs( missing_hashes, job_type )
+                            if len( missing_hashes ) > 0:
+                                
+                                self._ClearJobs( missing_hashes, job_type )
+                                
                             
                             for media_result in media_results:
                                 
@@ -2581,6 +2618,8 @@ class FilesMaintenanceManager( object ):
                                     
                                     self._controller.pub( 'notify_files_maintenance_done' )
                                     
+                                
+                                check_shutdown()
                                 
                             
                         finally:
@@ -2615,6 +2654,13 @@ class FilesMaintenanceManager( object ):
         
     
     def RunJobImmediately( self, media_results, job_type, pub_job_key = True ):
+        
+        if self._serious_error_encountered and pub_job_key:
+            
+            HydrusData.ShowText( 'Sorry, the file maintenance system has encountered a serious error and will perform no more jobs this boot. Please shut down and check your hard drive health immediately.' )
+            
+            return
+            
         
         job_key = ClientThreading.JobKey( cancellable = True )
         

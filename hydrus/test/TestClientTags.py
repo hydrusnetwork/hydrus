@@ -1954,13 +1954,13 @@ class TestTagObjects( unittest.TestCase ):
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
         self.assertEqual( p.ToString(), 'a*i:o* (wildcard search)' )
-        self.assertEqual( p.GetNamespace(), 'a*i' )
+        self.assertEqual( p.GetNamespace(), '*' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         
         self.assertEqual( p.ToString(), '-a*i:o*' )
-        self.assertEqual( p.GetNamespace(), 'a*i' )
+        self.assertEqual( p.GetNamespace(), '*' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         #

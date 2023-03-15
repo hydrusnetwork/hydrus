@@ -25,6 +25,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITagSorting
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.search import ClientGUISearch
@@ -985,7 +986,7 @@ class ListBox( QW.QScrollArea ):
     listBoxChanged = QC.Signal()
     mouseActivationOccurred = QC.Signal()
     
-    TEXT_X_PADDING = 3
+    TEXT_X_PADDING = 2
     
     def __init__( self, parent: QW.QWidget, terms_may_have_sibling_or_parent_info: bool, height_num_chars = 10, has_async_text_info = False ):
         
@@ -1703,6 +1704,8 @@ class ListBox( QW.QScrollArea ):
             return
             
         
+        fades_can_ever_happen = QtInit.WE_ARE_QT6 and HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' )
+        
         current_visible_index = first_visible_positional_index
         
         for logical_index in range( first_visible_logical_index, last_visible_logical_index + 1 ):
@@ -1716,36 +1719,86 @@ class ListBox( QW.QScrollArea ):
                 x_start = self.TEXT_X_PADDING
                 y_top = current_visible_index * text_height
                 
+                last_used_namespace_colour = None
+                
                 for ( text, ( r, g, b ) ) in texts_and_colours:
-                    
-                    text_colour = QG.QColor( r, g, b )
-                    
-                    if term in self._selected_terms:
-                        
-                        if x_start == self.TEXT_X_PADDING:
-                            
-                            background_colour_x = 0
-                            
-                        else:
-                            
-                            background_colour_x = x_start
-                            
-                        
-                        painter.fillRect( background_colour_x, y_top, visible_rect_width, text_height, text_colour )
-                        
-                        text_colour = self._background_colour
-                        
-                    
-                    painter.setPen( QG.QPen( text_colour ) )
                     
                     ( this_text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
                     
                     this_text_width = this_text_size.width()
                     this_text_height = this_text_size.height()
                     
+                    background_block_width = this_text_width + self.TEXT_X_PADDING
+                    
+                    if x_start == self.TEXT_X_PADDING:
+                        
+                        background_colour_x = 0
+                        
+                    else:
+                        
+                        background_colour_x = x_start
+                        
+                    
+                    namespace_colour = QG.QColor( r, g, b )
+                    
+                    text_colour = namespace_colour
+                    
+                    do_a_fade = fades_can_ever_happen and last_used_namespace_colour is not None and last_used_namespace_colour != namespace_colour
+                    
+                    if term in self._selected_terms:
+                        
+                        if do_a_fade:
+                            
+                            # this seems like a pain to set up, but I guess the correct way to do it is draw one rect in one go, since the lineargradient will draw beyond the fade fine
+                            gradient_brush = QG.QLinearGradient( background_colour_x, 0.0, background_colour_x + background_block_width, 0.0 )
+                            gradient_brush.setColorAt( 0.0, last_used_namespace_colour )
+                            gradient_brush.setColorAt( 1.0, namespace_colour )
+                            
+                            rect_drawing_fill = gradient_brush
+                            
+                            rect_width = background_block_width
+                            
+                        else:
+                            
+                            rect_drawing_fill = namespace_colour
+                            
+                            rect_width = visible_rect_width - background_colour_x
+                            
+                        
+                        try:
+                            
+                            painter.fillRect( background_colour_x, y_top, rect_width, text_height, rect_drawing_fill )
+                            
+                        except:
+                            
+                            painter.fillRect( background_colour_x, y_top, rect_width, text_height, namespace_colour )
+                            
+                        
+                        text_pen = QG.QPen( self._background_colour )
+                        
+                    else:
+                        
+                        if do_a_fade:
+                            
+                            gradient_brush = QG.QLinearGradient( x_start, 0.0, x_start + this_text_width, 0.0 )
+                            gradient_brush.setColorAt( 0.0, last_used_namespace_colour )
+                            gradient_brush.setColorAt( 1.0, namespace_colour )
+                            
+                            text_pen = QG.QPen( gradient_brush, 1 )
+                            
+                        else:
+                            
+                            text_pen = QG.QPen( text_colour )
+                            
+                        
+                    
+                    painter.setPen( text_pen )
+                    
                     painter.drawText( QC.QRectF( x_start, y_top, this_text_width, this_text_height ), text )
                     
-                    x_start += this_text_width
+                    x_start += background_block_width
+                    
+                    last_used_namespace_colour = namespace_colour
                     
                 
                 current_visible_index += 1
@@ -2238,10 +2291,13 @@ class ListBoxTags( ListBox ):
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
+        self._sibling_connection_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        
         self._UpdateBackgroundColour()
         
         HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def _GetCopyableTagStrings( self, command ):
@@ -2309,7 +2365,7 @@ class ListBoxTags( ListBox ):
         
         show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
         
-        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._show_parent_decorators, show_parent_rows )
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._sibling_connection_string, self._show_parent_decorators, show_parent_rows )
         
         rows_of_texts_and_colours = []
         
@@ -2560,6 +2616,18 @@ class ListBoxTags( ListBox ):
             
         
         return ListBox.eventFilter( self, watched, event )
+        
+    
+    def NotifyNewOptions( self ):
+        
+        new_sibling_connection_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        
+        if new_sibling_connection_string != self._sibling_connection_string:
+            
+            self._sibling_connection_string = new_sibling_connection_string
+            
+            self.widget().update()
+            
         
     
     def ShowMenu( self ):

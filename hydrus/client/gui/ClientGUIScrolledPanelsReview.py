@@ -1704,7 +1704,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if source_service_type == HC.TAG_REPOSITORY:
                 
                 self._migration_source_content_status_filter.addItem( 'current and pending', ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
-                self._migration_source_content_status_filter.addItem( 'current and pending', ( HC.CONTENT_STATUS_PENDING, ) )
+                self._migration_source_content_status_filter.addItem( 'pending', ( HC.CONTENT_STATUS_PENDING, ) )
                 
             
             self._migration_source_content_status_filter.addItem( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )

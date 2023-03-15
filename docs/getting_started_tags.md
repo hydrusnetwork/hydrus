@@ -9,7 +9,7 @@ A _tag_ is a small bit of text describing a single property of something. They m
 
 So, you have stored some media in your database. Everything is hashed and cached. You can search by inbox and resolution and size and so on, but if you really want to find what we are looking for, you will have to use _tags_.
 
-[FAQ: what is a tag?](faq.md#what_is_a_tag)
+[FAQ: what is a tag?](faq.md#tags)
 
 Your client starts with two [local tags services](getting_started_tags.md#tag_services), called 'my tags' and 'downloader tags' which keeps all of its file->tag mappings in your client's database where only you can see them. It is a good place to practise. So, select a file and press F3:
 
@@ -17,7 +17,7 @@ Your client starts with two [local tags services](getting_started_tags.md#tag_se
 
 The autocomplete dropdown in the manage tags dialog works very like the one in a normal search page--you type part of a tag, and matching results will appear below. You select the tag you want with the arrow keys and hit enter. Since your 'my tags' service doesn't have any tags in it yet, you won't get any results here except the exact match of what you typed. If you want to remove a tag, enter the exact same thing again or double-click it in the box above.
 
-Prefixing a tag with a category and a colon will create a [_namespaced_ tag](faq.md#what-is-a-namespace). This helps inform the software and other users about what the tag is. Examples of namespaced tags are:
+Prefixing a tag with a category and a colon will create a [_namespaced_ tag](faq.md#namespaces). This helps inform the software and other users about what the tag is. Examples of namespaced tags are:
 
 *   `character:batman`
 *   `series:street fighter`

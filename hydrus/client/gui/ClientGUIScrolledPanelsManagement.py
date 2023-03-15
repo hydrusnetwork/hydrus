@@ -2903,8 +2903,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_prefetch_delay_base_ms.setToolTip( tt )
             
-            self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
-            self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 5 )
+            self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 50 )
+            self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 50 )
+            
+            self._prefetch_label_warning = ClientGUICommon.BetterStaticText( image_cache_panel )
+            self._prefetch_label_warning.setToolTip( 'If you boost the prefetch numbers, make sure your image cache is big enough to handle it! Doubly so if you frequently load images that at 100% are far larger than your screen size. You really don\'t want to be prefetching more than your cache can hold!' )
             
             image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache' )
             
@@ -3045,6 +3048,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Base ms delay for media viewer neighbour render prefetch:', self._media_viewer_prefetch_delay_base_ms ) )
             rows.append( ( 'Num previous to prefetch:', self._media_viewer_prefetch_num_previous ) )
             rows.append( ( 'Num next to prefetch:', self._media_viewer_prefetch_num_next ) )
+            rows.append( ( 'Prefetch numbers are good?:', self._prefetch_label_warning ) )
             
             gridbox = ClientGUICommon.WrapInGrid( image_cache_panel, rows )
             
@@ -3111,6 +3115,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_cache_storage_limit_percentage.valueChanged.connect( self.EventImageCacheUpdate )
             self._image_cache_prefetch_limit_percentage.valueChanged.connect( self.EventImageCacheUpdate )
             
+            self._media_viewer_prefetch_num_previous.valueChanged.connect( self.EventImageCacheUpdate )
+            self._media_viewer_prefetch_num_next.valueChanged.connect( self.EventImageCacheUpdate )
+            
             self.EventImageCacheUpdate()
             self.EventThumbnailsUpdate()
             self.EventImageTilesUpdate()
@@ -3125,9 +3132,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_bytes_per_fullscreen = 3 * display_size.width() * display_size.height()
             
-            estimate = cache_size // estimated_bytes_per_fullscreen
+            image_cache_estimate = cache_size // estimated_bytes_per_fullscreen
             
-            self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusData.ToHumanInt( estimate // 2 ), HydrusData.ToHumanInt( estimate * 2 ) ) )
+            self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusData.ToHumanInt( image_cache_estimate // 2 ), HydrusData.ToHumanInt( image_cache_estimate * 2 ) ) )
             
             num_pixels = cache_size * ( self._image_cache_storage_limit_percentage.value() / 100 ) / 3
             
@@ -3148,6 +3155,30 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
             self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusData.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            
+            #
+            
+            num_prefetch = 1 + self._media_viewer_prefetch_num_previous.value() + self._media_viewer_prefetch_num_next.value()
+            
+            if num_prefetch > image_cache_estimate // 2:
+                
+                label = 'No, reduce or make your image cache bigger!'
+                object_name = 'HydrusWarning'
+                
+            else:
+                
+                label = 'Yes, looks good!'
+                object_name = ''
+                
+            
+            self._prefetch_label_warning.setText( label )
+            
+            if object_name != self._prefetch_label_warning.objectName():
+                
+                self._prefetch_label_warning.setObjectName( object_name )
+                
+                self._prefetch_label_warning.style().polish( self._prefetch_label_warning )
+                
             
         
         def EventImageTilesUpdate( self ):
@@ -3587,12 +3618,26 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._UpdateDefaultTagServiceControl()
             
+            self._favourites_input.tagsPasted.connect( self.AddTagsOnlyAdd )
+            
         
         def _UpdateDefaultTagServiceControl( self ):
             
             enabled = not self._save_default_tag_service_tab_on_change.isChecked()
             
             self._default_tag_service_tab.setEnabled( enabled )
+            
+        
+        def AddTagsOnlyAdd( self, tags ):
+            
+            current_tags = self._favourites.GetTags()
+            
+            tags = { tag for tag in tags if tag not in current_tags }
+            
+            if len( tags ) > 0:
+                
+                self._favourites.AddTags( tags )
+                
             
         
         def UpdateOptions( self ):
@@ -3649,6 +3694,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_number_namespaces = QW.QCheckBox( render_panel )
             self._show_number_namespaces.setToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' )
             self._namespace_connector = QW.QLineEdit( render_panel )
+            self._sibling_connector = QW.QLineEdit( render_panel )
+            self._fade_sibling_connector = QW.QCheckBox( render_panel )
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
             
@@ -3667,6 +3714,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
             self._show_number_namespaces.setChecked(( new_options.GetBoolean( 'show_number_namespaces' ) ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
+            self._sibling_connector.setText( new_options.GetString( 'sibling_connector' ) )
+            self._fade_sibling_connector.setChecked( new_options.GetBoolean( 'fade_sibling_connector' ) )
             self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
             
             #
@@ -3704,6 +3753,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
             rows.append( ( 'Unless namespace is a number: ', self._show_number_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            rows.append( ( 'Sibling connecting string: ', self._sibling_connector ) )
+            rows.append( ( 'Fade the namespace colour when showing siblings on Qt6: ', self._fade_sibling_connector ) )
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
@@ -3800,6 +3851,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.isChecked() )
             self._new_options.SetBoolean( 'show_number_namespaces', self._show_number_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
+            self._new_options.SetString( 'sibling_connector', self._sibling_connector.text() )
+            self._new_options.SetBoolean( 'fade_sibling_connector', self._fade_sibling_connector.isChecked() )
             self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
             
             HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()

@@ -564,6 +564,8 @@ class DialogInputTags( Dialog ):
         
         size_hint.setWidth( max( size_hint.width(), 300 ) )
         
+        self._tag_autocomplete.tagsPasted.connect( self.EnterTagsOnlyAdd )
+        
         QP.SetInitialSize( self, size_hint )
         
         ClientGUIFunctions.SetFocusLater( self._tag_autocomplete )
@@ -574,6 +576,18 @@ class DialogInputTags( Dialog ):
         if len( tags ) > 0:
             
             self._tags.EnterTags( tags )
+            
+        
+    
+    def EnterTagsOnlyAdd( self, tags ):
+        
+        current_tags = self._tags.GetTags()
+        
+        tags = { tag for tag in tags if tag not in current_tags }
+        
+        if len( tags ) > 0:
+            
+            self.EnterTags( tags )
             
         
     

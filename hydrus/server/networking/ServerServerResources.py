@@ -583,9 +583,11 @@ class HydrusResourceRestrictedAccountModifyDeleteAllContent( HydrusResourceRestr
         
         subject_account_key = request.parsed_request_args[ 'subject_account_key' ]
         
-        HG.server_controller.WriteSynchronous( 'modify_account_delete_all_content', self._service_key, request.hydrus_account, subject_account_key )
+        everything_was_deleted = HG.server_controller.WriteSynchronous( 'modify_account_delete_all_content', self._service_key, request.hydrus_account, subject_account_key )
         
-        response_context = HydrusServerResources.ResponseContext( 200 )
+        body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'everything_was_deleted' : everything_was_deleted } )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
         return response_context
         

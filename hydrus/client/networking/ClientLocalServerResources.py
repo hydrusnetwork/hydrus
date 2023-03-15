@@ -1781,7 +1781,9 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
             
             existing_names_to_notes = media_result.GetNotesManager().GetNamesToNotes()
             
-            new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, new_names_to_notes )
+            names_and_notes = list( new_names_to_notes.items() )
+            
+            new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, names_and_notes )
             
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_names_to_notes.items() ]

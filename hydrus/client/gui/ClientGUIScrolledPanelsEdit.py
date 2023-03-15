@@ -1,3 +1,5 @@
+import abc
+import collections.abc
 import json
 import os
 import typing
@@ -1865,14 +1867,28 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
         
         try:
             
-            names_to_notes_dict = json.loads( raw_text )
+            names_and_notes = json.loads( raw_text )
             
-            if not isinstance( names_to_notes_dict, dict ):
+            clean_names_and_notes = []
+            
+            if isinstance( names_and_notes, dict ):
                 
-                raise Exception( 'Not a dict!' )
+                names_and_notes = list( names_and_notes.items() )
                 
             
-            for ( key, value ) in names_to_notes_dict.items():
+            for item in names_and_notes:
+                
+                if not isinstance( item, collections.abc.Collection ):
+                    
+                    continue
+                    
+                
+                if len( item ) != 2:
+                    
+                    raise Exception( 'Not a two-tuple!' )
+                    
+
+                ( key, value ) = item
                 
                 if not isinstance( key, str ):
                     
@@ -1884,6 +1900,10 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
                     raise Exception( 'Value not a string!' )
                     
                 
+                clean_names_and_notes.append( item )
+                
+            
+            names_and_notes = clean_names_and_notes
             
         except:
             
@@ -1891,7 +1911,7 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
             
             return
             
-
+        
         ( existing_names_to_notes, deletee_names ) = self.GetValue()
         
         note_import_options = NoteImportOptions.NoteImportOptions()
@@ -1900,7 +1920,7 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
         
-        new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, names_to_notes_dict )
+        new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, names_and_notes )
         
         existing_panel_names_to_widgets = { self._notebook.tabText( i ) : self._notebook.widget( i ) for i in range( self._notebook.count() ) }
         

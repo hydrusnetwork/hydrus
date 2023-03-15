@@ -2231,6 +2231,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel, CAC.ApplicationComma
             
             menu_items.append( ( 'check', 'confirm remove/petition tags on explicit delete actions', 'If checked, clicking the remove/petition tags button (or hitting the deleted key on the list) will first confirm the action with a yes/no dialog.', check_manager ) )
             
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'ac_select_first_with_count' )
+            
+            menu_items.append( ( 'check', 'select the first tag result with actual count', 'If checked, when results come in, the typed entry, if it has no count, will be skipped.', check_manager ) )
+            
             check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipShowDeleted, lambda: self._show_deleted )
             
             menu_items.append( ( 'check', 'show deleted', 'Show deleted tags, if any.', check_manager ) )
@@ -3138,6 +3142,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all.clicked.connect( self._UpdateListCtrlData )
             self._pursue_whole_chain.clicked.connect( self._UpdateListCtrlData )
             
+            self._child_input.tagsPasted.connect( self.EnterChildrenOnlyAdd )
+            self._parent_input.tagsPasted.connect( self.EnterParentsOnlyAdd )
+            
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
@@ -3776,6 +3783,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        def EnterChildrenOnlyAdd( self, tags ):
+            
+            current_children = self._children.GetTags()
+            
+            tags = { tag for tag in tags if tag not in current_children }
+            
+            if len( tags ) > 0:
+                
+                self.EnterChildren( tags )
+                
+            
+        
         def EnterParents( self, tags ):
             
             if len( tags ) > 0:
@@ -3787,6 +3806,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._UpdateListCtrlData()
                 
                 self._listctrl_panel.UpdateButtons()
+                
+            
+        
+        def EnterParentsOnlyAdd( self, tags ):
+            
+            current_parents = self._parents.GetTags()
+            
+            tags = { tag for tag in tags if tag not in current_parents }
+            
+            if len( tags ) > 0:
+                
+                self.EnterParents( tags )
                 
             
         
@@ -4235,6 +4266,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
             self._listctrl_async_updater = self._InitialiseListCtrlAsyncUpdater()
+            
+            self._old_input.tagsPasted.connect( self.EnterOldsOnlyAdd )
             
         
         def _AddButton( self ):
@@ -5101,6 +5134,18 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateListCtrlData()
             
             self._listctrl_panel.UpdateButtons()
+            
+        
+        def EnterOldsOnlyAdd( self, olds ):
+            
+            current_olds = self._old_siblings.GetTags()
+            
+            olds = { old for old in olds if old not in current_olds }
+            
+            if len( olds ) > 0:
+                
+                self.EnterOlds( olds )
+                
             
         
         def GetContentUpdates( self ):

@@ -1,6 +1,9 @@
 import hashlib
 import json
 import os
+import typing
+
+import typing_extensions
 
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
@@ -139,6 +142,7 @@ def CreateFromNetworkBytes( network_bytes: bytes, raise_error_on_future_version 
     
     return CreateFromString( obj_string, raise_error_on_future_version = raise_error_on_future_version )
     
+
 def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = False ):
     
     if obj_tuple_or_none is None:
@@ -150,13 +154,15 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_futur
         return CreateFromSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = raise_error_on_future_version )
         
     
-def CreateFromString( obj_string, raise_error_on_future_version = False ):
+
+def CreateFromString( obj_string: str, raise_error_on_future_version = False ) -> "SerialisableBase":
     
     obj_tuple = json.loads( obj_string )
     
     return CreateFromSerialisableTuple( obj_tuple, raise_error_on_future_version = raise_error_on_future_version )
     
-def CreateFromSerialisableTuple( obj_tuple, raise_error_on_future_version = False ):
+
+def CreateFromSerialisableTuple( obj_tuple: tuple, raise_error_on_future_version = False ) -> "SerialisableBase":
     
     if len( obj_tuple ) == 3:
         
@@ -175,6 +181,7 @@ def CreateFromSerialisableTuple( obj_tuple, raise_error_on_future_version = Fals
     
     return obj
     
+
 def GetNoneableSerialisableTuple( obj_or_none ):
     
     if obj_or_none is None:
@@ -186,12 +193,14 @@ def GetNoneableSerialisableTuple( obj_or_none ):
         return obj_or_none.GetSerialisableTuple()
         
     
+
 def SetNonDupeName( obj, disallowed_names ):
     
     non_dupe_name = HydrusData.GetNonDupeName( obj.GetName(), disallowed_names )
     
     obj.SetName( non_dupe_name )
     
+
 def ObjectVersionIsFromTheFuture( obj_tuple ):
     
     if len( obj_tuple ) == 3:
@@ -205,6 +214,9 @@ def ObjectVersionIsFromTheFuture( obj_tuple ):
     
     return SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ].SERIALISABLE_VERSION > version
     
+
+SerialisableBaseSubclass = typing.TypeVar( 'SerialisableBaseSubclass', bound = 'SerialisableBase' )
+
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
@@ -242,7 +254,8 @@ class SerialisableBase( object ):
         return json.dumps( obj_tuple )
         
     
-    def Duplicate( self ):
+    # this magically tells type checkers that this delivers whatever 'self' type is, subclasses whatever
+    def Duplicate( self: SerialisableBaseSubclass ) -> SerialisableBaseSubclass:
         
         return CreateFromString( self.DumpToString() )
         

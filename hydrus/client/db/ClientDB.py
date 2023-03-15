@@ -11489,6 +11489,46 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 519:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'deviant art file page parser'
+                ] )
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'deviant art file (login-only redirect)',
+                    'deviant art file (original quality) (alt)',
+                    'deviant art file (original quality)',
+                    'deviant art resized file (low quality)',
+                    'deviant art resized file (medium quality)'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

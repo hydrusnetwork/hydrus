@@ -26,7 +26,7 @@ Let's look at the tag autocomplete dropdown:
     
     This controls whether a change to the search tags will instantly run the new search and get new results. Turning this off is helpful if you want to add, remove, or replace several heavy search terms in a row without getting UI lag.
     
-*   **[OR](/hydrus/docs/searching_and_sorting.md#or-searching)**
+*   **[OR](getting_started_searching.md#or_searching)**
     
     You only see this if you have 'advanced mode' on. It lets you enter some pretty complicated tags!
     

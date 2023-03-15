@@ -63,26 +63,29 @@ def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: Cl
         PutAtTopOfMatches( predicates, under_construction_or_predicate )
         
     
-def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
+def InsertTagPredicates( predicates: typing.List[ ClientSearch.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearch.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
     
-    if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion):
+    if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion ):
         
         tag_predicate = parsed_autocomplete_text.GetImmediateFileSearchPredicate( allow_auto_wildcard_conversion )
         
+        ideal_predicate = None
+        
+        if tag_predicate in predicates:
+            
+            tag_predicate = predicates[ predicates.index( tag_predicate ) ]
+            
+            ideal_predicate = tag_predicate.GetIdealPredicate()
+            
+        
+        # this elevates other tags that have our entered tag as a sibling somewhere to the top but tbh it wasn't helpful
+        # better to just hove any ideal and what we typed up top
+        '''
         actual_tag = tag_predicate.GetValue()
         
-        ideal_predicate = None
         other_matching_predicates = []
         
         for predicate in predicates:
-            
-            # this works due to __hash__
-            if predicate == tag_predicate:
-                
-                ideal_predicate = predicate.GetIdealPredicate()
-                
-                continue
-                
             
             matchable_search_texts = predicate.GetMatchableSearchTexts()
             
@@ -93,14 +96,24 @@ def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autoco
             
             if actual_tag in matchable_search_texts:
                 
+                if predicate.GetIdealPredicate() is not None:
+                    
+                    continue
+                    
+                
                 other_matching_predicates.append( predicate )
                 
             
+        
+        ClientSearch.SortPredicates( other_matching_predicates )
+        
+        other_matching_predicates.reverse()
         
         for predicate in other_matching_predicates:
             
             PutAtTopOfMatches( predicates, predicate, insert_if_does_not_exist = insert_if_does_not_exist )
             
+        '''
         
         PutAtTopOfMatches( predicates, tag_predicate, insert_if_does_not_exist = insert_if_does_not_exist )
         
@@ -110,6 +123,7 @@ def InsertTagPredicates( predicates: list, tag_service_key: bytes, parsed_autoco
             
         
     
+
 def ReadFetch(
     win: QW.QWidget,
     job_key: ClientThreading.JobKey,
@@ -651,6 +665,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         if not they_are_the_same:
             
             previously_selected_predicate = None
+            previously_selected_predicate_had_count = False
             
             if len( self._selected_terms ) == 1:
                 
@@ -675,6 +690,13 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             if len( self._predicates ) > 0:
                 
+                ac_select_first_with_count = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' )
+                
+                if ac_select_first_with_count: # no matter what, selection preservation won't work well if we move selection down
+                    
+                    preserve_single_selection = False
+                    
+                
                 if preserve_single_selection and previously_selected_predicate is not None and previously_selected_predicate in self._predicates:
                     
                     logical_index_to_select = self._predicates.index( previously_selected_predicate )
@@ -688,7 +710,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                         skip_ors = True
                         
                         some_preds_have_count = True in ( predicate.GetCount().HasNonZeroCount() for predicate in self._predicates )
-                        skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ) and some_preds_have_count
+                        skip_countless = ac_select_first_with_count and some_preds_have_count
                         
                         for ( index, predicate ) in enumerate( self._predicates ):
                             
@@ -1491,7 +1513,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
-        self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context )
+        self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context, is_paired_with_tag_domain = True )
         self._location_context_button.setMinimumWidth( 20 )
         
         tag_context = ClientSearch.TagContext( service_key = self._tag_service_key )
@@ -2697,6 +2719,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     nullEntered = QC.Signal()
+    tagsPasted = QC.Signal( list )
     
     def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, tag_service_key_changed_callable = None, show_paste_button = False ):
         
@@ -2830,14 +2853,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tags = HydrusTags.CleanTags( tags )
             
-            entry_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in tags ]
-            
-            if len( entry_predicates ) > 0:
-                
-                shift_down = False
-                
-                self._BroadcastChoices( entry_predicates, shift_down )
-                
+            self.tagsPasted.emit( list( tags ) )
             
         except:
             

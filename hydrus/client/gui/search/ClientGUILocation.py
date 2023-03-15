@@ -124,9 +124,10 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
     
     locationChanged = QC.Signal( ClientLocation.LocationContext )
     
-    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext ):
+    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, is_paired_with_tag_domain = False ):
         
         self._location_context = ClientLocation.LocationContext()
+        self._is_paired_with_tag_domain = is_paired_with_tag_domain
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._EditLocation )
         
@@ -154,9 +155,27 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
             
-            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to {}.'.format( service.GetName() ), self.SetValue, location_context )
+            if service.GetServiceType() == HC.COMBINED_FILE and self._is_paired_with_tag_domain:
+                
+                name = 'all known files with tags'
+                
+            else:
+                
+                name = service.GetName()
+                
+            
+            ClientGUIMenus.AppendMenuItem( menu, name, 'Change the current file domain to {}.'.format( service.GetName() ), self.SetValue, location_context )
             
             last_seen_service_type = service.GetServiceType()
+            
+            if service.GetServiceType() == HC.LOCAL_FILE_TRASH_DOMAIN:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ), deleted_service_keys = ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ) )
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'all files ever imported/deleted', 'Change the current file domain to all current and deleted files your client has seen.', self.SetValue, location_context )
+                
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -231,7 +250,16 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         
         self._location_context = location_context
         
-        self.setText( self._location_context.ToString( HG.client_controller.services_manager.GetName ) )
+        if self._location_context.IsAllKnownFiles():
+            
+            text = 'all known files with tags'
+            
+        else:
+            
+            text = self._location_context.ToString( HG.client_controller.services_manager.GetName )
+            
+        
+        self.setText( text )
         
         self.locationChanged.emit( self._location_context )
         
