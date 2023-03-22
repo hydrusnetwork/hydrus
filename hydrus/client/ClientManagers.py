@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client.media import ClientMedia
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -253,9 +254,12 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
-    def _GenerateViewsRow( self, canvas_type, view_timestamp, viewtime_delta ):
+    def _GenerateViewsRow( self, media: ClientMedia.Media, canvas_type: int, view_timestamp: int, viewtime_delta: int ):
         
         new_options = HG.client_controller.new_options
+        
+        viewtime_min = None
+        viewtime_max = None
         
         result_views_delta = 0
         result_viewtime_delta = 0
@@ -274,10 +278,20 @@ class FileViewingStatsManager( object ):
             
             if canvas_type == CC.CANVAS_MEDIA_VIEWER_DUPLICATES and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
                 
-                canvas_type = CC.CANVAS_MEDIA_VIEWER
+                do_it = False
+                
+            elif canvas_type == CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE and not new_options.GetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter' ):
                 
                 do_it = False
                 
+            
+            canvas_type = CC.CANVAS_MEDIA_VIEWER
+            
+        
+        if media.HasDuration() and viewtime_max is not None:
+            
+            # if user is watching a long vid, save that whole time mate
+            viewtime_max = max( viewtime_max, ( media.GetDurationMS() / 1000 ) * 5 )
             
         
         if do_it:
@@ -347,16 +361,18 @@ class FileViewingStatsManager( object ):
             
         
     
-    def FinishViewing( self, hash, canvas_type, view_timestamp, viewtime_delta ):
+    def FinishViewing( self, media: ClientMedia.MediaSingleton, canvas_type, view_timestamp, viewtime_delta ):
         
         if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
             return
             
         
+        hash = media.GetHash()
+        
         with self._lock:
             
-            ( canvas_type, row ) = self._GenerateViewsRow( canvas_type, view_timestamp, viewtime_delta )
+            ( canvas_type, row ) = self._GenerateViewsRow( media, canvas_type, view_timestamp, viewtime_delta )
             
             if not self._RowMakesChanges( row ):
                 

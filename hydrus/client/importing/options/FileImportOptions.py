@@ -61,7 +61,17 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._associate_primary_urls = True
         self._associate_source_urls = True
         self._presentation_import_options = PresentationImportOptions.PresentationImportOptions()
-        self._import_destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        
+        try:
+            
+            fallback = HG.client_controller.services_manager.GetLocalMediaFileServices()[0].GetServiceKey()
+            
+        except:
+            
+            fallback = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+            
+        
+        self._import_destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( fallback )
         
         self._is_default = False
         

@@ -167,6 +167,7 @@ def FilterNamespaces( tags, namespaces ):
     
     return result
     
+
 def SortNumericTags( tags ):
     
     tags = list( tags )
@@ -175,6 +176,7 @@ def SortNumericTags( tags ):
     
     return tags
     
+
 def CheckTagNotEmpty( tag ):
     
     ( namespace, subtag ) = SplitTag( tag )
@@ -184,6 +186,7 @@ def CheckTagNotEmpty( tag ):
         raise HydrusExceptions.TagSizeException( 'Received a zero-length tag!' )
         
     
+
 def CleanTag( tag ):
     
     try:
@@ -197,7 +200,14 @@ def CleanTag( tag ):
         
         tag = tag.lower()
         
-        tag = HydrusText.re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+        tag = HydrusText.re_leading_colons.sub( ':', tag )
+        
+        if HydrusText.re_leading_single_colon_and_no_more_colons.match( tag ) is not None:
+            
+            # Convert anything starting with one colon to start with two i.e. :D -> ::D
+            # but don't do :weird:stuff, which is a forced unnamespaced tag that includes a colon in the subtag
+            tag = ':' + tag
+            
         
         if ':' in tag:
             
@@ -225,6 +235,7 @@ def CleanTag( tag ):
         
     
     return tag
+    
 
 def CleanTags( tags ):
     
@@ -253,11 +264,12 @@ def CleanTags( tags ):
     
     return clean_tags
     
-def CombineTag( namespace, subtag ):
+
+def CombineTag( namespace, subtag, do_not_double_namespace = False ):
     
     if namespace == '':
         
-        if HydrusText.re_leading_single_colon.search( subtag ) is not None:
+        if ':' in subtag and HydrusText.re_leading_double_colon.match( subtag ) is None:
             
             return ':' + subtag
             
@@ -268,9 +280,17 @@ def CombineTag( namespace, subtag ):
         
     else:
         
-        return namespace + ':' + subtag
+        if do_not_double_namespace and subtag.startswith( namespace + ':' ):
+            
+            return subtag
+            
+        else:
+            
+            return namespace + ':' + subtag
+            
         
     
+
 def ConvertTagSliceToString( tag_slice ):
     
     if tag_slice == '':
@@ -292,10 +312,12 @@ def ConvertTagSliceToString( tag_slice ):
         return tag_slice
         
     
+
 def IsUnnamespaced( tag ):
     
     return SplitTag( tag )[0] == ''
     
+
 def SplitTag( tag ):
     
     if ':' in tag:

@@ -969,13 +969,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._export_location = QP.DirPickerCtrl( self )
             
-            location_context = self._new_options.GetDefaultLocalLocationContext()
-            
-            self._default_local_location_context = ClientGUILocation.LocationSearchContextButton( self, location_context )
-            self._default_local_location_context.setToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' )
-            
-            self._default_local_location_context.SetOnlyImportableDomainsAllowed( True )
-            
             self._prefix_hash_when_copying = QW.QCheckBox( self )
             self._prefix_hash_when_copying.setToolTip( 'If you often paste hashes into boorus, check this to automatically prefix with the type, like "md5:2496dabcbd69e3c56a5d8caabb7acde5".' )
             
@@ -1067,7 +1060,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Fallback local file search location: ', self._default_local_location_context ) )
             rows.append( ( 'When copying file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
@@ -1154,8 +1146,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
-            self._new_options.SetDefaultLocalLocationContext( self._default_local_location_context.GetValue() )
-            
             self._new_options.SetBoolean( 'prefix_hash_when_copying', self._prefix_hash_when_copying.isChecked() )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.isChecked()
@@ -1191,11 +1181,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = HG.client_controller.new_options
             
             self._file_viewing_statistics_active = QW.QCheckBox( self )
+            self._file_viewing_statistics_active_on_archive_delete_filter = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_dupe_filter = QW.QCheckBox( self )
             self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self )
             self._file_viewing_statistics_media_max_time = ClientGUICommon.NoneableSpinCtrl( self )
+            max_tt = 'If you view a file for a very long time, the amount of viewtime recorded is clipped to this. This stops an outrageous viewtime being saved because you left something open in the background. If the media you view has duration, like a video, the max viewtime is five times its length or this, whichever is larger.'
+            self._file_viewing_statistics_media_max_time.setToolTip( max_tt )
+            
             self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self )
             self._file_viewing_statistics_preview_max_time = ClientGUICommon.NoneableSpinCtrl( self )
+            self._file_viewing_statistics_preview_max_time.setToolTip( max_tt )
             
             self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
             
@@ -1208,6 +1203,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._file_viewing_statistics_active.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active' ) )
+            self._file_viewing_statistics_active_on_archive_delete_filter.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter' ) )
             self._file_viewing_statistics_active_on_dupe_filter.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ) )
             self._file_viewing_statistics_media_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' ) )
             self._file_viewing_statistics_media_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' ) )
@@ -1223,7 +1219,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Enable file viewing statistics tracking?:', self._file_viewing_statistics_active ) )
-            rows.append( ( 'Enable file viewing statistics tracking on the duplicate filter?:', self._file_viewing_statistics_active_on_dupe_filter ) )
+            rows.append( ( 'Enable file viewing statistics tracking in the archive/delete filter?:', self._file_viewing_statistics_active_on_archive_delete_filter ) )
+            rows.append( ( 'Enable file viewing statistics tracking in the duplicate filter?:', self._file_viewing_statistics_active_on_dupe_filter ) )
             rows.append( ( 'Min time to view on media viewer to count as a view (seconds):', self._file_viewing_statistics_media_min_time ) )
             rows.append( ( 'Cap any view on the media viewer to this maximum time (seconds):', self._file_viewing_statistics_media_max_time ) )
             rows.append( ( 'Min time to view on preview viewer to count as a view (seconds):', self._file_viewing_statistics_preview_min_time ) )
@@ -1242,6 +1239,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'file_viewing_statistics_active', self._file_viewing_statistics_active.isChecked() )
+            self._new_options.SetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter', self._file_viewing_statistics_active_on_archive_delete_filter.isChecked() )
             self._new_options.SetBoolean( 'file_viewing_statistics_active_on_dupe_filter', self._file_viewing_statistics_active_on_dupe_filter.isChecked() )
             self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time', self._file_viewing_statistics_media_min_time.GetValue() )
             self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time', self._file_viewing_statistics_media_max_time.GetValue() )
@@ -2583,40 +2581,70 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._autocomplete_panel = ClientGUICommon.StaticBox( self, 'autocomplete' )
+            self._read_autocomplete_panel = ClientGUICommon.StaticBox( self, 'file search autocomplete' )
             
-            self._default_search_synchronised = QW.QCheckBox( self._autocomplete_panel )
+            location_context = self._new_options.GetDefaultLocalLocationContext()
+            
+            self._default_local_location_context = ClientGUILocation.LocationSearchContextButton( self._read_autocomplete_panel, location_context )
+            self._default_local_location_context.setToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' )
+            
+            self._default_local_location_context.SetOnlyImportableDomainsAllowed( True )
+            
+            self._default_tag_service_search_page = ClientGUICommon.BetterChoice( self._read_autocomplete_panel )
+            
+            self._default_search_synchronised = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'This refers to the button on the autocomplete dropdown that enables new searches to start. If this is on, then new search pages will search as soon as you enter the first search predicate. If off, no search will happen until you switch it back on.'
             self._default_search_synchronised.setToolTip( tt )
             
-            self._autocomplete_float_main_gui = QW.QCheckBox( self._autocomplete_panel )
+            self._autocomplete_float_main_gui = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'The autocomplete dropdown can either \'float\' on top of the main window, or if that does not work well for you, it can embed into the parent page panel.'
             self._autocomplete_float_main_gui.setToolTip( tt )
             
-            self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._autocomplete_panel, min = 1, max = 128 )
-            tt = 'Read autocompletes are those in search pages, where you are looking through existing tags to find your files.'
-            self._ac_read_list_height_num_chars.setToolTip( tt )
+            self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._read_autocomplete_panel, min = 1, max = 128 )
             
-            self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._autocomplete_panel, min = 1, max = 128 )
-            tt = 'Write autocompletes are those in most dialogs, where you are adding new tags to files.'
-            self._ac_write_list_height_num_chars.setToolTip( tt )
-            
-            self._always_show_system_everything = QW.QCheckBox( self._autocomplete_panel )
+            self._always_show_system_everything = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'After users get some experience with the program and a larger collection, they tend to have less use for system:everything.'
             self._always_show_system_everything.setToolTip( tt )
             
-            self._filter_inbox_and_archive_predicates = QW.QCheckBox( self._autocomplete_panel )
+            self._filter_inbox_and_archive_predicates = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'If everything is current in the inbox (or archive), then there is no use listing it or its opposite--it either does not change the search or it produces nothing. If you find it jarring though, turn it off here!'
             self._filter_inbox_and_archive_predicates.setToolTip( tt )
             
             #
             
-            misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
+            self._write_autocomplete_panel = ClientGUICommon.StaticBox( self, 'tag edit autocomplete' )
+            
+            self._default_tag_service_tab = ClientGUICommon.BetterChoice( self._write_autocomplete_panel )
+            
+            self._save_default_tag_service_tab_on_change = QW.QCheckBox( self._write_autocomplete_panel )
+            
+            self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._write_autocomplete_panel, min = 1, max = 128 )
+            
+            #
+            
+            misc_panel = ClientGUICommon.StaticBox( self, 'file search' )
             
             self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
             self._forced_search_limit.setToolTip( 'This is overruled if you set an explicit system:limit larger than it.' )
             
             #
+            
+            self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
+            
+            services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            
+            for service in services:
+                
+                self._default_tag_service_tab.addItem( service.GetName(), service.GetServiceKey() )
+                
+                self._default_tag_service_search_page.addItem( service.GetName(), service.GetServiceKey() )
+                
+            
+            self._default_tag_service_tab.SetValue( self._new_options.GetKey( 'default_tag_service_tab' ) )
+            
+            self._save_default_tag_service_tab_on_change.setChecked( self._new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ) )
+            
+            self._default_tag_service_search_page.SetValue( self._new_options.GetKey( 'default_tag_service_search_page' ) )
             
             self._default_search_synchronised.setChecked( self._new_options.GetBoolean( 'default_search_synchronised' ) )
             
@@ -2633,28 +2661,43 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            vbox = QP.VBoxLayout()
+            message = 'This tag autocomplete appears in file search pages and other places where you use tags and system predicates to search for files.'
             
-            message = 'The autocomplete dropdown list is the panel that hangs below the tag input text box on search pages.'
+            st = ClientGUICommon.BetterStaticText( self._read_autocomplete_panel, label = message )
             
-            st = ClientGUICommon.BetterStaticText( self._autocomplete_panel, label = message )
-            
-            self._autocomplete_panel.Add( st, CC.FLAGS_CENTER )
+            self._read_autocomplete_panel.Add( st, CC.FLAGS_CENTER )
             
             rows = []
             
-            #
-            
+            rows.append( ( 'Default/Fallback local file search location: ', self._default_local_location_context ) )
+            rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
+            rows.append( ( 'Autocomplete dropdown floats over file search pages: ', self._autocomplete_float_main_gui ) )
+            rows.append( ( 'Autocomplete list height: ', self._ac_read_list_height_num_chars ) )
             rows.append( ( 'Start new search pages in \'searching immediately\': ', self._default_search_synchronised ) )
-            rows.append( ( 'Autocomplete results float in file search pages: ', self._autocomplete_float_main_gui ) )
-            rows.append( ( '\'Read\' autocomplete list height: ', self._ac_read_list_height_num_chars ) )
-            rows.append( ( '\'Write\' autocomplete list height: ', self._ac_write_list_height_num_chars ) )
             rows.append( ( 'show system:everything even if total files is over 10,000: ', self._always_show_system_everything ) )
             rows.append( ( 'hide inbox and archive system predicates if either has no files: ', self._filter_inbox_and_archive_predicates ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self._autocomplete_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._read_autocomplete_panel, rows )
             
-            self._autocomplete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._read_autocomplete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            message = 'This tag autocomplete appears in the manage tags dialog and other places where you edit a list of tags.'
+            
+            st = ClientGUICommon.BetterStaticText( self._write_autocomplete_panel, label = message )
+            
+            self._write_autocomplete_panel.Add( st, CC.FLAGS_CENTER )
+            
+            rows = []
+            
+            rows.append( ( 'Remember last used default tag service in manage tag dialogs: ', self._save_default_tag_service_tab_on_change ) )
+            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_service_tab ) )
+            rows.append( ( 'Autocomplete list height: ', self._ac_write_list_height_num_chars ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._write_autocomplete_panel, rows )
+            
+            self._write_autocomplete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -2668,17 +2711,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            #
+            vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._read_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._write_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
             
+            self._UpdateDefaultTagServiceControl()
+            
+            self._save_default_tag_service_tab_on_change.clicked.connect( self._UpdateDefaultTagServiceControl )
+            
+        
+        def _UpdateDefaultTagServiceControl( self ):
+            
+            enabled = not self._save_default_tag_service_tab_on_change.isChecked()
+            
+            self._default_tag_service_tab.setEnabled( enabled )
+            
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetDefaultLocalLocationContext( self._default_local_location_context.GetValue() )
             
             self._new_options.SetBoolean( 'default_search_synchronised', self._default_search_synchronised.isChecked() )
             
@@ -3504,12 +3561,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
             
-            self._default_tag_service_tab = ClientGUICommon.BetterChoice( general_panel )
-            
-            self._save_default_tag_service_tab_on_change = QW.QCheckBox( general_panel )
-            
-            self._default_tag_service_search_page = ClientGUICommon.BetterChoice( general_panel )
-            
             self._expand_parents_on_storage_taglists = QW.QCheckBox( general_panel )
             self._expand_parents_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
             
@@ -3535,23 +3586,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
             #
-            
-            self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
-            
-            services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
-            
-            for service in services:
-                
-                self._default_tag_service_tab.addItem( service.GetName(), service.GetServiceKey() )
-                
-                self._default_tag_service_search_page.addItem( service.GetName(), service.GetServiceKey() )
-                
-            
-            self._default_tag_service_tab.SetValue( self._new_options.GetKey( 'default_tag_service_tab' ) )
-            
-            self._save_default_tag_service_tab_on_change.setChecked( self._new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ) )
-            
-            self._default_tag_service_search_page.SetValue( self._new_options.GetKey( 'default_tag_service_search_page' ) )
             
             self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
             self._expand_parents_on_storage_taglists.setToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' )
@@ -3583,9 +3617,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_service_tab ) )
-            rows.append( ( 'Remember last used default tag service in manage tag dialogs: ', self._save_default_tag_service_tab_on_change ) )
-            rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Show parent info by default on edit/write taglists: ', self._show_parent_decorators_on_storage_taglists ) )
             rows.append( ( 'Show parent info by default on edit/write autocomplete taglists: ', self._show_parent_decorators_on_storage_autocomplete_taglists ) )
             rows.append( ( 'Show parents expanded by default on edit/write taglists: ', self._expand_parents_on_storage_taglists ) )
@@ -3614,18 +3645,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._save_default_tag_service_tab_on_change.clicked.connect( self._UpdateDefaultTagServiceControl )
-            
-            self._UpdateDefaultTagServiceControl()
-            
             self._favourites_input.tagsPasted.connect( self.AddTagsOnlyAdd )
-            
-        
-        def _UpdateDefaultTagServiceControl( self ):
-            
-            enabled = not self._save_default_tag_service_tab_on_change.isChecked()
-            
-            self._default_tag_service_tab.setEnabled( enabled )
             
         
         def AddTagsOnlyAdd( self, tags ):
@@ -3641,11 +3661,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
-            
-            self._new_options.SetKey( 'default_tag_service_tab', self._default_tag_service_tab.GetValue() )
-            self._new_options.SetBoolean( 'save_default_tag_service_tab_on_change', self._save_default_tag_service_tab_on_change.isChecked() )
-            
-            self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetValue() )
             
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_taglists', self._show_parent_decorators_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists', self._show_parent_decorators_on_storage_autocomplete_taglists.isChecked() )
@@ -3695,7 +3710,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_number_namespaces.setToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' )
             self._namespace_connector = QW.QLineEdit( render_panel )
             self._sibling_connector = QW.QLineEdit( render_panel )
+            
             self._fade_sibling_connector = QW.QCheckBox( render_panel )
+            tt = 'If set, then if the sibling goes from one namespace to another, that colour will fade across the distance of the sibling connector. Just a bit of fun.'
+            self._fade_sibling_connector.setToolTip( tt )
+            
+            self._sibling_connector_custom_namespace_colour = ClientGUICommon.NoneableTextCtrl( render_panel, none_phrase = 'use ideal tag colour' )
+            tt = 'The sibling connector can use a particular namespace\'s colour.'
+            self._sibling_connector_custom_namespace_colour.setToolTip( tt )
+            
+            self._or_connector = QW.QLineEdit( render_panel )
+            tt = 'When an OR predicate is rendered, it splits the components by this text.'
+            self._or_connector.setToolTip( tt )
+            
+            self._or_connector_custom_namespace_colour = QW.QLineEdit( render_panel )
+            tt = 'The OR connector can use a particular namespace\'s colour.'
+            self._or_connector_custom_namespace_colour.setToolTip( tt )
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
             
@@ -3712,11 +3742,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
-            self._show_number_namespaces.setChecked(( new_options.GetBoolean( 'show_number_namespaces' ) ) )
+            self._show_number_namespaces.setChecked( new_options.GetBoolean( 'show_number_namespaces' ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
+            self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
             self._sibling_connector.setText( new_options.GetString( 'sibling_connector' ) )
             self._fade_sibling_connector.setChecked( new_options.GetBoolean( 'fade_sibling_connector' ) )
-            self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
+            self._sibling_connector_custom_namespace_colour.SetValue( new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' ) )
+            self._or_connector.setText( new_options.GetString( 'or_connector' ) )
+            self._or_connector_custom_namespace_colour.setText( new_options.GetNoneableString( 'or_connector_custom_namespace_colour' ) )
             
             #
             
@@ -3754,7 +3787,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Unless namespace is a number: ', self._show_number_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
             rows.append( ( 'Sibling connecting string: ', self._sibling_connector ) )
-            rows.append( ( 'Fade the namespace colour when showing siblings on Qt6: ', self._fade_sibling_connector ) )
+            rows.append( ( 'Fade the colour of the sibling connector string on Qt6: ', self._fade_sibling_connector ) )
+            rows.append( ( 'Namespace for the colour of the sibling connecting string: ', self._sibling_connector_custom_namespace_colour ) )
+            rows.append( ( 'OR connecting string: ', self._or_connector ) )
+            rows.append( ( 'Namespace for the colour of the OR connecting string: ', self._or_connector_custom_namespace_colour ) )
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
@@ -3771,8 +3807,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._NamespacesUpdated()
+            self._SiblingColourStuffClicked()
             
             self._show_namespaces.clicked.connect( self._NamespacesUpdated )
+            self._fade_sibling_connector.clicked.connect( self._SiblingColourStuffClicked )
             
             self.setLayout( vbox )
             
@@ -3837,6 +3875,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        def _SiblingColourStuffClicked( self ):
+            
+            choice_available = not self._fade_sibling_connector.isChecked()
+            
+            self._sibling_connector_custom_namespace_colour.setEnabled( choice_available )
+            
+        
         def _NamespacesUpdated( self ):
             
             self._show_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
@@ -3851,9 +3896,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.isChecked() )
             self._new_options.SetBoolean( 'show_number_namespaces', self._show_number_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
+            self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
             self._new_options.SetString( 'sibling_connector', self._sibling_connector.text() )
             self._new_options.SetBoolean( 'fade_sibling_connector', self._fade_sibling_connector.isChecked() )
-            self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
+            
+            self._new_options.SetNoneableString( 'sibling_connector_custom_namespace_colour', self._sibling_connector_custom_namespace_colour.GetValue() )
+            
+            self._new_options.SetString( 'or_connector', self._or_connector.text() )
+            self._new_options.SetNoneableString( 'or_connector_custom_namespace_colour', self._or_connector_custom_namespace_colour.text() )
             
             HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             

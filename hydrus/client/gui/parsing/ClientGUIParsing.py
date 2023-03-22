@@ -557,7 +557,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._mappings_panel = QW.QWidget( self._content_panel )
         
-        self._namespace = QW.QLineEdit( self._mappings_panel )
+        self._namespace = ClientGUICommon.NoneableTextCtrl( self._mappings_panel, none_phrase = 'any namespace' )
+        tt = 'The difference between "any namespace" and setting an empty input for "unnamespaced" is "unnamespaced" will force unnamespaced, even if the parsed tag includes a colon. If you are parsing hydrus content and expect to see "namespace:subtag", hit "any namespace", and if you are parsing normal boorus that might have a colon in for weird reasons, try "unnamespaced".'
+        self._namespace.setToolTip( tt )
         
         #
         
@@ -634,7 +636,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             namespace = additional_info
             
-            self._namespace.setText( namespace )
+            self._namespace.SetValue( namespace )
             
         elif content_type == HC.CONTENT_TYPE_NOTES:
             
@@ -901,7 +903,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            namespace = self._namespace.text()
+            namespace = self._namespace.GetValue()
             
             additional_info = namespace
             

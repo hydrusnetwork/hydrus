@@ -589,7 +589,7 @@ class ClientFilesManager( object ):
         hash = media.GetHash()
         mime = media.GetMime()
         ( width, height ) = media.GetResolution()
-        duration = media.GetDuration()
+        duration = media.GetDurationMS()
         num_frames = media.GetNumFrames()
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
@@ -2124,7 +2124,7 @@ class FilesMaintenanceManager( object ):
             return None
             
         
-        duration = media_result.GetDuration()
+        duration = media_result.GetDurationMS()
         
         if duration is not None:
             

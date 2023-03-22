@@ -339,12 +339,12 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                     
                 else:
                     
-                    current_frame_index = int( round( ( current_timestamp_ms / self._media.GetDuration() ) * num_frames ) )
+                    current_frame_index = int( round( ( current_timestamp_ms / self._media.GetDurationMS() ) * num_frames ) )
                     
                     current_frame_index = min( current_frame_index, num_frames - 1 )
                     
                 
-                current_timestamp_ms = min( current_timestamp_ms, self._media.GetDuration() )
+                current_timestamp_ms = min( current_timestamp_ms, self._media.GetDurationMS() )
                 
             
             paused = self._player.pause
@@ -492,7 +492,7 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         new_timestamp_ms = max( 0, ( current_timestamp_s * 1000 ) + ( direction * duration_ms ) )
         
-        if new_timestamp_ms > self._media.GetDuration():
+        if new_timestamp_ms > self._media.GetDurationMS():
             
             new_timestamp_ms = 0
             

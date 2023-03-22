@@ -912,6 +912,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def Import( self, temp_path: str, file_import_options: FileImportOptions.FileImportOptions, status_hook = None ):
         
+        if file_import_options.IsDefault():
+            
+            file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            
+        
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
         
         file_import_status = file_import_job.DoWork( status_hook = status_hook )

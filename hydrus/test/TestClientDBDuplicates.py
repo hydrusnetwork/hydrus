@@ -107,7 +107,6 @@ class TestClientDBDuplicates( unittest.TestCase ):
             fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
             fake_file_import_job._perceptual_hashes = [ perceptual_hash ]
-            fake_file_import_job._file_import_options = FileImportOptions.FileImportOptions()
             
             self._write( 'import_file', fake_file_import_job )
             

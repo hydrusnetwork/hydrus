@@ -327,14 +327,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
         
     
-    def _AnalyzeTempTable( self, temp_table_name ):
-        
-        # this is useful to do after populating a temp table so the query planner can decide which index to use in a big join that uses it
-        
-        self._Execute( 'ANALYZE {};'.format( temp_table_name ) )
-        self._Execute( 'ANALYZE mem.sqlite_master;' ) # this reloads the current stats into the query planner, may no longer be needed
-        
-    
     def _AttachExternalDatabases( self ):
         
         for ( name, filename ) in self._db_filenames.items():

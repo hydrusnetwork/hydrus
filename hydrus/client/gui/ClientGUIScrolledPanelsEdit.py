@@ -552,6 +552,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        self._default_reason = default_reason
+        
         local_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
         
         if suggested_file_service_key is None:
@@ -649,6 +651,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             permitted_reason_choices.append( ( 'keep existing reason: {}'.format( self._existing_shared_file_deletion_reason ), self._existing_shared_file_deletion_reason ) )
             
+            selection_index = len( permitted_reason_choices ) - 1
+            
         
         custom_index = len( permitted_reason_choices )
         
@@ -657,6 +661,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         if self._all_files_have_existing_file_deletion_reasons and self._existing_shared_file_deletion_reason is None:
             
             permitted_reason_choices.append( ( '(all files have existing file deletion reasons and they differ): do not alter them.', self.SPECIAL_CHOICE_NO_REASON ) )
+            
+            selection_index = len( permitted_reason_choices ) - 1
             
         
         self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, vertical = True )
@@ -767,7 +773,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetReason( self ):
         
-        if self._reason_panel.isEnabled():
+        if self._reason_panel.isVisible() and self._reason_panel.isEnabled():
             
             reason = self._reason_radio.GetValue()
             
@@ -782,7 +788,15 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            reason = None
+            if self._all_files_have_existing_file_deletion_reasons or self._existing_shared_file_deletion_reason is not None:
+                
+                # do not overwrite
+                reason = None
+                
+            else:
+                
+                reason = self._default_reason
+                
             
         
         return reason
@@ -813,7 +827,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if trashed_key in keys_to_hashes and combined_key in keys_to_hashes and keys_to_hashes[ trashed_key ] == keys_to_hashes[ combined_key ]:
             
-            del keys_to_hashes[ trashed_key ]
+            del keys_to_hashes[ combined_key ]
             
         
         possible_file_service_keys_and_hashes = [ ( fsk, keys_to_hashes[ fsk ] ) for fsk in possible_file_service_keys if fsk in keys_to_hashes and len( keys_to_hashes[ fsk ] ) > 0 ]
@@ -1150,16 +1164,23 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if save_reason and HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
             
-            if self._reason_radio.GetCurrentIndex() <= 0:
-                
-                last_advanced_file_deletion_reason = None
-                
-            else:
-                
-                last_advanced_file_deletion_reason = reason
-                
+            reasons_ok = self._reason_radio.isVisible() and self._reason_radio.isEnabled()
             
-            HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
+            user_selected_existing_or_make_no_change = reason == self._existing_shared_file_deletion_reason or reason is None
+            
+            if reasons_ok and not user_selected_existing_or_make_no_change:
+                
+                if self._reason_radio.GetCurrentIndex() <= 0:
+                    
+                    last_advanced_file_deletion_reason = None
+                    
+                else:
+                    
+                    last_advanced_file_deletion_reason = reason
+                    
+                
+                HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
+                
             
         
         return ( involves_physical_delete, list_of_service_keys_to_content_updates )

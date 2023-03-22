@@ -1714,6 +1714,8 @@ class ListBox( QW.QScrollArea ):
             
             rows_of_texts_and_colours = self._GetRowsOfTextsAndColours( term )
             
+            term_ok_with_fade = term.CanFadeColours()
+            
             for texts_and_colours in rows_of_texts_and_colours:
                 
                 x_start = self.TEXT_X_PADDING
@@ -1743,7 +1745,7 @@ class ListBox( QW.QScrollArea ):
                     
                     text_colour = namespace_colour
                     
-                    do_a_fade = fades_can_ever_happen and last_used_namespace_colour is not None and last_used_namespace_colour != namespace_colour
+                    do_a_fade = fades_can_ever_happen and term_ok_with_fade and last_used_namespace_colour is not None and last_used_namespace_colour != namespace_colour
                     
                     if term in self._selected_terms:
                         
@@ -2291,7 +2293,13 @@ class ListBoxTags( ListBox ):
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
-        self._sibling_connection_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        self._sibling_connector_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        self._sibling_connector_namespace = None
+        
+        if not HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
+            
+            self._sibling_connector_namespace = HG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
+            
         
         self._UpdateBackgroundColour()
         
@@ -2365,7 +2373,7 @@ class ListBoxTags( ListBox ):
         
         show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
         
-        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._sibling_connection_string, self._show_parent_decorators, show_parent_rows )
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._sibling_connector_string, self._sibling_connector_namespace, self._show_parent_decorators, show_parent_rows )
         
         rows_of_texts_and_colours = []
         
@@ -2373,7 +2381,7 @@ class ListBoxTags( ListBox ):
             
             texts_and_colours = []
             
-            for ( text, namespace ) in texts_and_namespaces:
+            for ( text, colour_type, namespace ) in texts_and_namespaces:
                 
                 if namespace in namespace_colours:
                     
@@ -2620,11 +2628,18 @@ class ListBoxTags( ListBox ):
     
     def NotifyNewOptions( self ):
         
-        new_sibling_connection_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        new_sibling_connector_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        new_sibling_connector_namespace = None
         
-        if new_sibling_connection_string != self._sibling_connection_string:
+        if not HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
             
-            self._sibling_connection_string = new_sibling_connection_string
+            new_sibling_connector_namespace = HG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
+            
+        
+        if new_sibling_connector_string != self._sibling_connector_string or new_sibling_connector_namespace != self._sibling_connector_namespace:
+            
+            self._sibling_connector_string = new_sibling_connector_string
+            self._sibling_connector_namespace = new_sibling_connector_namespace
             
             self.widget().update()
             

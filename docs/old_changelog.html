@@ -35,6 +35,39 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_521"><a href="#version_521">version 521</a></h2>
+                    <ul>
+                        <li><h3>some tag presentation</h3></li>
+                        <li>building on last week's custom sibling connector, if you don't like the fade you can now override the 'namespace' colour of the sibling connector if you like</li>
+                        <li>you can also set the ' OR ' connector text</li>
+                        <li>and you can set the OR connector's 'namespace' colour. it was 'system' before</li>
+                        <li>also turned off the new namespace colour fading for OR predicates, where it was unintentionally kicking in and looking horrible lol</li>
+                        <li><h3>misc</h3></li>
+                        <li>added a checkbox to 'file viewing statistcs' to turn off tracking for the archive/delete filter, if you don't like that</li>
+                        <li>file viewing statistics now maxes out at five times a duration-having media's duration, if that is more than your max view time</li>
+                        <li>the simple version of the file delete dialog will now never overwrite a file deletion reason if all of the to-be-deleted files already have deletion reasons (e.g. when physically deleting trash)	</li>
+                        <li>the advanced version of the dialog now always selects 'keep existing reason' or 'do not alter existing reasons' when they exist, regardless of your 'remember previous reason' action. also, the 'remember previous reason' saved reason no longer updates if 'keep existing reason' or 'do not alter existing reasons' is set--it will stick on whatever it was before</li>
+                        <li>I might have fixed a height-layout bug in the petition management page</li>
+                        <li><h3>advanced change to unnamespaced tags and their parsing</h3></li>
+                        <li>the rule that allows ':p' as a tag (by secretly storing it as '::p') has been expanded--now any unnamespaced tag can include a colon as long as it starts with an explicit colon, which in hydrus rendering contexts is usually hidden. you can now type these in simply by beginning your tag with ':'--the secret character will be quickly swallowed</li>
+                        <li>for the parsing system, content parsers that get tags can now decide whether to set an explicit namespace or not. from now on, content parsers that are set to get unnamespaced tags will force all tags they get to be unnamespaced! this stops some site that has incidental colons in their 'subtags' from spamming twenty different new namespaces to hydrus. to preserve old parser behaviour, all existing content parsers that were left blank (no namespace) will be updated to not set an explicit namespace. if you are a parser maker, please consider whether you want to go with 'unnamespaced' or 'any namespace' going forward in your parsers--since most places don't use the hydrus 'namespace:subtag' format, I suspect when we want to make the decision, we'll want 'unnamespaced'</li>
+                        <li>I updated the pixiv parser to specifically ask for unnamespaced tags when parsing regular user tags, since it has some of these colon-having tags</li>
+                        <li>as a side thing, extra colons are now collapsed at the start of a tag--anything that starts with four colons will be collapsed down to two, with one displaying to humans</li>
+                        <li>also, during parsing, if a content parser gets a tag and the subtag already starts with its namespace, it will no longer double the namespace. parse 'character:dave' with namespace set to 'character', it will no longer produce 'character:character:dave'</li>
+                        <li><h3>advanced file domain and file import options stuff</h3></li>
+                        <li>all import pages that need to consult their file domain now do so on a 'realised' version of 'default file import options', so if you are set to import to 'my imports', and you open a new page from a tag or some thumbs on that import page, the new file page will be set to 'my imports', not some weird 'my files' stub value (in clients that deleted 'my files', this would be 'initialising...' forever)</li>
+                        <li>more stages of the file import process 'realise' default file import options stubs, just in case more of these problems slip through in future (e.g. in my file import unit tests, which I just discovered were all broken)</li>
+                        <li>the 'default' file import options stub is now initialised with your first local file domain rather than 'my files', so if this thing is ever still consulted anywhere, it should serve as a better last resort</li>
+                        <li>also fixed the file domain button getting stuck on 'initialising' if it starts with an empty file domain</li>
+                        <li>when you open the edit file import options dialog on a 'default' FIO and switch to a non-default, it now fills in all the details with the current LOUD FIO</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>extracted the master file search method (~1800 lines of code) from the monolithic database object and into its own module. then broke several sub-pieces like rating or note searching code out into that module and cleaned misc stuff along the way. not done by any means, but this was a big db-cleanup hump</li>
+                        <li>reshuffled all the page management objects so they no longer keep an explicit copy of their current file domain--now they always consult their respective sub-objects, whether that is a file search or an importer or what. any time a page needs to consult its file domain, it'll always get the live and sensible version. as above, they also 'realise' default file import options stubs</li>
+                        <li>broke the 'getting started with tags' help page into two and straddled the 'getting started with searching' page with them. the intention is to get users typing a few tags into their first import pages, just that, and then playing around with them in search, before moving on to more complicated tag subjects</li>
+                        <li>split the 'autocomplete' section of the 'search' options into two, for read/write a/c contexts, and the default file and tag domain options have been moved there from 'files and trash' and 'tags'</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_520"><a href="#version_520">version 520</a></h2>
                     <ul>
                         <li><h3>autocomplete</h3></li>

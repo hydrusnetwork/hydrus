@@ -498,7 +498,7 @@ class RasterContainerVideo( RasterContainer ):
         
         video_buffer_size = new_options.GetInteger( 'video_buffer_size' )
         
-        duration = self._media.GetDuration()
+        duration = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
         
         if duration is None or duration == 0:
@@ -572,7 +572,7 @@ class RasterContainerVideo( RasterContainer ):
     def THREADRender( self ):
         
         mime = self._media.GetMime()
-        duration = self._media.GetDuration()
+        duration = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
         
         time.sleep( 0.00001 )
@@ -748,7 +748,7 @@ class RasterContainerVideo( RasterContainer ):
             
         
     
-    def GetDuration( self, index ):
+    def GetDurationMS( self, index ):
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             

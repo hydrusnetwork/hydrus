@@ -107,6 +107,11 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job created for path {}.'.format( temp_path ) )
             
         
+        if file_import_options.IsDefault():
+            
+            file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            
+        
         self._temp_path = temp_path
         self._file_import_options = file_import_options
         

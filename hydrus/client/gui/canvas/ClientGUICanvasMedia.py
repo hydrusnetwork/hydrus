@@ -507,7 +507,7 @@ class Animation( QW.QWidget ):
         
         self._current_frame_drawn = True
         
-        next_frame_time_s = self._video_container.GetDuration( self._current_frame_index ) / 1000.0
+        next_frame_time_s = self._video_container.GetDurationMS( self._current_frame_index ) / 1000.0
         
         next_frame_ideally_due = self._next_frame_due_at + next_frame_time_s
         
@@ -895,7 +895,7 @@ class Animation( QW.QWidget ):
                             
                             if self._current_timestamp_ms is not None and self._video_container is not None and self._video_container.IsInitialised():
                                 
-                                duration_ms = self._video_container.GetDuration( self._current_frame_index - 1 )
+                                duration_ms = self._video_container.GetDurationMS( self._current_frame_index - 1 )
                                 
                                 self._current_timestamp_ms += duration_ms
                                 
@@ -1261,7 +1261,7 @@ class AnimationBar( QW.QWidget ):
     def SetMediaAndWindow( self, media, media_window ):
         
         self._media_window = media_window
-        self._duration_ms = max( media.GetDuration(), 1 )
+        self._duration_ms = max( media.GetDurationMS(), 1 )
         
         num_frames = media.GetNumFrames()
         

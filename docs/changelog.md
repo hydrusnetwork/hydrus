@@ -7,6 +7,46 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 521](https://github.com/hydrusnetwork/hydrus/releases/tag/v521)
+
+### some tag presentation
+
+* building on last week's custom sibling connector, if you don't like the fade you can now override the 'namespace' colour of the sibling connector if you like
+* you can also set the ' OR ' connector text
+* and you can set the OR connector's 'namespace' colour. it was 'system' before
+* also turned off the new namespace colour fading for OR predicates, where it was unintentionally kicking in and looking horrible lol
+
+### misc
+
+* added a checkbox to 'file viewing statistcs' to turn off tracking for the archive/delete filter, if you don't like that
+* file viewing statistics now maxes out at five times a duration-having media's duration, if that is more than your max view time
+* the simple version of the file delete dialog will now never overwrite a file deletion reason if all of the to-be-deleted files already have deletion reasons (e.g. when physically deleting trash)	
+* the advanced version of the dialog now always selects 'keep existing reason' or 'do not alter existing reasons' when they exist, regardless of your 'remember previous reason' action. also, the 'remember previous reason' saved reason no longer updates if 'keep existing reason' or 'do not alter existing reasons' is set--it will stick on whatever it was before
+* I might have fixed a height-layout bug in the petition management page
+
+### advanced change to unnamespaced tags and their parsing
+
+* the rule that allows ':p' as a tag (by secretly storing it as '::p') has been expanded--now any unnamespaced tag can include a colon as long as it starts with an explicit colon, which in hydrus rendering contexts is usually hidden. you can now type these in simply by beginning your tag with ':'--the secret character will be quickly swallowed
+* for the parsing system, content parsers that get tags can now decide whether to set an explicit namespace or not. from now on, content parsers that are set to get unnamespaced tags will force all tags they get to be unnamespaced! this stops some site that has incidental colons in their 'subtags' from spamming twenty different new namespaces to hydrus. to preserve old parser behaviour, all existing content parsers that were left blank (no namespace) will be updated to not set an explicit namespace. if you are a parser maker, please consider whether you want to go with 'unnamespaced' or 'any namespace' going forward in your parsers--since most places don't use the hydrus 'namespace:subtag' format, I suspect when we want to make the decision, we'll want 'unnamespaced'
+* I updated the pixiv parser to specifically ask for unnamespaced tags when parsing regular user tags, since it has some of these colon-having tags
+* as a side thing, extra colons are now collapsed at the start of a tag--anything that starts with four colons will be collapsed down to two, with one displaying to humans
+* also, during parsing, if a content parser gets a tag and the subtag already starts with its namespace, it will no longer double the namespace. parse 'character:dave' with namespace set to 'character', it will no longer produce 'character:character:dave'
+
+### advanced file domain and file import options stuff
+
+* all import pages that need to consult their file domain now do so on a 'realised' version of 'default file import options', so if you are set to import to 'my imports', and you open a new page from a tag or some thumbs on that import page, the new file page will be set to 'my imports', not some weird 'my files' stub value (in clients that deleted 'my files', this would be 'initialising...' forever)
+* more stages of the file import process 'realise' default file import options stubs, just in case more of these problems slip through in future (e.g. in my file import unit tests, which I just discovered were all broken)
+* the 'default' file import options stub is now initialised with your first local file domain rather than 'my files', so if this thing is ever still consulted anywhere, it should serve as a better last resort
+* also fixed the file domain button getting stuck on 'initialising' if it starts with an empty file domain
+* when you open the edit file import options dialog on a 'default' FIO and switch to a non-default, it now fills in all the details with the current LOUD FIO
+
+### boring cleanup
+
+* extracted the master file search method (~1800 lines of code) from the monolithic database object and into its own module. then broke several sub-pieces like rating or note searching code out into that module and cleaned misc stuff along the way. not done by any means, but this was a big db-cleanup hump
+* reshuffled all the page management objects so they no longer keep an explicit copy of their current file domain--now they always consult their respective sub-objects, whether that is a file search or an importer or what. any time a page needs to consult its file domain, it'll always get the live and sensible version. as above, they also 'realise' default file import options stubs
+* broke the 'getting started with tags' help page into two and straddled the 'getting started with searching' page with them. the intention is to get users typing a few tags into their first import pages, just that, and then playing around with them in search, before moving on to more complicated tag subjects
+* split the 'autocomplete' section of the 'search' options into two, for read/write a/c contexts, and the default file and tag domain options have been moved there from 'files and trash' and 'tags'
+
 ## [Version 520](https://github.com/hydrusnetwork/hydrus/releases/tag/v520)
 
 ### autocomplete
@@ -361,83 +401,3 @@ title: Changelog
 * I added a couple unit tests for the new .txt sidecar separator
 * fixed a bad sidecar unit test
 * 'client_running' and 'server_running' are now in the .gitignore
-
-## [Version 511](https://github.com/hydrusnetwork/hydrus/releases/tag/v511)
-
-### thumbnail UI scaling
-
-* thumbnails can finally look good at high UI scales! a new setting in _options->thumbnails_, 'Thumbnail UI scale supersampling %', lets you tell hydrus to generate thumbnails at a particular UI scale. match it to your monitor, and your thumbnails should regenerate to look crisp
-* some users have complicated multi-monitor setups, or they change their UI scale regularly, so I'm not auto-setting this _yet_. let me know how it goes
-* sadly <100% for super-crunchy-mode doesn't work
-
-### unnamespaced search tags
-
-* _I am not really happy with this solution, since it doesn't neatly restore the old behaviour, but it does make things easier in the new system and I've fixed a related bug_
-* a new option in _services->manage tag display and search_, 'Unnamespaced input gives (any namespace) wildcard results', now lets you quickly search `*:sam*` by typing `sam`
-* fixed an issue where an autocomplete input with a total wildcard namespace, like `*:sam` was not matching to unnamespaced tags when preparing the list of tag results
-* wildcards with `*` namespace now have a special `(any namespace)` suffix, and they show with unnamespaced namespace colour
-
-### misc
-
-* fixed the client-server communication problem related to last week's SerialisableDictionary update. I messed up and forgot this object is used in network comms, which meant >=v510 clients couldn't talk to a <=509 server and _vice versa_ version swaps. now the server always kicks out an old SerialisableDictionary serialisation. I plan to remove the patch in 26 weeks, giving us more buffer time for users to update naturally
-* the recent option to turn off mouse-scroll-changes-menu-button-value is improved--now the wheel event is correctly passed up to the parent panel, so you'll scroll right through one of these buttons, not halt on it. the file sort control now also obeys this option
-* if you try to zoom a media in so that its virtual size would be >32,000px on a side, the canvas now zooms to 32k exactly. this is the max allowed zoom for technical reasons atm (I'll fix it in a future rewrite). this also fixes the 'zoom max' command, which previously would make no action if the max zoom created a virtual canvas bigger than this. also, 'zoom max' is now shown on the media viewer right-click menu
-* the 'max zoom' dimension for mpv windows and my native animation window is now 8k. seems like there are smaller technical limits for mpv, and my animation window isn't tiled, so this is to be extra safe for now
-* fixed a bug where it was possible to send the 'undelete file' signal to a file that was physically deleted (and therefore viewed in a special 'deleted files' domain). the file would obediently return to its original local file service and then throw 'missing file' warnings when the thumb tried to show. now these files are discarded from undelete consideration
-* if you are looking at physically deleted files, the thumbnail view now provides a 'clear deletion record' menu action! this is the same command as the button in _services->review services->all local files_, but just on the selection
-* fixed several taglists across the program that were displaying tags in the wrong display context and/or not sorting correctly. this mostly went wrong by setting sorted storage taglists (which normally show sibling/parent flare) as unsorted display taglists
-* file lookup script tag suggestions (as fetched from some external source) are now set to be sorted
-
-### file import options pre-import checking
-
-* _this stuff is advanced users only. normal users can rest assured that the way the client skips downloads for 'already in db/previously deleted' files now has fewer false negatives and false positives_
-* the awkwardly named advanced 'do not check url/hash to see if file already in db/previously deleted' checkboxes in file import options have been overhauled. now they are phrased in the positive ("check x to determine aid/pd?") and offer 'do not check', 'check', and the new 'check - and matches are dispositive'. the tooltip has been updated to talk about what they do. 'dispositive' basically means 'if this one hits, trust it over the other', and by default the 'hash' check remains dispositive over the URLs (this was previously hardcoded, now you can choose urls to rule in some cases).
-* there is also a new checkbox to optionally disable a component of the url checking that looks at neighbouring urls on the same file to determine url-mapping trustworthiness. this will solve or help explore some weird multi-url-mapping situations
-* also, novel SHA256 hashes no longer count as 'matches', just like a novel MD5 hash would not. this helps keep useful dispositive behaviour for known hashes but also automatically defers to urls when a site is being CDN-optimised and transfer hashes are different to api-reported ones. this fixes some watchers that have been using excess bandwidth on repeated downloads
-* fixed several problems with the url-lookup logic, particularly with the method that checks for 'file-neighbour' urls (simply, when a file-url match should be distrusted because that file has multiple urls of the same url class). it was also too aggressive on file/unknown url classes, which can legitimately have tokenised neighbours, and getting confused by http/https dupes
-* the neighbour test now remembers untrustworthy domains across different url checks for a file, which helps some subsequent direct-file-url checks where neighbours aren't a marker of file-url mapping reliability
-* the overall logic behind the hash and url lookup is cleaned up significantly
-* if you are an advanced user who has been working with me on this stuff, let me know how it goes. we erected this rats' nest through years of patches, and now I have cleaned it out. I'm confident it works better overall, but I may have missed one of your complicated situations. at the least, these new options should help us figure out quicker fixes in future
-
-### boring code cleanup
-
-* removed some old 'subject_identifier' arg parsing from various account-modification calls in the server code. as previously planned, for simplicity and security, the only identifier for these actions is now 'subject_account_key', and subject_identifier is only used for account lookups
-* improved the error handling around serialised object loading. the messages explain what happened and state object type and the versions involved
-* cleaned up some tag sort code
-* cleaned up how advanced file delete content updates work
-* fixed yet another duplicate potentials count unit test that was sometimes failing due to complex count perspective
-
-## [Version 510](https://github.com/hydrusnetwork/hydrus/releases/tag/v510)
-
-### notes
-
-* duplicate metadata merge options now supports note merging. you can copy from worse to better or in both directions, with a couple extra conflict-resolution options that are a subset of note import options and have reasonable defaults.
-* the default note merge options are to go from worse to better for 'set as better' and both directions for 'they are the same', renaming notes on conflicts. **your existing duplicate metadata merge options will receive these settings on update, so if you don't want this, update your settings from the duplicate filter page**
-* the manage notes dialog gets copy and paste buttons. these will copy all the current notes and paste them to another instance of the panel, using the default (extend if possible, otherwise rename) conflict resolution rules
-* if an automatic system like a parser gives a note text that already exists on the file, the Note Import Options now discards it in all cases, no matter the names involved. no more automatic dupes!
-* ADVANCED: note import options (and related note add/merge operations that use it) now scan all prefix-matching note names for 'new note is already in file' and 'new note is an extension of a note already in file' tests. this improves a former fix to the 'successive parses of two sites with the same note name but different note text cause one of them to be dupe-added as (2), (3), (4), renames etc...' bug. the initial (1) rename will be scanned and recognised as 'already in file' and ignored or now extended as the settings say, just as if the desired name were hit. thanks to the reports here--I missed the logic the first time around
-* it would be nice to have 'manage notes' for multiple files at once--this is still a future goal
-
-### notes client api
-
-* the `/add_notes/set_notes` now takes some new parameters if you want to apply the adapted Note Import Options merge logic rather than figure out renames and extensions yourself
-* `/add_notes/set_notes` now returns the changes it made, which in the new mode may not be exactly what you instructed
-* added unit tests and help to reflect the above
-* client api version is now 38
-
-### misc
-
-* I fixed up how shift/ctrl/drag selection works on taglists. like with the recent thumbnail selection update, you can now 'undo' a shift-select with subsequent clicks or 'drag undo', and the list remembers what _was_ selected beforehand. ctrl-shift-select is also a more reliable 'deselect range'. both mouse drag selection and ctrl-drag selection use this logic, have fewer index bugs, and the ctrl-drag now chooses at the start whether this drag will be selection or deselection based on your initial click that started the drag. have a play with it--overall it just feels better now
-* the 'file log' menu now shows a 'reverse' command, which reverses all the imports in the log. if you want to import from oldest to newest with a typical booru, just start your downloader with file imports paused (check the cog icon), and then allow the gallery search to fully populate the list as normaly. once done, hit this new reverse and then unpause the files, and you should be good
-* any image files or thumbnails that are completely transparent and have a non-completely-black image now have their alpha channel stripped, just like files that are completely opaque. I believe the instances where this is a mistake outweigh the instances where it is legit, but let me know how we get on--maybe there are some weird mid-gif thumbs or something where this misfires. in the same thing, I reverted the 'psd thumbnails now have no transparency' change from last week. the issue where ffmpeg was sometimes being confused about psd layer masks from earlier should be fixed while letting legit transparency work correctly. the ultimate fix here will be to roll imagemagick into the program, which I am now planning and will start 'running from source' experiments with soon
-* the three 'additional fixed time...' settings in _options->downloading_ now have a max value of 3600, for extreme situation testing
-
-### boring code cleanup
-
-* updated my serialisabledict/list objects again--they can now handle bytes objects in any position. I will slowly migrate my existing hardcoded bytes serialisation and the old serialisablebytesdict to these freshly flexible classes
-* for clarity, across the code, renamed 'duplicate action options' to 'duplicate content merge options'
-* refactored duplicate content merge options initialisation, clearing the stuffed init and totuple to nicer get/set
-* broke apart how NoteImportOptions does its main note filtering for easier low-level access
-* cleaned a ton of note import options code up. the logic here was not great, now it is a bit tidier
-* undid whatever nonsense I was doing with taglist ctrl-drag-selection and cleaned up the main click and drag event handling along with its index calculation and 'what was clicked last time' record
-* fixed numerous weird logical/position index issues with the taglist and clicking/dragging

@@ -135,7 +135,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         self._all_known_files_allowed_only_in_advanced_mode = False
         self._only_importable_domains_allowed = False
         
-        self.SetValue( location_context )
+        self.SetValue( location_context, force_label = True )
         
     
     def _EditLocation( self ):
@@ -237,15 +237,18 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         self._all_known_files_allowed_only_in_advanced_mode = all_known_files_allowed_only_in_advanced_mode
         
     
-    def SetValue( self, location_context: ClientLocation.LocationContext ):
+    def SetValue( self, location_context: ClientLocation.LocationContext, force_label = False ):
         
         location_context = location_context.Duplicate()
         
         location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
-        if location_context == self._location_context:
+        if not force_label:
             
-            return
+            if location_context == self._location_context:
+                
+                return
+                
             
         
         self._location_context = location_context

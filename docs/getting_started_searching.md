@@ -3,10 +3,10 @@ title: Searching and Sorting
 ---
 
 # Searching and sorting
-The primary purpose of tags is to be able to find what you've tagged again. For this we have the search feature of Hydrus.
+The primary purpose of tags is to be able to find what you've tagged again. Let's see more how it works.
 
 ## Searching
-Just open a new search page (`pages > new file search page` or <kbd>Ctrl+T</kbd> `> file search`) and start typing away in the search field which should be focused when you first open the page.
+Just open a new search page (`pages > new file search page` or <kbd>Ctrl+T</kbd> `> file search`) and start typing in the search field which should be focused when you first open the page.
 
 ### The dropdown controls
 
@@ -14,17 +14,17 @@ Let's look at the tag autocomplete dropdown:
 
 ![](images/ac_dropdown.png)
 
-*   **favourite searches star**
+*   **system predicates**
     
-    Once you get experience with the client, have a play with this. Rather than leaving common search pages open, save them in here and load them up as needed. You will keep your client lightweight and save time.
+    Hydrus calls search terms _predicates_. 'system predicates', which search metadata other than simple tags, show on any search page with an empty autocomplete input. You can mix them into any search alongside tags. They are very useful, so try them out!
     
 *   **include current/pending tags**
     
-    Turn these on and off to control whether tag _search predicates_ apply to tags the exist, or limit just to those pending to be uploaded to a tag repository. Just searching 'pending' tags is useful if you want to scan what you have pending to go up to the PTR--just turn off 'current' tags and search `system:num tags > 0`.
+    Turn these on and off to control whether tag _predicates_ apply to tags that exist, or those pending to be uploaded to a tag repository. Just searching 'pending' tags is useful if you want to scan what you have pending to go up to the PTR--just turn off 'current' tags and search `system:num tags > 0`.
     
 *   **searching immediately**
     
-    This controls whether a change to the search tags will instantly run the new search and get new results. Turning this off is helpful if you want to add, remove, or replace several heavy search terms in a row without getting UI lag.
+    This controls whether a change to the list of current search predicates will instantly run the new search and get new results. Turning this off is helpful if you want to add, remove, or replace several heavy search terms in a row without getting UI lag.
     
 *   **[OR](getting_started_searching.md#or_searching)**
     
@@ -32,15 +32,20 @@ Let's look at the tag autocomplete dropdown:
     
 *   **file/tag domains**
     
-    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:samus aran`, then you will get file results from your 'my files' domain that have `character:samus aran` in any tag service. For most purposes, this combination is fine, but as you use the client more, you may want to access different search domains.
+    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:samus aran`, then you will get file results from your 'my files' domain that have `character:samus aran` in any known tag service. For most purposes, this combination is fine, but as you use the client more, you will sometimes want to access different search domains.
     
     For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a `system:num_tags` or a `character:samus aran` will only look 'my tags'.
     
-    Turning on 'advanced mode' gives access to more search domains. Some of them are subtly complicated and only useful for clever jobs--most of the time, you still want 'my files' and 'all known tags'.
+    Turning on 'advanced mode' gives access to more search domains. Some of them are subtly complicated, run extremely slowly, and only useful for clever jobs--most of the time, you still want 'my files' and 'all known tags'.
+    
+*   **favourite searches star**
+    
+    Once you are more experienced, have a play with this. It lets you save your common searches for future, so you don't have to either keep re-entering them or keep them open all the time. If you close big things down when you aren't using them, you will keep your client lightweight and save time.
+    
 
-Hydrus will treat a space the same way as an underscore when searching so the query `character:samus aran` will find files tagged with `character:samus aran` and `character:samus_aran`.
+When you type a tag in a search page, Hydrus will treat a space the same way as an underscore. Searching `character:samus aran` will find files tagged with `character:samus aran` and `character:samus_aran`. This is true of some other syntax characters, `[](){}/\"'-`, too.
 
-Tags will be searchable by all their [siblings](/advanced_siblings.md). If there's a sibling for `large` -> `huge` then the query `large` will find files tagged with either and so will a search for `huge`. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
+Tags will be searchable by all their [siblings](advanced_siblings.md). If there's a sibling for `large` -> `huge` then typing `large` will provide `huge` as a suggestion. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
 
 ### Wildcards
 
@@ -61,9 +66,6 @@ This is particularly useful if you have a number of files with commonly structur
 ![](images/wildcard_cool_pic.png)
 
 In this case, selecting the `title:cool pic*` predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like `series:cool pic` and `page:1`, `page:2`, `page:3`.
-
-### System predicates
-Tags are intended to tell you about content in the file while system predicates on the other hand deals with the files themselves for the most part: How big a file is, resolution, number of pixels, sound or no sound, number of tags assigned to the file, time imported, and quite a few other things. System predicates are the things prefixed with `system:` in the window that appear when you click in the search box.
 
 ## OR searching
 Searches find files that match every search 'predicate' in the list (it is an **AND** search), which makes it difficult to search for files that include one **OR** another tag. For example the query `red eyes` **AND** `green eyes` (aka what you get if you enter each tag by itself) will only find files that has both tags. While the query `red eyes` **OR** `green eyes` will present you with files that are tagged with red eyes or green eyes, or both.

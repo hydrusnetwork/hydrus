@@ -61,7 +61,7 @@ class MediaResult( object ):
         return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
     
-    def GetDuration( self ):
+    def GetDurationMS( self ):
         
         return self._file_info_manager.duration
         

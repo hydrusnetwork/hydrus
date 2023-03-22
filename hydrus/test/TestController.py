@@ -66,6 +66,7 @@ from hydrus.test import TestHydrusNetworking
 from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
 from hydrus.test import TestHydrusSessions
+from hydrus.test import TestHydrusTags
 from hydrus.test import TestServerDB
 
 DB_DIR = None
@@ -789,6 +790,7 @@ class Controller( object ):
             TestClientImageHandling,
             TestClientMetadataMigration,
             TestClientMigration,
+            TestHydrusTags,
             TestHydrusServer
         ]
         
@@ -814,6 +816,7 @@ class Controller( object ):
             TestClientThreading,
             TestFunctions,
             TestHydrusData,
+            TestHydrusTags,
             TestHydrusSerialisable,
             TestHydrusSessions
         ]

@@ -71,11 +71,29 @@ def ConvertParseResultToPrettyString( result ):
         
         try:
             
-            tag = HydrusTags.CleanTag( HydrusTags.CombineTag( additional_info, parsed_text ) )
+            if additional_info is None:
+                
+                combined_tag = parsed_text
+                
+            else:
+                
+                combined_tag = HydrusTags.CombineTag( additional_info, parsed_text, do_not_double_namespace = True )
+                
+            
+            tag = HydrusTags.CleanTag( combined_tag )
             
         except:
             
             tag = 'unparsable tag, will likely be discarded'
+            
+        
+        try:
+            
+            HydrusTags.CheckTagNotEmpty( tag )
+            
+        except HydrusExceptions.TagSizeException:
+            
+            tag = 'empty tag, will be discarded'
             
         
         return 'tag: ' + tag
@@ -179,11 +197,16 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
             elif content_type == HC.CONTENT_TYPE_MAPPINGS:
                 
-                namespaces = [ namespace for namespace in additional_infos if namespace != '' ]
+                namespaces = [ namespace for namespace in additional_infos if namespace not in ( '', None ) ]
                 
                 if '' in additional_infos:
                     
                     namespaces.append( 'unnamespaced' )
+                    
+                
+                if None in additional_infos:
+                    
+                    namespaces.append( 'any namespace' )
                     
                 
                 pretty_strings.append( 'tags: ' + ', '.join( namespaces ) )
@@ -381,7 +404,16 @@ def GetNamespacesFromParsableContent( parsable_content ):
     
     content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( content_type, additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
     
-    namespaces = content_type_to_additional_infos[ HC.CONTENT_TYPE_MAPPINGS ] # additional_infos is a set of namespaces
+    namespaces = set( content_type_to_additional_infos[ HC.CONTENT_TYPE_MAPPINGS ] ) # additional_infos is a set of namespaces
+    
+    if None in namespaces:
+        
+        namespaces.discard( None )
+        
+        namespaces.add( '' )
+        
+    
+    namespaces = sorted( namespaces )
     
     return namespaces
     
@@ -445,7 +477,20 @@ def GetTagsFromParseResults( results ):
         
         if content_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            tag_results.append( HydrusTags.CombineTag( additional_info, parsed_text ) )
+            namespace = additional_info
+            
+            make_no_namespace_changes = namespace is None
+            
+            if make_no_namespace_changes:
+                
+                combined_tag = parsed_text
+                
+            else:
+                
+                combined_tag = HydrusTags.CombineTag( namespace, parsed_text, do_not_double_namespace = True )
+                
+            
+            tag_results.append( combined_tag )
             
         
     
@@ -1965,7 +2010,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
         
@@ -1982,14 +2027,6 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         if formula is None:
             
             formula = ParseFormulaHTML()
-            
-        
-        if additional_info is None:
-            
-            if content_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                additional_info = ''
-                
             
         
         self._name = name
@@ -2171,6 +2208,27 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( name, content_type, serialisable_formula, additional_info ) = old_serialisable_info
+            
+            if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                namespace = additional_info
+                
+                if namespace == '':
+                    
+                    namespace = None
+                    
+                
+                additional_info = namespace
+                
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
+            
+            return ( 7, new_serialisable_info )
             
         
     

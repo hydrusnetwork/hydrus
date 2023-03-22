@@ -128,12 +128,7 @@ def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_
     
     ClientGUIMenus.AppendMenu( menu, submenu, 'show files' )
     
-def CreateManagementController( page_name, management_type, location_context = None ):
-    
-    if location_context is None:
-        
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-        
+def CreateManagementController( page_name, management_type ):
     
     new_options = HG.client_controller.new_options
     
@@ -142,7 +137,6 @@ def CreateManagementController( page_name, management_type, location_context = N
     management_controller.SetType( management_type )
     management_controller.SetVariable( 'media_sort', new_options.GetDefaultSort() )
     management_controller.SetVariable( 'media_collect', new_options.GetDefaultCollect() )
-    management_controller.SetVariable( 'location_context', location_context )
     
     return management_controller
     
@@ -151,7 +145,7 @@ def CreateManagementControllerDuplicateFilter():
     
     default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
     
-    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER, location_context = default_location_context )
+    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER )
     
     file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
     
@@ -167,6 +161,7 @@ def CreateManagementControllerDuplicateFilter():
     
     return management_controller
     
+
 def CreateManagementControllerImportGallery( page_name = None ):
     
     if page_name is None:
@@ -178,14 +173,13 @@ def CreateManagementControllerImportGallery( page_name = None ):
     
     multiple_gallery_import = ClientImportGallery.MultipleGalleryImport( gug_key_and_name = gug_key_and_name )
     
-    location_context = multiple_gallery_import.GetFileImportOptions().GetDestinationLocationContext()
-    
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, location_context = location_context )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY )
     
     management_controller.SetVariable( 'multiple_gallery_import', multiple_gallery_import )
     
     return management_controller
     
+
 def CreateManagementControllerImportSimpleDownloader():
     
     simple_downloader_import = ClientImportSimpleURLs.SimpleDownloaderImport()
@@ -194,19 +188,16 @@ def CreateManagementControllerImportSimpleDownloader():
     
     simple_downloader_import.SetFormulaName( formula_name )
     
-    location_context = simple_downloader_import.GetFileImportOptions().GetDestinationLocationContext()
-    
-    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, location_context = location_context )
+    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER )
     
     management_controller.SetVariable( 'simple_downloader_import', simple_downloader_import )
     
     return management_controller
     
+
 def CreateManagementControllerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
     
-    location_context = file_import_options.GetDestinationLocationContext()
-    
-    management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD, location_context = location_context )
+    management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
     
     hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, metadata_routers = metadata_routers, paths_to_additional_service_keys_to_tags = paths_to_additional_service_keys_to_tags, delete_after_success = delete_after_success )
     
@@ -214,6 +205,7 @@ def CreateManagementControllerImportHDD( paths, file_import_options: FileImportO
     
     return management_controller
     
+
 def CreateManagementControllerImportMultipleWatcher( page_name = None, url = None ):
     
     if page_name is None:
@@ -223,14 +215,13 @@ def CreateManagementControllerImportMultipleWatcher( page_name = None, url = Non
     
     multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
-    location_context = multiple_watcher_import.GetFileImportOptions().GetDestinationLocationContext()
-    
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, location_context = location_context )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
     
     management_controller.SetVariable( 'multiple_watcher_import', multiple_watcher_import )
     
     return management_controller
     
+
 def CreateManagementControllerImportURLs( page_name = None ):
     
     if page_name is None:
@@ -240,42 +231,31 @@ def CreateManagementControllerImportURLs( page_name = None ):
     
     urls_import = ClientImportSimpleURLs.URLsImport()
     
-    location_context = urls_import.GetFileImportOptions().GetDestinationLocationContext()
-    
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS, location_context = location_context )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS )
     
     management_controller.SetVariable( 'urls_import', urls_import )
     
     return management_controller
     
+
 def CreateManagementControllerPetitions( petition_service_key ):
     
     petition_service = HG.client_controller.services_manager.GetService( petition_service_key )
     
     page_name = petition_service.GetName() + ' petitions'
     
-    petition_service_type = petition_service.GetServiceType()
-    
-    if petition_service_type in HC.LOCAL_FILE_SERVICES or petition_service_type == HC.FILE_REPOSITORY:
-        
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( petition_service_key )
-        
-    else:
-        
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
-        
-    
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_PETITIONS, location_context = location_context )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_PETITIONS )
     
     management_controller.SetVariable( 'petition_service_key', petition_service_key )
     
     return management_controller
     
+
 def CreateManagementControllerQuery( page_name, file_search_context: ClientSearch.FileSearchContext, search_enabled ):
     
     location_context = file_search_context.GetLocationContext()
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY, location_context = location_context )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY )
     
     synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
@@ -285,6 +265,7 @@ def CreateManagementControllerQuery( page_name, file_search_context: ClientSearc
     
     return management_controller
     
+
 class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
@@ -675,6 +656,77 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return d
         
     
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        # this is hacky, but it has a decent backstop and it is easier than keeping the management controller updated with this oft-changing thing all the time when we nearly always have it duped somewhere else anyway
+        
+        source_names = [
+            'file_search_context',
+            'file_search_context_1',
+            'multiple_gallery_import',
+            'multiple_watcher_import',
+            'hdd_import',
+            'simple_downloader_import',
+            'urls_import'
+        ]
+        
+        for source_name in source_names:
+            
+            if source_name in self._variables:
+                
+                source = self._variables[ source_name ]
+                
+                if hasattr( source, 'GetFileImportOptions' ):
+                    
+                    file_import_options = source.GetFileImportOptions()
+                    
+                    location_context = FileImportOptions.GetRealFileImportOptions( file_import_options, FileImportOptions.IMPORT_TYPE_LOUD ).GetDestinationLocationContext()
+                    
+                    return location_context
+                    
+                elif hasattr( source, 'GetLocationContext' ):
+                    
+                    location_context = source.GetLocationContext()
+                    
+                    return location_context
+                    
+                
+            
+        
+        if 'petition_service_key' in self._variables:
+            
+            petition_service_key = self._variables[ 'petition_service_key' ]
+            
+            try:
+                
+                petition_service = HG.client_controller.services_manager.GetService( petition_service_key )
+                
+                petition_service_type = petition_service.GetServiceType()
+                
+                if petition_service_type in HC.LOCAL_FILE_SERVICES or petition_service_type == HC.FILE_REPOSITORY:
+                    
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( petition_service_key )
+                    
+                else:
+                    
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
+                    
+                
+                return location_context
+                
+            except HydrusExceptions.DataMissing:
+                
+                pass
+                
+        
+        if 'location_context' in self._variables:
+            
+            return self._variables[ 'location_context' ]
+            
+        
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+    
     def GetNumSeeds( self ):
         
         try:
@@ -912,7 +964,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def _GetCurrentLocationContext( self ):
         
-        return self._management_controller.GetVariable( 'location_context' )
+        return self._management_controller.GetLocationContext()
         
     
     def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
@@ -993,6 +1045,8 @@ class ManagementPanel( QW.QScrollArea ):
         self._controller = controller
         self._management_controller = management_controller
         
+        self._last_seen_location_context = self._management_controller.GetLocationContext()
+        
         self._page = page
         self._page_key = self._management_controller.GetVariable( 'page_key' )
         
@@ -1019,13 +1073,22 @@ class ManagementPanel( QW.QScrollArea ):
         return 'empty page'
         
     
+    def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST ):
+        
+        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        
+        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key, tag_display_type = tag_display_type )
+        
+        self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
+        
+        QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
     def _SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
-        current_location_context = self._management_controller.GetVariable( 'location_context' )
-        
-        if location_context != current_location_context:
+        if location_context != self._last_seen_location_context:
             
-            self._management_controller.SetVariable( 'location_context', location_context )
+            self._last_seen_location_context = location_context
             
             self.locationChanged.emit( location_context )
             
@@ -1041,34 +1104,6 @@ class ManagementPanel( QW.QScrollArea ):
             
             media_panel.PublishSelectionChange()
             
-        
-    
-    def GetMediaCollect( self ):
-        
-        if self.SHOW_COLLECT:
-            
-            return self._media_collect.GetValue()
-            
-        else:
-            
-            return ClientMedia.MediaCollect()
-            
-        
-    
-    def GetMediaSort( self ):
-        
-        return self._media_sort.GetSort()
-        
-    
-    def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST ):
-        
-        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
-        
-        self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key, tag_display_type = tag_display_type )
-        
-        self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
-        
-        QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def CheckAbleToClose( self ):
@@ -1088,7 +1123,7 @@ class ManagementPanel( QW.QScrollArea ):
     
     def GetDefaultEmptyMediaPanel( self ) -> ClientGUIResults.MediaPanel:
         
-        location_context = self._management_controller.GetVariable( 'location_context' )
+        location_context = self._management_controller.GetLocationContext()
         
         media_panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, [] )
         
@@ -1097,6 +1132,23 @@ class ManagementPanel( QW.QScrollArea ):
         media_panel.SetEmptyPageStatusOverride( status )
         
         return media_panel
+        
+    
+    def GetMediaCollect( self ):
+        
+        if self.SHOW_COLLECT:
+            
+            return self._media_collect.GetValue()
+            
+        else:
+            
+            return ClientMedia.MediaCollect()
+            
+        
+    
+    def GetMediaSort( self ):
+        
+        return self._media_sort.GetSort()
         
     
     def GetPageState( self ) -> int:
@@ -2387,7 +2439,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 media_results = []
                 
             
-            location_context = self._highlighted_gallery_import.GetFileImportOptions().GetDestinationLocationContext()
+            location_context = FileImportOptions.GetRealFileImportOptions( self._highlighted_gallery_import.GetFileImportOptions(), FileImportOptions.IMPORT_TYPE_LOUD ).GetDestinationLocationContext()
             
             self._SetLocationContext( location_context )
             
@@ -3272,7 +3324,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 media_results = []
                 
             
-            location_context = self._highlighted_watcher.GetFileImportOptions().GetDestinationLocationContext()
+            location_context = FileImportOptions.GetRealFileImportOptions( self._highlighted_watcher.GetFileImportOptions(), FileImportOptions.IMPORT_TYPE_LOUD ).GetDestinationLocationContext()
             
             self._SetLocationContext( location_context )
             
@@ -5030,19 +5082,24 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if contents.count() > 0:
             
-            ideal_height_in_rows = min( 20, len( contents_and_checks ) )
+            ideal_height_in_rows = max( 1, min( 20, len( contents_and_checks ) ) )
             
             pixels_per_row = contents.sizeHintForRow( 0 )
             
-            ideal_height_in_pixels = ( ideal_height_in_rows * pixels_per_row ) + ( contents.frameWidth() * 2 )
+        else:
             
-            contents.setFixedHeight( ideal_height_in_pixels )
+            ideal_height_in_rows = 1
+            pixels_per_row = 16
             
+        
+        ideal_height_in_pixels = ( ideal_height_in_rows * pixels_per_row ) + ( contents.frameWidth() * 2 )
+        
+        contents.setFixedHeight( ideal_height_in_pixels )
         
     
     def _ShowHashes( self, hashes ):
         
-        location_context = self._management_controller.GetVariable( 'location_context' )
+        location_context = self._management_controller.GetLocationContext()
         
         with ClientGUICommon.BusyCursor():
             
@@ -5752,7 +5809,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if query_job_key == self._query_job_key:
             
-            location_context = self._management_controller.GetVariable( 'location_context' )
+            location_context = self._management_controller.GetLocationContext()
             
             panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, location_context, media_results )
             

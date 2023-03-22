@@ -584,7 +584,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             return ''
             
         
-        total_duration = sum( ( media.GetDuration() for media in media_source ) )
+        total_duration = sum( ( media.GetDurationMS() for media in media_source ) )
         
         return HydrusData.ConvertMillisecondsToPrettyTime( total_duration )
         
@@ -856,7 +856,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                         
                         if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ):
                             
-                            focus_it = media.GetDuration() is None
+                            focus_it = media.GetDurationMS() is None
                             
                         else:
                             
@@ -905,7 +905,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
                     
                     if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ):
                         
-                        focus_it = media.GetDuration() is None
+                        focus_it = media.GetDurationMS() is None
                         
                     else:
                         

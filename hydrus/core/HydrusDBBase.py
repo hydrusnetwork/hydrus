@@ -175,6 +175,14 @@ class DBBase( object ):
         self._c = None
         
     
+    def _AnalyzeTempTable( self, temp_table_name ):
+        
+        # this is useful to do after populating a temp table so the query planner can decide which index to use in a big join that uses it
+        
+        self._Execute( 'ANALYZE {};'.format( temp_table_name ) )
+        self._Execute( 'ANALYZE mem.sqlite_master;' ) # this reloads the current stats into the query planner, may no longer be needed
+        
+    
     def _CloseCursor( self ):
         
         if self._c is not None:

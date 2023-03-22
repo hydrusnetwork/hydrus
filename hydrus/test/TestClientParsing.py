@@ -1,11 +1,93 @@
 import os
 import random
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 
+from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
+
+class DummyFormula( ClientParsing.ParseFormula ):
+    
+    def __init__( self, result: typing.List[ str ] ):
+        
+        ClientParsing.ParseFormula.__init__( self )
+        
+        self._result = result
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return None
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        pass
+        
+    
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
+        
+        return self._result
+        
+    
+    def ToPrettyString( self ):
+        
+        return 'test dummy formula'
+        
+    
+    def ToPrettyMultilineString( self ):
+        
+        return 'test dummy formula' + os.linesep + 'returns what you give it'
+        
+    
+
+class TestContentParser( unittest.TestCase ):
+    
+    def test_mappings( self ):
+        
+        parsing_context = {}
+        parsing_text = 'test parsing text'
+        
+        name = 'test content parser'
+        
+        # none
+        
+        dummy_formula = DummyFormula( [ 'character:lara croft', 'double pistols' ] )
+        
+        additional_info = None
+        
+        content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
+        
+        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:lara croft', 'double pistols' } )
+        
+        # ''
+        
+        additional_info = ''
+        
+        content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
+        
+        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { ':character:lara croft', 'double pistols' } )
+        
+        # character
+        
+        additional_info = 'character'
+        
+        content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
+        
+        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:lara croft', 'character:double pistols' } )
+        
+        # series
+        
+        additional_info = 'series'
+        
+        content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
+        
+        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'series:character:lara croft', 'series:double pistols' } )
+        
+    
 
 class TestStringConverter( unittest.TestCase ):
     

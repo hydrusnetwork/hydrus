@@ -202,7 +202,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetDuration( self ) -> typing.Optional[ int ]:
+    def GetDurationMS( self ) -> typing.Optional[ int ]:
         
         raise NotImplementedError()
         
@@ -1768,7 +1768,7 @@ class MediaCollection( MediaList, Media ):
         self._size = sum( [ media.GetSize() for media in self._sorted_media ] )
         self._size_definite = not False in ( media.IsSizeDefinite() for media in self._sorted_media )
         
-        duration_sum = sum( [ media.GetDuration() for media in self._sorted_media if media.HasDuration() ] )
+        duration_sum = sum( [ media.GetDurationMS() for media in self._sorted_media if media.HasDuration() ] )
         
         if duration_sum > 0: self._duration = duration_sum
         else: self._duration = None
@@ -1839,7 +1839,7 @@ class MediaCollection( MediaList, Media ):
             
         
     
-    def GetDuration( self ):
+    def GetDurationMS( self ):
         
         return self._duration
         
@@ -2037,9 +2037,9 @@ class MediaSingleton( Media ):
         return self
         
     
-    def GetDuration( self ):
+    def GetDurationMS( self ):
         
-        return self._media_result.GetDuration()
+        return self._media_result.GetDurationMS()
         
     
     def GetEarliestHashId( self ):
@@ -2388,7 +2388,7 @@ class MediaSingleton( Media ):
     
     def HasDuration( self ):
         
-        duration = self._media_result.GetDuration()
+        duration = self._media_result.GetDurationMS()
         
         return duration is not None and duration > 0
         
@@ -2672,7 +2672,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     # videos > images > pdfs
                     # heavy vids first, heavy images first
                     
-                    duration = x.GetDuration()
+                    duration = x.GetDurationMS()
                     num_frames = x.GetNumFrames()
                     size = x.GetSize()
                     resolution = x.GetResolution()
@@ -2745,7 +2745,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetDuration() )
+                    return deal_with_none( x.GetDurationMS() )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_FRAMERATE:
@@ -2759,7 +2759,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         return -1
                         
                     
-                    duration = x.GetDuration()
+                    duration = x.GetDurationMS()
                     
                     if duration is None or duration == 0:
                         

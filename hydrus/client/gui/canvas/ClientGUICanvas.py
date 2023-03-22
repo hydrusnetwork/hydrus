@@ -690,7 +690,7 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         
         hash = self._current_media.GetHash()
         
-        HG.client_controller.file_viewing_stats_manager.FinishViewing( hash, self.CANVAS_TYPE, view_timestamp, viewtime_delta )
+        HG.client_controller.file_viewing_stats_manager.FinishViewing( self._current_media, self.CANVAS_TYPE, view_timestamp, viewtime_delta )
         
     
     def _SeekDeltaCurrentMedia( self, direction, duration_ms ):
@@ -3674,6 +3674,8 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         
     
 class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
+    
+    CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         

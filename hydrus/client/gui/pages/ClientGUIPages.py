@@ -456,7 +456,7 @@ class Page( QW.QWidget ):
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetVariable( 'location_context' ) )
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetLocationContext() )
         
         self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
@@ -1078,7 +1078,7 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            location_context = self._management_controller.GetVariable( 'location_context' )
+            location_context = self._management_controller.GetLocationContext()
             
             media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, location_context, media_results )
             
@@ -2934,7 +2934,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         source_management_controller = source_page.GetManagementController()
         
-        location_context = source_management_controller.GetVariable( 'location_context' )
+        location_context = source_management_controller.GetLocationContext()
         
         screen_position = QG.QCursor.pos()
         

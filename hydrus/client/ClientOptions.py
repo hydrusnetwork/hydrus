@@ -212,6 +212,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
         
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
+        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_archive_delete_filter' ] = True
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_dupe_filter' ] = False
         
         self._dictionary[ 'booleans' ][ 'prefix_hash_when_copying' ] = False
@@ -279,6 +280,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click_only_static' ] = False
         
         self._dictionary[ 'booleans' ][ 'fade_sibling_connector' ] = True
+        self._dictionary[ 'booleans' ][ 'use_custom_sibling_connector_colour' ] = False
         
         from hydrus.client.gui.canvas import ClientGUIMPV
         
@@ -555,12 +557,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'qt_stylesheet_name' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_reason' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_special_action' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'sibling_connector_custom_namespace_colour' ] = 'system'
+        self._dictionary[ 'noneable_strings' ][ 'or_connector_custom_namespace_colour' ] = 'system'
         
         self._dictionary[ 'strings' ] = {}
         
         self._dictionary[ 'strings' ][ 'app_display_name' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'sibling_connector' ] = ' \u2192 '
+        self._dictionary[ 'strings' ][ 'or_connector' ] = ' OR '
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
@@ -723,6 +728,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         quiet_file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
         quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         quiet_file_import_options.SetPresentationImportOptions( presentation_import_options )
+        quiet_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
         
@@ -731,6 +737,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         loud_file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         loud_file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
         loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
+        loud_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
         

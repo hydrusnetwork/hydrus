@@ -2050,25 +2050,26 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
             
-            texts_and_namespaces = []
+            or_connector = HG.client_controller.new_options.GetString( 'or_connector' )
+            or_connector_namespace = HG.client_controller.new_options.GetNoneableString( 'or_connector_custom_namespace_colour' )
             
-            if or_under_construction:
-                
-                texts_and_namespaces.append( ( 'OR: ', 'system' ) )
-                
+            texts_and_namespaces = []
             
             for or_predicate in self._value:
                 
-                texts_and_namespaces.append( ( or_predicate.ToString(), or_predicate.GetNamespace() ) )
+                texts_and_namespaces.append( ( or_predicate.ToString(), 'namespace', or_predicate.GetNamespace() ) )
                 
-                texts_and_namespaces.append( ( ' OR ', 'system' ) )
+                texts_and_namespaces.append( ( or_connector, 'or', or_connector_namespace ) )
                 
             
-            texts_and_namespaces = texts_and_namespaces[ : -1 ]
+            if not or_under_construction:
+                
+                texts_and_namespaces = texts_and_namespaces[ : -1 ]
+                
             
         else:
             
-            texts_and_namespaces = [ ( self.ToString( render_for_user = render_for_user ), self.GetNamespace() ) ]
+            texts_and_namespaces = [ ( self.ToString( render_for_user = render_for_user ), 'namespace', self.GetNamespace() ) ]
             
         
         return texts_and_namespaces
@@ -2145,6 +2146,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
         return False
+        
+    
+    def IsORPredicate( self ):
+        
+        return self._predicate_type == PREDICATE_TYPE_OR_CONTAINER
         
     
     def IsUIEditable( self, ideal_predicate: "Predicate" ) -> bool:

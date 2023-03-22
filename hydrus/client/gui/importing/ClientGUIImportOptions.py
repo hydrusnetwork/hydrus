@@ -46,6 +46,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        if file_import_options.IsDefault():
+            
+            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD ).Duplicate()
+            
+            file_import_options.SetIsDefault( True )
+            
+        
+        #
+        
         default_panel = ClientGUICommon.StaticBox( self, 'default options' )
         
         self._use_default_dropdown = ClientGUICommon.BetterChoice( default_panel )
