@@ -704,7 +704,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._conversion_type = ClientGUICommon.BetterChoice( self._control_panel )
             
-            for t_type in ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.STRING_CONVERSION_REVERSE, ClientStrings.STRING_CONVERSION_REGEX_SUB, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_INTEGER_ADDITION ):
+            for t_type in ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.STRING_CONVERSION_REVERSE, ClientStrings.STRING_CONVERSION_REGEX_SUB, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_INTEGER_ADDITION, ClientStrings.STRING_CONVERSION_HASH_FUNCTION ):
                 
                 self._conversion_type.addItem( ClientStrings.conversion_type_str_lookup[ t_type ], t_type )
                 
@@ -718,6 +718,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_offset = ClientGUICommon.BetterSpinBox( self._control_panel, min=-86400, max=86400 )
+            self._data_hash_function = ClientGUICommon.BetterChoice( self._control_panel )
             
             for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
                 
@@ -735,6 +736,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_GMT )
             self._data_timezone_encode.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            
+            for e in ( 'md5', 'sha1', 'sha256', 'sha512' ):
+                
+                self._data_hash_function.addItem( e, e )
+                
             
             #
             
@@ -799,6 +805,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_text.setText( phrase )
                 self._data_timezone_encode.SetValue( timezone_type )
+            
+            elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
+
+                self._data_hash_function.SetValue(data)
                 
             elif data is not None:
                 
@@ -827,6 +837,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode_label = ClientGUICommon.BetterStaticText( self, 'date decode timezone: ' )
             self._data_timezone_offset_label = ClientGUICommon.BetterStaticText( self, 'timezone offset: ' )
             self._data_timezone_encode_label = ClientGUICommon.BetterStaticText( self, 'date encode timezone: ' )
+            self._data_hash_function_label = ClientGUICommon.BetterStaticText( self, 'hashing function: ' )
             
             rows.append( ( 'conversion type: ', self._conversion_type ) )
             rows.append( ( self._data_text_label, self._data_text ) )
@@ -838,6 +849,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( self._data_timezone_decode_label, self._data_timezone_decode ) )
             rows.append( ( self._data_timezone_offset_label, self._data_timezone_offset ) )
             rows.append( ( self._data_timezone_encode_label, self._data_timezone_encode ) )
+            rows.append( ( self._data_hash_function_label, self._data_hash_function) )
             
             self._control_gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
             
@@ -879,6 +891,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateExampleText )
             self._data_timezone_offset.valueChanged.connect( self._UpdateExampleText )
             self._data_timezone_encode.currentIndexChanged.connect( self._UpdateExampleText )
+            self._data_hash_function.currentIndexChanged.connect( self._UpdateExampleText )
             
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateDataControls )
             self._data_timezone_encode.currentIndexChanged.connect( self._UpdateDataControls )
@@ -897,6 +910,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode_label.setVisible( False )
             self._data_timezone_offset_label.setVisible( False )
             self._data_timezone_encode_label.setVisible( False )
+            self._data_hash_function_label.setVisible( False )
             
             self._data_text.setVisible( False )
             self._data_number.setVisible( False )
@@ -907,6 +921,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode.setVisible( False )
             self._data_timezone_offset.setVisible( False )
             self._data_timezone_encode.setVisible( False )
+            self._data_hash_function.setVisible( False )
             
             conversion_type = self._conversion_type.GetValue()
             
@@ -919,6 +934,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_decoding_label.setVisible( True )
                 self._data_decoding.setVisible( True )
+            
+            elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
+                
+                self._data_hash_function_label.setVisible( True )
+                self._data_hash_function.setVisible( True )
                 
             elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_REGEX_SUB ):
                 
@@ -1078,6 +1098,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 timezone_time = self._data_timezone_encode.GetValue()
                 
                 data = ( phrase, timezone_time )
+                
+            elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
+                
+                data = self._data_hash_function.GetValue()
                 
             else:
                 

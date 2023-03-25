@@ -104,6 +104,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self.note = ''
         
         self._referral_url = None
+        self._request_headers = None
         
         self._force_next_page_url_generation = False
         
@@ -144,7 +145,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             self.modified,
             self.status,
             self.note,
-            self._referral_url
+            self._referral_url,
+            self._request_headers
         )
         
     
@@ -159,7 +161,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             self.modified,
             self.status,
             self.note,
-            self._referral_url
+            self._referral_url,
+            self._request_headers
             ) = serialisable_info
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
@@ -261,6 +264,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self._referral_url = referral_url
         
     
+    def SetRequestHeaders( self, request_headers: dict ):
+        
+        self._request_headers = request_headers
+        
+    
     def SetRunToken( self, run_token: bytes ):
         
         self._run_token = run_token
@@ -355,6 +363,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
             
+            for ( key, value ) in self._request_headers.items():
+                
+                network_job.AddAdditionalHeader( key, value )
+            
             network_job.SetGalleryToken( gallery_token_name )
             
             network_job.OverrideBandwidth( 30 )
@@ -404,6 +416,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, actual_fetched_url )
                     
                     file_seed.SetReferralURL( url_for_child_referral )
+
+                    file_seed.SetRequestHeaders( self._request_headers )
                     
                     file_seeds = [ file_seed ]
                     

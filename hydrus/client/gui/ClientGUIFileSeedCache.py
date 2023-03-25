@@ -530,6 +530,24 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     ClientGUIMenus.AppendMenu( menu, url_submenu, 'additional urls' )
                     
+                #
+                
+                headers = selected_file_seed.GetHTTPHeaders()
+                
+                if headers is None:
+                    
+                    ClientGUIMenus.AppendMenuLabel( menu, 'no additional headers')
+                    
+                else:
+                    
+                    header_submenu = QW.QMenu( menu )
+                    
+                    for ( key, value ) in headers.items():
+                        
+                        ClientGUIMenus.AppendMenuLabel( header_submenu, key + ': ' + value )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, header_submenu, 'additional headers' )
                 
                 #
                 

@@ -139,13 +139,19 @@ def ConvertParseResultToPrettyString( result ):
         if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
             
             return 'source time: ' + timestamp_string
-            
+        
         
     elif content_type == HC.CONTENT_TYPE_TITLE:
         
         priority = additional_info
         
         return 'watcher page title (priority ' + str( priority ) + '): ' + parsed_text
+        
+    elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+        
+        header_name = additional_info
+        
+        return 'http header "{}": "{}"'.format( header_name, parsed_text )
         
     elif content_type == HC.CONTENT_TYPE_VETO:
         
@@ -238,6 +244,12 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             elif content_type == HC.CONTENT_TYPE_TITLE:
                 
                 pretty_strings.append( 'watcher page title' )
+                
+            elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+                
+                headers = [ header for header in additional_infos if header not in ( '', None ) ]
+
+                pretty_strings.append( 'http headers: ' + ', '.join( headers ) )
                 
             elif content_type == HC.CONTENT_TYPE_VETO:
                 
@@ -570,6 +582,23 @@ def GetTitleFromAllParseResults( all_parse_results ):
         return None
         
     
+
+def GetHTTPHeadersFromParseResults( parse_results ):
+    
+    headers = {}
+        
+    for ( ( name, content_type, additional_info ), parsed_text ) in parse_results:
+        
+        if content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+            
+            header_name = additional_info
+            
+            headers[header_name] = parsed_text
+            
+        
+    
+    return headers
+
 
 def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority = False ):
     

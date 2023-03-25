@@ -529,6 +529,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         types_to_str[ HC.CONTENT_TYPE_HASH ] = 'file hash'
         types_to_str[ HC.CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
         types_to_str[ HC.CONTENT_TYPE_TITLE ] = 'watcher title'
+        types_to_str[ HC.CONTENT_TYPE_HTTP_HEADER ] = 'http header'
         types_to_str[ HC.CONTENT_TYPE_VETO ] = 'veto'
         types_to_str[ HC.CONTENT_TYPE_VARIABLE ] = 'temporary variable'
         
@@ -602,6 +603,12 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._header_panel = QW.QWidget( self._content_panel )
+        
+        self._header_name = QW.QLineEdit( self._header_panel )
+        
+        #
+        
         self._veto_panel = QW.QWidget( self._content_panel )
         
         self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
@@ -662,6 +669,12 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             priority = additional_info
             
             self._title_priority.setValue( priority )
+            
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+            
+            header_name = additional_info
+            
+            self._header_name.setText(header_name)
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
@@ -751,6 +764,27 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._title_panel.setLayout( gridbox )
         
         #
+        self._urls_panel.setLayout( gridbox )
+        rows = []
+        
+        rows.append( ( 'header name: ', self._header_name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._header_panel, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        label = 'The value from this content parser will be used for the specified HTTP header on all URLs derived.'
+
+        st = ClientGUICommon.BetterStaticText( self._header_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._header_panel.setLayout( vbox )
+        
+        #
         
         vbox = QP.VBoxLayout()
         
@@ -794,6 +828,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_panel.Add( self._hash_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._timestamp_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._header_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._temp_variable_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -842,6 +877,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._hash_panel.setVisible( False )
         self._timestamp_panel.setVisible( False )
         self._title_panel.setVisible( False )
+        self._header_panel.setVisible( False )
         self._veto_panel.setVisible( False )
         self._temp_variable_panel.setVisible( False )
         
@@ -873,6 +909,10 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         elif content_type == HC.CONTENT_TYPE_TITLE:
             
             self._title_panel.show()
+
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+            
+            self._header_panel.show()
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
@@ -936,6 +976,12 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             priority = self._title_priority.value()
             
             additional_info = priority
+            
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+            
+            header_name = self._header_name.text()
+            
+            additional_info = header_name
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
@@ -1222,7 +1268,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
+        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_HTTP_HEADER, HC.CONTENT_TYPE_VETO ]
         
         self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestDataForChild, permitted_content_types )
         

@@ -164,6 +164,7 @@ CONTENT_TYPE_NOTES = 18
 CONTENT_TYPE_FILE_VIEWING_STATS = 19
 CONTENT_TYPE_TAG = 20
 CONTENT_TYPE_DEFINITIONS = 21
+CONTENT_TYPE_HTTP_HEADER = 22
 
 content_type_string_lookup = {
     CONTENT_TYPE_MAPPINGS : 'mappings',
@@ -186,7 +187,8 @@ content_type_string_lookup = {
     CONTENT_TYPE_TITLE : 'title',
     CONTENT_TYPE_NOTES : 'notes',
     CONTENT_TYPE_FILE_VIEWING_STATS : 'file viewing stats',
-    CONTENT_TYPE_DEFINITIONS : 'definitions'
+    CONTENT_TYPE_DEFINITIONS : 'definitions',
+    CONTENT_TYPE_HTTP_HEADER : 'http header'
 }
 
 CONTENT_UPDATE_ADD = 0

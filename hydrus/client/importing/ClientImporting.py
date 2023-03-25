@@ -43,6 +43,8 @@ def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_impor
     
     for parse_results in all_parse_results:
         
+        parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( parse_results )
+        
         parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
         
         parsed_urls = HydrusData.DedupeList( parsed_urls )
@@ -58,6 +60,8 @@ def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_impor
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
             file_seed.SetReferralURL( source_url )
+            
+            file_seed.SetRequestHeaders( parsed_request_headers )
             
             file_seed.AddParseResults( parse_results, file_import_options )
             
