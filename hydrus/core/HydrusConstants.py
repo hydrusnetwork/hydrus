@@ -47,8 +47,24 @@ PLATFORM_MACOS = muh_platform == 'darwin'
 PLATFORM_LINUX = muh_platform == 'linux'
 PLATFORM_HAIKU = muh_platform == 'haiku1'
 
+if PLATFORM_WINDOWS:
+    NICE_PLATFORM_STRING = 'Windows'
+elif PLATFORM_MACOS:
+    NICE_PLATFORM_STRING = 'macOS'
+elif PLATFORM_LINUX:
+    NICE_PLATFORM_STRING = 'Linux'
+elif PLATFORM_HAIKU:
+    NICE_PLATFORM_STRING = 'Haiku'
+
 RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
 RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
+
+if RUNNING_FROM_SOURCE:
+    NICE_RUNNING_AS_STRING = 'from source'
+elif RUNNING_FROM_FROZEN_BUILD:
+    NICE_RUNNING_AS_STRING = 'from frozen build'
+elif RUNNING_FROM_MACOS_APP:
+    NICE_RUNNING_AS_STRING = 'from App'
 
 BIN_DIR = os.path.join( BASE_DIR, 'bin' )
 HELP_DIR = os.path.join( BASE_DIR, 'help' )
@@ -84,8 +100,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 521
-CLIENT_API_VERSION = 42
+SOFTWARE_VERSION = 522
+CLIENT_API_VERSION = 43
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -164,7 +180,7 @@ CONTENT_TYPE_NOTES = 18
 CONTENT_TYPE_FILE_VIEWING_STATS = 19
 CONTENT_TYPE_TAG = 20
 CONTENT_TYPE_DEFINITIONS = 21
-CONTENT_TYPE_HTTP_HEADER = 22
+CONTENT_TYPE_HTTP_HEADERS = 22
 
 content_type_string_lookup = {
     CONTENT_TYPE_MAPPINGS : 'mappings',
@@ -188,7 +204,7 @@ content_type_string_lookup = {
     CONTENT_TYPE_NOTES : 'notes',
     CONTENT_TYPE_FILE_VIEWING_STATS : 'file viewing stats',
     CONTENT_TYPE_DEFINITIONS : 'definitions',
-    CONTENT_TYPE_HTTP_HEADER : 'http header'
+    CONTENT_TYPE_HTTP_HEADERS : 'http headers'
 }
 
 CONTENT_UPDATE_ADD = 0

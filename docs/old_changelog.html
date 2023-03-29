@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_522"><a href="#version_522">version 522</a></h2>
+                    <ul>
+                        <li><h3>notes in sidecars</h3></li>
+                        <li>the sidecars system now supports notes!</li>
+                        <li>my sidecars only support univariate rows atm (a list of strings, rather than, say, a list of pairs of strings), so I had to make a decision how to handle note names. if I reworked the pipeline to handle multivariate data, it would take weeks; if I incorporated explicit names into the sidecar object, it would have made 'get/export all my notes' awkward or impossible and not solved the storage problem; so I have compromised in this first version by choosing to import/export everything and merging the name and text into the same row. it expects/says 'name: text' for input and output. let me know what you think. I may revisit this, depending on how it goes</li>
+                        <li>I added a note to the sidecars help about this special 'name: text' rule along with a couple ideas for tricky situations</li>
+                        <li><h3>misc</h3></li>
+                        <li>added 'system:framerate' and 'system:number of frames' to the system predicate parser!</li>
+                        <li>I am undoing two changes to tag logic from last week: you can now have as many colons at the start of a tag as you like, and the content parser no longer tries to stop double-stacked namespaces. both of these were more trouble than they were worth. in related news, '::' is now a valid tag again, displaying as ':', and you can create ':blush:'-style tags by typing '::blush:'. I'm pretty sure these tags will autocomplete search awfully, so if you end up using something like this legit, let me know how it goes</li>
+                        <li>if you change the 'media/preview viewer uses its own volume' setting, the client now updates the UI sliders for this immediately, it doesn't need a client restart. the actual volume on the video also changes immediately</li>
+                        <li>when an mpv window is called to play media that has 'no audio', the mpv window is now explicitly muted. we'll see if this fixes an interesting issue where on one system, videos that have an audio channel with no sound, which hydrus detects as 'no audio', were causing cracks and pops and bursts of hellnoise in mpv (we suspect some sort of normalisation gain error)</li>
+                        <li><h3>file safety with duplicate symlinked directory entries</h3></li>
+                        <li>the main hydrus function that merges/mirrors files and directories now checks if the source and destination are the same location but with two different representations (e.g. a mapped drive and its network location). if so, to act as a final safety backstop, the mirror skips work and the merge throws an error. previously, if you wangled two entries for the same location into 'migrate database' and started a migration, it could cause file deletions!</li>
+                        <li>I've also updated my database migration routines to recognise and handle this situation explicitly. it now skips all file operations and just updates the location record instantly. it is now safe to have the same location twice in the dialog using different names, and to migrate from one to the other. the only bizzaro thing is if you look in the directory, it of course has boths' contents. as always though, I'll say make backups regularly, and sync them before you do any big changes like a migration--then if something goes wrong, you always have an up-to-date backup to roll back to</li>
+                        <li>the 'migrate database' dialog no longer chases the real path of what you give it. if you want to give it the mapped drive Z:, it'll take and remember it</li>
+                        <li>some related 'this is in the wrong place' recovery code handles these symlink situations better as well</li>
+                        <li><h3>advanced new parsing tricks</h3></li>
+                        <li>thanks to a clever user doing the heavy lifting, there are two neat but advanced additions to the downloader system</li>
+                        <li>first, the parsing system has a new content parser type, 'http headers', which lets you parse http headers to be used on subsequent downloads created by the parsing downloader object (e.g. next gallery page urls, file downloads from post pages, multi-file posts that split off to single post page urls). should be possible to wangle tokenized gallery searches and file downloads and some hacky login systems</li>
+                        <li>second, the string converter system now lets you calculate the normal hydrus hashes--md5, sha1, sha256, sha512--of any string (decoding it by utf-8), outputting hexadecimal</li>
+                        <li><h3>http headers on the client api</h3></li>
+                        <li>the client api now lets you see and edit the http headers (as under _network->data->review http headers_) for the global network context and specific domains. the commands are `/manage_headers/get_headers` and `/manage_headers/set_headers`</li>
+                        <li>if you have the 'Make a short-lived popup on cookie updates through the Client API' option set (under 'popups' options page), this now applies to these header changes too</li>
+                        <li>also debuting on the side is a 'network context' object in the `get_headers` response, confirming the domain you set for. this is an internal object that does domain location stuff all over. it isn't important here, but as we do more network domain setting editing, I expect we'll see more of this guy</li>
+                        <li>I added some some documentation for all this, as normal, to the client api help</li>
+                        <li>the labels and help around 'manage cookies' permission are now 'manage cookies and headers'</li>
+                        <li>the client api version is now 43</li>
+                        <li>the old `/manage_headers/set_user_agent` still works. ideally, please move to `set_headers`, since it isn't that complex, but no rush. I've made a job to delete it in a year</li>
+                        <li>while I was doing this, I realised get/set_cookies is pretty bad. I hate their old 'just spam tuples' approach. I've slowly been replacing this stuff with nicer named JSON Objects as is more typical in APIs and is easier to update, so I expect I'll overhaul them at some point</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>gave the about window a pass. it now runs on the newer scrolling panel system using my hydrus UI objects (so e.g. the hyperlink now opens on a custom browser command, if you need it), says what platform you are on and whether you are source/build/app, and the version info lines are cleaned a little</li>
+                        <li>fixed/cleaned some bad code all around http header management</li>
+                        <li>wrote some unit tests for http headers in the client api</li>
+                        <li>wrote some unit tests for notes in sidecars</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_521"><a href="#version_521">version 521</a></h2>
                     <ul>
                         <li><h3>some tag presentation</h3></li>

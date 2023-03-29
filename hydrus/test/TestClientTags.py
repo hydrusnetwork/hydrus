@@ -5,12 +5,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusText
-
-from hydrus.external import SystemPredicateParser
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientManagers
 from hydrus.client import ClientSearch
 from hydrus.client import ClientSearchParseSystemPredicates
 from hydrus.client.media import ClientMediaManagers

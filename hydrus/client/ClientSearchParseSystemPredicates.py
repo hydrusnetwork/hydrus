@@ -166,6 +166,8 @@ pred_generators = {
     SystemPredicateParser.Predicate.SIMILAR_TO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
     SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
     SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( o, v[0] * 1000 + v[1] ) ),
+    SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( o, v ) ),
+    SystemPredicateParser.Predicate.NUM_OF_FRAMES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ( o, v ) ),
     SystemPredicateParser.Predicate.NUM_PIXELS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( o, v, HydrusData.ConvertPixelsToInt( u ) ) ),
     SystemPredicateParser.Predicate.RATIO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
     SystemPredicateParser.Predicate.TAG_AS_NUMBER : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( o[0], o[1], v ) ),

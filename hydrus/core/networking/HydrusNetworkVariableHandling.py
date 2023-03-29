@@ -490,6 +490,8 @@ def TestVariableType( name: str, value: typing.Any, expected_type: type, expecte
         
     
 
+EXPECTED_TYPE = typing.TypeVar( 'EXPECTED_TYPE' )
+
 class ParsedRequestArguments( dict ):
     
     def __missing__( self, key ):
@@ -497,8 +499,13 @@ class ParsedRequestArguments( dict ):
         raise HydrusExceptions.BadRequestException( 'It looks like the parameter "{}" was missing!'.format( key ) )
         
     
-    def GetValue( self, key, expected_type, expected_list_type = None, expected_dict_types = None, default_value = None, none_on_missing = False ):
+    def GetValue( self, key, expected_type: EXPECTED_TYPE, expected_list_type = None, expected_dict_types = None, default_value = None ) -> EXPECTED_TYPE:
         
-        return GetValueFromDict( self, key, expected_type, expected_list_type = expected_list_type, expected_dict_types = expected_dict_types, default_value = default_value, none_on_missing = none_on_missing )
+        return GetValueFromDict( self, key, expected_type, expected_list_type = expected_list_type, expected_dict_types = expected_dict_types, default_value = default_value )
+        
+    
+    def GetValueOrNone( self, key, expected_type: EXPECTED_TYPE, expected_list_type = None, expected_dict_types = None ) -> typing.Optional[ EXPECTED_TYPE ]:
+        
+        return GetValueFromDict( self, key, expected_type, expected_list_type = expected_list_type, expected_dict_types = expected_dict_types, none_on_missing = True )
         
     

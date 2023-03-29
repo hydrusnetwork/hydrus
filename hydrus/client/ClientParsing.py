@@ -77,7 +77,7 @@ def ConvertParseResultToPrettyString( result ):
                 
             else:
                 
-                combined_tag = HydrusTags.CombineTag( additional_info, parsed_text, do_not_double_namespace = True )
+                combined_tag = HydrusTags.CombineTag( additional_info, parsed_text )
                 
             
             tag = HydrusTags.CleanTag( combined_tag )
@@ -147,7 +147,7 @@ def ConvertParseResultToPrettyString( result ):
         
         return 'watcher page title (priority ' + str( priority ) + '): ' + parsed_text
         
-    elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+    elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
         
         header_name = additional_info
         
@@ -245,9 +245,9 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
                 pretty_strings.append( 'watcher page title' )
                 
-            elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+            elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
                 
-                headers = [ header for header in additional_infos if header not in ( '', None ) ]
+                headers = sorted( [ header for header in additional_infos if header not in ( '', None ) ] )
 
                 pretty_strings.append( 'http headers: ' + ', '.join( headers ) )
                 
@@ -499,7 +499,7 @@ def GetTagsFromParseResults( results ):
                 
             else:
                 
-                combined_tag = HydrusTags.CombineTag( namespace, parsed_text, do_not_double_namespace = True )
+                combined_tag = HydrusTags.CombineTag( namespace, parsed_text )
                 
             
             tag_results.append( combined_tag )
@@ -589,16 +589,16 @@ def GetHTTPHeadersFromParseResults( parse_results ):
         
     for ( ( name, content_type, additional_info ), parsed_text ) in parse_results:
         
-        if content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+        if content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
             
             header_name = additional_info
             
-            headers[header_name] = parsed_text
+            headers[ header_name ] = parsed_text
             
         
     
     return headers
-
+    
 
 def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority = False ):
     

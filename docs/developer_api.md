@@ -221,7 +221,7 @@ Arguments:
         *   2 - Edit File Tags
         *   3 - Search for and Fetch Files
         *   4 - Manage Pages
-        *   5 - Manage Cookies
+        *   5 - Manage Cookies and Headers
         *   6 - Manage Database
         *   7 - Edit File Notes
         *   8 - Manage File Relationships
@@ -2035,29 +2035,29 @@ Response:
 
 The files will be promoted to be the kings of their respective duplicate groups. If the file is already the king (also true for any file with no duplicates), this is idempotent. It also processes the files in the given order, so if you specify two files in the same group, the latter will be the king at the end of the request.
 
-## Managing Cookies and HTTP Headers
+## Managing Cookies
 
-This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.
+This refers to the cookies held in the client's session manager, which you can review under _network->data->manage session cookies_. These are sent to every request on the respective domains.
 
 ### **GET `/manage_cookies/get_cookies`** { id="manage_cookies_get_cookies" }
 
 _Get the cookies for a particular domain._
 
 Restricted access: 
-:   YES. Manage Cookies permission needed.
+:   YES. Manage Cookies and Headers permission needed.
     
 Required Headers: n/a
     
 Arguments:
 :   *  `domain`
 
-    ``` title="Example request (for gelbooru.com)"
-    /manage_cookies/get_cookies?domain=gelbooru.com
-    ```
-        
+``` title="Example request (for gelbooru.com)"
+/manage_cookies/get_cookies?domain=gelbooru.com
+```
 
 Response:
 :   A JSON Object listing all the cookies for that domain in \[ name, value, domain, path, expires \] format.
+
 ```json title="Example response"
 {
 	"cookies" : [
@@ -2077,7 +2077,7 @@ Response:
 Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.
 
 Restricted access: 
-:   YES. Manage Cookies permission needed.
+:   YES. Manage Cookies and Headers permission needed.
     
 Required Headers:
 :   
@@ -2100,12 +2100,121 @@ You can set 'value' to be null, which will clear any existing cookie with the co
 
 Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.
 
+## Managing HTTP Headers
+
+This refers to the custom headers you can see under _network->data->manage http headers_.
+
+### **GET `/manage_headers/get_headers`** { id="manage_headers_get_headers" }
+
+Get the custom http headers.
+
+Restricted access: 
+:   YES. Manage Cookies and Headers permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:   *  `domain`: optional, the domain to fetch headers for
+
+``` title="Example request (for gelbooru.com)"
+/manage_headers/get_headers?domain=gelbooru.com
+```
+
+``` title="Example request (for global)"
+/manage_headers/get_headers
+```
+
+Response:
+:   A JSON Object listing all the headers:
+
+```json title="Example response"
+{
+  "network_context" : {
+    "type" : 2,
+    "data" : "gelbooru.com"
+  },
+  "headers" : {
+    "User-Agent" : {
+      "value" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0",
+      "approved" : "approved",
+      "reason" : "Set by Client API"
+    },
+    "DNT" : {
+      "value" : "1",
+      "approved" : "approved",
+      "reason" : "Set by Client API"
+    }
+  }
+}
+```
+
+### **POST `/manage_headers/set_headers`** { id="manage_headers_set_headers" }
+
+Manages the custom http headers.
+
+Restricted access: 
+:   YES. Manage Cookies and Headers permission needed.
+    
+Required Headers:
+:    
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:       
+    *   `domain`: (optional, the specific domain to set the header for)
+    *   `headers`: (a JSON Object that holds "key" objects)
+
+```json title="Example request body"
+{
+  "domain" : "mysite.com",
+  "headers" : {
+    "User-Agent" : {
+      "value" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0"
+    },
+    "DNT" : {
+      "value" : "1"
+    },
+    "CoolStuffToken" : {
+      "value" : "abcdef0123456789",
+      "approved" : "pending",
+      "reason" : "This unlocks the Sonic fanfiction!"
+    }
+  }
+}
+```
+
+```json title="Example request body that deletes"
+{
+  "domain" : "myothersite.com",
+  "headers" : {
+    "User-Agent" : {
+      "value" : null
+    },
+    "Authorization" : {
+      "value" : null
+    }
+  }
+}
+```
+
+If you do not set a domain, or you set it to `null`, the 'context' will be the global context, which applies as a fallback to all jobs.
+
+Domain headers also apply to their subdomains--unless they are overwritten by specific subdomain entries.
+
+Each `key` Object under `headers` has the same form as [/manage\_headers/get\_headers](#manage_headers_get_headers). `value` is obvious--it is the value of the header. If the pair doesn't exist yet, you need the `value`, but if you just want to approve something, it is optional. Set it to `null` to delete an existing pair.
+
+You probably won't ever use `approved` or `reason`, but they plug into the 'validation' system in the client. They are both optional. Approved can be any of `[ approved, denied, pending ]`, and by default everything you add will be `approved`. If there is anything `pending` when a network job asks, the user will be presented with a yes/no popup presenting the reason for the header. If they click 'no', the header is set to `denied` and the network job goes ahead without it. If you have a header that changes behaviour or unlocks special content, you might like to make it optional in this way.
+
+If you need to reinstate it, the default `global` `User-Agent` is `Mozilla/5.0 (compatible; Hydrus Client)`.
+
 ### **POST `/manage_headers/set_user_agent`** { id="manage_headers_set_user_agent" }
+
+_This is deprecated--move to [/manage\_headers/set\_headers](#manage_headers_set_headers)!_
 
 This sets the 'Global' User-Agent for the client, as typically editable under _network->data->manage http headers_, for instance if you want hydrus to appear as a specific browser associated with some cookies.
 
 Restricted access: 
-:   YES. Manage Cookies permission needed.
+:   YES. Manage Cookies and Headers permission needed.
     
 Required Headers:
 :    

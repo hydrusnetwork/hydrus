@@ -316,24 +316,29 @@ class StringConverter( StringProcessingStep ):
                     
                     if hash_function == 'md5':
                         
-                        s = hashlib.md5(s.encode('utf-8')).hexdigest()
+                        s = hashlib.md5( s.encode( 'utf-8' ) ).hexdigest()
                         
                     elif hash_function == 'sha1':
                         
-                        s = hashlib.sha1(s.encode('utf-8')).hexdigest()
+                        s = hashlib.sha1( s.encode( 'utf-8' ) ).hexdigest()
                         
                     elif hash_function == 'sha256':
                         
-                        s = hashlib.sha256(s.encode('utf-8')).hexdigest()
+                        s = hashlib.sha256( s.encode( 'utf-8' ) ).hexdigest()
                         
                     elif hash_function == 'sha512':
                         
-                        s = hashlib.sha512(s.encode('utf-8')).hexdigest()
+                        s = hashlib.sha512( s.encode( 'utf-8' ) ).hexdigest()
+                        
+                    else:
+                        
+                        raise Exception( f'Unknown hash function "{hash_function}"!' )
                         
                     
+                
             except Exception as e:
                 
-                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.ConversionToString( conversion ) + '" to string "' + repr( s ) + '":' + str( e ) )
+                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "{}" to string "{}": {}'.format( self.ConversionToString( conversion ), s, e ) )
                 
             
         
@@ -454,7 +459,7 @@ class StringConverter( StringProcessingStep ):
             
         elif conversion_type == STRING_CONVERSION_HASH_FUNCTION:
             
-            return 'hash string with ' + str( data )
+            return 'hash string by ' + str( data )
             
         else:
             

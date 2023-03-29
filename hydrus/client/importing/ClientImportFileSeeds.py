@@ -111,7 +111,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
         
@@ -139,7 +139,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._cloudflare_last_modified_time = None
         
         self._referral_url = None
-        self._request_headers = None
+        self._request_headers = {}
         
         self._external_filterable_tags = set()
         self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
@@ -483,6 +483,50 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return ( 6, new_serialisable_info )
             
         
+        if version == 6:
+            
+            (
+                file_seed_type,
+                file_seed_data,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_primary_urls,
+                serialisable_source_urls,
+                serialisable_tags,
+                names_and_notes,
+                serialisable_hashes
+            ) = old_serialisable_info
+            
+            request_headers = {}
+            
+            new_serialisable_info = (
+                file_seed_type,
+                file_seed_data,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                request_headers,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_primary_urls,
+                serialisable_source_urls,
+                serialisable_tags,
+                names_and_notes,
+                serialisable_hashes
+            )
+            
+            return ( 7, new_serialisable_info )
+            
+        
     
     def AddParseResults( self, parse_results, file_import_options: FileImportOptions.FileImportOptions ):
         
@@ -583,6 +627,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             for ( key, value ) in self._request_headers.items():
                 
                 network_job.AddAdditionalHeader( key, value )
+                
             
             if override_bandwidth:
                 
@@ -911,7 +956,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         return set( self._source_urls )
     
-    def GetHTTPHeaders( self ):
+    def GetHTTPHeaders( self ) -> dict:
         
         return self._request_headers
         
@@ -1184,7 +1229,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def SetRequestHeaders( self, request_headers: dict ):
         
-        self._request_headers = request_headers
+        self._request_headers = dict( request_headers )
         
     
     def SetStatus( self, status: int, note: str = '', exception = None ):
@@ -1306,12 +1351,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
                     
-                    if self._request_headers is not None:
-                        
-                        for ( key, value ) in self._request_headers.items():
-                        
-                            network_job.AddAdditionalHeader( key, value )
-                            
+                    for ( key, value ) in self._request_headers.items():
+                    
+                        network_job.AddAdditionalHeader( key, value )
                         
                     
                     HG.client_controller.network_engine.AddJob( network_job )
@@ -1438,6 +1480,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( parse_results )
                         
+                        self._request_headers.update( parsed_request_headers )
+                        
                         desired_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
                         
                         child_urls = []
@@ -1498,7 +1542,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 duplicate_file_seed.SetReferralURL( url_for_child_referral )
 
-                                duplicate_file_seed.SetRequestHeaders( parsed_request_headers )
+                                duplicate_file_seed.SetRequestHeaders( self._request_headers )
                                 
                                 if self._referral_url is not None:
                                     

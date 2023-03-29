@@ -70,7 +70,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED
     SERIALISABLE_NAME = 'Gallery Log Entry'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, url = None, can_generate_more_pages = True ):
         
@@ -104,7 +104,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self.note = ''
         
         self._referral_url = None
-        self._request_headers = None
+        self._request_headers = {}
         
         self._force_next_page_url_generation = False
         
@@ -202,6 +202,28 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( url, can_generate_more_pages, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, created, modified, status, note, referral_url ) = old_serialisable_info
+            
+            request_headers = {}
+            
+            new_serialisable_info = (
+                url,
+                can_generate_more_pages,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                created,
+                modified,
+                status,
+                note,
+                referral_url,
+                request_headers
+            )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def ForceNextPageURLGeneration( self ):
         
@@ -266,7 +288,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def SetRequestHeaders( self, request_headers: dict ):
         
-        self._request_headers = request_headers
+        self._request_headers = dict( request_headers )
         
     
     def SetRunToken( self, run_token: bytes ):
@@ -366,6 +388,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             for ( key, value ) in self._request_headers.items():
                 
                 network_job.AddAdditionalHeader( key, value )
+                
             
             network_job.SetGalleryToken( gallery_token_name )
             
@@ -419,8 +442,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
 
                     file_seed.SetRequestHeaders( self._request_headers )
                     
-                    file_seeds = [ file_seed ]
-                    
                     file_seeds_callable( ( file_seed, ) )
                     
                     status = CC.STATUS_SUCCESSFUL_AND_NEW
@@ -431,11 +452,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if do_parse:
                 
-                parsing_context = {}
-                
-                parsing_context[ 'gallery_url' ] = gallery_url
-                parsing_context[ 'url' ] = url_to_check
-                parsing_context[ 'post_index' ] = '0'
+                parsing_context = {
+                    'gallery_url' : gallery_url,
+                    'url' : url_to_check,
+                    'post_index' : '0'
+                }
                 
                 all_parse_results = parser.Parse( parsing_context, parsing_text )
                 
@@ -488,6 +509,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                 
                 flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
+                
+                parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( flattened_results )
+                
+                self._request_headers.update( parsed_request_headers )
                 
                 sub_gallery_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_SUB_GALLERY, ), only_get_top_priority = True )
                 

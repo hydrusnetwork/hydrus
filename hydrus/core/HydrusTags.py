@@ -200,8 +200,6 @@ def CleanTag( tag ):
         
         tag = tag.lower()
         
-        tag = HydrusText.re_leading_colons.sub( ':', tag )
-        
         if HydrusText.re_leading_single_colon_and_no_more_colons.match( tag ) is not None:
             
             # Convert anything starting with one colon to start with two i.e. :D -> ::D
@@ -265,11 +263,11 @@ def CleanTags( tags ):
     return clean_tags
     
 
-def CombineTag( namespace, subtag, do_not_double_namespace = False ):
+def CombineTag( namespace, subtag ):
     
     if namespace == '':
         
-        if ':' in subtag and HydrusText.re_leading_double_colon.match( subtag ) is None:
+        if ':' in subtag:
             
             return ':' + subtag
             
@@ -280,14 +278,7 @@ def CombineTag( namespace, subtag, do_not_double_namespace = False ):
         
     else:
         
-        if do_not_double_namespace and subtag.startswith( namespace + ':' ):
-            
-            return subtag
-            
-        else:
-            
-            return namespace + ':' + subtag
-            
+        return namespace + ':' + subtag
         
     
 

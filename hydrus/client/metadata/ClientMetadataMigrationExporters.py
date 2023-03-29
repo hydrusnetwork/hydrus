@@ -11,6 +11,7 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientStrings
+from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.metadata import ClientMetadataMigrationCore
 
 class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNode ):
@@ -57,6 +58,90 @@ class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetad
         raise NotImplementedError()
         
     
+
+class SingleFileMetadataExporterMediaNotes( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterMedia ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_NOTES
+    SERIALISABLE_NAME = 'Metadata Single File Exporter Media Notes'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterMedia.__init__( self )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return list()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        gumpf = serialisable_info
+        
+    
+    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        names_and_notes = []
+        
+        for row in rows:
+            
+            if ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING not in row:
+                
+                continue
+                
+            
+            ( name, text ) = row.split( ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, 1 )
+            
+            if name == '' or text == '':
+                
+                continue
+                
+            
+            name = name.replace( ClientMetadataMigrationCore.NOTE_NAME_ESCAPE_STRING, ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING )
+            
+            names_and_notes.append( ( name, text ) )
+            
+        
+        media_result = HG.client_controller.Read( 'media_result', hash )
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        note_import_options.SetIsDefault( False )
+        note_import_options.SetExtendExistingNoteIfPossible( True )
+        note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
+        
+        service_keys_to_content_updates = note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes )
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            'Artist Commentary: This work is one of my favourites.',
+            'Translation: "What a nice day!"'
+        ]
+        
+        return examples
+        
+    
+    def ToString( self ) -> str:
+        
+        return 'notes to media'
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_NOTES ] = SingleFileMetadataExporterMediaNotes
 
 class SingleFileMetadataExporterMediaTags( HydrusSerialisable.SerialisableBase, SingleFileMetadataExporterMedia ):
     

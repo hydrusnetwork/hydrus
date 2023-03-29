@@ -261,7 +261,7 @@ class TestClientAPI( unittest.TestCase ):
         permissions_to_set_up.append( ( 'add_tags', [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
         permissions_to_set_up.append( ( 'add_urls', [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
         permissions_to_set_up.append( ( 'manage_pages', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES ] ) )
-        permissions_to_set_up.append( ( 'manage_cookies', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_COOKIES ] ) )
+        permissions_to_set_up.append( ( 'manage_headers', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_HEADERS ] ) )
         permissions_to_set_up.append( ( 'search_all_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         permissions_to_set_up.append( ( 'search_green_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         
@@ -638,7 +638,7 @@ class TestClientAPI( unittest.TestCase ):
     def _test_get_services( self, connection, set_up_permissions ):
         
         should_work = { set_up_permissions[ 'everything' ], set_up_permissions[ 'add_files' ], set_up_permissions[ 'add_tags' ], set_up_permissions[ 'manage_pages' ], set_up_permissions[ 'search_all_files' ], set_up_permissions[ 'search_green_files' ] }
-        should_break = { set_up_permissions[ 'add_urls' ], set_up_permissions[ 'manage_cookies' ] }
+        should_break = { set_up_permissions[ 'add_urls' ], set_up_permissions[ 'manage_headers' ] }
         
         expected_answer = {
             'local_tags' : [
@@ -2317,7 +2317,7 @@ class TestClientAPI( unittest.TestCase ):
     
     def _test_manage_cookies( self, connection, set_up_permissions ):
         
-        api_permissions = set_up_permissions[ 'manage_cookies' ]
+        api_permissions = set_up_permissions[ 'manage_headers' ]
         
         access_key_hex = api_permissions.GetAccessKey().hex()
         
@@ -2459,6 +2459,15 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
+    
+    def _test_manage_headers( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'manage_headers' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        #
+        
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/manage_headers/set_user_agent'
@@ -2500,6 +2509,316 @@ class TestClientAPI( unittest.TestCase ):
         from hydrus.client import ClientDefaults
         
         self.assertEqual( current_headers[ 'User-Agent' ], ClientDefaults.DEFAULT_USER_AGENT )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 0,
+                'data' : None
+            },
+            'headers' : {
+                'User-Agent' : {
+                    'approved': 'approved',
+                    'reason': 'This is the default User-Agent identifier for the client for all network connections.',
+                    'value' : ClientDefaults.DEFAULT_USER_AGENT
+                }
+            }
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_headers/set_headers'
+        
+        request_dict = { 'headers' : { 'Test' : { 'value' : 'test_value' } } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 0,
+                'data' : None
+            },
+            'headers' : {
+                'User-Agent' : {
+                    'approved': 'approved',
+                    'reason': 'This is the default User-Agent identifier for the client for all network connections.',
+                    'value' : ClientDefaults.DEFAULT_USER_AGENT
+                },
+                'Test' : {
+                    'approved': 'approved',
+                    'reason': 'Set by Client API',
+                    'value' : 'test_value'
+                }
+            }
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_headers/set_headers'
+        
+        request_dict = { 'domain' : None, 'headers' : { 'Test' : { 'value' : 'test_value2' } } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 0,
+                'data' : None
+            },
+            'headers' : {
+                'User-Agent' : {
+                    'approved': 'approved',
+                    'reason': 'This is the default User-Agent identifier for the client for all network connections.',
+                    'value' : ClientDefaults.DEFAULT_USER_AGENT
+                },
+                'Test' : {
+                    'approved': 'approved',
+                    'reason': 'Set by Client API',
+                    'value' : 'test_value2'
+                }
+            }
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        domain = 'subdomain.example.com'
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = f'/manage_headers/get_headers?domain={domain}'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 2,
+                'data' : 'subdomain.example.com'
+            },
+            'headers' : {}
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_headers/set_headers'
+        
+        request_dict = { 'domain' : 'subdomain.example.com', 'headers' : { 'cool_stuff' : { 'value' : 'on', 'approved' : 'pending', 'reason' : 'select yes to turn on cool stuff' } } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers?domain=subdomain.example.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 2,
+                'data' : 'subdomain.example.com'
+            },
+            'headers' : {
+                'cool_stuff' : { 'value' : 'on', 'approved' : 'pending', 'reason' : 'select yes to turn on cool stuff' }
+            }
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_headers/set_headers'
+        
+        request_dict = { 'domain' : 'subdomain.example.com', 'headers' : { 'cool_stuff' : { 'approved' : 'approved' } } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers?domain=subdomain.example.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 2,
+                'data' : 'subdomain.example.com'
+            },
+            'headers' : {
+                'cool_stuff' : { 'value' : 'on', 'approved' : 'approved', 'reason' : 'select yes to turn on cool stuff' }
+            }
+        }
+        
+        self.assertEqual( d, expected_result )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_headers/set_headers'
+        
+        request_dict = { 'domain' : 'subdomain.example.com', 'headers' : { 'cool_stuff' : { 'value' : None } } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_headers/get_headers?domain=subdomain.example.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'network_context' : {
+                'type' : 2,
+                'data' : 'subdomain.example.com'
+            },
+            'headers' : {}
+        }
+        
+        self.assertEqual( d, expected_result )
         
     
     def _test_manage_database( self, connection, set_up_permissions ):
@@ -4610,6 +4929,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_urls( connection, set_up_permissions )
         self._test_manage_duplicates( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
+        self._test_manage_headers( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
         

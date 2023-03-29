@@ -22,6 +22,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 
 choice_tuple_label_lookup = {
+    ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes : 'a file\'s notes',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags : 'a file\'s tags',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs : 'a file\'s URLs',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT : 'a .txt sidecar',
@@ -29,6 +30,7 @@ choice_tuple_label_lookup = {
 }
 
 choice_tuple_description_lookup = {
+    ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes : 'The notes that a file has.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags : 'The tags that a file has on a particular service.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs : 'The known URLs that a file has.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT : 'A list of raw newline-separated texts in a .txt file.',
@@ -171,7 +173,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             importer.SetServiceKey( self._service_key )
             
-        elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ):
+        elif isinstance( importer, ( ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ) ):
             
             pass
             
@@ -226,6 +228,10 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         if self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags:
             
             importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( string_processor = string_processor, service_key = self._service_key )
+            
+        elif self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes:
+            
+            importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes( string_processor = string_processor )
             
         elif self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs:
             
@@ -306,7 +312,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._service_selection_panel.setVisible( True )
             
-        elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ):
+        elif isinstance( importer, ( ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ) ):
             
             pass
             

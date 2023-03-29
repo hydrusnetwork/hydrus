@@ -534,9 +534,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 headers = selected_file_seed.GetHTTPHeaders()
                 
-                if headers is None:
+                if len( headers ) == 0:
                     
-                    ClientGUIMenus.AppendMenuLabel( menu, 'no additional headers')
+                    ClientGUIMenus.AppendMenuLabel( menu, 'no additional headers' )
                     
                 else:
                     

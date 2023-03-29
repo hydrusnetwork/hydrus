@@ -704,7 +704,22 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._conversion_type = ClientGUICommon.BetterChoice( self._control_panel )
             
-            for t_type in ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING, ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_END, ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.STRING_CONVERSION_REVERSE, ClientStrings.STRING_CONVERSION_REGEX_SUB, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_INTEGER_ADDITION, ClientStrings.STRING_CONVERSION_HASH_FUNCTION ):
+            for t_type in (
+                    ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING,
+                    ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_END,
+                    ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING,
+                    ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_END,
+                    ClientStrings.STRING_CONVERSION_PREPEND_TEXT,
+                    ClientStrings.STRING_CONVERSION_APPEND_TEXT,
+                    ClientStrings.STRING_CONVERSION_ENCODE,
+                    ClientStrings.STRING_CONVERSION_DECODE,
+                    ClientStrings.STRING_CONVERSION_REVERSE,
+                    ClientStrings.STRING_CONVERSION_REGEX_SUB,
+                    ClientStrings.STRING_CONVERSION_DATE_DECODE,
+                    ClientStrings.STRING_CONVERSION_DATE_ENCODE,
+                    ClientStrings.STRING_CONVERSION_INTEGER_ADDITION,
+                    ClientStrings.STRING_CONVERSION_HASH_FUNCTION
+            ):
                 
                 self._conversion_type.addItem( ClientStrings.conversion_type_str_lookup[ t_type ], t_type )
                 
@@ -718,7 +733,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_offset = ClientGUICommon.BetterSpinBox( self._control_panel, min=-86400, max=86400 )
+            
             self._data_hash_function = ClientGUICommon.BetterChoice( self._control_panel )
+            tt = 'This hashes the string\'s UTF-8-decoded bytes to hexadecimal.'
+            self._data_hash_function.setToolTip( tt )
             
             for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
                 
@@ -807,8 +825,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._data_timezone_encode.SetValue( timezone_type )
             
             elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
-
-                self._data_hash_function.SetValue(data)
+                
+                self._data_hash_function.SetValue( data )
                 
             elif data is not None:
                 
@@ -849,7 +867,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( self._data_timezone_decode_label, self._data_timezone_decode ) )
             rows.append( ( self._data_timezone_offset_label, self._data_timezone_offset ) )
             rows.append( ( self._data_timezone_encode_label, self._data_timezone_encode ) )
-            rows.append( ( self._data_hash_function_label, self._data_hash_function) )
+            rows.append( ( self._data_hash_function_label, self._data_hash_function ) )
             
             self._control_gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
             

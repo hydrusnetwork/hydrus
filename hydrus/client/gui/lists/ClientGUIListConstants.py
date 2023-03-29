@@ -310,11 +310,11 @@ class COLUMN_LIST_PATHS_TO_TAGS( COLUMN_LIST_DEFINITION ):
     TAGS = 2
     
 
-column_list_type_name_lookup[ COLUMN_LIST_PATHS_TO_TAGS.ID ] = 'import paths and their tags'
+column_list_type_name_lookup[ COLUMN_LIST_PATHS_TO_TAGS.ID ] = 'import paths and their metadata'
 
 register_column_type( COLUMN_LIST_PATHS_TO_TAGS.ID, COLUMN_LIST_PATHS_TO_TAGS.NUMBER, '#', False, 4, True )
 register_column_type( COLUMN_LIST_PATHS_TO_TAGS.ID, COLUMN_LIST_PATHS_TO_TAGS.PATH, 'path', False, 40, True )
-register_column_type( COLUMN_LIST_PATHS_TO_TAGS.ID, COLUMN_LIST_PATHS_TO_TAGS.TAGS, 'tags', False, 40, True )
+register_column_type( COLUMN_LIST_PATHS_TO_TAGS.ID, COLUMN_LIST_PATHS_TO_TAGS.TAGS, 'metadata', False, 40, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_PATHS_TO_TAGS.ID ] = ( COLUMN_LIST_PATHS_TO_TAGS.NUMBER, True )
 

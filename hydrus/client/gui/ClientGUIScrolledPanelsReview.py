@@ -63,6 +63,63 @@ from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
 
+class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, name, version, description, license_text, developers, site ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        icon_label = ClientGUICommon.BetterStaticText( self )
+        icon_label.setPixmap( HG.client_controller.frame_icon_pixmap )
+        
+        name_label = ClientGUICommon.BetterStaticText( self, name )
+        name_label_font = name_label.font()
+        name_label_font.setBold( True )
+        name_label.setFont( name_label_font )
+        
+        version_label = ClientGUICommon.BetterStaticText( self, version )
+        
+        tabwidget = QW.QTabWidget( self )
+        
+        desc_panel = QW.QWidget( self )
+        
+        desc_label = ClientGUICommon.BetterStaticText( self, description )
+        desc_label.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        
+        url_label = ClientGUICommon.BetterHyperLink( self, site, site )
+        
+        credits = QW.QTextEdit( self )
+        credits.setPlainText( 'Created by ' + ', '.join( developers ) )
+        credits.setReadOnly( True )
+        credits.setAlignment( QC.Qt.AlignHCenter )
+        
+        license_textedit = QW.QTextEdit( self )
+        license_textedit.setPlainText( license_text )
+        license_textedit.setReadOnly( True )
+        
+        tabwidget.addTab( desc_panel, 'Description' )
+        tabwidget.addTab( credits, 'Credits' )
+        tabwidget.addTab( license_textedit, 'License' )
+        tabwidget.setCurrentIndex( 0 )
+        
+        desc_layout = QP.VBoxLayout()
+        
+        QP.AddToLayout( desc_layout, desc_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( desc_layout, url_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        desc_panel.setLayout( desc_layout )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, icon_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, name_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, version_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, tabwidget, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+    
+
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
@@ -186,17 +243,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _AddPath( self, path, starting_weight = 1 ):
-        
-        try:
-            
-            path = os.path.realpath( path )
-            
-        except OSError as e:
-            
-            HydrusData.PrintException( e )
-            
-            QW.QMessageBox.warning( self, 'Warning', 'I tried to remove symlinks from this path, but that failed! If this path is a clever mount, this situation may be ok. I will let you continue, and if the path looks ok and you are confident you can read from and write to it, you can continue. I recommend you close the client and make a backup right now though. The full error has been printed to log.' )
-            
         
         if path in self._locations_to_ideal_weights:
             
@@ -816,17 +862,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = dlg.GetPath()
                 
-                try:
-                    
-                    path = os.path.realpath( path )
-                    
-                except OSError as e:
-                    
-                    HydrusData.PrintException( e )
-                    
-                    QW.QMessageBox.warning( self, 'Warning', 'I tried to remove symlinks from this path, but that failed! If this path is a clever mount, this situation may be ok. I will let you continue, and if the path looks ok and you are confident you can read from and write to it, you can continue. I recommend you close the client and make a backup right now though. The full error has been printed to log.' )
-                    
-                
                 if path in self._locations_to_ideal_weights:
                     
                     QW.QMessageBox.warning( self, 'Warning', 'That path already exists as a regular file location! Please choose another.' )
@@ -903,6 +938,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._rebalance_status_st.style().polish( self._rebalance_status_st )
         
     
+
 def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     time.sleep( 2 ) # important to have this, so the migrate dialog can close itself and clean its event loop, wew
@@ -956,6 +992,11 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
                 source_path = os.path.join( source, filename )
                 dest_path = os.path.join( dest, filename )
                 
+                if os.path.exists( source_path ) and os.path.exists( dest_path ) and os.path.samefile( source_path, dest_path ):
+                    
+                    continue
+                    
+                
                 HydrusPaths.MergeFile( source_path, dest_path )
                 
             
@@ -964,6 +1005,11 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
             
             source_path = os.path.join( source, portable_location )
             dest_path = os.path.join( dest, portable_location )
+            
+            if os.path.exists( source_path ) and os.path.exists( dest_path ) and os.path.samefile( source_path, dest_path ):
+                
+                continue
+                
             
             HydrusPaths.MergeTree( source_path, dest_path, text_update_hook = text_update_hook )
             
@@ -2221,7 +2267,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         domain_manager.AutoAddURLClassesAndParsers( new_url_classes, dupe_url_classes, new_parsers )
         
         bandwidth_manager.AutoAddDomainMetadatas( new_domain_metadatas )
-        domain_manager.AutoAddDomainMetadatas( new_domain_metadatas, approved = True )
+        domain_manager.AutoAddDomainMetadatas( new_domain_metadatas, approved = ClientNetworkingDomain.VALID_APPROVED )
         login_manager.AutoAddLoginScripts( new_login_scripts )
         
         num_new_gugs = len( new_gugs )

@@ -905,7 +905,7 @@ class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        subject_account_key = request.parsed_request_args.GetValue( 'subject_account_key', bytes, none_on_missing = True )
+        subject_account_key = request.parsed_request_args.GetValueOrNone( 'subject_account_key', bytes )
         
         petition_count_info = HG.server_controller.Read( 'num_petitions', self._service_key, request.hydrus_account, subject_account_key = subject_account_key )
         
@@ -949,7 +949,7 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        subject_account_key = request.parsed_request_args.GetValue( 'subject_account_key', bytes, none_on_missing = True )
+        subject_account_key = request.parsed_request_args.GetValueOrNone( 'subject_account_key', bytes )
         # add reason to here some time, for when we eventually select petitions from a summary list of ( account, reason, size ) stuff
         content_type = request.parsed_request_args[ 'content_type' ]
         status = request.parsed_request_args[ 'status' ]

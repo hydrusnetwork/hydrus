@@ -538,6 +538,11 @@ def MergeFile( source, dest ):
     
     # this can merge a file, but if it is given a dir it will just straight up overwrite not merge
     
+    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+        
+        raise Exception( f'Woah, "{source}" and "{dest}" are the same file!' )
+        
+    
     if not os.path.isdir( source ):
         
         if PathsHaveSameSizeAndDate( source, dest ):
@@ -564,7 +569,13 @@ def MergeFile( source, dest ):
     
     return True
     
+
 def MergeTree( source, dest, text_update_hook = None ):
+    
+    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+        
+        raise Exception( f'Woah, "{source}" and "{dest}" are the same directory!' )
+        
     
     pauser = HydrusData.BigJobPauser()
     
@@ -638,7 +649,13 @@ def MergeTree( source, dest, text_update_hook = None ):
             
         
     
+
 def MirrorFile( source, dest ):
+    
+    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+        
+        return True
+        
     
     if not PathsHaveSameSizeAndDate( source, dest ):
         
@@ -661,6 +678,11 @@ def MirrorFile( source, dest ):
     return True
     
 def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None ):
+    
+    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+        
+        return
+        
     
     pauser = HydrusData.BigJobPauser()
     
@@ -729,6 +751,7 @@ def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None 
             
         
     
+
 def OpenFileLocation( path ):
     
     def do_it():

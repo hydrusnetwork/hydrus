@@ -25,8 +25,10 @@ VALID_UNKNOWN = 2
 valid_str_lookup = {
     VALID_DENIED : 'denied',
     VALID_APPROVED : 'approved',
-    VALID_UNKNOWN : 'unknown'
+    VALID_UNKNOWN : 'pending'
 }
+
+valid_enum_lookup = { value : key for ( key, value ) in valid_str_lookup.items() }
 
 class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
@@ -289,7 +291,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         serialisable_default_note_import_options_tuple = ( serialisable_file_post_default_note_import_options, serialisable_watchable_default_note_import_options, serialisable_url_class_keys_to_default_note_import_options )
         
         serialisable_parsers = self._parsers.GetSerialisableTuple()
-        serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), list(custom_header_dict.items()) ) for ( network_context, custom_header_dict ) in list(self._network_contexts_to_custom_header_dicts.items()) ]
+        serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), list( custom_header_dict.items() ) ) for ( network_context, custom_header_dict ) in self._network_contexts_to_custom_header_dicts.items() ]
         
         return ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_default_note_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
         
@@ -755,7 +757,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def AutoAddDomainMetadatas( self, domain_metadatas, approved = False ):
+    def AutoAddDomainMetadatas( self, domain_metadatas, approved = VALID_APPROVED ):
         
         for domain_metadata in domain_metadatas:
             
@@ -934,6 +936,24 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         url_tuples.extend( unmatched_url_tuples )
         
         return url_tuples
+        
+    
+    def DeleteCustomHeader( self, network_context: ClientNetworkingContexts.NetworkContext, key: str ):
+        
+        with self._lock:
+            
+            if network_context in self._network_contexts_to_custom_header_dicts:
+                
+                custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                
+                if key in custom_header_dict:
+                    
+                    del custom_header_dict[ key ]
+                    
+                
+            
+            self._SetDirty()
+            
         
     
     def DeleteGUGs( self, deletee_names ):
@@ -1164,7 +1184,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                     
-                    for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
+                    for ( key, ( value, approved, reason ) ) in list( custom_header_dict.items() ):
                         
                         if approved == VALID_APPROVED:
                             
@@ -1262,9 +1282,12 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                 
-                for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
+                for ( key, ( value, approved, reason ) ) in list( custom_header_dict.items() ):
                     
-                    headers_list.append( ( key, value, reason ) )
+                    if approved == VALID_APPROVED:
+                        
+                        headers_list.append( ( key, value, reason ) )
+                        
                     
                 
             
@@ -1416,7 +1439,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def IsValid( self, network_contexts ):
         
-        # for now, let's say that denied headers are simply not added, not that they invalidate a query
+        # denied headers are simply not added--they don't invalidate a query
         
         for network_context in network_contexts:
             
@@ -1713,6 +1736,54 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetCustomHeader( self, network_context: ClientNetworkingContexts.NetworkContext, key, value = None, approved = None, reason = None ):
+        
+        with self._lock:
+            
+            fallback_value = None
+            fallback_approved = VALID_APPROVED
+            fallback_reason = 'Set by Client API'
+            
+            if network_context not in self._network_contexts_to_custom_header_dicts:
+                
+                self._network_contexts_to_custom_header_dicts[ network_context ] = {}
+                
+            
+            custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+            
+            if key in custom_header_dict:
+                
+                ( fallback_value, fallback_approved, fallback_reason ) = custom_header_dict[ key ]
+                
+            
+            if value is None:
+                
+                if fallback_value is None:
+                    
+                    raise Exception( 'Sorry, was called to set HTTP Header information for key "{}" on "{}", but there was no attached value and it did not already exist!'.format( key, network_context ) )
+                    
+                else:
+                    
+                    value = fallback_value
+                    
+                
+            
+            if approved is None:
+                
+                approved = fallback_approved
+                
+            
+            if reason is None:
+                
+                reason = fallback_reason
+                
+            
+            custom_header_dict[ key ] = ( value, approved, reason )
+            
+            self._SetDirty()
+            
+        
+    
     def SetDefaultFilePostNoteImportOptions( self, note_import_options ):
         
         with self._lock:
@@ -1802,14 +1873,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._gug_keys_to_display.update( gug_keys_to_display )
             
             self._SetDirty()
-            
-        
-    
-    def SetGlobalUserAgent( self, user_agent_string ):
-        
-        with self._lock:
-            
-            self._network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ][ 'User-Agent' ] = ( user_agent_string, True, 'Set by Client API' )
             
         
     

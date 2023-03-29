@@ -74,6 +74,78 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
         
     
 
+class SingleFileMetadataImporterMediaNotes( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterMedia ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_NOTES
+    SERIALISABLE_NAME = 'Metadata Single File Importer Media Notes'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, string_processor: typing.Optional[ ClientStrings.StringProcessor ] = None ):
+        
+        if string_processor is None:
+            
+            string_processor = ClientStrings.StringProcessor()
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
+        
+        return serialisable_string_processor
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_string_processor = serialisable_info
+        
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            'Artist Commentary: This work is one of my favourites.',
+            'Translation: "What a nice day!"'
+        ]
+        
+        return examples
+        
+    
+    def Import( self, media_result: ClientMediaResult.MediaResult ):
+        
+        names_to_notes = media_result.GetNotesManager().GetNamesToNotes()
+        
+        rows = [ '{}{}{}'.format( name.replace( ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, ClientMetadataMigrationCore.NOTE_NAME_ESCAPE_STRING ), ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, text ) for ( name, text ) in names_to_notes.items() ]
+        
+        if self._string_processor.MakesChanges():
+            
+            rows = self._string_processor.ProcessStrings( rows )
+            
+        
+        return rows
+        
+    
+    def ToString( self ) -> str:
+        
+        if self._string_processor.MakesChanges():
+            
+            full_munge_text = ', applying {}'.format( self._string_processor.ToString() )
+            
+        else:
+            
+            full_munge_text = ''
+            
+        
+        return 'notes from media{}'.format( full_munge_text )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_NOTES ] = SingleFileMetadataImporterMediaNotes
+
 class SingleFileMetadataImporterMediaTags( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterMedia ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS

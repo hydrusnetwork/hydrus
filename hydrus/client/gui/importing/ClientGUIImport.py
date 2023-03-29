@@ -1023,7 +1023,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
             
             allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
-            allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
+            allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
             
             self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
             

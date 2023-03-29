@@ -304,7 +304,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._metadata_routers_box = ClientGUICommon.StaticBox( self, 'sidecar exporting' )
         
         metadata_routers = export_folder.GetMetadataRouters()
-        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self._metadata_routers_box, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
@@ -566,7 +566,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
-        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )

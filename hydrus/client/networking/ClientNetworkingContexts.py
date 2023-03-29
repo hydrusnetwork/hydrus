@@ -29,6 +29,11 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return NotImplemented
         
     
+    def __format__( self, format_spec ):
+        
+        return self.ToString()
+        
+    
     def __hash__( self ):
         
         return ( self.context_type, self.context_data ).__hash__()

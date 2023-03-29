@@ -198,6 +198,8 @@ class VolumeControl( QW.QWidget ):
             
             self.adjustSize()
             
+            HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+            
         
         def DoShowHide( self ):
             
@@ -245,6 +247,34 @@ class VolumeControl( QW.QWidget ):
             event.ignore()
             
         
+        def NotifyNewOptions( self ):
+            
+            if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
+                
+                option_to_use = 'media_viewer_uses_its_own_audio_volume'
+                volume_type = AUDIO_MEDIA_VIEWER
+                
+            else:
+                
+                option_to_use = 'preview_uses_its_own_audio_volume'
+                volume_type = AUDIO_PREVIEW
+                
+            
+            if HG.client_controller.new_options.GetBoolean( option_to_use ):
+                
+                slider_volume_type = volume_type
+                
+            else:
+                
+                slider_volume_type = AUDIO_GLOBAL
+                
+            
+            if slider_volume_type != self._volume.GetVolumeType():
+                
+                self._volume.SetVolumeType( slider_volume_type )
+                
+            
+        
     
 class VolumeSlider( QW.QSlider ):
     
@@ -276,6 +306,20 @@ class VolumeSlider( QW.QSlider ):
     def _VolumeSliderMoved( self ):
         
         ChangeVolume( self._volume_type, self.value() )
+        
+    
+    def GetVolumeType( self ):
+        
+        return self._volume_type
+        
+    
+    def SetVolumeType( self, volume_type ):
+        
+        self._volume_type = volume_type
+        
+        volume = self._GetCorrectValue()
+        
+        self.setValue( volume )
         
     
     def UpdateMute( self ):

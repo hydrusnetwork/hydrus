@@ -15,7 +15,7 @@ class TestHydrusTags( unittest.TestCase ):
         self.assertEqual( HydrusTags.CleanTag( ':p' ), '::p' )
         
         self.assertEqual( HydrusTags.CombineTag( '', ':p' ), '::p' )
-        self.assertEqual( HydrusTags.CombineTag( '', '::p' ), '::p' )
+        self.assertEqual( HydrusTags.CombineTag( '', '::p' ), ':::p' )
         
         self.assertEqual( HydrusTags.CombineTag( '', 'unnamespace:withcolon' ), ':unnamespace:withcolon' )
         

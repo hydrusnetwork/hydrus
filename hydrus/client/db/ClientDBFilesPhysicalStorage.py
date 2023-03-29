@@ -121,6 +121,11 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
     
     def RelocateClientFiles( self, prefix, abs_source, abs_dest ):
         
+        if not os.path.exists( abs_source ):
+            
+            raise Exception( 'Was commanded to move prefix "{}" from "{}" to "{}", but that source does not exist!'.format( prefix, abs_source, abs_dest ) )
+            
+        
         if not os.path.exists( abs_dest ):
             
             raise Exception( 'Was commanded to move prefix "{}" from "{}" to "{}", but that destination does not exist!'.format( prefix, abs_source, abs_dest ) )
@@ -129,23 +134,29 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         full_source = os.path.join( abs_source, prefix )
         full_dest = os.path.join( abs_dest, prefix )
         
-        if os.path.exists( full_source ):
+        if not os.path.samefile( abs_source, abs_dest ):
             
-            HydrusPaths.MergeTree( full_source, full_dest )
-            
-        elif not os.path.exists( full_dest ):
-            
-            HydrusPaths.MakeSureDirectoryExists( full_dest )
+            if os.path.exists( full_source ):
+                
+                HydrusPaths.MergeTree( full_source, full_dest )
+                
+            elif not os.path.exists( full_dest ):
+                
+                HydrusPaths.MakeSureDirectoryExists( full_dest )
+                
             
         
         portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( abs_dest )
         
         self._Execute( 'UPDATE client_files_locations SET location = ? WHERE prefix = ?;', ( portable_dest, prefix ) )
         
-        if os.path.exists( full_source ):
+        if not os.path.samefile( abs_source, abs_dest ):
             
-            try: HydrusPaths.RecyclePath( full_source )
-            except: pass
+            if os.path.exists( full_source ):
+                
+                try: HydrusPaths.RecyclePath( full_source )
+                except: pass
+                
             
         
     

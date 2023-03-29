@@ -82,6 +82,8 @@ class Predicate( Enum ):
     LAST_VIEWED_TIME = auto()
     TIME_IMPORTED = auto()
     DURATION = auto()
+    FRAMERATE = auto()
+    NUM_OF_FRAMES = auto()
     FILE_SERVICE = auto()
     NUM_FILE_RELS = auto()
     RATIO = auto()
@@ -145,6 +147,7 @@ class Units( Enum ):
     FILE_RELATIONSHIP_TYPE = auto()  # One of 'not related/false positive', 'duplicates', 'alternates', 'potential duplicates'
     PIXELS_OR_NONE = auto()  # Always None (meaning pixels)
     PIXELS = auto()  # One of 'pixels', 'kilopixels', 'megapixels'
+    FPS_OR_NONE = auto() # 'fps'
 
 
 # All system predicates
@@ -182,6 +185,8 @@ SYSTEM_PREDICATES = {
     'last viewed time|last view time': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'time imported|import time': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
+    'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL_EXACT, Value.NATURAL, Units.FPS_OR_NONE),
+    'number of frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
     'ratio': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
@@ -272,6 +277,13 @@ def parse_unit( string: str, spec ):
         match = re.match( 'mpx|megapixels|megapixel', string )
         if match: return string[ len( match[ 0 ] ): ], 'megapixels'
         raise ValueError( "Invalid unit, expected pixels" )
+    elif spec == Units.FPS_OR_NONE:
+        if not string:
+            return string, None
+        else:
+            match = re.match( 'fps', string )
+            if match: return string[ len( match[ 0 ] ): ], None
+        raise ValueError( "Invalid unit, expected no unit or fps" )
     raise ValueError( "Invalid unit specification" )
 
 
@@ -487,6 +499,8 @@ examples = [
     "system:duration < 5 seconds",
     "system:duration ~= 5 sec 6000 msecs",
     "system:duration > 3 milliseconds",
+    "system:framerate > 60fps",
+    "system:number of frames > 6000",
     "system:file service is pending to my files",
     "   system:file service currently in my files",
     "system:file service isn't currently in my files",

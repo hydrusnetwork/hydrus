@@ -529,7 +529,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         types_to_str[ HC.CONTENT_TYPE_HASH ] = 'file hash'
         types_to_str[ HC.CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
         types_to_str[ HC.CONTENT_TYPE_TITLE ] = 'watcher title'
-        types_to_str[ HC.CONTENT_TYPE_HTTP_HEADER ] = 'http header'
+        types_to_str[ HC.CONTENT_TYPE_HTTP_HEADERS ] = 'http headers'
         types_to_str[ HC.CONTENT_TYPE_VETO ] = 'veto'
         types_to_str[ HC.CONTENT_TYPE_VARIABLE ] = 'temporary variable'
         
@@ -606,6 +606,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._header_panel = QW.QWidget( self._content_panel )
         
         self._header_name = QW.QLineEdit( self._header_panel )
+        tt = 'Any header you parse here will be passed on to subsequent jobs/objects created by this same parse. Next gallery pages, file downloads from post urls, post pages spawned from multi-file posts. And the headers will be passed on to their children. Should help with tokenised searches or weird guest-login issues.'
+        self._header_name.setToolTip( tt )
         
         #
         
@@ -670,11 +672,11 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._title_priority.setValue( priority )
             
-        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
             
             header_name = additional_info
             
-            self._header_name.setText(header_name)
+            self._header_name.setText( header_name )
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
@@ -910,7 +912,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._title_panel.show()
 
-        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
             
             self._header_panel.show()
             
@@ -977,7 +979,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             additional_info = priority
             
-        elif content_type == HC.CONTENT_TYPE_HTTP_HEADER:
+        elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
             
             header_name = self._header_name.text()
             
@@ -1268,7 +1270,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_HTTP_HEADER, HC.CONTENT_TYPE_VETO ]
+        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_HTTP_HEADERS, HC.CONTENT_TYPE_VETO ]
         
         self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestDataForChild, permitted_content_types )
         

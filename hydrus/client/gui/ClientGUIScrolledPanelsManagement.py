@@ -2498,7 +2498,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._freeze_message_manager_when_main_gui_minimised.setToolTip( 'This is useful if the popup toaster restores strangely after minimised changes.' )
             
             self._notify_client_api_cookies = QW.QCheckBox( self._popup_panel )
-            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie information over the Client API.' )
+            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie or http header information over the Client API.' )
             
             #
             
@@ -2519,7 +2519,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'BUGFIX: Force this width as the fixed width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'Freeze the popup toaster when mouse is on another display: ', self._freeze_message_manager_when_mouse_on_other_monitor ) )
             rows.append( ( 'Freeze the popup toaster when the main gui is minimised: ', self._freeze_message_manager_when_main_gui_minimised ) )
-            rows.append( ( 'Make a short-lived popup on cookie updates through the Client API: ', self._notify_client_api_cookies ) )
+            rows.append( ( 'Make a short-lived popup on cookie/header updates through the Client API: ', self._notify_client_api_cookies ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._popup_panel, rows )
             

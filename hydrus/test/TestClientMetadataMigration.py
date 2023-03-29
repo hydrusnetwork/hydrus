@@ -261,6 +261,48 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         self.assertEqual( set( result ), set( string_processor.ProcessStrings( my_current_storage_tags ) ) )
         
     
+    def test_media_notes( self ):
+        
+        names_to_notes = {
+            'test' : 'This is a test note!',
+            'Another Test' : 'This one has\n\na newline!'
+        }
+        
+        expected_rows = [ '{}: {}'.format( name, note ) for ( name, note ) in names_to_notes.items() ]
+        
+        # simple
+        
+        hash = HydrusData.GenerateKey()
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetNotesManager().SetNamesToNotes( names_to_notes )
+        
+        # simple
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes()
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), set( expected_rows ) )
+        
+        # with string processor
+        
+        string_processor = ClientStrings.StringProcessor()
+        
+        processing_steps = [ ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) ]
+        
+        string_processor.SetProcessingSteps( processing_steps )
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes( string_processor = string_processor )
+        
+        result = importer.Import( media_result )
+        
+        self.assertTrue( len( result ) > 0 )
+        self.assertNotEqual( set( result ), set( expected_rows ) )
+        self.assertEqual( set( result ), set( string_processor.ProcessStrings( expected_rows ) ) )
+        
+    
     def test_media_urls( self ):
         
         urls = { 'https://site.com/123456', 'https://cdn5.st.com/file/123456' }
@@ -550,6 +592,43 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         hashes = { hash }
         
         expected_service_keys_to_content_updates = { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in rows ] }
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+    
+    def test_media_notes( self ):
+        
+        hash = os.urandom( 32 )
+        notes = [ 'test: this is a test note', 'another test: this is a different\n\ntest note' ]
+        
+        # no notes makes no write
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        exporter.Export( hash, [] )
+        
+        with self.assertRaises( Exception ):
+            
+            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            
+        
+        # simple
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
+        
+        HG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        exporter.Export( hash, notes )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in [ n.split( ': ', 1 ) for n in notes ] ]
+        
+        expected_service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         

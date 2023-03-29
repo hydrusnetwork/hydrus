@@ -702,12 +702,12 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _AboutWindow( self ):
         
-        aboutinfo = QP.AboutDialogInfo()
+        name = 'hydrus client'
+        version = '{}, using network version {}'.format( HC.SOFTWARE_VERSION, HC.NETWORK_VERSION )
         
-        aboutinfo.SetName( 'hydrus client' )
-        aboutinfo.SetVersion( str( HC.SOFTWARE_VERSION ) + ', using network version ' + str( HC.NETWORK_VERSION ) )
+        library_version_lines = []
         
-        library_versions = []
+        library_version_lines.append( 'running on {} {}'.format( HC.NICE_PLATFORM_STRING, HC.NICE_RUNNING_AS_STRING ) )
         
         # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
         v = sys.version
@@ -717,20 +717,20 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             v = v.split( ' ' )[0]
             
         
-        library_versions.append( ( 'python', v ) )
-        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
+        library_version_lines.append( 'python: {}'.format( v ) )
+        library_version_lines.append( 'FFMPEG: {}'.format( HydrusVideoHandling.GetFFMPEGVersion() ) )
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
             
-            library_versions.append( ( 'mpv api version: ', ClientGUIMPV.GetClientAPIVersionString() ) )
+            library_version_lines.append( 'mpv api version: {}'.format( ClientGUIMPV.GetClientAPIVersionString() ) )
             
         else:
             
-            library_versions.append( ( 'mpv', 'not available' ) )
+            library_version_lines.append( 'mpv not available!' )
             
             if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
                 
-                HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1, it will try to import it. It seems your system does not have this or it failed to import. The specific error follows:' )
+                HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1, it will try to import it. It seems your system does not have this, or it failed to import. The specific error follows:' )
                 
             else:
                 
@@ -740,9 +740,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             HydrusData.ShowText( ClientGUIMPV.mpv_failed_reason )
             
         
-        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
-        library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
-        library_versions.append( ( 'Pillow', PIL.__version__ ) )
+        library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
+        library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
+        library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
         
         if QtInit.WE_ARE_QT5:
             
@@ -750,13 +750,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 import PySide2
                 
-                library_versions.append( ( 'PySide2', PySide2.__version__ ) )
+                library_version_lines.append( 'Qt: PySide2 {}'.format( PySide2.__version__ ) )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
                 
-                library_versions.append( ( 'PyQt5', PYQT_VERSION_STR ) )
+                library_version_lines.append( 'Qt: PyQt5 {}'.format( PYQT_VERSION_STR ) )
                 
             
         elif QtInit.WE_ARE_QT6:
@@ -765,21 +765,17 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 import PySide6
                 
-                library_versions.append( ( 'PySide6', PySide6.__version__ ) )
+                library_version_lines.append( 'Qt: PySide6 {}'.format( PySide6.__version__ ) )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401,E0611
                 
-                library_versions.append( ( 'PyQt6', PYQT_VERSION_STR ) )
+                library_version_lines.append( 'Qt: PyQt6 {}'.format( PYQT_VERSION_STR ) )
                 
             
         
-        library_versions.append( ( 'qtpy', qtpy.__version__ ) )
-        
-        library_versions.append( ( 'Qt', QC.__version__ ) )
-        
-        library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
+        library_version_lines.append( 'sqlite: {}'.format( sqlite3.sqlite_version ) )
         
         CBOR_AVAILABLE = False
         
@@ -793,50 +789,57 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             pass
             
         
-        library_versions.append( ( 'cbor2 present: ', str( CBOR_AVAILABLE ) ) )
+        library_version_lines.append( 'cbor2 present: {}'.format( str( CBOR_AVAILABLE ) ) )
+        
+        library_version_lines.append( 'chardet present: {}'.format( str( HydrusText.CHARDET_OK ) ) )
         
         from hydrus.client.networking import ClientNetworkingJobs
         
-        library_versions.append( ( 'chardet present: ', str( HydrusText.CHARDET_OK ) ) )
-        
         if ClientNetworkingJobs.CLOUDSCRAPER_OK:
             
-            library_versions.append( ( 'cloudscraper present:', ClientNetworkingJobs.cloudscraper.__version__ ) )
+            try:
+                
+                library_version_lines.append( 'cloudscraper present: {}'.format( ClientNetworkingJobs.cloudscraper.__version__ ) )
+                
+            except:
+                
+                library_version_lines.append( 'cloudscraper present: unknown version' )
+                
             
         else:
             
-            library_versions.append( ( 'cloudscraper present: ', 'False' ) )
+            library_version_lines.append( 'cloudscraper present: {}'.format( 'False' ) )
             
         
-        library_versions.append( ( 'cryptography present:', str( HydrusEncryption.CRYPTO_OK ) ) )
-        library_versions.append( ( 'dateutil present: ', str( ClientTime.DATEUTIL_OK ) ) )
-        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
-        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
-        library_versions.append( ( 'lz4 present: ', str( HydrusCompression.LZ4_OK ) ) )
-        library_versions.append( ( 'pympler present:', str( HydrusMemory.PYMPLER_OK ) ) )
-        library_versions.append( ( 'pyopenssl present:', str( HydrusEncryption.OPENSSL_OK ) ) )
-        library_versions.append( ( 'speedcopy present:', str( HydrusFileHandling.SPEEDCOPY_OK ) ) )
-        library_versions.append( ( 'install dir', HC.BASE_DIR ) )
-        library_versions.append( ( 'db dir', HG.client_controller.db_dir ) )
-        library_versions.append( ( 'temp dir', HydrusTemp.GetCurrentTempDir() ) )
-        library_versions.append( ( 'db cache size per file', '{}MB'.format( HG.db_cache_size ) ) )
-        library_versions.append( ( 'db journal mode', HG.db_journal_mode ) )
-        library_versions.append( ( 'db synchronous mode', str( HG.db_synchronous ) ) )
-        library_versions.append( ( 'db transaction commit period', '{}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) ) )
-        library_versions.append( ( 'db using memory for temp?', str( HG.no_db_temp_files ) ) )
+        library_version_lines.append( 'cryptography present: {}'.format( HydrusEncryption.CRYPTO_OK ) )
+        library_version_lines.append( 'dateutil present: {}'.format( ClientTime.DATEUTIL_OK ) )
+        library_version_lines.append( 'html5lib present: {}'.format( ClientParsing.HTML5LIB_IS_OK ) )
+        library_version_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
+        library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
+        library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
+        library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
+        library_version_lines.append( 'speedcopy present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
+        library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
+        library_version_lines.append( 'db dir: {}'.format( HG.client_controller.db_dir ) )
+        library_version_lines.append( 'temp dir: {}'.format( HydrusTemp.GetCurrentTempDir() ) )
+        library_version_lines.append( 'db cache size per file: {}MB'.format( HG.db_cache_size ) )
+        library_version_lines.append( 'db journal mode: {}'.format( HG.db_journal_mode ) )
+        library_version_lines.append( 'db synchronous mode: {}'.format( HG.db_synchronous ) )
+        library_version_lines.append( 'db transaction commit period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
+        library_version_lines.append( 'db using memory for temp?: {}'.format( HG.no_db_temp_files ) )
         
         import locale
         
         l_string = locale.getlocale()[0]
         qtl_string = QC.QLocale().name()
         
-        library_versions.append( ( 'locale strings', str( ( l_string, qtl_string ) ) ) )
+        library_version_lines.append( 'locale: {}/{}'.format( l_string, qtl_string ) )
         
-        description = 'This client is the media management application of the hydrus software suite.'
+        description = 'This is the media management application of the hydrus software suite.'
         
-        description += os.linesep * 2 + os.linesep.join( ( lib + ': ' + version for ( lib, version ) in library_versions ) )
+        description += os.linesep * 2 + os.linesep.join( library_version_lines )
         
-        aboutinfo.SetDescription( description )
+        #
         
         if os.path.exists( HC.LICENSE_PATH ):
             
@@ -850,12 +853,15 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             license = 'no licence file found!'
             
         
-        aboutinfo.SetLicense( license )
+        developers = [ 'Anonymous' ]
         
-        aboutinfo.SetDevelopers( [ 'Anonymous' ] )
-        aboutinfo.SetWebSite( 'https://hydrusnetwork.github.io/hydrus/' )
+        site = 'https://hydrusnetwork.github.io/hydrus/'
         
-        QP.AboutBox( self, aboutinfo )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'about hydrus' )
+        
+        panel = ClientGUIScrolledPanelsReview.AboutPanel( frame, name, version, description, license, developers, site )
+        
+        frame.SetPanel( panel )
         
     
     def _AnalyzeDatabase( self ):

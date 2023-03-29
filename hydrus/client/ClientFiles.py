@@ -614,17 +614,37 @@ class ClientFilesManager( object ):
     
     def _GetRecoverTuple( self ):
         
-        all_locations = { location for location in list(self._prefixes_to_locations.values()) }
+        all_locations = { location for location in self._prefixes_to_locations.values() }
         
         all_prefixes = list(self._prefixes_to_locations.keys())
         
         for possible_location in all_locations:
             
+            if not os.path.exists( possible_location ):
+                
+                continue
+                
+            
             for prefix in all_prefixes:
                 
                 correct_location = self._prefixes_to_locations[ prefix ]
                 
-                if possible_location != correct_location and os.path.exists( os.path.join( possible_location, prefix ) ):
+                if correct_location == possible_location:
+                    
+                    continue
+                    
+                
+                if os.path.exists( os.path.join( possible_location, prefix ) ):
+                    
+                    if not os.path.exists( correct_location ):
+                        
+                        continue
+                        
+                    
+                    if os.path.samefile( possible_location, correct_location ):
+                        
+                        continue
+                        
                     
                     recoverable_location = possible_location
                     

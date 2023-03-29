@@ -1,6 +1,7 @@
 import locale
 import os
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -18,6 +19,7 @@ from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.media import ClientMedia
 
 mpv_failed_reason = 'MPV seems ok!'
 
@@ -521,7 +523,7 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         self._player.set_loglevel( level )
         
     
-    def SetMedia( self, media, start_paused = False ):
+    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = False ):
         
         if media == self._media:
             
@@ -576,6 +578,11 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             hash = self._media.GetHash()
             mime = self._media.GetMime()
             
+            # some videos have an audio channel that is silent. hydrus thinks these dudes are 'no audio', but when we throw them at mpv, it may play audio for them
+            # would be fine, you think, except in one reported case this causes scratches and pops and hell whitenoise
+            # so let's see what happens here
+            mute_override = not self._media.HasAudio()
+            
             client_files_manager = HG.client_controller.client_files_manager
             
             path = client_files_manager.GetFilePath( hash, mime )
@@ -596,7 +603,7 @@ class MPVWidget( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
                 
             
             self._player.volume = self._GetCorrectCurrentVolume()
-            self._player.mute = self._GetCorrectCurrentMute()
+            self._player.mute = mute_override or self._GetCorrectCurrentMute()
             self._player.pause = start_paused
             
         

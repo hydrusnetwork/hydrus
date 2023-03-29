@@ -5,6 +5,9 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientStrings
 
+NOTE_CONNECTOR_STRING = ': '
+NOTE_NAME_ESCAPE_STRING = ':\\ '
+
 def GetSidecarPath( actual_file_path: str, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter, file_extension: str ):
     
     path_components = []

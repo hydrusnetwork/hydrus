@@ -132,3 +132,13 @@ The cool thing about JSON files is I can export multiple times to the same file 
 ```
 
 You should be careful that the location you are exporting to does not have any old JSON files with conflicting filenames in it--hydrus will update them, not overwrite them! This may be an issue if you have an synchronising Export Folder that exports random files with the same filenames.
+
+## Note on Notes
+
+You can now import/export notes with your sidecars. Since notes have two variables--name and text--but the sidecars system only supports lists of single strings, I merge these together! If you export notes, they will output in the form 'name: text'. If you want to import notes, arrange them in the same form, 'name: text'.
+
+If you do need to select a particular note out of many, see if a String Match (regex `^name: `) in the String Processor will do it.
+
+If you need to work with multiple notes that have newlines, I recommend you use JSON rather than txt. If you have to use txt on multiple multi-paragraph-notes, then try a different separator than newline. Go for `||||` or something, whatever works for your job.
+
+Depending on how awkward this all is, I may revise it.

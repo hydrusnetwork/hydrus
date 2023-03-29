@@ -77,7 +77,7 @@ class TestContentParser( unittest.TestCase ):
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
         
-        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:lara croft', 'character:double pistols' } )
+        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:character:lara croft', 'character:double pistols' } )
         
         # series
         

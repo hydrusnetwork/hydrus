@@ -123,6 +123,8 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'manage_headers', manage_headers )
         
         manage_headers.putChild( b'set_user_agent', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesSetUserAgent( self._service, self._client_requests_domain ) )
+        manage_headers.putChild( b'get_headers', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesGetHeaders( self._service, self._client_requests_domain ) )
+        manage_headers.putChild( b'set_headers', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesSetHeaders( self._service, self._client_requests_domain ) )
         
         manage_pages = NoResource()
         

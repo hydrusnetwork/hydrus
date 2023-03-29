@@ -1552,47 +1552,6 @@ class StatusBar( QW.QStatusBar ):
             
         
     
-class AboutDialogInfo:
-    
-    def __init__( self ):
-        
-        self.name = ''
-        self.version = ''
-        self.description = ''
-        self.license = ''
-        self.developers = []
-        self.website = ''
-
-    def SetName( self, name ):
-        
-        self.name = name
-
-
-    def SetVersion( self, version ):
-        
-        self.version = version
-
-
-    def SetDescription( self, description ):
-        
-        self.description = description
-
-
-    def SetLicense( self, license ):
-        
-        self.license = license
-
-
-    def SetDevelopers( self, developers_list ):
-        
-        self.developers = developers_list
-
-
-    def SetWebSite( self, url ):
-        
-        self.website = url
-
-
 class UIActionSimulator:
     
     def __init__( self ):
@@ -1613,74 +1572,6 @@ class UIActionSimulator:
         QW.QApplication.instance().postEvent( widget, ev1 )
         QW.QApplication.instance().postEvent( widget, ev2 )
         
-
-# TODO: rewrite this to be on my newer panel system so this can resize for lads on small screens etc..
-class AboutBox( QW.QDialog ):
-    
-    def __init__( self, parent, about_info ):
-        
-        QW.QDialog.__init__( self, parent )
-        
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
-        
-        self.setAttribute( QC.Qt.WA_DeleteOnClose )
-        
-        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
-        
-        layout = QW.QVBoxLayout( self )
-        
-        self.setWindowTitle( 'About ' + about_info.name )
-        
-        icon_label = QW.QLabel( self )
-        name_label = QW.QLabel( about_info.name, self )
-        version_label = QW.QLabel( about_info.version, self )
-        tabwidget = QW.QTabWidget( self )
-        desc_panel = QW.QWidget( self )
-        desc_label = QW.QLabel( about_info.description, self )
-        url_label = QW.QLabel( '<a href="{0}">{0}</a>'.format( about_info.website ), self )
-        credits = QW.QTextEdit( self )
-        license = QW.QTextEdit( self )
-        close_button = QW.QPushButton( 'close', self )
-        icon_label.setPixmap( HG.client_controller.frame_icon_pixmap )
-        layout.addWidget( icon_label, alignment = QC.Qt.AlignHCenter )
-        
-        name_label_font = name_label.font()
-        name_label_font.setBold( True )
-        name_label.setFont( name_label_font )
-        layout.addWidget( name_label, alignment = QC.Qt.AlignHCenter )
-        
-        layout.addWidget( version_label, alignment = QC.Qt.AlignHCenter )
-        
-        layout.addWidget( tabwidget, alignment =  QC.Qt.AlignHCenter )
-        tabwidget.addTab( desc_panel, 'Description' )
-        tabwidget.addTab( credits, 'Credits' )
-        tabwidget.addTab( license, 'License' )
-        tabwidget.setCurrentIndex( 0 )
-        
-        credits.setPlainText( 'Created by ' + ', '.join(about_info.developers) )
-        credits.setReadOnly( True )
-        credits.setAlignment( QC.Qt.AlignHCenter )
-        
-        license.setPlainText( about_info.license )
-        license.setReadOnly( True )
-        
-        desc_layout = QW.QVBoxLayout()
-        
-        desc_layout.addWidget( desc_label, alignment = QC.Qt.AlignHCenter )
-        desc_label.setWordWrap( True )
-        desc_label.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
-        desc_layout.addWidget( url_label, alignment = QC.Qt.AlignHCenter )
-        url_label.setTextFormat( QC.Qt.RichText )
-        url_label.setTextInteractionFlags( QC.Qt.TextBrowserInteraction )
-        url_label.setOpenExternalLinks( True )
-        desc_panel.setLayout( desc_layout )
-        
-        layout.addWidget( close_button, alignment = QC.Qt.AlignRight )
-        close_button.clicked.connect( self.accept )
-        
-        self.setLayout( layout )
-        
-        self.exec_()
 
 class RadioBox( QW.QFrame ):
     

@@ -21,6 +21,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 
 choice_tuple_label_lookup = {
+    ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes : 'a file\'s notes',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags : 'a file\'s tags',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs : 'a file\'s URLs',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT : 'a .txt sidecar',
@@ -28,6 +29,7 @@ choice_tuple_label_lookup = {
 }
 
 choice_tuple_description_lookup = {
+    ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes : 'The notes that a file has.',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags : 'The tags that a file has on a particular service.',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs : 'The known URLs that a file has.',
     ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT : 'A list of raw newline-separated texts in a .txt file.',
@@ -170,7 +172,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             exporter.SetServiceKey( self._service_key )
             
-        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
+        elif isinstance( exporter, ( ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ) ):
             
             pass
             
@@ -232,6 +234,10 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs:
             
             exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs()
+            
+        elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes:
+            
+            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT:
             
@@ -316,7 +322,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
                 QW.QMessageBox.warning( self, 'Warning', message )
                 
             
-        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
+        elif isinstance( exporter, ( ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ) ):
             
             pass
             
