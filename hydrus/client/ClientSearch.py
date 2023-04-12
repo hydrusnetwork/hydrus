@@ -67,6 +67,7 @@ PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME = 43
 PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA = 44
 PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA = 45
 PREDICATE_TYPE_SYSTEM_HAS_EXIF = 46
+PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME = 47
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -79,6 +80,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_AGE,
     PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
     PREDICATE_TYPE_SYSTEM_HASH,
     PREDICATE_TYPE_SYSTEM_WIDTH,
     PREDICATE_TYPE_SYSTEM_HEIGHT,
@@ -442,7 +444,7 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'hash' ] = ( hashes, hash_type, predicate.IsInclusive() )
                 
             
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
                 
                 ( operator, age_type, age_value ) = value
                 
@@ -1537,6 +1539,7 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_SYSTEM_AGE,
     PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+    PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
     PREDICATE_TYPE_SYSTEM_HEIGHT,
     PREDICATE_TYPE_SYSTEM_WIDTH,
     PREDICATE_TYPE_SYSTEM_RATIO,
@@ -1754,7 +1757,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ), hash_type )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
             
             ( operator, age_type, age_value ) = serialisable_value
             
@@ -1885,7 +1888,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
             
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
                 
                 ( operator, age_type, age_value ) = serialisable_value
                 
@@ -2169,7 +2172,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+        if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
             
             # age_type
             if self._value[1] != ideal_value[1]:
@@ -2447,7 +2450,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base += ' is ' + HydrusData.ToHumanInt( value )
                     
                 
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME  ):
                 
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_AGE:
                     
@@ -2460,6 +2463,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     
                     base = 'modified time'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME:
+                    
+                    base = 'archived time'
                     
                 
                 if self._value is not None:
@@ -2492,6 +2499,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                             
                             pretty_operator = 'around '
+                            
+                        else:
+                            
+                            pretty_operator = 'unknown operator '
                             
                         
                         base += ': ' + pretty_operator + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta ) + ' ago'

@@ -305,13 +305,30 @@ class TestServer( unittest.TestCase ):
             'hashes' : hashes
         }
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
+        media_results = []
         
-        notes_manager = ClientMediaManagers.NotesManager( {} )
-        
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
-        
-        media_results = [ ClientMediaResult.MediaResult( file_info_manager, ClientMediaManagers.TagsManager( {}, {} ), ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() ), ClientMediaManagers.RatingsManager( {} ), notes_manager, file_viewing_stats_manager ) for hash in hashes ]
+        for hash in hashes:
+            
+            file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, 500, HC.IMAGE_JPEG, 640, 480 )
+            
+            timestamps_manager = ClientMediaManagers.TimestampsManager()
+            
+            notes_manager = ClientMediaManagers.NotesManager( {} )
+            
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+            
+            media_result = ClientMediaResult.MediaResult(
+                file_info_manager,
+                ClientMediaManagers.TagsManager( {}, {} ),
+                timestamps_manager,
+                ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager ),
+                ClientMediaManagers.RatingsManager( {} ),
+                notes_manager,
+                file_viewing_stats_manager
+            )
+            
+            media_results.append( media_result )
+            
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )

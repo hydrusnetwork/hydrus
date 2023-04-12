@@ -272,7 +272,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', ExportToClipboard, file_seed_cache )
         ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', ExportToPNG, win, file_seed_cache )
@@ -280,7 +280,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
         ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
         
     
-    submenu = QW.QMenu( menu )
+    submenu = ClientGUIMenus.GenerateMenu( menu )
     
     ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', ImportFromClipboard, win, file_seed_cache )
     ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', ImportFromPNG, win, file_seed_cache )
@@ -318,7 +318,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
-        self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
+        self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
@@ -430,7 +430,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         selected_file_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if len( selected_file_seeds ) == 0:
             
@@ -467,7 +467,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                hash_submenu = QW.QMenu( menu )
+                hash_submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 for hash_type in ( 'sha256', 'md5', 'sha1', 'sha512' ):
                     
@@ -496,7 +496,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    url_submenu = QW.QMenu( menu )
+                    url_submenu = ClientGUIMenus.GenerateMenu( menu )
                     
                     if referral_url is not None:
                         
@@ -540,7 +540,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    header_submenu = QW.QMenu( menu )
+                    header_submenu = ClientGUIMenus.GenerateMenu( menu )
                     
                     for ( key, value ) in headers.items():
                         
@@ -563,7 +563,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    tag_submenu = QW.QMenu( menu )
+                    tag_submenu = ClientGUIMenus.GenerateMenu( menu )
                     
                     for tag in tags:
                         
@@ -589,7 +589,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         PopulateFileSeedCacheMenu( self, submenu, self._file_seed_cache )
         

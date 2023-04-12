@@ -70,21 +70,26 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         has_audio = False
         num_words = None
         
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
+        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, dict(), set(), set(), inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -204,21 +209,26 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         has_audio = False
         num_words = None
         
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
+        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, dict(), set(), set(), inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         # simple local
         
@@ -319,9 +329,14 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         has_audio = False
         num_words = None
         
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
+        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, dict(), set(), set(), inbox, urls )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox, urls )
         
         # duplicate to generate proper dicts
         
@@ -331,13 +346,13 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         # simple
         

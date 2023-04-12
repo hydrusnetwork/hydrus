@@ -1899,7 +1899,7 @@ class ContentUpdate( object ):
             
         elif self._data_type == HC.CONTENT_TYPE_TIMESTAMP:
             
-            ( timestamp_type, hash, data ) = self._row
+            ( hash, timestamp_data ) = self._row
             
             hashes = { hash }
             

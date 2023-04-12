@@ -14,6 +14,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -61,7 +62,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._use_simple_delete = use_simple_delete
         self._can_delete_callback = can_delete_callback
         
-        self._menu_callable = None
+        self._rows_menu_callable = None
         
         ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
         
@@ -173,6 +174,9 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         #self.header().sectionMoved.connect( self._DoStatusChanged ) # same
         self.header().sectionResized.connect( self._SectionsResized )
+        
+        self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
+        self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
         
     
     def _AddDataInfo( self, data_info ):
@@ -352,11 +356,51 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def _ShowMenu( self ):
+    def _RefreshHeaderNames( self ):
+        
+        for i in range( self.header().count() ):
+            
+            column_type = self.headerItem().data( i, QC.Qt.UserRole )
+            
+            name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
+            
+            if column_type == self._sort_column_type:
+                
+                char = '\u25B2' if self._sort_asc else '\u25BC'
+                
+                name_for_title = '{} {}'.format( name, char )
+                
+            else:
+                
+                name_for_title = name
+                
+            
+            self.headerItem().setText( i, name_for_title )
+            self.headerItem().setToolTip( i, name )
+            
+        
+    
+    def _ShowHeaderMenu( self ):
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        name = CGLC.column_list_type_name_lookup[ self._column_list_type ]
+        
+        ClientGUIMenus.AppendMenuLabel( menu, f'multi-column list: {name}', 'This is the name of this multi-column list widget.' )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def _ShowRowsMenu( self ):
+        
+        if self._rows_menu_callable is None:
+            
+            return
+            
         
         try:
             
-            menu = self._menu_callable()
+            menu = self._rows_menu_callable()
             
         except HydrusExceptions.DataMissing:
             
@@ -426,6 +470,8 @@ class BetterListCtrl( QW.QTreeWidget ):
                 
             
         
+        self._RefreshHeaderNames()
+        
     
     def _UpdateRow( self, index, display_tuple ):
         
@@ -460,9 +506,9 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.columnListContentsChanged.emit()
         
     
-    def AddMenuCallable( self, menu_callable ):
+    def AddRowsMenuCallable( self, menu_callable ):
         
-        self._menu_callable = menu_callable
+        self._rows_menu_callable = menu_callable
         
         self.setContextMenuPolicy( QC.Qt.CustomContextMenu )
         self.customContextMenuRequested.connect( self.EventShowMenu )
@@ -576,7 +622,7 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def EventShowMenu( self ):
         
-        QP.CallAfter( self._ShowMenu )
+        QP.CallAfter( self._ShowRowsMenu )
         
     
     def ForceHeight( self, rows ):

@@ -35,6 +35,50 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_523"><a href="#version_523">version 523</a></h2>
+                    <ul>
+                        <li><h3>timestamp editing</h3></li>
+                        <li>you can now _right-click->manage->times_ on any file to edit its archived, imported, deleted, previously imported (for undelete), file modified, domain modified, and last viewed times. there's a whole new dialog with new datetime buttons and everything. it only works on single files atm, so it is currently only appropriate for little fixes, and there's a couple advanced things like setting a currently missing deletion time that it can't do yet, but I expect to expand it in future (also ideally with some kind of 'cascade' option for multi-files so you can set a timestamp iteratively (e.g. +1 second per file) over a series of thumbs to force a certain import order sort etc...)</li>
+                        <li>I added a new shortcut action 'manage file times', for this dialog. like the other media 'manage' shortcuts, you can hit it on the dialog to ok it, too</li>
+                        <li>when you edit a saved file modified date, I have made it to update the actual file modified date on your disk too. a statement is printed to the log with old/new timestamps, just in case you ever need to recover this</li>
+                        <li>added system:archived time search predicate! it is under the system:time stub like the other time-based search preds. it works in the system predicate parser too</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a stupid logical typo from 521's overhaul that was causing the advanced file deletion dialog to always set the default file deletion reason! sorry for the trouble, this one slipped through due to a tricky test situation (this data is actually calculated twice on dialog ok, and on the first run it was correct -\_-)</li>
+                        <li>in the edit system predicate dialogs, when you have a list of 'recent' preds and static useful preds, if one of the recent is supposed to also appear in the statics, it now won't be duped</li>
+                        <li>fixed a bug in the media object's file locations manager's deletion routine, which wasn't adding and removing the special 'all deleted files' domain at the UI level--not that this shows up in UI much, but the new timestamps UI revealed this</li>
+                        <li>in the janitorial 'petitions processing' page, the add and delete checkbox lists now no longer have horizontal scrollbars in any situation. previously, either list, but particularly the 'delete', at height 1, could be deceptively obscured by a pop-in scrollbar</li>
+                        <li>when you change your internal backup location, the dialog now states your current location beforehand. this information was previously not viewable! also, if you select the same location again, the process notes this and exits with no changes made</li>
+                        <li>all multi-column lists across the program now show a ▲ or ▼ on the column they are currently sorted on! this is one of those things I meant to do for ages; now it is done.</li>
+                        <li>also, you can now right-click any multi-column list's header for a stub menu. for now it just says the thing's identifier name, but I'll start hanging things off here like individual section-size reset and, in time, finally play around with 'select columns' tech</li>
+                        <li>all menus across the program now send their longer description text to the main window status bar. until now (at least in Qt, I forget wx), this has only been true for the menubar menus</li>
+                        <li>all menus across the program now have tooltips turned on. any command with description text, which is I think pretty much all of them, will present its full written description on hover. this may end up being annoying, so let me know what you think</li>
+                        <li><h3>client api</h3></li>
+                        <li>fixed an issue in the client api where it wasn't returning `file_metadata` results in the same file order you asked for. sorry for the trouble--this was softly intended, previously, but I forgot to make sure it stayed true. it also now folds in 'missing' hashes with null ids in the same position you asked for</li>
+                        <li>a new suite of unit tests check this explicitly for all the typical parameter/response types, and the new missing-hash insertion order--it shouldn't happen again!</li>
+                        <li>just to be safe, since this is a new feature, client api version is now 44</li>
+                        <li><h3>boring code updates/cleanup</h3></li>
+                        <li>wrote a new serialisable 'timestamp data' object to hold the various hydrus timestamps: archived, imported, deleted, previously imported, file modified, domain modified, aggregate modified, and last viewed time</li>
+                        <li>rewrote the timestamp content update pipeline to use 'timestamp data' object</li>
+                        <li>wrote a new database module for timestamp management off the file metadata module and migrated the domain-based modified timestamp code to it</li>
+                        <li>migrated the 'archive time' timestamp-handling from the inbox module to the new timestamp module</li>
+                        <li>migrated the media result timestamp-manager construction routine all down to the new timestamp module</li>
+                        <li>migrated the aggregate modified time file search code to the new timestamp module and added archived time search too</li>
+                        <li>wrote some UI for timestamp editing, whacked some copy/paste buttons on it too</li>
+                        <li>moved all current/deleted timestamp handling down from the locations manager to the timestamp manager and split off 'previously imported' time, which is used to preserve import timestamp for undelete events, into its own thing rather than a tacked-on hack for deleted timestamps</li>
+                        <li>moved all the location manager location timestamp tracking down to the timestamp manager</li>
+                        <li>the media result is now initialised with and handles an explicit copy of the timestamp manager, which is now shared to both location manager and file viewing stats manager, with duplication and merging code updated to handle this shared situation</li>
+                        <li>moved all the media/preview 'last view time' tracking down from the file viewing stats manager to the timestamp manager, which FVS now received on initialisation</li>
+                        <li>all media-based timestamp inspection now goes through the timestamp manager</li>
+                        <li>collections now track some aggregate timestamps a bit better, and they now calculate a archived time--not sure if it is useful, but they know it now</li>
+                        <li>updated all parts of the timestamp system to use the same shared enums</li>
+                        <li>cleaned the timestamp code generally</li>
+                        <li>cleaned some file service update code generally</li>
+                        <li>moved the main file viewing stats fetching routine for MediaResult building down to the file viewing stats module</li>
+                        <li>updated the old custom gridbox layout to handle multiple-column-spanning controls</li>
+                        <li>went through all the bash scripts and fixed some issues my IDE linter was moaning about. -r on reads, quotes around variable names, 4-space indenting, and neater testing of program return states</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_522"><a href="#version_522">version 522</a></h2>
                     <ul>
                         <li><h3>notes in sidecars</h3></li>

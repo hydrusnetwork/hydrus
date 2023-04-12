@@ -1084,6 +1084,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             
         
     
+    def _ManageTimestamps( self ):
+        
+        if self._HasFocusSingleton():
+            
+            media = self._GetFocusSingleton()
+            
+            ClientGUIMediaActions.EditFileTimestamps( self, media )
+            
+            self.setFocus( QC.Qt.OtherFocusReason )
+            
+        
+    
     def _ManageURLs( self ):
         
         if len( self._selected_media ) > 0:
@@ -2243,6 +2255,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
             elif action == CAC.SIMPLE_MANAGE_FILE_NOTES:
                 
                 self._ManageNotes()
+                
+            elif action == CAC.SIMPLE_MANAGE_FILE_TIMESTAMPS:
+                
+                self._ManageTimestamps()
                 
             elif action == CAC.SIMPLE_OPEN_KNOWN_URL:
                 
@@ -3654,7 +3670,7 @@ class MediaPanelThumbnails( MediaPanel ):
         media_has_inbox = num_inbox > 0
         media_has_archive = num_archive > 0
         
-        menu = QW.QMenu( self.window() )
+        menu = ClientGUIMenus.GenerateMenu( self.window() )
         
         if self._HasFocusSingleton():
             
@@ -3875,7 +3891,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # do the actual menu
             
-            selection_info_menu = QW.QMenu( menu )
+            selection_info_menu = ClientGUIMenus.GenerateMenu( menu )
             
             if multiple_selected:
                 
@@ -4057,7 +4073,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            manage_menu = QW.QMenu( menu )
+            manage_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'tags', 'Manage tags for the selected files.', self._ManageTags )
             
@@ -4079,11 +4095,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage notes for the focused file.', self._ManageNotes )
             
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            
             ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
             
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
-            regen_menu = QW.QMenu( manage_menu )
+            regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
             
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
@@ -4127,7 +4145,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len_interesting_local_service_keys > 0 and len_interesting_remote_service_keys > 0:
                 
-                files_parent_menu = QW.QMenu( menu )
+                files_parent_menu = ClientGUIMenus.GenerateMenu( menu )
                 
                 ClientGUIMenus.AppendMenu( menu, files_parent_menu, 'files' )
                 
@@ -4143,7 +4161,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len_interesting_remote_service_keys > 0:
                 
-                remote_action_menu = QW.QMenu( files_parent_menu )
+                remote_action_menu = ClientGUIMenus.GenerateMenu( files_parent_menu )
                 
                 if len( downloadable_file_service_keys ) > 0:
                     
@@ -4219,13 +4237,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            open_menu = QW.QMenu( menu )
+            open_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
             
             if self._focused_media.HasImages():
                 
-                similar_menu = QW.QMenu( open_menu )
+                similar_menu = ClientGUIMenus.GenerateMenu( open_menu )
                 
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', self._GetSimilarTo, CC.HAMMING_EXACT_MATCH )
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', self._GetSimilarTo, CC.HAMMING_VERY_SIMILAR )
@@ -4253,17 +4271,17 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # share
             
-            share_menu = QW.QMenu( menu )
+            share_menu = ClientGUIMenus.GenerateMenu( menu )
             
             #
             
-            copy_menu = QW.QMenu( share_menu )
+            copy_menu = ClientGUIMenus.GenerateMenu( share_menu )
             
             if selection_has_local:
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
                 
-                copy_hash_menu = QW.QMenu( copy_menu )
+                copy_hash_menu = ClientGUIMenus.GenerateMenu( copy_menu )
                 
                 if self._HasFocusSingleton():
                     
@@ -4279,7 +4297,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if multiple_selected:
                     
-                    copy_hash_menu = QW.QMenu( copy_menu )
+                    copy_hash_menu = ClientGUIMenus.GenerateMenu( copy_menu )
                     
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
@@ -4343,7 +4361,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            export_menu  = QW.QMenu( share_menu )
+            export_menu  = ClientGUIMenus.GenerateMenu( share_menu )
             
             ClientGUIMenus.AppendMenuItem( export_menu, export_phrase, 'Export the selected files to an external folder.', self._ExportFiles )
             
@@ -4538,7 +4556,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
     
     if file_filter_all.GetCount( win, filter_counts ) > 0:
         
-        remove_menu = QW.QMenu( menu )
+        remove_menu = ClientGUIMenus.GenerateMenu( menu )
         
         #
         
@@ -4620,7 +4638,7 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
     
     if file_filter_all.GetCount( win, filter_counts ) > 0:
         
-        select_menu = QW.QMenu( menu )
+        select_menu = ClientGUIMenus.GenerateMenu( menu )
         
         #
         

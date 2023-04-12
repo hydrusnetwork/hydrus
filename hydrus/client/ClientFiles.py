@@ -4,6 +4,7 @@ import queue
 import random
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -19,6 +20,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.metadata import ClientTags
 
@@ -1555,6 +1557,34 @@ class ClientFilesManager( object ):
             
         
         return do_it
+        
+    
+    def UpdateFileModifiedTimestamp( self, media, modified_timestamp: int ):
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
+        
+        with self._rwlock.write:
+            
+            path = self._GenerateExpectedFilePath( hash, mime )
+            
+            if os.path.exists( path ):
+                
+                existing_access_time = os.path.getatime( path )
+                existing_modified_time = os.path.getmtime( path )
+                
+                try:
+                    
+                    os.utime( path, ( existing_access_time, modified_timestamp ) )
+                    
+                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusData.ConvertTimestampToPrettyTime( existing_modified_time ), HydrusData.ConvertTimestampToPrettyTime( modified_timestamp ) ))
+                    
+                except PermissionError:
+                    
+                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusData.ConvertTimestampToPrettyTime( modified_timestamp ), path ) )
+                    
+                
+            
         
     
     def shutdown( self ):

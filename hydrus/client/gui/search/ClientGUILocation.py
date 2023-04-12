@@ -142,7 +142,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         
         services = ClientLocation.GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed )
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         last_seen_service_type = None
         

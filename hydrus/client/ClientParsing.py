@@ -136,10 +136,10 @@ def ConvertParseResultToPrettyString( result ):
             timestamp_string = 'could not convert to integer'
             
         
-        if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+        if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
-            return 'source time: ' + timestamp_string
-        
+            return 'source/post time: ' + timestamp_string
+            
         
     elif content_type == HC.CONTENT_TYPE_TITLE:
         
@@ -235,9 +235,9 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
                 for timestamp_type in additional_infos:
                     
-                    if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+                    if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
                         
-                        pretty_strings.append( 'source time' )
+                        pretty_strings.append( 'source/post time' )
                         
                     
                 
@@ -532,9 +532,9 @@ def GetTimestampFromParseResults( results, desired_timestamp_type ):
                     continue
                     
                 
-                if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+                if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
                     
-                    timestamp = min( HydrusData.GetNow() - 30, timestamp )
+                    timestamp = min( HydrusData.GetNow() - 5, timestamp )
                     
                 
                 timestamp_results.append( timestamp )

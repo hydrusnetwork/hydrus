@@ -355,8 +355,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # older
     
-    s_ts = shown_media.GetLocationsManager().GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-    c_ts = comparison_media.GetLocationsManager().GetCurrentTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    s_ts = shown_media.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    c_ts = comparison_media.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
     
     one_month = 86400 * 30
     

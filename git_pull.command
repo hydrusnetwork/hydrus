@@ -1,11 +1,11 @@
 #!/bin/bash
 
-pushd "$(dirname "$0")"
+pushd "$(dirname "$0")" || exit 1
 
 git pull
 
 echo "Done!"
 
-read
+read -r
 
-popd
+popd || exit

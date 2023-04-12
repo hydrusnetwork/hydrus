@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pushd "$(dirname "$0")"
+pushd "$(dirname "$0")" || exit 1
 
 INSTALL_DIR="$(readlink -f .)"
 DESKTOP_SOURCE_PATH=$INSTALL_DIR/static/hydrus.desktop
@@ -10,7 +10,7 @@ echo "Install folder appears to be $INSTALL_DIR"
 
 if [ ! -f "$DESKTOP_SOURCE_PATH" ]; then
 	echo "Sorry, I do not see the template file at $DESKTOP_SOURCE_PATH! Was it deleted, or this script moved?"
-	popd
+	popd || exit 1
 	exit 1
 fi
 
@@ -24,21 +24,21 @@ else
 	
 fi
 
-read affirm
+read -r affirm
 
-if [ $affirm = "y" ]; then
+if [ "$affirm" = "y" ]; then
 	:
-elif [ $affirm = "n" ]; then
-	popd
+elif [ "$affirm" = "n" ]; then
+	popd || exit
 	exit 0
 else
 	echo "Sorry, did not understand that input!"
-	popd
+	popd || exit 1
 	exit 1
 fi
 
-sed -e "s#Exec=.*#Exec=${INSTALL_DIR}/client.sh#" -e "s#Icon=.*#Icon=${INSTALL_DIR}/static/hydrus.png#" $DESKTOP_SOURCE_PATH > $DESKTOP_DEST_PATH
+sed -e "s#Exec=.*#Exec=${INSTALL_DIR}/client.sh#" -e "s#Icon=.*#Icon=${INSTALL_DIR}/static/hydrus.png#" "$DESKTOP_SOURCE_PATH" > "$DESKTOP_DEST_PATH"
 
 echo "Done!"
 
-popd
+popd || exit

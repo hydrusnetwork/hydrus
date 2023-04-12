@@ -193,9 +193,31 @@ class TestSerialisables( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, dict(), set(), set(), inbox )
-        trash_locations_manager = ClientMediaManagers.LocationsManager( { CC.TRASH_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 12 }, dict(), set(), set(), inbox )
-        deleted_locations_manager = ClientMediaManagers.LocationsManager( dict(), { CC.LOCAL_FILE_SERVICE_KEY : 120, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }, set(), set(), inbox )
+        local_timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        current_to_timestamps = { CC.LOCAL_FILE_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }
+        
+        local_timestamps_manager.SetImportedTimestamps( current_to_timestamps )
+        
+        local_locations_manager = ClientMediaManagers.LocationsManager( set( current_to_timestamps.keys() ), set(), set(), set(), local_timestamps_manager, inbox )
+        
+        trash_timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        current_to_timestamps = { CC.TRASH_SERVICE_KEY : 123, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 12 }
+        
+        local_timestamps_manager.SetImportedTimestamps( current_to_timestamps )
+        
+        trash_locations_manager = ClientMediaManagers.LocationsManager( set( current_to_timestamps.keys() ), set(), set(), set(), trash_timestamps_manager, inbox )
+        
+        deleted_timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        deleted_to_previously_imported_timestamps = { CC.LOCAL_FILE_SERVICE_KEY : 10, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 118 }
+        deleted_to_timestamps = { CC.LOCAL_FILE_SERVICE_KEY : 120, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123 }
+        
+        deleted_timestamps_manager.SetDeletedTimestamps( deleted_to_timestamps )
+        deleted_timestamps_manager.SetPreviouslyImportedTimestamps( deleted_to_previously_imported_timestamps )
+        
+        deleted_locations_manager = ClientMediaManagers.LocationsManager( set(), set( deleted_to_timestamps.keys() ), set(), set(), deleted_timestamps_manager, inbox )
         
         # duplicate to generate proper dicts
         
@@ -211,7 +233,7 @@ class TestSerialisables( unittest.TestCase ):
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( ClientMediaManagers.TimestampsManager() )
         
         #
         
@@ -219,7 +241,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_timestamps_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -229,7 +251,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_timestamps_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         other_local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -239,7 +261,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, local_timestamps_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         local_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -249,7 +271,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_timestamps_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         trashed_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -259,7 +281,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_timestamps_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         deleted_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -269,7 +291,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, one_tags_manager, local_timestamps_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         one_media = ClientMedia.MediaSingleton( media_result )
         
@@ -279,7 +301,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, two_tags_manager, local_timestamps_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         two_media = ClientMedia.MediaSingleton( media_result )
         

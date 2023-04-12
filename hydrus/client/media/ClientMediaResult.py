@@ -12,6 +12,7 @@ class MediaResult( object ):
         self,
         file_info_manager: ClientMediaManagers.FileInfoManager,
         tags_manager: ClientMediaManagers.TagsManager,
+        timestamps_manager: ClientMediaManagers.TimestampsManager,
         locations_manager: ClientMediaManagers.LocationsManager,
         ratings_manager: ClientMediaManagers.RatingsManager,
         notes_manager: ClientMediaManagers.NotesManager,
@@ -20,6 +21,7 @@ class MediaResult( object ):
         
         self._file_info_manager = file_info_manager
         self._tags_manager = tags_manager
+        self._timestamps_manager = timestamps_manager
         self._locations_manager = locations_manager
         self._ratings_manager = ratings_manager
         self._notes_manager = notes_manager
@@ -53,12 +55,13 @@ class MediaResult( object ):
         
         file_info_manager = self._file_info_manager.Duplicate()
         tags_manager = self._tags_manager.Duplicate()
-        locations_manager = self._locations_manager.Duplicate()
+        timestamps_manager = self._timestamps_manager.Duplicate()
+        locations_manager = self._locations_manager.Duplicate( timestamps_manager )
         ratings_manager = self._ratings_manager.Duplicate()
         notes_manager = self._notes_manager.Duplicate()
-        file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate()
+        file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate( timestamps_manager )
         
-        return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        return MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
     
     def GetDurationMS( self ):
@@ -134,6 +137,11 @@ class MediaResult( object ):
     def GetTagsManager( self ) -> ClientMediaManagers.TagsManager:
         
         return self._tags_manager
+        
+    
+    def GetTimestampsManager( self ) -> ClientMediaManagers.TimestampsManager:
+        
+        return self._timestamps_manager
         
     
     def HasAudio( self ):

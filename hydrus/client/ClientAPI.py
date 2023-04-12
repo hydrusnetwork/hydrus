@@ -320,7 +320,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def CheckPermissionToSeeFiles( self, hash_ids ):
+    def CheckPermissionToSeeFiles( self, hash_ids: typing.Collection[ int ] ):
         
         with self._lock:
             

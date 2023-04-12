@@ -605,7 +605,7 @@ class MediaSortControl( QW.QWidget ):
                     
                     if submetatype not in submetatypes_to_menus:
                         
-                        submenu = QW.QMenu( menu )
+                        submenu = ClientGUIMenus.GenerateMenu( menu )
                         
                         submetatypes_to_menus[ submetatype ] = submenu
                         
@@ -627,7 +627,7 @@ class MediaSortControl( QW.QWidget ):
         
         if menu is not None:
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'namespaces' )
             
@@ -661,7 +661,7 @@ class MediaSortControl( QW.QWidget ):
             
             if menu is not None:
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 ClientGUIMenus.AppendMenu( menu, submenu, 'ratings' )
                 
@@ -727,7 +727,7 @@ class MediaSortControl( QW.QWidget ):
     
     def _SortTypeButtonClick( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._PopulateSortMenuOrList( menu = menu )
         

@@ -1576,6 +1576,8 @@ While the 'storage_tags' represent the actual tags stored on the database for a 
 
 #### parameters
 
+The `metadata` list _should_ come back in the same sort order you asked, whether that is in `file_ids` or `hashes`!
+
 If you ask with hashes rather than file_ids, hydrus will, by default, only return results when it has seen those hashes before. This is to stop the client making thousands of new file_id records in its database if you perform a scanning operation. If you ask about a hash the client has never encountered before--for which there is no file_id--you will get this style of result:
 
 ```json title="Missing file_id example"
@@ -1591,7 +1593,7 @@ If you ask with hashes rather than file_ids, hydrus will, by default, only retur
 
 You can change this behaviour with `create_new_file_ids=true`, but bear in mind you will get a fairly 'empty' metadata result with lots of 'null' lines, so this is only useful for gathering the numerical ids for later Client API work.
 
-If you ask about any file_ids that do not exist, you'll get 404.
+If you ask about file_ids that do not exist, you'll get 404.
 
 If you set `only_return_basic_information=true`, this will be much faster for first-time requests than the full metadata result, but it will be slower for repeat requests. The full metadata object is cached after first fetch, the limited file info object is not.
 

@@ -220,7 +220,7 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
 
         ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', ExportToClipboard, gallery_seed_log )
         ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', ExportToPNG, win, gallery_seed_log )
@@ -230,7 +230,7 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
     
     if not read_only:
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', ImportFromClipboard, win, gallery_seed_log, can_generate_more_pages )
         ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', ImportFromPNG, win, gallery_seed_log, can_generate_more_pages )
@@ -271,7 +271,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
-        self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
+        self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
@@ -367,7 +367,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         selected_gallery_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if len( selected_gallery_seeds ) == 0:
             
@@ -399,7 +399,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         PopulateGallerySeedLogButton( self, submenu, self._gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
         

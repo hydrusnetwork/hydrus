@@ -1,5 +1,7 @@
 import hashlib
 import os
+import typing
+
 import psutil
 import signal
 import sys
@@ -35,6 +37,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs

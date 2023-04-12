@@ -592,7 +592,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._timestamp_type = ClientGUICommon.BetterChoice( self._timestamp_panel )
         
-        self._timestamp_type.addItem( 'source time', HC.TIMESTAMP_TYPE_SOURCE )
+        self._timestamp_type.addItem( 'source time', HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN )
         
         #
         
@@ -911,7 +911,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         elif content_type == HC.CONTENT_TYPE_TITLE:
             
             self._title_panel.show()
-
+            
         elif content_type == HC.CONTENT_TYPE_HTTP_HEADERS:
             
             self._header_panel.show()

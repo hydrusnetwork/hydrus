@@ -45,33 +45,35 @@ def GetFakeMediaResult( hash: bytes ):
     
     service_keys_to_filenames = {}
     
-    import_timestamp = random.randint( HydrusData.GetNow() - 1000000, HydrusData.GetNow() - 15 )
-    
-    current_to_timestamps = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : import_timestamp, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : import_timestamp, CC.LOCAL_FILE_SERVICE_KEY : import_timestamp }
-    
     tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
-    timestamp_manager = ClientMediaManagers.TimestampManager()
+    timestamps_manager = ClientMediaManagers.TimestampsManager()
+    
+    import_timestamp = random.randint( HydrusData.GetNow() - 1000000, HydrusData.GetNow() - 15 )
     
     file_modified_timestamp = random.randint( import_timestamp - 50000, import_timestamp - 1 )
     
-    timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
+    timestamps_manager.SetFileModifiedTimestamp( file_modified_timestamp )
+    
+    current_to_timestamps = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : import_timestamp, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : import_timestamp, CC.LOCAL_FILE_SERVICE_KEY : import_timestamp }
+    
+    timestamps_manager.SetImportedTimestamps( current_to_timestamps )
     
     locations_manager = ClientMediaManagers.LocationsManager(
-        current_to_timestamps,
-        {},
+        set( current_to_timestamps.keys() ),
         set(),
         set(),
+        set(),
+        timestamps_manager,
         inbox = False,
         urls = set(),
-        service_keys_to_filenames = service_keys_to_filenames,
-        timestamp_manager = timestamp_manager
+        service_keys_to_filenames = service_keys_to_filenames
     )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
     notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
-    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
     
-    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     

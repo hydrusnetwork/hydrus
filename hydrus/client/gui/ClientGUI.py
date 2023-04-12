@@ -2244,7 +2244,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 self._pending_service_keys_to_submenus = {}
                 
-                self._menubar_pending_submenu = QW.QMenu( self )
+                self._menubar_pending_submenu = ClientGUIMenus.GenerateMenu( self )
                 
                 self.ReplaceMenu( name, self._menubar_pending_submenu, '&pending' )
                 
@@ -2542,7 +2542,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             if len( gui_session_names ) > 0:
                 
-                load = QW.QMenu( self._menubar_pages_sessions_submenu )
+                load = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
                 
                 for name in gui_session_names:
                     
@@ -2551,7 +2551,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 ClientGUIMenus.AppendMenu( self._menubar_pages_sessions_submenu, load, 'clear and load' )
                 
-                append = QW.QMenu( self._menubar_pages_sessions_submenu )
+                append = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
                 
                 for name in gui_session_names:
                     
@@ -2562,13 +2562,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 if len( gui_session_names_to_backup_timestamps ) > 0:
                     
-                    append_backup = QW.QMenu( self._menubar_pages_sessions_submenu )
+                    append_backup = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
                     
                     rows = sorted( gui_session_names_to_backup_timestamps.items() )
                     
                     for ( name, timestamps ) in rows:
                         
-                        submenu = QW.QMenu( append_backup )
+                        submenu = ClientGUIMenus.GenerateMenu( append_backup )
                         
                         for timestamp in timestamps:
                             
@@ -2582,7 +2582,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                 
             
-            save = QW.QMenu( self._menubar_pages_sessions_submenu )
+            save = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
             
             for name in gui_session_names:
                 
@@ -2600,7 +2600,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
             
             if len( set( gui_session_names ).difference( ClientGUISession.RESERVED_SESSION_NAMES ) ) > 0:
                 
-                delete = QW.QMenu( self._menubar_pages_sessions_submenu )
+                delete = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
                 
                 for name in gui_session_names:
                     
@@ -2700,7 +2700,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                     
                     name = service.GetName()
                     
-                    submenu = QW.QMenu( self._menubar_pending_submenu )
+                    submenu = ClientGUIMenus.GenerateMenu( self._menubar_pending_submenu )
                     
                     ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload {}\'s pending content.'.format( name ), self._UploadPending, service_key )
                     ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear {}\'s pending content.'.format( name ), self._DeletePending, service_key )
@@ -2847,7 +2847,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
                 
                 for service in admin_services:
                     
-                    submenu = QW.QMenu( self._menubar_services_admin_submenu )
+                    submenu = ClientGUIMenus.GenerateMenu( self._menubar_services_admin_submenu )
                     
                     service_key = service.GetServiceKey()
                     
@@ -3003,7 +3003,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoDatabase( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
         
@@ -3021,7 +3021,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         message += os.linesep * 2
         message += 'Check the help for more info on how best to backup manually.'
         
-        self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated.', HydrusData.ShowText, message )
+        self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated, and internal backups are not possible--click for more info.', HydrusData.ShowText, message )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3029,7 +3029,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        file_maintenance_menu = QW.QMenu( menu )
+        file_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
         ClientGUIMenus.AppendSeparator( file_maintenance_menu )
@@ -3054,7 +3054,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
         
-        maintenance_submenu = QW.QMenu( menu )
+        maintenance_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
@@ -3069,7 +3069,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( menu, maintenance_submenu, 'db maintenance' )
         
-        check_submenu = QW.QMenu( menu )
+        check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
@@ -3079,7 +3079,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( menu, check_submenu, 'check and repair' )
         
-        regen_submenu = QW.QMenu( menu )
+        regen_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'total pending count, in the pending menu', 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)', 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
@@ -3107,7 +3107,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        file_viewing_submenu = QW.QMenu( menu )
+        file_viewing_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
         ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
@@ -3119,7 +3119,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoFile( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self._ImportFiles )
         
@@ -3127,9 +3127,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        i_and_e_submenu = QW.QMenu( menu )
+        i_and_e_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        submenu = QW.QMenu( i_and_e_submenu )
+        submenu = ClientGUIMenus.GenerateMenu( i_and_e_submenu )
         
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ), self._PausePlaySync, 'import_folders' )
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', self._controller.new_options.GetBoolean( 'pause_export_folders_sync' ), self._PausePlaySync, 'export_folders' )
@@ -3138,11 +3138,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( i_and_e_submenu )
         
-        self._menubar_file_import_submenu = QW.QMenu( i_and_e_submenu )
+        self._menubar_file_import_submenu = ClientGUIMenus.GenerateMenu( i_and_e_submenu )
         
         ClientGUIMenus.AppendMenu( i_and_e_submenu, self._menubar_file_import_submenu, 'check import folder now' )
         
-        self._menubar_file_export_submenu = QW.QMenu( i_and_e_submenu )
+        self._menubar_file_export_submenu = ClientGUIMenus.GenerateMenu( i_and_e_submenu )
         
         ClientGUIMenus.AppendMenu( i_and_e_submenu, self._menubar_file_export_submenu, 'run export folder now' )
         
@@ -3157,7 +3157,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        open = QW.QMenu( menu )
+        open = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self._OpenInstallFolder )
         ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self._OpenDBFolder )
@@ -3199,11 +3199,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoHelp( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', self._OpenHelp )
         
-        links = QW.QMenu( menu )
+        links = ClientGUIMenus.GenerateMenu( menu )
         
         site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_pixmaps().file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
         site = ClientGUIMenus.AppendMenuBitmapItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_pixmaps().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
@@ -3244,9 +3244,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        debug = QW.QMenu( menu )
+        debug = ClientGUIMenus.GenerateMenu( menu )
         
-        debug_modes = QW.QMenu( debug )
+        debug_modes = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
@@ -3255,7 +3255,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
         
-        profiling = QW.QMenu( debug )
+        profiling = ClientGUIMenus.GenerateMenu( debug )
         
         profile_mode_message = 'If something is running slow, you can turn on profile mode to have hydrus gather information on how long many jobs take to run.'
         profile_mode_message += os.linesep * 2
@@ -3271,7 +3271,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, profiling, 'profiling' )
         
-        report_modes = QW.QMenu( debug )
+        report_modes = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'cache report mode', 'Have the image and thumb caches report their operation.', HG.cache_report_mode, self._SwitchBoolean, 'cache_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
@@ -3293,7 +3293,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
         
-        gui_actions = QW.QMenu( debug )
+        gui_actions = ClientGUIMenus.GenerateMenu( debug )
         
         default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
@@ -3328,7 +3328,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
         
-        data_actions = QW.QMenu( debug )
+        data_actions = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuCheckItem( data_actions, 'db ui-hang relief mode', 'Have UI-synchronised database jobs process pending Qt events while they wait.', HG.db_ui_hang_relief_mode, self._SwitchBoolean, 'db_ui_hang_relief_mode' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
@@ -3341,7 +3341,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
         
-        memory_actions = QW.QMenu( debug )
+        memory_actions = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
@@ -3357,13 +3357,13 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenu( debug, memory_actions, 'memory actions' )
         
-        network_actions = QW.QMenu( debug )
+        network_actions = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
         
         ClientGUIMenus.AppendMenu( debug, network_actions, 'network actions' )
         
-        tests = QW.QMenu( debug )
+        tests = ClientGUIMenus.GenerateMenu( debug )
         
         ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
         ClientGUIMenus.AppendMenuItem( tests, 'run the client api test', 'Run hydrus_dev\'s weekly Client API Test. Guaranteed to work and not mess up your session, ha ha.', self._RunClientAPITest )
@@ -3384,9 +3384,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoNetwork( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
         
@@ -3415,7 +3415,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage and edit rules', 'See where you are consuming data.', self._ReviewBandwidth )
         ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
@@ -3430,7 +3430,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         if not ClientParsing.HTML5LIB_IS_OK:
             
@@ -3453,7 +3453,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        clipboard_menu = QW.QMenu( submenu )
+        clipboard_menu = ClientGUIMenus.GenerateMenu( submenu )
         
         ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
         ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
@@ -3464,7 +3464,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
         
@@ -3482,7 +3482,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
         
@@ -3503,7 +3503,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoPages( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._menubar_pages_page_count = ClientGUIMenus.AppendMenuLabel( menu, 'initialising', 'You have this many pages open.' )
         
@@ -3513,7 +3513,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._RefreshCurrentPage )
         
-        splitter_menu = QW.QMenu( menu )
+        splitter_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
         
@@ -3533,7 +3533,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        self._menubar_pages_sessions_submenu = QW.QMenu( menu )
+        self._menubar_pages_sessions_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_pages_sessions_submenu, 'sessions' )
         
@@ -3543,19 +3543,19 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        self._menubar_pages_search_submenu = QW.QMenu( menu )
+        self._menubar_pages_search_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_pages_search_submenu, 'new file search page' )
         
         #
         
-        self._menubar_pages_petition_submenu = QW.QMenu( menu )
+        self._menubar_pages_petition_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_pages_petition_submenu, 'new petition page' )
         
         #
         
-        download_menu = QW.QMenu( menu )
+        download_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
         ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
@@ -3566,7 +3566,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        self._menubar_pages_download_popup_submenu = QW.QMenu( menu )
+        self._menubar_pages_download_popup_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( self._menubar_pages_download_popup_submenu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
         
@@ -3574,7 +3574,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        special_menu = QW.QMenu( menu )
+        special_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
         ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
@@ -3585,7 +3585,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        special_command_menu = QW.QMenu( menu )
+        special_command_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', HG.client_controller.pub, 'clear_multiwatcher_highlights' )
         
@@ -3598,9 +3598,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoServices( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'all repository synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', self._controller.new_options.GetBoolean( 'pause_repo_sync' ), self._PausePlaySync, 'repo' )
         
@@ -3611,7 +3611,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
         ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
         
-        self._menubar_services_admin_submenu = QW.QMenu( menu )
+        self._menubar_services_admin_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_services_admin_submenu, 'administrate services' )
         
@@ -3624,7 +3624,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoTags( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'migrate tags', 'Migrate tags from one place to another.', self._MigrateTags )
         
@@ -3641,7 +3641,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         #
         
-        tag_display_maintenance_menu = QW.QMenu( menu )
+        tag_display_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review current sync', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
         ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
@@ -3670,7 +3670,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
     
     def _InitialiseMenuInfoUndo( self ):
         
-        menu = QW.QMenu( self )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._menubar_undo_undo = ClientGUIMenus.AppendMenuItem( menu, 'initialising', 'Undo last operation.', self._controller.pub, 'undo' )
         
@@ -3678,7 +3678,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCo
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        self._menubar_undo_closed_pages_submenu = QW.QMenu( menu )
+        self._menubar_undo_closed_pages_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_undo_closed_pages_submenu, 'closed pages' )
         
@@ -6373,15 +6373,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetupBackupPath( self ):
         
-        backup_intro = 'Everything in your client is stored in the database, which consists of a handful of .db files and a single subdirectory that contains all your media files. It is a very good idea to maintain a regular backup schedule--to save from hard drive failure, serious software fault, accidental deletion, or any other unexpected problem. It sucks to lose all your work, so make sure it can\'t happen!'
-        backup_intro += os.linesep * 2
-        backup_intro += 'If you prefer to create a manual backup with an external program like FreeFileSync, then please cancel out of the dialog after this and set up whatever you like, but if you would rather a simple solution, simply select a directory and the client will remember it as the designated backup location. Creating or updating your backup can be triggered at any time from the database menu.'
-        backup_intro += os.linesep * 2
-        backup_intro += 'An ideal backup location is initially empty and on a different hard drive.'
-        backup_intro += os.linesep * 2
-        backup_intro += 'If you have a large database (100,000+ files) or a slow hard drive, creating the initial backup may take a long time--perhaps an hour or more--but updating an existing backup should only take a couple of minutes (since the client only has to copy new or modified files). Try to update your backup every week!'
-        backup_intro += os.linesep * 2
-        backup_intro += 'If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
+        existing_backup_path = self._new_options.GetNoneableString( 'backup_path' )
+        
+        if existing_backup_path is None:
+            
+            backup_intro = 'Everything in your client is stored in the \'database\', which consists of a handful of .db files and a single subdirectory that contains all your media files. It is a very good idea to maintain a regular backup schedule--to save from hard drive failure, serious software fault, accidental deletion, or any other unexpected problem. It sucks to lose all your work, so make sure it can\'t happen!'
+            backup_intro += os.linesep * 2
+            backup_intro += 'If you prefer to create a manual backup with an external program like FreeFileSync, then please cancel out of the dialog after this and set up whatever you like, but if you would rather a simple solution, simply select a directory and the client will remember it as the designated backup location. Creating or updating your backup can be triggered at any time from the database menu.'
+            backup_intro += os.linesep * 2
+            backup_intro += 'An ideal backup location is initially empty and on a different hard drive.'
+            backup_intro += os.linesep * 2
+            backup_intro += 'If you have a large database (100,000+ files) or a slow hard drive, creating the initial backup may take a long time--perhaps an hour or more--but updating an existing backup should only take a couple of minutes (since the client only has to copy new or modified files). Try to update your backup every week!'
+            backup_intro += os.linesep * 2
+            backup_intro += 'If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
+            
+        else:
+            
+            backup_intro = 'Your current backup location is "{}".'.format( existing_backup_path )
+            backup_intro += os.linesep * 2
+            backup_intro += 'If your client is getting large and/or complicated, I recommend you start backing up with a proper external program like FreeFileSync. If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
+            
         
         QW.QMessageBox.information( self, 'Information', backup_intro )
         
@@ -6393,12 +6404,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if path == '':
                     
-                    path = None
+                    return
                     
                 
                 if path == self._controller.GetDBDir():
                     
                     QW.QMessageBox.critical( self, 'Error', 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
+                    
+                    return
+                    
+                
+                if path == existing_backup_path:
+                    
+                    QW.QMessageBox.information( self, 'Already in use!', 'The path you chose is your current saved backup path. No changes have been made.' )
                     
                     return
                     

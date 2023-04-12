@@ -18,6 +18,7 @@ from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBFilesTimestamps
 from hydrus.client.db import ClientDBFilesViewingStats
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsStorage
@@ -876,6 +877,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         modules_hashes: ClientDBMaster.ClientDBMasterHashes,
         modules_tags: ClientDBMaster.ClientDBMasterTags,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
+        modules_files_timestamps: ClientDBFilesTimestamps.ClientDBFilesTimestamps,
         modules_files_viewing_stats: ClientDBFilesViewingStats.ClientDBFilesViewingStats,
         modules_url_map: ClientDBURLMap.ClientDBURLMap,
         modules_notes_map: ClientDBNotesMap.ClientDBNotesMap,
@@ -895,6 +897,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         self.modules_hashes = modules_hashes
         self.modules_tags = modules_tags
         self.modules_files_metadata_basic = modules_files_metadata_basic
+        self.modules_files_timestamps = modules_files_timestamps
         self.modules_files_viewing_stats = modules_files_viewing_stats
         self.modules_url_map = modules_url_map
         self.modules_notes_map = modules_notes_map
@@ -1189,32 +1192,25 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         if ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in timestamp_ranges:
             
-            modified_timestamp_predicates = []
-            
             ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
             
-            if '>' in ranges:
+            if len( ranges ) > 0:
                 
-                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) >= {}'.format( ranges[ '>' ] ) )
-                
-            
-            if '<' in ranges:
-                
-                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) <= {}'.format( ranges[ '<' ] ) )
-                
-            
-            if len( modified_timestamp_predicates ) > 0:
-                
-                pred_string = ' AND '.join( modified_timestamp_predicates )
-                
-                q1 = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps'
-                q2 = 'SELECT hash_id, file_modified_timestamp FROM file_domain_modified_timestamps'
-                
-                query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
-                
-                modified_timestamp_hash_ids = self._STS( self._Execute( query ) )
+                modified_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, ranges )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
+                
+            
+        
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME in timestamp_ranges:
+            
+            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
+            
+            if len( ranges ) > 0:
+                
+                archived_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_ARCHIVED, ranges )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, archived_timestamp_hash_ids )
                 
             
         

@@ -977,9 +977,14 @@ class GridLayout( QW.QGridLayout ):
         self.setMargin( 2 )
         self.setSpacing( spacing )
         
+        self.next_row = 0
+        self.next_col = 0
+        
+    
     def GetFixedColumnCount( self ):
         
         return self._col_count
+        
 
     def setMargin( self, val ):
         
@@ -990,29 +995,40 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
 
     if isinstance( layout, GridLayout ):
         
-        cols = layout.GetFixedColumnCount()
+        row = layout.next_row
         
-        count = layout.count()
+        col = layout.next_col
         
-        row = math.floor( count / cols )
-        
-        col = count % cols
-        
-        if isinstance( item, QW.QLayout ):
+        try:
             
-            layout.addLayout( item, row, col )
+            if isinstance( item, QW.QLayout ):
+                
+                layout.addLayout( item, row, col )
+                
+            elif isinstance( item, QW.QWidget ):
+                
+                layout.addWidget( item, row, col )
+                
+            elif isinstance( item, tuple ):
+                
+                spacer = QW.QPushButton()#QW.QSpacerItem( 0, 0, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed )
+                layout.addWidget( spacer, row, col )
+                spacer.setVisible(False)
+                
+                return
+                
             
-        elif isinstance( item, QW.QWidget ):
+        finally:
             
-            layout.addWidget( item, row, col )
-            
-        elif isinstance( item, tuple ):
-            
-            spacer = QW.QPushButton()#QW.QSpacerItem( 0, 0, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed )
-            layout.addWidget( spacer, row, col )
-            spacer.setVisible(False)
-            
-            return
+            if col == layout.GetFixedColumnCount() - 1:
+                
+                layout.next_row += 1
+                layout.next_col = 0
+                
+            else:
+                
+                layout.next_col += 1
+                
             
         
     else:

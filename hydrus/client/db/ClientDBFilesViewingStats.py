@@ -2,9 +2,11 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBModule
 
 class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
@@ -32,6 +34,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
     
     def _GetInitialTableGenerationDict( self ) -> dict:
         
+        # TODO: Migrate last_viewed_timestamp over to the FilesTimestamps module and think about collapsing it to just the media viewer, with an option to fold preview views in if you want
         return {
             'main.file_viewing_stats' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, canvas_type INTEGER, last_viewed_timestamp INTEGER, views INTEGER, viewtime INTEGER, PRIMARY KEY ( hash_id, canvas_type ) );', 400 )
         }
@@ -187,6 +190,13 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return last_viewed_timestamp_hash_ids
         
     
+    def GetHashIdsToFileViewingStatsRows( self, hash_ids_table_name ):
+        
+        query = 'SELECT hash_id, canvas_type, last_viewed_timestamp, views, viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id );'.format( hash_ids_table_name )
+        
+        return HydrusData.BuildKeyToListDict( ( ( hash_id, ( canvas_type, last_viewed_timestamp, views, viewtime ) ) for ( hash_id, canvas_type, last_viewed_timestamp, views, viewtime ) in self._Execute( query ) ) )
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         tables_and_columns = []
@@ -197,5 +207,41 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         
         return tables_and_columns
+        
+    
+    def GetTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+        
+        if timestamp_data.location is None:
+            
+            return
+            
+        
+        result = self._Execute( 'SELECT last_viewed_timestamp FROM file_viewing_stats WHERE canvas_type = ? AND hash_id = ?;', ( timestamp_data.location, hash_id ) ).fetchone()
+        
+        if result is None:
+            
+            return None
+            
+        else:
+            
+            ( timestamp, ) = result
+            
+            return timestamp
+            
+        
+    
+    def SetTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+        
+        if timestamp_data.location is None:
+            
+            return
+            
+        
+        if timestamp_data.timestamp is None:
+            
+            return
+            
+        
+        self._Execute( 'UPDATE file_viewing_stats SET last_viewed_timestamp = ? WHERE canvas_type = ? and hash_id = ?;', ( timestamp_data.timestamp, timestamp_data.location, hash_id ) )
         
     

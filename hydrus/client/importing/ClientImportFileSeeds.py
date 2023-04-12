@@ -29,6 +29,7 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -550,7 +551,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self._names_and_notes_dict.update( names_and_notes )
         
-        source_timestamp = ClientParsing.GetTimestampFromParseResults( parse_results, HC.TIMESTAMP_TYPE_SOURCE )
+        source_timestamp = ClientParsing.GetTimestampFromParseResults( parse_results, HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN )
         
         if source_timestamp is not None:
             
@@ -1700,13 +1701,17 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         domain_modified_timestamp = self.source_time
                         
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( 'domain', hash, ( domain, domain_modified_timestamp ) ) )
+                    timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, domain_modified_timestamp )
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
                     
                     service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
                     
                     if self._cloudflare_last_modified_time is not None:
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( 'domain', hash, ( 'cloudflare.com', self._cloudflare_last_modified_time ) ) )
+                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( 'cloudflare.com', self._cloudflare_last_modified_time )
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
                         
                         service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
                         

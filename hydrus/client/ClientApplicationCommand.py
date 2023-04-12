@@ -149,6 +149,7 @@ SIMPLE_ZOOM_CANVAS = 141
 SIMPLE_ZOOM_100 = 142
 SIMPLE_ZOOM_DEFAULT = 143
 SIMPLE_SHOW_DUPLICATES = 144
+SIMPLE_MANAGE_FILE_TIMESTAMPS = 145
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -202,6 +203,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_MANAGE_FILE_NOTES : 'manage file notes',
     SIMPLE_MANAGE_FILE_RATINGS : 'manage file ratings',
     SIMPLE_MANAGE_FILE_TAGS : 'manage file tags',
+    SIMPLE_MANAGE_FILE_TIMESTAMPS : 'manage file times',
     SIMPLE_MANAGE_FILE_URLS : 'manage file urls',
     SIMPLE_MOVE_PAGES_SELECTION_LEFT : 'move page selection left (cycles up through page of pages at boundaries)',
     SIMPLE_MOVE_PAGES_SELECTION_RIGHT : 'move page selection right (cycles up through page of pages at boundaries)',

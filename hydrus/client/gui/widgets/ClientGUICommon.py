@@ -46,52 +46,77 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
         sizer_flags = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
         
     
-    for ( text, control ) in rows:
+    for row in rows:
         
-        if isinstance( text, BetterStaticText ):
+        if isinstance( row, typing.Collection ) and len( row ) == 2:
             
-            st = text
+            ( text, control ) = row
+            
+            if isinstance( text, BetterStaticText ):
+                
+                st = text
+                
+            else:
+                
+                st = BetterStaticText( parent, text )
+                
+            
+            if control.objectName() == 'HydrusWarning':
+                
+                st.setObjectName( 'HydrusWarning' )
+                
+            
+            possible_tooltip_widget = None
+            
+            if isinstance( control, QW.QLayout ):
+                
+                cflags = sizer_flags
+                
+                if control.count() > 0:
+                    
+                    possible_widget_item = control.itemAt( 0 )
+                    
+                    if isinstance( possible_widget_item, QW.QWidgetItem ):
+                        
+                        possible_tooltip_widget = possible_widget_item.widget()
+                        
+                    
+                
+            else:
+                
+                cflags = control_flags
+                
+                possible_tooltip_widget = control
+                
+            
+            if possible_tooltip_widget is not None and isinstance( possible_tooltip_widget, QW.QWidget ) and possible_tooltip_widget.toolTip() != '':
+                
+                st.setToolTip( possible_tooltip_widget.toolTip() )
+                
+            
+            QP.AddToLayout( gridbox, st, text_flags )
+            QP.AddToLayout( gridbox, control, cflags )
             
         else:
             
-            st = BetterStaticText( parent, text )
+            control = row
             
-        
-        if control.objectName() == 'HydrusWarning':
+            r = gridbox.next_row
+            c = gridbox.next_col
             
-            st.setObjectName( 'HydrusWarning' )
+            rowSpan = 1
+            columnSpan = -1
             
-        
-        possible_tooltip_widget = None
-        
-        if isinstance( control, QW.QLayout ):
+            gridbox.addWidget( control, r, c, rowSpan, columnSpan )
             
-            cflags = sizer_flags
+            gridbox.next_row += 1
+            gridbox.next_col = 0
             
-            if control.count() > 0:
-                
-                possible_widget_item = control.itemAt( 0 )
-                
-                if isinstance( possible_widget_item, QW.QWidgetItem ):
-                    
-                    possible_tooltip_widget = possible_widget_item.widget()
-                    
-                
+            h_policy = QW.QSizePolicy.Expanding
+            v_policy = QW.QSizePolicy.Fixed
             
-        else:
+            control.setSizePolicy( h_policy, v_policy )
             
-            cflags = control_flags
-            
-            possible_tooltip_widget = control
-            
-        
-        if possible_tooltip_widget is not None and isinstance( possible_tooltip_widget, QW.QWidget ) and possible_tooltip_widget.toolTip() != '':
-            
-            st.setToolTip( possible_tooltip_widget.toolTip() )
-            
-        
-        QP.AddToLayout( gridbox, st, text_flags )
-        QP.AddToLayout( gridbox, control, cflags )
         
     
     if add_stretch_at_end:
@@ -534,7 +559,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         
         self.setDefaultAction( action )
         
-        self._menu = QW.QMenu( self )
+        self._menu = ClientGUIMenus.GenerateMenu( self )
         
         self._menu.installEventFilter( self )
         
@@ -925,7 +950,7 @@ class ExportPatternButton( BetterButton ):
     
     def _Hit( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
         
@@ -1726,13 +1751,13 @@ class RegexButton( BetterButton ):
     
     def _ShowMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy it to the clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\s' )
         ClientGUIMenus.AppendMenuItem( submenu, r'number character - \d', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\d' )
@@ -1770,7 +1795,7 @@ class RegexButton( BetterButton ):
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'regex components' )
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
         

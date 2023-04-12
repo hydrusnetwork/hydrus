@@ -2,10 +2,8 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
-from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBModule
 
 class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
@@ -28,10 +26,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
-        index_generation_dict[ 'main.file_domain_modified_timestamps' ] = [
-            ( [ 'file_modified_timestamp' ], False, 476 )
-        ]
-        
         return index_generation_dict
         
     
@@ -41,8 +35,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
-            'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
-            'main.file_domain_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp INTEGER, PRIMARY KEY ( hash_id, domain_id ) );', 476 )
+            'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 )
         }
         
     
@@ -59,25 +52,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         # hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words
         self._ExecuteMany( insert_phrase + ' files_info ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', rows )
-        
-    
-    def ClearDomainModifiedTimestamp( self, hash_id: int, domain_id: int ):
-        
-        self._Execute( 'DELETE FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( hash_id, domain_id ) )
-        
-    
-    def GetDomainModifiedTimestamp( self, hash_id: int, domain_id: int ) -> typing.Optional[ int ]:
-        
-        result = self._Execute( 'SELECT file_modified_timestamp FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( hash_id, domain_id ) ).fetchone()
-        
-        if result is None:
-            
-            return None
-            
-        
-        ( timestamp, ) = result
-        
-        return timestamp
         
     
     def GetMime( self, hash_id: int ) -> int:
@@ -208,11 +182,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return has_icc_profile_hash_ids
         
     
-    def SetDomainModifiedTimestamp( self, hash_id: int, domain_id: int, timestamp: int ):
-        
-        self._Execute( 'REPLACE INTO file_domain_modified_timestamps ( hash_id, domain_id, file_modified_timestamp ) VALUES ( ?, ?, ? );', ( hash_id, domain_id, timestamp ) )
-        
-    
     def SetHasEXIF( self, hash_id: int, has_exif: bool ):
         
         if has_exif:
@@ -246,23 +215,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
-            
-        
-    
-    def UpdateDomainModifiedTimestamp( self, hash_id: int, domain_id: int, timestamp: int ):
-        
-        should_update = True
-        
-        existing_timestamp = self.GetDomainModifiedTimestamp( hash_id, domain_id )
-        
-        if existing_timestamp is not None:
-            
-            should_update = ClientTime.ShouldUpdateDomainModifiedTime( existing_timestamp, timestamp )
-            
-        
-        if should_update:
-            
-            self.SetDomainModifiedTimestamp( hash_id, domain_id, timestamp )
             
         
     

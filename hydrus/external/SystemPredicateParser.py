@@ -79,6 +79,7 @@ class Predicate( Enum ):
     FILETYPE = auto()
     HASH = auto()
     MOD_DATE = auto()
+    ARCHIVED_DATE = auto()
     LAST_VIEWED_TIME = auto()
     TIME_IMPORTED = auto()
     DURATION = auto()
@@ -157,7 +158,7 @@ class Units( Enum ):
 SYSTEM_PREDICATES = {
     'everything': (Predicate.EVERYTHING, None, None, None),
     'inbox': (Predicate.INBOX, None, None, None),
-    'archive': (Predicate.ARCHIVE, None, None, None),
+    'archive$': (Predicate.ARCHIVE, None, None, None), # $ so as not to clash with system:archive(d) date
     'has duration': (Predicate.HAS_DURATION, None, None, None),
     'no duration': (Predicate.NO_DURATION, None, None, None),
     '(is the )?best quality( file)? of( its)?( duplicate)? group': (Predicate.BEST_QUALITY_OF_GROUP, None, None, None),
@@ -181,6 +182,7 @@ SYSTEM_PREDICATES = {
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
+    'archived? date|date archived': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'modified date|date modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'last viewed time|last view time': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'time imported|import time': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
@@ -477,6 +479,7 @@ examples = [
     #"system:filetype =   image/jpg, image/png, apng",
     "system:hash = abcdef1 abcdef2 abcdef3",
     "system:hash = abcdef1 abcdef, abcdef4 md5",
+    "system:archived date < 7  years 45 days 70h",
     "system:modified date < 7  years 45 days 70h",
     "system:modified date > 2011-06-04",
     "system:date modified > 7 years 2    months",

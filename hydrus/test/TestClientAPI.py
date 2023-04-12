@@ -1304,12 +1304,14 @@ class TestClientAPI( unittest.TestCase ):
         
         tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
-        locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() )
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( { 'abc' : '123' } )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         from hydrus.client.importing.options import NoteImportOptions
         
@@ -4066,7 +4068,7 @@ class TestClientAPI( unittest.TestCase ):
         
         current_import_timestamp = 500
         ipfs_import_timestamp = 123456
-        deleted_import_timestamp = 300
+        previously_imported_timestamp = 300
         deleted_deleted_timestamp = 450
         file_modified_timestamp = 20
         
@@ -4111,25 +4113,32 @@ class TestClientAPI( unittest.TestCase ):
             
             tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
             
-            timestamp_manager = ClientMediaManagers.TimestampManager()
+            timestamps_manager = ClientMediaManagers.TimestampsManager()
             
-            timestamp_manager.SetFileModifiedTimestamp( file_modified_timestamp )
+            timestamps_manager.SetFileModifiedTimestamp( file_modified_timestamp )
+            timestamps_manager.SetImportedTimestamps( current_to_timestamps )
+            
+            deleted_to_timestamps = { random_file_service_hex_deleted : deleted_deleted_timestamp }
+            deleted_to_previously_imported_timestamps = { random_file_service_hex_deleted : previously_imported_timestamp }
+            
+            timestamps_manager.SetDeletedTimestamps( deleted_to_timestamps )
+            timestamps_manager.SetPreviouslyImportedTimestamps( deleted_to_previously_imported_timestamps )
             
             locations_manager = ClientMediaManagers.LocationsManager(
-                current_to_timestamps,
-                { random_file_service_hex_deleted : ( deleted_deleted_timestamp, deleted_import_timestamp ) },
+                set( current_to_timestamps.keys() ),
+                set( deleted_to_timestamps.keys() ),
                 set(),
                 set(),
+                timestamps_manager,
                 inbox = False,
                 urls = urls,
-                service_keys_to_filenames = service_keys_to_filenames,
-                timestamp_manager = timestamp_manager
+                service_keys_to_filenames = service_keys_to_filenames
             )
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
             
-            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
             
             media_results.append( media_result )
             
@@ -4188,7 +4197,7 @@ class TestClientAPI( unittest.TestCase ):
                     'deleted' : {
                         random_file_service_hex_deleted.hex() : {
                             'time_deleted' : deleted_deleted_timestamp,
-                            'time_imported' : deleted_import_timestamp,
+                            'time_imported' : previously_imported_timestamp,
                             'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_deleted ),
                             'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ),
                             'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ) ]
@@ -4355,6 +4364,32 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_only_return_basic_information_result )
         
+        # same but diff order
+        
+        expected_order = [ 3, 1, 2 ]
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
+        path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 3, 1, 2 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ) }
+        
+        expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        self.assertEqual( d, expected_result )
+        
         # metadata from file_ids
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
@@ -4388,11 +4423,66 @@ class TestClientAPI( unittest.TestCase ):
                 HydrusData.Print( ( j, file_post_e[j] ) )
                 
             
-        '''
         
         self.maxDiff = None
+        '''
         
         for ( row_a, row_b ) in zip( d[ 'metadata' ], expected_metadata_result[ 'metadata' ] ):
+            
+            self.assertEqual( set( row_a.keys() ), set( row_b.keys() ) )
+            
+            for key in list( row_a.keys() ):
+                
+                self.assertEqual( row_a[ key ], row_b[ key ] )
+                
+            
+        
+        # same but diff order
+        
+        expected_order = [ 3, 1, 2 ]
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
+        path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( expected_order ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        # quick print-inspect on what went wrong
+        '''
+        m = d[ 'metadata' ]
+        m_e = expected_metadata_result[ 'metadata' ]
+        
+        for ( i, file_post ) in enumerate( m ):
+            
+            file_post_e = m_e[ i ]
+            
+            for j in file_post.keys():
+                
+                HydrusData.Print( ( j, file_post[j] ) )
+                HydrusData.Print( ( j, file_post_e[j] ) )
+                
+            
+        
+        self.maxDiff = None
+        '''
+        
+        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ) }
+        
+        expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        self.assertEqual( d, expected_result )
+        
+        for ( row_a, row_b ) in zip( d[ 'metadata' ], expected_result[ 'metadata' ] ):
             
             self.assertEqual( set( row_a.keys() ), set( row_b.keys() ) )
             
@@ -4412,7 +4502,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # identifiers from hashes
         
-        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4428,9 +4518,33 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_identifier_result )
         
+        # same but diff order
+        
+        expected_order = [ 3, 1, 2 ]
+        
+        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in expected_order ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'metadata' : list( expected_identifier_result[ 'metadata' ] ) }
+        
+        expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        self.assertEqual( d, expected_result )
+        
         # basic metadata from hashes
         
-        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4446,9 +4560,33 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_only_return_basic_information_result )
         
+        # same but diff order
+        
+        expected_order = [ 3, 1, 2 ]
+        
+        path = '/get_files/file_metadata?hashes={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in expected_order ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ) }
+        
+        expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        self.assertEqual( d, expected_result )
+        
         # metadata from hashes
         
-        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4464,6 +4602,28 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_metadata_result )
         
+        # same but diff order
+        
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in expected_order ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ) }
+        
+        expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        self.assertEqual( d, expected_result )
+        
         # fails on borked hashes
         
         path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ 'deadbeef' ] ) ) )
@@ -4478,7 +4638,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from hashes with detailed url info
         
-        path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&detailed_url_information=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4496,7 +4656,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from hashes with notes info
         
-        path = '/get_files/file_metadata?hashes={}&include_notes=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for ( k, hash ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&include_notes=true'.format( urllib.parse.quote( json.dumps( [ file_ids_to_hashes[ hash_id ].hex() for hash_id in [ 1, 2, 3 ] ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4540,11 +4700,24 @@ class TestClientAPI( unittest.TestCase ):
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results_from_ids', media_results )
         
-        hashes_in_test = list( file_ids_to_hashes.values() )
+        hashes_in_test = [ mr.GetHash() for mr in media_results ]
         
         novel_hashes = [ os.urandom( 32 ) for i in range( 5 ) ]
         
         hashes_in_test.extend( novel_hashes )
+        
+        expected_result = {
+            'metadata' : expected_metadata_result[ 'metadata' ] + [
+                {
+                    'hash' : hash.hex(),
+                    'file_id' : None
+                } for hash in novel_hashes
+            ]
+        }
+        
+        random.shuffle( hashes_in_test )
+        
+        expected_result[ 'metadata' ].sort( key = lambda m_dict: hashes_in_test.index( bytes.fromhex( m_dict[ 'hash' ] ) ) )
         
         path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in hashes_in_test ] ) ) )
         
@@ -4560,22 +4733,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        metadata = d[ 'metadata' ]
-        
-        for hash in novel_hashes:
-            
-            self.assertTrue( True in [ hash.hex() == row[ 'hash' ] for row in metadata ] )
-            
-            for row in metadata:
-                
-                if row[ 'hash' ] == hash.hex():
-                    
-                    self.assertEqual( len( row ), 2 )
-                    
-                    self.assertEqual( row[ 'file_id' ], None )
-                    
-                
-            
+        self.assertEqual( d, expected_result )
         
     
     def _test_get_files( self, connection, set_up_permissions ):
@@ -4599,12 +4757,14 @@ class TestClientAPI( unittest.TestCase ):
         
         tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
-        locations_manager = ClientMediaManagers.LocationsManager( dict(), dict(), set(), set() )
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
@@ -4861,7 +5021,7 @@ class TestClientAPI( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )

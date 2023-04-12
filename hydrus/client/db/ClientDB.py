@@ -34,6 +34,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesInbox
@@ -44,6 +45,7 @@ from hydrus.client.db import ClientDBFilesMetadataRich
 from hydrus.client.db import ClientDBFilesPhysicalStorage
 from hydrus.client.db import ClientDBFilesSearch
 from hydrus.client.db import ClientDBFilesStorage
+from hydrus.client.db import ClientDBFilesTimestamps
 from hydrus.client.db import ClientDBFilesViewingStats
 from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMappingsCacheCombinedFilesDisplay
@@ -1275,9 +1277,6 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'CREATE TABLE IF NOT EXISTS local_incdec_ratings ( service_id INTEGER, hash_id INTEGER, rating INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'local_incdec_ratings', [ 'hash_id' ] )
         self._CreateIndex( 'local_incdec_ratings', [ 'rating' ] )
-        
-        self._Execute( 'CREATE TABLE IF NOT EXISTS file_modified_timestamps ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );' )
-        self._CreateIndex( 'file_modified_timestamps', [ 'file_modified_timestamp' ] )
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS options ( options TEXT_YAML );', )
         
@@ -3056,7 +3055,7 @@ class DB( HydrusDB.HydrusDB ):
         return jobs_to_do
         
     
-    def _GetMediaResults( self, hash_ids: typing.Iterable[ int ], sorted = False ):
+    def _GetMediaResults( self, hash_ids: typing.Collection[ int ], sorted = False ):
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -3073,8 +3072,9 @@ class DB( HydrusDB.HydrusDB ):
                 hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
                 
                 (
-                    hash_ids_to_current_file_service_ids_and_timestamps,
-                    hash_ids_to_deleted_file_service_ids_and_timestamps,
+                    hash_ids_to_current_file_service_ids_to_timestamps,
+                    hash_ids_to_deleted_file_service_ids_to_timestamps,
+                    hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps,
                     hash_ids_to_pending_file_service_ids,
                     hash_ids_to_petitioned_file_service_ids
                 ) = self.modules_files_storage.GetHashIdsToServiceInfoDicts( temp_table_name )
@@ -3100,19 +3100,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_names_and_notes = self.modules_notes_map.GetHashIdsToNamesAndNotes( temp_table_name )
                 
-                hash_ids_to_file_viewing_stats = HydrusData.BuildKeyToListDict( ( ( hash_id, ( canvas_type, last_viewed_timestamp, views, viewtime ) ) for ( hash_id, canvas_type, last_viewed_timestamp, views, viewtime ) in self._Execute( 'SELECT hash_id, canvas_type, last_viewed_timestamp, views, viewtime FROM {} CROSS JOIN file_viewing_stats USING ( hash_id );'.format( temp_table_name ) ) ) )
+                hash_ids_to_file_viewing_stats = self.modules_files_viewing_stats.GetHashIdsToFileViewingStatsRows( temp_table_name )
                 
-                hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMediaManagers.FileViewingStatsManager( file_viewing_stats ) for ( hash_id, file_viewing_stats ) in hash_ids_to_file_viewing_stats.items() }
-                
-                hash_ids_to_file_modified_timestamps = dict( self._Execute( 'SELECT hash_id, file_modified_timestamp FROM {} CROSS JOIN file_modified_timestamps USING ( hash_id );'.format( temp_table_name ) ) )
-                
-                hash_ids_to_domain_modified_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( domain, timestamp ) ) for ( hash_id, domain, timestamp ) in self._Execute( 'SELECT hash_id, domain, file_modified_timestamp FROM {} CROSS JOIN file_domain_modified_timestamps USING ( hash_id ) CROSS JOIN url_domains USING ( domain_id );'.format( temp_table_name ) ) ) )
-                
-                hash_ids_to_archive_timestamps = self.modules_files_inbox.GetHashIdsToArchiveTimestamps( temp_table_name )
+                hash_ids_to_half_initialised_timestamp_managers = self.modules_files_timestamps.GetHashIdsToHalfInitialisedTimestampsManagers( hash_ids, temp_table_name )
                 
                 hash_ids_to_local_file_deletion_reasons = self.modules_files_storage.GetHashIdsToFileDeletionReasons( temp_table_name )
                 
-                hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in hash_ids_to_current_file_service_ids_and_timestamps.items() }
+                hash_ids_to_current_file_service_ids = { hash_id : list( file_service_ids_to_timestamps.keys() ) for ( hash_id, file_service_ids_to_timestamps ) in hash_ids_to_current_file_service_ids_to_timestamps.items() }
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
@@ -3133,9 +3127,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
+                current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_to_timestamps[ hash_id ].items() }
                 
-                deleted_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : ( timestamp, original_timestamp ) for ( service_id, timestamp, original_timestamp ) in hash_ids_to_deleted_file_service_ids_and_timestamps[ hash_id ] }
+                deleted_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_deleted_file_service_ids_to_timestamps[ hash_id ].items() }
+                
+                deleted_file_service_keys_to_previously_imported_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps[ hash_id ].items() }
                 
                 pending_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
                 
@@ -3149,25 +3145,18 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filename for ( service_id, filename ) in service_ids_to_filenames.items() }
                 
-                timestamp_manager = ClientMediaManagers.TimestampManager()
-                
-                if hash_id in hash_ids_to_file_modified_timestamps:
+                if hash_id in hash_ids_to_half_initialised_timestamp_managers:
                     
-                    timestamp_manager.SetFileModifiedTimestamp( hash_ids_to_file_modified_timestamps[ hash_id ] )
+                    timestamps_manager = hash_ids_to_half_initialised_timestamp_managers[ hash_id ]
                     
-                
-                if hash_id in hash_ids_to_domain_modified_timestamps:
+                else:
                     
-                    for ( domain, modified_timestamp ) in hash_ids_to_domain_modified_timestamps[ hash_id ]:
-                        
-                        timestamp_manager.SetDomainModifiedTimestamp( domain, modified_timestamp )
-                        
+                    timestamps_manager = ClientMediaManagers.TimestampsManager()
                     
                 
-                if hash_id in hash_ids_to_archive_timestamps:
-                    
-                    timestamp_manager.SetArchivedTimestamp( hash_ids_to_archive_timestamps[ hash_id ] )
-                    
+                timestamps_manager.SetImportedTimestamps( current_file_service_keys_to_timestamps )
+                timestamps_manager.SetDeletedTimestamps( deleted_file_service_keys_to_timestamps )
+                timestamps_manager.SetPreviouslyImportedTimestamps( deleted_file_service_keys_to_previously_imported_timestamps )
                 
                 if hash_id in hash_ids_to_local_file_deletion_reasons:
                     
@@ -3179,14 +3168,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 locations_manager = ClientMediaManagers.LocationsManager(
-                    current_file_service_keys_to_timestamps,
-                    deleted_file_service_keys_to_timestamps,
+                    set( current_file_service_keys_to_timestamps.keys() ),
+                    set( deleted_file_service_keys_to_timestamps.keys() ),
                     pending_file_service_keys,
                     petitioned_file_service_keys,
+                    timestamps_manager,
                     inbox = inbox,
                     urls = urls,
                     service_keys_to_filenames = service_keys_to_filenames,
-                    timestamp_manager = timestamp_manager,
                     local_file_deletion_reason = local_file_deletion_reason
                 )
                 
@@ -3211,13 +3200,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                if hash_id in hash_ids_to_file_viewing_stats_managers:
+                if hash_id in hash_ids_to_file_viewing_stats:
                     
-                    file_viewing_stats_manager = hash_ids_to_file_viewing_stats_managers[ hash_id ]
+                    file_viewing_stats = hash_ids_to_file_viewing_stats[ hash_id ]
+                    
+                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( timestamps_manager, file_viewing_stats )
                     
                 else:
                     
-                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager()
+                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
                     
                 
                 #
@@ -3237,7 +3228,7 @@ class DB( HydrusDB.HydrusDB ):
                 file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
                 file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
                 
-                missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
+                missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
             
             self._weakref_media_result_cache.AddMediaResults( missing_media_results )
@@ -4444,7 +4435,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_modified_timestamp = file_import_job.GetFileModifiedTimestamp()
             
-            self._Execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
+            self.modules_files_timestamps.SetTimestamp( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
             
             #
             
@@ -4659,7 +4650,13 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_inbox = ClientDBFilesInbox.ClientDBFilesInbox( self._c, self.modules_files_storage )
+        self.modules_files_timestamps = ClientDBFilesTimestamps.ClientDBFilesTimestamps( self._c, self.modules_urls, self.modules_files_viewing_stats, self.modules_files_storage )
+        
+        self._modules.append( self.modules_files_timestamps )
+        
+        #
+        
+        self.modules_files_inbox = ClientDBFilesInbox.ClientDBFilesInbox( self._c, self.modules_files_storage, self.modules_files_timestamps )
         
         self._modules.append( self.modules_files_inbox )
         
@@ -4766,7 +4763,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_maintenance = ClientDBFilesMaintenance.ClientDBFilesMaintenance( self._c, self.modules_files_maintenance_queue, self.modules_hashes, self.modules_hashes_local_cache, self.modules_files_metadata_basic, self.modules_similar_files, self.modules_repositories, self._weakref_media_result_cache )
+        self.modules_files_maintenance = ClientDBFilesMaintenance.ClientDBFilesMaintenance( self._c, self.modules_files_maintenance_queue, self.modules_hashes, self.modules_hashes_local_cache, self.modules_files_metadata_basic, self.modules_files_timestamps, self.modules_similar_files, self.modules_repositories, self._weakref_media_result_cache )
         
         self._modules.append( self.modules_files_maintenance )
         
@@ -4782,6 +4779,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_hashes,
             self.modules_tags,
             self.modules_files_metadata_basic,
+            self.modules_files_timestamps,
             self.modules_files_viewing_stats,
             self.modules_url_map,
             self.modules_notes_map,
@@ -5401,37 +5399,21 @@ class DB( HydrusDB.HydrusDB ):
                         
                     elif data_type == HC.CONTENT_TYPE_TIMESTAMP:
                         
-                        ( timestamp_type, hash, data ) = row
+                        ( hash, timestamp_data ) = row
                         
-                        if timestamp_type == 'domain':
+                        hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                        
+                        if action == HC.CONTENT_UPDATE_ADD:
                             
-                            if action == HC.CONTENT_UPDATE_ADD:
-                                
-                                ( domain, timestamp ) = data
-                                
-                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
-                                domain_id = self.modules_urls.GetURLDomainId( domain )
-                                
-                                self.modules_files_metadata_basic.UpdateDomainModifiedTimestamp( hash_id, domain_id, timestamp )
-                                
-                            elif action == HC.CONTENT_UPDATE_SET:
-                                
-                                ( domain, timestamp ) = data
-                                
-                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
-                                domain_id = self.modules_urls.GetURLDomainId( domain )
-                                
-                                self.modules_files_metadata_basic.SetDomainModifiedTimestamp( hash_id, domain_id, timestamp )
-                                
-                            elif action == HC.CONTENT_UPDATE_DELETE:
-                                
-                                domain = data
-                                
-                                hash_id = self.modules_hashes_local_cache.GetHashId( hash )
-                                domain_id = self.modules_urls.GetURLDomainId( domain )
-                                
-                                self.modules_files_metadata_basic.ClearDomainModifiedTimestamp( hash_id, domain_id )
-                                
+                            self.modules_files_timestamps.UpdateTimestamp( hash_id, timestamp_data )
+                            
+                        elif action == HC.CONTENT_UPDATE_SET:
+                            
+                            self.modules_files_timestamps.SetTimestamp( hash_id, timestamp_data )
+                            
+                        elif action == HC.CONTENT_UPDATE_DELETE:
+                            
+                            self.modules_files_timestamps.ClearTimestamp( hash_id, timestamp_data )
                             
                         
                     elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:

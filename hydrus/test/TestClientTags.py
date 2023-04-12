@@ -2036,6 +2036,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:md5 hash is not abcdef01', "system:Hash != Abcdef01 md5" ),
             ( 'system:md5 hash is not abcdef01', "system:Hash is not Abcdef01 md5" ),
             ( 'system:sha256 hash is abcdef0102', "system:hash = abcdef0102" ),
+            ( 'system:archived time: since 7 years 1 month ago', "system:archived date < 7  years 45 days 70h" ),
+            ( 'system:archived time: since 7 years 1 month ago', "system:archive date < 7  years 45 days 70h" ),
             ( 'system:modified time: since 7 years 1 month ago', "system:modified date < 7  years 45 days 70h" ),
             ( 'system:modified time: since 2011-06-04', "system:modified date > 2011-06-04" ),
             ( 'system:modified time: before 7 years 2 months ago', "system:date modified > 7 years 2    months" ),

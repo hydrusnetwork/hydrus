@@ -76,7 +76,7 @@ management_panel_types_to_classes = {}
 
 def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_presentation_import_options: typing.Optional[ PresentationImportOptions.PresentationImportOptions ], callable ):
     
-    submenu = QW.QMenu( menu )
+    submenu = ClientGUIMenus.GenerateMenu( menu )
     
     # inbox only
     # detect single_selected_presentation_import_options and deal with it
@@ -2146,7 +2146,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._UpdateImportStatus()
         
-        self._gallery_importers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
+        self._gallery_importers_listctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         
         self._import_options_button.fileImportOptionsChanged.connect( self._multiple_gallery_import.SetFileImportOptions )
         self._import_options_button.noteImportOptionsChanged.connect( self._multiple_gallery_import.SetNoteImportOptions )
@@ -2345,7 +2345,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             raise HydrusExceptions.DataMissing()
             
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
 
         ClientGUIMenus.AppendMenuItem( menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
         
@@ -2372,7 +2372,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             file_seed_cache = importer.GetFileSeedCache()
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'show file log', 'Show the file log windows for the selected query.', self._ShowSelectedImportersFileSeedCaches )
             
@@ -2384,7 +2384,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             gallery_seed_log = importer.GetGallerySeedLog()
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'show search log', 'Show the search log windows for the selected query.', self._ShowSelectedImportersGallerySeedLogs )
             
@@ -2638,7 +2638,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _ShowCogMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ( start_file_queues_paused, start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer ) = self._multiple_gallery_import.GetQueueStartSettings()
 
@@ -2954,7 +2954,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
-        self._watchers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
+        self._watchers_listctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         
         self._UpdateImportStatus()
         
@@ -3214,7 +3214,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             raise HydrusExceptions.DataMissing()
             
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
         ClientGUIMenus.AppendMenuItem( menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
@@ -3246,7 +3246,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             file_seed_cache = watcher.GetFileSeedCache()
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'show file log', 'Show the file log windows for the selected watcher.', self._ShowSelectedImportersFileSeedCaches )
             
@@ -3258,7 +3258,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             gallery_seed_log = watcher.GetGallerySeedLog()
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'show check log', 'Show the check log windows for the selected watcher.', self._ShowSelectedImportersGallerySeedLogs )
             
@@ -4503,6 +4503,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._contents_add = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_add.itemDoubleClicked.connect( self.ContentsAddDoubleClick )
+        self._contents_add.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_add, ( 16, 20 ) )
         
@@ -4510,6 +4511,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._contents_delete = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_delete.itemDoubleClicked.connect( self.ContentsDeleteDoubleClick )
+        self._contents_delete.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_delete, ( 16, 20 ) )
         
@@ -5463,7 +5465,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if len( copyable_items_a ) + len( copyable_items_b ) > 0:
             
-            menu = QW.QMenu()
+            menu = ClientGUIMenus.GenerateMenu( self )
             
             for copyable_items in [ copyable_items_a, copyable_items_b ]:
                 

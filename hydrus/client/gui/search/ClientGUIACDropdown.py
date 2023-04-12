@@ -1982,7 +1982,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _FavouriteSearchesMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if not self._hide_favourites_edit_actions:
             
@@ -2022,7 +2022,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                 else:
                     
-                    menu_to_use = QW.QMenu( menu )
+                    menu_to_use = ClientGUIMenus.GenerateMenu( menu )
                     
                     ClientGUIMenus.AppendMenu( menu, menu_to_use, folder_name )
                     

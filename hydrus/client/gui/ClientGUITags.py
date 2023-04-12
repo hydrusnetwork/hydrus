@@ -1008,7 +1008,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if len( names_to_tag_filters ) == 0:
             
@@ -1029,7 +1029,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'this tag filter', 'export this tag filter', HG.client_controller.pub, 'clipboard', 'text', self.GetValue().DumpToString() )
         
@@ -1359,7 +1359,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if len( names_to_tag_filters ) == 0:
             

@@ -1765,7 +1765,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         click_over_page_of_pages = False
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if click_over_tab:
             
@@ -1803,7 +1803,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 else:
                     
-                    close_menu = QW.QMenu( menu )
+                    close_menu = ClientGUIMenus.GenerateMenu( menu )
                     
                     ClientGUIMenus.AppendMenuItem( close_menu, 'other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
                     
@@ -1839,7 +1839,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( selectable_media_pages ) > 0:
             
-            select_menu = QW.QMenu( menu )
+            select_menu = ClientGUIMenus.GenerateMenu( menu )
             
             for selectable_media_page in selectable_media_pages:
                 
@@ -1862,7 +1862,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             can_select_right = selection_index < end_index
             can_select_end = selection_index < end_index - 1
             
-            navigate_menu = QW.QMenu( menu )
+            navigate_menu = ClientGUIMenus.GenerateMenu( menu )
             
             if can_select_home:
                 
@@ -1899,7 +1899,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if more_than_one_tab:
                 
-                move_menu = QW.QMenu( menu )
+                move_menu = ClientGUIMenus.GenerateMenu( menu )
                 
                 if can_go_home:
                     
@@ -1932,7 +1932,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 ClientGUIMenus.AppendMenuItem( submenu, 'by most files first', 'Sort these pages according to how many files they have.', self._SortPagesByFileCount, 'desc' )
                 ClientGUIMenus.AppendMenuItem( submenu, 'by fewest files first', 'Sort these pages according to how few files they have.', self._SortPagesByFileCount, 'asc' )
@@ -1970,7 +1970,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( existing_session_names ) > 0:
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             for name in existing_session_names:
                 
@@ -1982,7 +1982,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if click_over_page_of_pages:
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             for name in existing_session_names:
                 

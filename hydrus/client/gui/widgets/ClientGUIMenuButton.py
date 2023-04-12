@@ -47,7 +47,7 @@ class MenuMixin( object ):
                 
             elif item_type == 'submenu':
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 self._PopulateMenu( submenu, data )
                 
@@ -75,7 +75,7 @@ class MenuBitmapButton( MenuMixin, ClientGUICommon.BetterBitmapButton ):
     
     def DoMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._PopulateMenu( menu, self._menu_items )
         
@@ -97,7 +97,7 @@ class MenuButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def DoMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._PopulateMenu( menu, self._menu_items )
         
@@ -174,7 +174,7 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def DoMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         self._PopulateMenu( menu, self._menu_items )
         

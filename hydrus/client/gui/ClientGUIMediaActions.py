@@ -170,6 +170,37 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
             
         
     
+
+def EditFileTimestamps( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
+    
+    title = 'manage times'
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsEdit.EditFileTimestampsPanel( dlg, media )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            hash = media.GetHash()
+            
+            service_keys_to_content_updates = panel.GetServiceKeysToContentUpdates()
+            file_modified_timestamp = panel.GetFileModifiedUpdate()
+            
+            if len( service_keys_to_content_updates ) > 0:
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
+                if file_modified_timestamp is not None:
+                    
+                    HG.client_controller.client_files_manager.UpdateFileModifiedTimestamp( media, file_modified_timestamp )
+                    
+                
+            
+        
+    
+
 def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key: bytes, action: int, media: typing.Collection[ ClientMedia.MediaSingleton ], rating: typing.Optional[ float ] ):
     
     hashes = set()

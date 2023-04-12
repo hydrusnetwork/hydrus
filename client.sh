@@ -1,18 +1,16 @@
 #!/bin/bash
 
-pushd "$(dirname "$0")"
+pushd "$(dirname "$0")" || exit 1
 
 if [ ! -d "venv" ]; then
 	echo "You need to set up a venv! Check the running from source help for more info!"
-	popd
+	popd || exit 1
 	exit 1
 fi
 
-source venv/bin/activate
-
-if [ $? -ne 0 ]; then
+if ! source venv/bin/activate; then
     echo "The venv failed to activate, stopping now!"
-	popd
+	popd || exit 1
 	exit 1
 fi
 
@@ -24,4 +22,4 @@ python client.py
 
 deactivate
 
-popd
+popd || exit

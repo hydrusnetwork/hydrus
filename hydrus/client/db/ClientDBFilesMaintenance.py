@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientFiles
+from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
@@ -13,6 +14,7 @@ from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBRepositories
 from hydrus.client.db import ClientDBSimilarFiles
+from hydrus.client.db import ClientDBFilesTimestamps
 from hydrus.client.media import ClientMediaResultCache
 
 class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
@@ -24,6 +26,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         modules_hashes: ClientDBMaster.ClientDBMasterHashes,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
+        modules_files_timestamps: ClientDBFilesTimestamps.ClientDBFilesTimestamps,
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
         modules_repositories: ClientDBRepositories.ClientDBRepositories,
         weakref_media_result_cache: ClientMediaResultCache.MediaResultCache
@@ -35,6 +38,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         self.modules_hashes = modules_hashes
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_files_metadata_basic = modules_files_metadata_basic
+        self.modules_files_timestamps = modules_files_timestamps
         self.modules_similar_files = modules_similar_files
         self.modules_repositories = modules_repositories
         self._weakref_media_result_cache = weakref_media_result_cache
@@ -72,7 +76,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                             self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                             
                         
-                        result = self._Execute( 'SELECT 1 FROM file_modified_timestamps WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                        result = self.modules_files_timestamps.GetTimestamp( hash_id, ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_MODIFIED_FILE ) )
                         
                         if result is None:
                             
@@ -146,7 +150,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     file_modified_timestamp = additional_data
                     
-                    self._Execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
+                    self.modules_files_timestamps.SetTimestamp( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
                     
                     new_file_info.add( ( hash_id, hash ) )
                     

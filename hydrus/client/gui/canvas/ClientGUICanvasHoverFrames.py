@@ -946,7 +946,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', ClientGUIShortcutControls.ManageShortcuts, self )
         
@@ -955,7 +955,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             my_canvas_active_custom_shortcuts = self._my_canvas.GetActiveCustomShortcutNames()
             default_media_viewer_custom_shortcuts = HG.client_controller.new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
             
-            current_menu = QW.QMenu( menu )
+            current_menu = ClientGUIMenus.GenerateMenu( menu )
             
             for name in custom_shortcuts_names:
                 
@@ -964,7 +964,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             ClientGUIMenus.AppendMenu( menu, current_menu, 'set current shortcuts' )
             
-            defaults_menu = QW.QMenu( menu )
+            defaults_menu = ClientGUIMenus.GenerateMenu( menu )
             
             for name in custom_shortcuts_names:
                 

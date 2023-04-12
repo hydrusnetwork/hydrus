@@ -58,7 +58,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         # I'm not a qwidget, but a qobject, so use my parent for this
         parent_widget = self.parent()
         
-        new_menu = QW.QMenu( parent_widget )
+        new_menu = ClientGUIMenus.GenerateMenu( parent_widget )
         
         self._show_hide_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'show/hide', 'Hide or show the hydrus client', self.flip_show_ui.emit )
         

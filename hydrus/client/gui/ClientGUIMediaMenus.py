@@ -25,7 +25,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
     
     multiple_selected = num_selected > 1
     
-    duplicates_menu = QW.QMenu( menu )
+    duplicates_menu = ClientGUIMenus.GenerateMenu( menu )
     
     focused_hash = focus_singleton.GetHash()
     
@@ -145,7 +145,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
     
     if multiple_selected or single_action_available:
         
-        duplicates_action_submenu = QW.QMenu( duplicates_menu )
+        duplicates_action_submenu = ClientGUIMenus.GenerateMenu( duplicates_menu )
         
         if len( file_duplicate_info ) == 0:
             
@@ -190,7 +190,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
             
-            duplicates_edit_action_submenu = QW.QMenu( duplicates_action_submenu )
+            duplicates_edit_action_submenu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
             
             for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                 
@@ -215,7 +215,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
             
-            duplicates_single_dissolution_menu = QW.QMenu( duplicates_action_submenu )
+            duplicates_single_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
             
             if focus_can_be_searched:
                 
@@ -256,7 +256,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                duplicates_multiple_dissolution_menu = QW.QMenu( duplicates_action_submenu )
+                duplicates_multiple_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
                 
                 ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
                 ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
@@ -321,7 +321,7 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
             
         elif view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU:
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuLabel( submenu, preview_line )
             
@@ -432,10 +432,10 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
     
     if len( focus_labels_and_urls ) > 0 or len( selected_media_url_classes ) > 0 or multiple_or_unmatching_selection_url_classes:
         
-        urls_menu = QW.QMenu( menu )
+        urls_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        urls_visit_menu = QW.QMenu( urls_menu )
-        urls_copy_menu = QW.QMenu( urls_menu )
+        urls_visit_menu = ClientGUIMenus.GenerateMenu( urls_menu )
+        urls_copy_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         
         # copy each this file's urls (of a particular type)
         
@@ -546,7 +546,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicabl
         return
         
     
-    local_action_menu = QW.QMenu( menu )
+    local_action_menu = ClientGUIMenus.GenerateMenu( menu )
     
     if len( local_duplicable_to_file_service_keys ) > 0:
         
@@ -615,7 +615,7 @@ def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias:
     
     # add test here for if media actually has stats, edit them, all that
     
-    submenu = QW.QMenu( menu )
+    submenu = ClientGUIMenus.GenerateMenu( menu )
     
     ClientGUIMenus.AppendMenuItem( submenu, 'clear', 'Clear all the recorded file viewing stats for the selected files.', ClientGUIMedia.DoClearFileViewingStats, win, flat_medias )
     
@@ -650,7 +650,7 @@ def AddPrettyInfoLines( menu, pretty_info_lines ):
                     continue
                     
                 
-                lines_submenu = QW.QMenu( m )
+                lines_submenu = ClientGUIMenus.GenerateMenu( m )
                 
                 add_pretty_info_rows( lines_submenu, rows )
                 
@@ -678,7 +678,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
         
     else:
         
-        submenu = QW.QMenu( menu )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
         for service_key in service_keys:
             

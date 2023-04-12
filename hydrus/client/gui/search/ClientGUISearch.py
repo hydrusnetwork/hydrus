@@ -28,6 +28,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA,
     ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_AGE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
@@ -201,6 +202,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         AGE_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
         LAST_VIEWED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
+        ARCHIVED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
         MODIFIED_DELTA_PRED = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '>', 'delta', ( 2000, 1, 1, 1 ) ) )
         KNOWN_URL_EXACT = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', '', '' ) )
         KNOWN_URL_DOMAIN = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', '', '' ) )
@@ -239,6 +241,17 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                 else:
                     
                     self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDate( self, predicate ) )
+                    
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME:
+                
+                if predicate.IsUIEditable( ARCHIVED_DELTA_PRED ):
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDelta( self, predicate ) )
+                    
+                else:
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDate( self, predicate ) )
                     
                 
             elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
@@ -454,6 +467,11 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDelta, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemAgeDate, predicate ) )
             
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME:
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDate, predicate ) )
+            
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemModifiedDelta, predicate ) )
@@ -488,7 +506,16 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDelta, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemLastViewedDate, predicate ) )
             
-            page_name = 'last viewed'
+            pages.append( ( 'last viewed', recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+            
+            page_name = 'archived'
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
+            static_pred_buttons = []
+            editable_pred_panels = []
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDelta, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemArchivedDate, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
@@ -703,6 +730,20 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             for button in static_pred_buttons:
                 
+                preds = button.GetPredicates()
+                
+                if len( preds ) == 1:
+                    
+                    pred = list( preds )[0]
+                    
+                    if pred in recent_predicates:
+                        
+                        button.setVisible( False )
+                        
+                        continue
+                        
+                    
+                
                 QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 button.predicatesChosen.connect( self.StaticButtonClicked )
@@ -803,7 +844,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         def _DefaultsMenu( self ):
             
-            menu = QW.QMenu()
+            menu = ClientGUIMenus.GenerateMenu( self )
             
             ClientGUIMenus.AppendMenuItem( menu, 'set this as new default', 'Set the current value of this as the new default for this predicate.', self._predicate_panel.SaveCustomDefault )
             
@@ -874,7 +915,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
         
         services = services_manager.GetServices( service_types_in_order )
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         last_seen_service_type = None
         

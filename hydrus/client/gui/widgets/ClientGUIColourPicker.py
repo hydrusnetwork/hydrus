@@ -182,7 +182,7 @@ class ColourPickerButton( QW.QPushButton ):
     
     def ShowMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         hex_string = self.GetColour().name( QG.QColor.HexRgb )
         

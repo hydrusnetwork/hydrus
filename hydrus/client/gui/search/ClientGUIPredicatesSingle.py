@@ -480,6 +480,19 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemDate ):
         
     
 
+class PanelPredicateSystemArchivedDate( PanelPredicateSystemDate ):
+    
+    def _GetSystemPredicateLabel( self ) -> str:
+        
+        return 'system:archived date'
+        
+    
+    def _GetPredicateType( self ) -> int:
+        
+        return ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        
+    
+
 class PanelPredicateSystemModifiedDate( PanelPredicateSystemDate ):
     
     def _GetSystemPredicateLabel( self ) -> str:
@@ -551,6 +564,8 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         return predicates
         
     
+
+# TODO: Merge all this gubbins together, like date above
 class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -609,6 +624,66 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         return predicates
         
     
+
+class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = TimeDeltaOperator( self )
+        
+        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, age_type, ( years, months, days, hours ) ) = predicate.GetValue()
+        
+        self._sign.SetValue( sign )
+        
+        self._years.setValue( years )
+        self._months.setValue( months )
+        self._days.setValue( days )
+        self._hours.setValue( hours )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:archived date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        
+    
+    def GetPredicates( self ):
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        
+        return predicates
+        
+    
+
 class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):

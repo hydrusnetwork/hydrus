@@ -1,4 +1,3 @@
-import abc
 import collections.abc
 import json
 import os
@@ -19,12 +18,14 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
+from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
@@ -687,6 +688,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         if len( self._permitted_action_choices ) == 1:
             
             self._action_radio.hide()
+            self._action_radio.setEnabled( False )
             
         else:
             
@@ -696,6 +698,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         if not HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
             self._reason_panel.hide()
+            self._reason_panel.setEnabled( False )
             
         
         self._action_radio.radioBoxChanged.connect( self._UpdateControls )
@@ -773,7 +776,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetReason( self ):
         
-        if self._reason_panel.isVisible() and self._reason_panel.isEnabled():
+        if self._reason_panel.isEnabled():
             
             reason = self._reason_radio.GetValue()
             
@@ -1035,11 +1038,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetFocus( self ):
         
-        if self._action_radio.isVisible():
+        if self._action_radio.isEnabled():
             
             self._action_radio.setFocus( QC.Qt.OtherFocusReason )
             
-        elif self._reason_panel.isVisible() and self._reason_panel.isEnabled():
+        elif self._reason_panel.isEnabled():
             
             self._reason_radio.setFocus( QC.Qt.OtherFocusReason )
             
@@ -2094,6 +2097,638 @@ class EditFileNotesPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationComm
         return True
         
     
+
+class EditFileTimestampsPanel( ClientGUIScrolledPanels.EditPanel, CAC.ApplicationCommandProcessorMixin ):
+    
+    def __init__( self, parent: QW.QWidget, media: ClientMedia.MediaSingleton ):
+        
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._media = media
+        
+        timestamps_manager = self._media.GetLocationsManager().GetTimestampsManager()
+        
+        #
+        
+        self._archive_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        self._file_modified_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        
+        self._last_viewed_media_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        self._last_viewed_preview_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        
+        self._file_modified_timestamp_warning_st = ClientGUICommon.BetterStaticText( self, label = 'This will also change the modified date of the file on disk!' )
+        self._file_modified_timestamp_warning_st.setObjectName( 'HydrusWarning' )
+        self._file_modified_timestamp_warning_st.setAlignment( QC.Qt.AlignCenter )
+        self._file_modified_timestamp_warning_st.setVisible( False )
+        
+        domain_box = ClientGUICommon.StaticBox( self, 'web domain times' )
+        
+        self._domain_modified_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( domain_box )
+        
+        self._domain_modified_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._domain_modified_list_ctrl_panel, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, 8, self._ConvertTimestampDataToDomainModifiedListCtrlTuples, use_simple_delete = True, activation_callback = self._EditDomainModifiedTimestamp )
+        
+        self._domain_modified_list_ctrl_panel.SetListCtrl( self._domain_modified_list_ctrl )
+        
+        self._domain_modified_list_ctrl_panel.AddButton( 'add', self._AddDomainModifiedTimestamp )
+        self._domain_modified_list_ctrl_panel.AddButton( 'edit', self._EditDomainModifiedTimestamp, enabled_only_on_selection = True )
+        self._domain_modified_list_ctrl_panel.AddDeleteButton()
+        
+        file_services_box = ClientGUICommon.StaticBox( self, 'file services' )
+        
+        self._file_services_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_services_box )
+        
+        self._file_services_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._file_services_list_ctrl_panel, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, 8, self._ConvertTimestampDataToFileServiceListCtrlTuples, activation_callback = self._EditFileServiceTimestamp )
+        
+        self._file_services_list_ctrl_panel.SetListCtrl( self._file_services_list_ctrl )
+        
+        self._file_services_list_ctrl_panel.AddButton( 'edit', self._EditFileServiceTimestamp, enabled_only_on_selection = True )
+        # TODO: An extension here is to add an 'add' button for files that have a _missing_ delete time
+        
+        #
+        
+        rows = []
+        
+        #
+        
+        file_modified_timestamp = timestamps_manager.GetFileModifiedTimestamp()
+        
+        if file_modified_timestamp is None:
+            
+            self._file_modified_timestamp.setEnabled( False )
+            self._file_modified_timestamp.setText( 'unknown -- run file maintenance to determine' )
+            
+        else:
+            
+            self._file_modified_timestamp.SetValueTimestamp( file_modified_timestamp )
+            
+        
+        rows.append( ( 'file modified time: ', self._file_modified_timestamp ) )
+        
+        rows.append( self._file_modified_timestamp_warning_st )
+        
+        #
+        
+        if not self._media.HasInbox():
+            
+            archived_timestamp = timestamps_manager.GetArchivedTimestamp()
+            
+            if archived_timestamp is not None:
+                
+                self._archive_timestamp.SetValueTimestamp( archived_timestamp )
+                
+            
+            rows.append( ( 'archived time: ', self._archive_timestamp ) )
+            
+        else:
+            
+            self._archive_timestamp.setVisible( False )
+            
+        
+        #
+        
+        last_viewed_media_viewer_timestamp = timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER )
+        
+        if last_viewed_media_viewer_timestamp is None:
+            
+            self._last_viewed_media_viewer_timestamp.setVisible( False )
+            
+        else:
+            
+            self._last_viewed_media_viewer_timestamp.SetValueTimestamp( last_viewed_media_viewer_timestamp )
+            
+            rows.append( ( 'last viewed in media viewer: ', self._last_viewed_media_viewer_timestamp ) )
+            
+        
+        last_viewed_preview_viewer_timestamp = timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_PREVIEW )
+        
+        if last_viewed_preview_viewer_timestamp is None:
+            
+            self._last_viewed_preview_viewer_timestamp.setVisible( False )
+            
+        else:
+            
+            self._last_viewed_preview_viewer_timestamp.SetValueTimestamp( last_viewed_preview_viewer_timestamp )
+            
+            rows.append( ( 'last viewed in preview viewer: ', self._last_viewed_preview_viewer_timestamp ) )
+            
+        
+        #
+        
+        self._domain_modified_list_ctrl.AddDatas( timestamps_manager.GetDomainModifiedTimestampDatas() )
+        self._domain_modified_list_ctrl.Sort()
+        
+        self._file_services_list_ctrl.AddDatas( timestamps_manager.GetFileServiceTimestampDatas() )
+        self._file_services_list_ctrl.Sort()
+        
+        #
+        
+        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button.setToolTip( 'Copy all timestamps to the clipboard.' )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste all timestamps from another timestamps dialog.' )
+        
+        #
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        domain_box.Add( self._domain_modified_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        file_services_box.Add( self._file_services_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._copy_button )
+        QP.AddToLayout( button_hbox, self._paste_button )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, domain_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, file_services_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
+        
+        vbox.addStretch( 1 )
+        
+        self.widget().setLayout( vbox )
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        
+        self._file_modified_timestamp.dateTimeChanged.connect( self._ShowFileModifiedWarning )
+        
+        ClientGUIFunctions.SetFocusLater( self )
+        
+    
+    def _ConvertTimestampDataToDomainModifiedListCtrlTuples( self, timestamp_data: ClientTime.TimestampData ):
+        
+        domain = timestamp_data.location
+        
+        pretty_timestamp = HydrusData.ConvertTimestampToPrettyTime( timestamp_data.timestamp )
+        
+        display_tuple = ( domain, pretty_timestamp )
+        sort_tuple = ( domain, timestamp_data.timestamp )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ConvertTimestampDataToFileServiceListCtrlTuples( self, timestamp_data: ClientTime.TimestampData ):
+        
+        try:
+            
+            pretty_name = HG.client_controller.services_manager.GetName( timestamp_data.location )
+            
+        except HydrusExceptions.DataMissing:
+            
+            pretty_name = 'unknown service!'
+            
+        
+        sort_name = pretty_name
+        
+        pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_data.timestamp_type ]
+        sort_timestamp_type = pretty_timestamp_type
+        
+        pretty_timestamp = HydrusData.ConvertTimestampToPrettyTime( timestamp_data.timestamp )
+        
+        if timestamp_data.timestamp is None:
+            
+            sort_timestamp = 0
+            
+        else:
+            
+            sort_timestamp = timestamp_data.timestamp
+            
+        
+        display_tuple = ( pretty_name, pretty_timestamp_type, pretty_timestamp )
+        sort_tuple = ( sort_name, sort_timestamp_type, sort_timestamp )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Copy( self ):
+        
+        list_of_timestamp_data = HydrusSerialisable.SerialisableList( self._GetValidTimestampDatas() )
+        
+        text = json.dumps( list_of_timestamp_data.GetSerialisableTuple() )
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _AddDomainModifiedTimestamp( self ):
+        
+        message = 'Enter domain'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                domain = dlg.GetValue()
+                
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg_2:
+                    
+                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
+                    
+                    control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                    
+                    qt_datetime = QC.QDateTime.currentDateTime()
+                    
+                    control.SetValue( qt_datetime )
+                    
+                    panel.SetControl( control )
+                    
+                    dlg_2.SetPanel( panel )
+                    
+                    if dlg_2.exec() == QW.QDialog.Accepted:
+                        
+                        new_qt_datetime = control.GetValue()
+                        
+                        timestamp = new_qt_datetime.toSecsSinceEpoch()
+                        
+                        timestamp_data = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = timestamp )
+                        
+                        self._domain_modified_list_ctrl.AddDatas( ( timestamp_data, ) )
+                        
+                        self._domain_modified_list_ctrl.Sort()
+                        
+                    
+                
+            
+        
+    
+    def _EditDomainModifiedTimestamp( self ):
+        
+        selected_timestamp_datas = self._domain_modified_list_ctrl.GetData( only_selected = True )
+        
+        for timestamp_data in selected_timestamp_datas:
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                
+                qt_datetime = QC.QDateTime.fromSecsSinceEpoch( timestamp_data.timestamp )
+                
+                control.SetValue( qt_datetime )
+                
+                panel.SetControl( control )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    new_qt_datetime = control.GetValue()
+                    
+                    new_timestamp = new_qt_datetime.toSecsSinceEpoch()
+                    
+                    if new_timestamp != timestamp_data.timestamp:
+                        
+                        new_timestamp_data = timestamp_data.Duplicate()
+                        
+                        new_timestamp_data.timestamp = new_timestamp
+                        
+                        self._domain_modified_list_ctrl.DeleteDatas( ( timestamp_data, ) )
+                        self._domain_modified_list_ctrl.AddDatas( ( new_timestamp_data, ) )
+                        
+                        self._domain_modified_list_ctrl.Sort()
+                        
+                    
+                
+            
+        
+    
+    def _EditFileServiceTimestamp( self ):
+        
+        selected_timestamp_datas = self._file_services_list_ctrl.GetData( only_selected = True )
+        
+        for timestamp_data in selected_timestamp_datas:
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                
+                qt_datetime = QC.QDateTime.fromSecsSinceEpoch( timestamp_data.timestamp )
+                
+                control.SetValue( qt_datetime )
+                
+                panel.SetControl( control )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    new_qt_datetime = control.GetValue()
+                    
+                    new_timestamp = new_qt_datetime.toSecsSinceEpoch()
+                    
+                    if new_timestamp != timestamp_data.timestamp:
+                        
+                        new_timestamp_data = timestamp_data.Duplicate()
+                        
+                        new_timestamp_data.timestamp = new_timestamp
+                        
+                        self._file_services_list_ctrl.DeleteDatas( ( timestamp_data, ) )
+                        self._file_services_list_ctrl.AddDatas( ( new_timestamp_data, ) )
+                        
+                        self._file_services_list_ctrl.Sort()
+                        
+                    
+                
+            
+        
+    
+    def _GetValidTimestampDatas( self, only_changes = False ):
+        
+        timestamps_manager = self._media.GetLocationsManager().GetTimestampsManager()
+        
+        result = []
+        
+        #
+        
+        if not self._media.HasInbox():
+            
+            archive_timestamp = self._archive_timestamp.GetValueTimestamp()
+            
+            we_want_it = archive_timestamp != timestamps_manager.GetArchivedTimestamp() or not only_changes
+            
+            if archive_timestamp is not None and we_want_it:
+                
+                result.append( ClientTime.TimestampData.STATICArchivedTime( archive_timestamp ) )
+                
+            
+        
+        #
+        
+        file_modified_timestamp = self._file_modified_timestamp.GetValueTimestamp()
+        
+        we_want_it = file_modified_timestamp != timestamps_manager.GetFileModifiedTimestamp() or not only_changes
+        
+        if file_modified_timestamp is not None and we_want_it:
+            
+            result.append( ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
+            
+        
+        #
+        
+        last_viewed_media_viewer_timestamp = self._last_viewed_media_viewer_timestamp.GetValueTimestamp()
+        
+        we_want_it = last_viewed_media_viewer_timestamp != timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER ) or not only_changes
+        
+        if last_viewed_media_viewer_timestamp is not None and we_want_it:
+            
+            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_MEDIA_VIEWER, last_viewed_media_viewer_timestamp ) )
+            
+        
+        last_viewed_preview_viewer_timestamp = self._last_viewed_preview_viewer_timestamp.GetValueTimestamp()
+        
+        we_want_it = last_viewed_preview_viewer_timestamp != timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_PREVIEW ) or not only_changes
+        
+        if last_viewed_preview_viewer_timestamp is not None and we_want_it:
+            
+            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_PREVIEW, last_viewed_preview_viewer_timestamp ) )
+            
+        
+        #
+        
+        new_domain_modified_timestamp_datas = self._domain_modified_list_ctrl.GetData()
+        
+        original_domain_modified_timestamp_datas = timestamps_manager.GetDomainModifiedTimestampDatas()
+        
+        if only_changes:
+            
+            result.extend( set( new_domain_modified_timestamp_datas ).difference( original_domain_modified_timestamp_datas ) )
+            
+        else:
+            
+            result.extend( new_domain_modified_timestamp_datas )
+            
+        
+        original_domains = { timestamp_data.location for timestamp_data in original_domain_modified_timestamp_datas }
+        new_domains = { timestamp_data.location for timestamp_data in new_domain_modified_timestamp_datas }
+        
+        deletee_timestamp_datas = [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = None ) for domain in original_domains.difference( new_domains ) ]
+        
+        result.extend( deletee_timestamp_datas )
+        
+        #
+        
+        possibly_edited_file_service_timestamp_datas = self._file_services_list_ctrl.GetData()
+        original_file_service_timestamp_datas = timestamps_manager.GetFileServiceTimestampDatas()
+        
+        for timestamp_data in possibly_edited_file_service_timestamp_datas:
+            
+            we_want_it = timestamp_data not in original_file_service_timestamp_datas or not only_changes
+            
+            if timestamp_data.timestamp is not None and we_want_it:
+                
+                result.append( timestamp_data )
+                
+            
+        
+        return result
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            QW.QMessageBox.critical( self, 'Error', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            serialisable_tuple = json.loads( raw_text )
+            
+            list_of_timestamp_data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple )
+            
+            for item in list_of_timestamp_data:
+                
+                if not isinstance( item, ClientTime.TimestampData ):
+                    
+                    raise Exception( 'Not a timestamp data!' )
+                    
+                
+            
+        except:
+            
+            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            
+            return
+            
+        
+        self._SetValueTimestampDatas( list_of_timestamp_data )
+        
+    
+    def _SetValueTimestampDatas( self, list_of_timestamp_data: typing.Collection[ ClientTime.TimestampData ] ):
+        
+        for timestamp_data in list_of_timestamp_data:
+            
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
+                
+                if self._media.HasInbox() or timestamp_data.timestamp is None:
+                    
+                    continue
+                    
+                
+                self._archive_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                
+            elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
+                
+                if timestamp_data.timestamp is None:
+                    
+                    continue
+                    
+                
+                self._file_modified_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                
+            elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+                
+                if timestamp_data.location is None or timestamp_data.timestamp is None:
+                    
+                    continue
+                    
+                
+                if timestamp_data.location == CC.CANVAS_MEDIA_VIEWER:
+                    
+                    if self._last_viewed_media_viewer_timestamp.isVisible():
+                        
+                        self._last_viewed_media_viewer_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                        
+                    
+                elif timestamp_data.location == CC.CANVAS_PREVIEW:
+                    
+                    if self._last_viewed_preview_viewer_timestamp.isVisible():
+                        
+                        self._last_viewed_preview_viewer_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                        
+                    
+                
+            elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+                
+                current_domain_modified_timestamp_datas = self._domain_modified_list_ctrl.GetData()
+                
+                for existing_timestamp_data in current_domain_modified_timestamp_datas:
+                    
+                    if existing_timestamp_data.location == timestamp_data.location:
+                        
+                        self._domain_modified_list_ctrl.DeleteDatas( ( existing_timestamp_data, ) )
+                        
+                        break
+                        
+                    
+                
+                if timestamp_data.timestamp is not None:
+                    
+                    self._domain_modified_list_ctrl.AddDatas( ( timestamp_data, ) )
+                    
+                
+            elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+                
+                if timestamp_data.location is None or timestamp_data.timestamp is None:
+                    
+                    continue
+                    
+                
+                current_file_service_timestamp_datas = self._file_services_list_ctrl.GetData()
+                
+                for existing_timestamp_data in current_file_service_timestamp_datas:
+                    
+                    if existing_timestamp_data.timestamp_type == timestamp_data.timestamp_type and existing_timestamp_data.location == timestamp_data.location:
+                        
+                        if existing_timestamp_data.timestamp != timestamp_data.timestamp:
+                            
+                            self._file_services_list_ctrl.DeleteDatas( ( existing_timestamp_data, ) )
+                            self._file_services_list_ctrl.AddDatas( ( timestamp_data, ) )
+                            
+                            self._file_services_list_ctrl.Sort()
+                            
+                            break
+                            
+                        
+                    
+                
+            
+        
+    
+    def _ShowFileModifiedWarning( self ):
+        
+        self._file_modified_timestamp_warning_st.setVisible( True )
+        
+    
+    def GetFileModifiedUpdate( self ) -> typing.Optional[ int ]:
+        
+        for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
+            
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp is not None:
+                
+                return timestamp_data.timestamp
+                
+            
+        
+        return None
+        
+    
+    def GetServiceKeysToContentUpdates( self ) -> typing.Dict[ bytes, typing.List[ HydrusData.ContentUpdate ] ]:
+        
+        content_updates = []
+        
+        for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
+            
+            if timestamp_data.timestamp is None:
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_DELETE, ( self._media.GetHash(), timestamp_data ) )
+                
+            else:
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( self._media.GetHash(), timestamp_data ) )
+                
+            
+            content_updates.append( content_update )
+            
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
+        
+        return service_keys_to_content_updates
+        
+    
+    def GetValue( self ):
+        
+        return self.GetServiceKeysToContentUpdates()
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        if command.IsSimpleCommand():
+            
+            action = command.GetSimpleAction()
+            
+            if action == CAC.SIMPLE_MANAGE_FILE_TIMESTAMPS:
+                
+                self._OKParent()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, info ):

@@ -1991,7 +1991,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             if make_submenus:
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 label = 'file import options'
                 
@@ -2027,7 +2027,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             if make_submenus:
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 label = 'note import options'
                 
@@ -2063,7 +2063,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             if make_submenus:
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 label = 'tag import options'
                 

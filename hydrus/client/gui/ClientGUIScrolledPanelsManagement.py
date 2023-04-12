@@ -1343,7 +1343,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._frame_locations.AddDatas( ( listctrl_list, ) )
                 
             
-            #self._frame_locations.SortListItems( col = 0 )
+            self._frame_locations.Sort()
             
             #
             

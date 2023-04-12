@@ -67,7 +67,7 @@ def AddAudioVolumeMenu( menu, canvas_type ):
             
         
     
-    volume_menu = QW.QMenu( menu )
+    volume_menu = ClientGUIMenus.GenerateMenu( menu )
     
     ( global_mute_option_name, global_volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
     
@@ -571,6 +571,16 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
         manage_tags.SetPanel( panel )
         
     
+    def _ManageTimestamps( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        ClientGUIMediaActions.EditFileTimestamps( self, self._current_media )
+        
+    
     def _ManageURLs( self ):
         
         if self._current_media is None:
@@ -868,6 +878,10 @@ class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
             elif action == CAC.SIMPLE_MANAGE_FILE_NOTES:
                 
                 self._ManageNotes()
+                
+            elif action == CAC.SIMPLE_MANAGE_FILE_TIMESTAMPS:
+                
+                self._ManageTimestamps()
                 
             elif action == CAC.SIMPLE_OPEN_KNOWN_URL:
                 
@@ -1376,7 +1390,7 @@ class CanvasPanel( Canvas ):
     
     def ShowMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         new_options = HG.client_controller.new_options
         
@@ -1398,7 +1412,7 @@ class CanvasPanel( Canvas ):
             
             top_line = info_lines.pop( 0 )
             
-            info_menu = QW.QMenu( menu )
+            info_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
@@ -1449,7 +1463,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            manage_menu = QW.QMenu( menu )
+            manage_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
             
@@ -1471,13 +1485,15 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = QW.QMenu( menu )
+            open_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
             ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
@@ -1492,13 +1508,13 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
             
-            share_menu = QW.QMenu( menu )
+            share_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            copy_menu = QW.QMenu( share_menu )
+            copy_menu = ClientGUIMenus.GenerateMenu( share_menu )
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
-            copy_hash_menu = QW.QMenu( copy_menu )
+            copy_hash_menu = ClientGUIMenus.GenerateMenu( copy_menu )
 
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( self._current_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
@@ -4317,7 +4333,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            menu = QW.QMenu()
+            menu = ClientGUIMenus.GenerateMenu( self )
             
             #
             
@@ -4325,7 +4341,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             top_line = info_lines.pop( 0 )
             
-            info_menu = QW.QMenu( menu )
+            info_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
@@ -4339,7 +4355,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._media_container.IsZoomable():
                 
-                zoom_menu = QW.QMenu( menu )
+                zoom_menu = ClientGUIMenus.GenerateMenu( menu )
                 
                 ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom in', 'Zoom the media in.', self._media_container.ZoomIn )
                 ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom out', 'Zoom the media out.', self._media_container.ZoomOut )
@@ -4374,7 +4390,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.parentWidget().FullscreenSwitch )
                 
             
-            slideshow = QW.QMenu( menu )
+            slideshow = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
             ClientGUIMenus.AppendMenuItem( slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
@@ -4432,7 +4448,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            manage_menu = QW.QMenu( menu )
+            manage_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
             
@@ -4454,6 +4470,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
@@ -4466,7 +4484,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = QW.QMenu( menu )
+            open_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in the default external program.', self._OpenExternally )
             ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
@@ -4481,13 +4499,13 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
             
-            share_menu = QW.QMenu( menu )
+            share_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            copy_menu = QW.QMenu( share_menu )
+            copy_menu = ClientGUIMenus.GenerateMenu( share_menu )
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
-            copy_hash_menu = QW.QMenu( copy_menu )
+            copy_hash_menu = ClientGUIMenus.GenerateMenu( copy_menu )
 
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( self._current_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )

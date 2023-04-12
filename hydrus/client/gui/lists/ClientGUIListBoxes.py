@@ -2656,7 +2656,7 @@ class ListBoxTags( ListBox ):
         
         selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if self._terms_may_have_sibling_or_parent_info:
             
@@ -2693,7 +2693,7 @@ class ListBoxTags( ListBox ):
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        copy_menu = QW.QMenu( menu )
+        copy_menu = ClientGUIMenus.GenerateMenu( menu )
         
         selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
         selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
@@ -2766,8 +2766,8 @@ class ListBoxTags( ListBox ):
         
         if can_show_siblings_and_parents or can_launch_sibling_and_parent_dialogs:
             
-            siblings_menu = QW.QMenu( menu )
-            parents_menu = QW.QMenu( menu )
+            siblings_menu = ClientGUIMenus.GenerateMenu( menu )
+            parents_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenu( menu, siblings_menu, 'siblings' )
             ClientGUIMenus.AppendMenu( menu, parents_menu, 'parents' )
@@ -3020,7 +3020,7 @@ class ListBoxTags( ListBox ):
                 
                 if self.can_spawn_new_windows or self._CanProvideCurrentPagePredicates():
                     
-                    search_menu = QW.QMenu( menu )
+                    search_menu = ClientGUIMenus.GenerateMenu( menu )
                     
                     ClientGUIMenus.AppendMenu( menu, search_menu, 'search' )
                     
@@ -3131,7 +3131,7 @@ class ListBoxTags( ListBox ):
             
             if len( selected_actual_tags ) > 0 and self._page_key is not None:
                 
-                select_menu = QW.QMenu( menu )
+                select_menu = ClientGUIMenus.GenerateMenu( menu )
                 
                 tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_actual_tags )
                 
@@ -3183,7 +3183,7 @@ class ListBoxTags( ListBox ):
                 
                 ( namespace, subtag ) = HydrusTags.SplitTag( selected_tag )
                 
-                hide_menu = QW.QMenu( menu )
+                hide_menu = ClientGUIMenus.GenerateMenu( menu )
                 
                 ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
                 ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( selected_tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
@@ -3222,7 +3222,7 @@ class ListBoxTags( ListBox ):
                 description = 'Add this tag from your favourites'
                 
             
-            favourites_menu = QW.QMenu( menu )
+            favourites_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, set_favourite_tags, selected_tag )
             
@@ -3924,7 +3924,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            submenu = QW.QMenu( menu )
+            submenu = ClientGUIMenus.GenerateMenu( menu )
             
             for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
                 

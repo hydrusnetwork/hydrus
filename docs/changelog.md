@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 523](https://github.com/hydrusnetwork/hydrus/releases/tag/v523)
+
+### timestamp editing
+
+* you can now _right-click->manage->times_ on any file to edit its archived, imported, deleted, previously imported (for undelete), file modified, domain modified, and last viewed times. there's a whole new dialog with new datetime buttons and everything. it only works on single files atm, so it is currently only appropriate for little fixes, and there's a couple advanced things like setting a currently missing deletion time that it can't do yet, but I expect to expand it in future (also ideally with some kind of 'cascade' option for multi-files so you can set a timestamp iteratively (e.g. +1 second per file) over a series of thumbs to force a certain import order sort etc...)
+* I added a new shortcut action 'manage file times', for this dialog. like the other media 'manage' shortcuts, you can hit it on the dialog to ok it, too
+* when you edit a saved file modified date, I have made it to update the actual file modified date on your disk too. a statement is printed to the log with old/new timestamps, just in case you ever need to recover this
+* added system:archived time search predicate! it is under the system:time stub like the other time-based search preds. it works in the system predicate parser too
+
+### misc
+
+* fixed a stupid logical typo from 521's overhaul that was causing the advanced file deletion dialog to always set the default file deletion reason! sorry for the trouble, this one slipped through due to a tricky test situation (this data is actually calculated twice on dialog ok, and on the first run it was correct -\_-)
+* in the edit system predicate dialogs, when you have a list of 'recent' preds and static useful preds, if one of the recent is supposed to also appear in the statics, it now won't be duped
+* fixed a bug in the media object's file locations manager's deletion routine, which wasn't adding and removing the special 'all deleted files' domain at the UI level--not that this shows up in UI much, but the new timestamps UI revealed this
+* in the janitorial 'petitions processing' page, the add and delete checkbox lists now no longer have horizontal scrollbars in any situation. previously, either list, but particularly the 'delete', at height 1, could be deceptively obscured by a pop-in scrollbar
+* when you change your internal backup location, the dialog now states your current location beforehand. this information was previously not viewable! also, if you select the same location again, the process notes this and exits with no changes made
+* all multi-column lists across the program now show a ▲ or ▼ on the column they are currently sorted on! this is one of those things I meant to do for ages; now it is done.
+* also, you can now right-click any multi-column list's header for a stub menu. for now it just says the thing's identifier name, but I'll start hanging things off here like individual section-size reset and, in time, finally play around with 'select columns' tech
+* all menus across the program now send their longer description text to the main window status bar. until now (at least in Qt, I forget wx), this has only been true for the menubar menus
+* all menus across the program now have tooltips turned on. any command with description text, which is I think pretty much all of them, will present its full written description on hover. this may end up being annoying, so let me know what you think
+
+### client api
+
+* fixed an issue in the client api where it wasn't returning `file_metadata` results in the same file order you asked for. sorry for the trouble--this was softly intended, previously, but I forgot to make sure it stayed true. it also now folds in 'missing' hashes with null ids in the same position you asked for
+* a new suite of unit tests check this explicitly for all the typical parameter/response types, and the new missing-hash insertion order--it shouldn't happen again!
+* just to be safe, since this is a new feature, client api version is now 44
+
+### boring code updates/cleanup
+
+* wrote a new serialisable 'timestamp data' object to hold the various hydrus timestamps: archived, imported, deleted, previously imported, file modified, domain modified, aggregate modified, and last viewed time
+* rewrote the timestamp content update pipeline to use 'timestamp data' object
+* wrote a new database module for timestamp management off the file metadata module and migrated the domain-based modified timestamp code to it
+* migrated the 'archive time' timestamp-handling from the inbox module to the new timestamp module
+* migrated the media result timestamp-manager construction routine all down to the new timestamp module
+* migrated the aggregate modified time file search code to the new timestamp module and added archived time search too
+* wrote some UI for timestamp editing, whacked some copy/paste buttons on it too
+* moved all current/deleted timestamp handling down from the locations manager to the timestamp manager and split off 'previously imported' time, which is used to preserve import timestamp for undelete events, into its own thing rather than a tacked-on hack for deleted timestamps
+* moved all the location manager location timestamp tracking down to the timestamp manager
+* the media result is now initialised with and handles an explicit copy of the timestamp manager, which is now shared to both location manager and file viewing stats manager, with duplication and merging code updated to handle this shared situation
+* moved all the media/preview 'last view time' tracking down from the file viewing stats manager to the timestamp manager, which FVS now received on initialisation
+* all media-based timestamp inspection now goes through the timestamp manager
+* collections now track some aggregate timestamps a bit better, and they now calculate a archived time--not sure if it is useful, but they know it now
+* updated all parts of the timestamp system to use the same shared enums
+* cleaned the timestamp code generally
+* cleaned some file service update code generally
+* moved the main file viewing stats fetching routine for MediaResult building down to the file viewing stats module
+* updated the old custom gridbox layout to handle multiple-column-spanning controls
+* went through all the bash scripts and fixed some issues my IDE linter was moaning about. -r on reads, quotes around variable names, 4-space indenting, and neater testing of program return states
+
 ## [Version 522](https://github.com/hydrusnetwork/hydrus/releases/tag/v522)
 
 ### notes in sidecars
@@ -364,31 +413,3 @@ title: Changelog
 * obviously a bunch of client api unit test and help cleanup to account for the obsolete stuff and various other changes here
 * updated a bunch of the client api unit tests to handle some of the new parsing
 * fixed the remaining 'randomly fail due to complex counting logic' potential count unit tests. turns out there were like seven more of them
-
-## [Version 513](https://github.com/hydrusnetwork/hydrus/releases/tag/v513)
-
-### client api
-
-* the Client API now supports the duplicates system! this is early stages, and what I've exposed is ugly and technical, but if you want to try out some external dupe processing, give it a go and let me know what you think! (issue #347)
-* a new 'manage file relationships' permission gives your api keys access
-* the new GET commands are:
-* - `/manage_file_relationships/get_file_relationships`, which fetches potential dupes, dupes, alternates, false positives, and dupe kings
-* - `/manage_file_relationships/get_potentials_count`, which can take two file searches, a potential dupes search type, a pixel match type, and max hamming distance, and will give the number of potential pairs in that domain
-* - `/manage_file_relationships/get_potential_pairs`, which takes the same params as count and a `max_num_pairs` and gives you a batch of pairs to process, just like the dupe filter
-* - `/manage_file_relationships/get_random_potentials`, which takes the same params as count and gives you some hashes just like the 'show some random potential pairs' button
-* the new POST commands are:
-* - `/manage_file_relationships/set_file_relationships`, which sets potential/dupe/alternate/false positive relationships between file pairs with some optional content merge and file deletes
-* - `/manage_file_relationships/set_kings`, which sets duplicate group kings
-* more commands will be written in the future for various remove/dissolve actions
-* wrote unit tests for all the commands!
-* wrote help for all the commands!
-* fixed an issue in the '/manage_pages/get_pages' call where the response data structure was saying 'focused' instead of 'selected' for 'page of pages'
-* cilent api version is now 40
-
-### boring misc cleanup and refactoring
-
-* cleaned and wrote some more parsing methods for the api to support duplicate search tech and reduce copypasted parsing code
-* renamed the client api permission labels a little, just making it all clearer and line up better. also, the 'edit client permissions' dialog now sorts the permissions
-* reordered and renamed the dev help headers in the same way
-* simple but significant rename-refactoring in file duplicates database module, tearing off the old 'Duplicates' prefixes to every method ha ha
-* updated the advanced Windows 'running from source' help to talk more about VC build tools. some old scripts don't seem to work any more in Win 11, but you also don't really need it any more (I moved to a new dev machine this week so had to set everything up again)

@@ -1331,7 +1331,7 @@ class ScriptManagementControl( QW.QWidget ):
             urls = self._job_key.GetURLs()
             
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         for url in urls:
             

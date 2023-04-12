@@ -98,7 +98,7 @@ class NetworkJobControl( QW.QFrame ):
     
     def _ShowCogMenu( self ):
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         if self._network_job is not None and self._network_job.engine is not None:
             
@@ -114,7 +114,7 @@ class NetworkJobControl( QW.QFrame ):
                 
                 bandwidth_manager = self._network_job.engine.bandwidth_manager
                 
-                submenu = QW.QMenu( menu )
+                submenu = ClientGUIMenus.GenerateMenu( menu )
                 
                 menu_network_contexts = []
                 
@@ -210,7 +210,7 @@ class NetworkJobControl( QW.QFrame ):
             return
             
         
-        menu = QW.QMenu()
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'show error', 'Show the recent error in a messagebox.', self.ShowError )
         ClientGUIMenus.AppendMenuItem( menu, 'copy error', 'Copy the recent error to the clipboard.', self.CopyError )

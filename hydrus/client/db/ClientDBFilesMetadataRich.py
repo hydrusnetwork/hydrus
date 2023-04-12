@@ -7,6 +7,7 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
+from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
@@ -258,7 +259,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
-        result = self.modules_files_storage.GetCurrentTimestamp( self.modules_services.trash_service_id, hash_id )
+        result = self.modules_files_storage.GetImportedTimestamp( self.modules_services.trash_service_id, hash_id )
         
         if result is not None:
             
@@ -269,7 +270,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
-        result = self.modules_files_storage.GetCurrentTimestamp( self.modules_services.combined_local_file_service_id, hash_id )
+        result = self.modules_files_storage.GetImportedTimestamp( self.modules_services.combined_local_file_service_id, hash_id )
         
         if result is not None:
             

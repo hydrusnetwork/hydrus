@@ -1,3 +1,4 @@
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
@@ -106,9 +107,9 @@ def AppendMenuLabel( menu, label, description = '' ):
     original_label_text = label
     label = SanitiseLabel( label )
     
-    if description is None:
+    if description == '':
         
-        description = ''
+        description = f'copy "{label}" to clipboard'
         
     
     menu_item = QW.QAction( menu )
@@ -152,7 +153,7 @@ def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
         
     else:
         
-        submenu = QW.QMenu( menu )
+        submenu = GenerateMenu( menu )
         
         AppendMenu( menu, submenu, submenu_name )
         
@@ -202,6 +203,34 @@ def DestroyMenu( menu ):
         menu.deleteLater()
         
     
+
+
+class StatusBarRedirectFilter( QC.QObject ):
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.StatusTip:
+            
+            QW.QApplication.instance().sendEvent( HG.client_controller.gui, event )
+            
+            return True
+            
+        
+        return False
+        
+    
+
+def GenerateMenu( parent: QW.QWidget ) -> QW.QMenu:
+    
+    menu = QW.QMenu( parent )
+    
+    menu.setToolTipsVisible( True )
+    
+    menu.installEventFilter( StatusBarRedirectFilter( menu ) )
+    
+    return menu
+    
+
 def GetEventCallable( callable, *args, **kwargs ):
     
     def event_callable( checked_state ):

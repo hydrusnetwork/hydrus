@@ -1,18 +1,20 @@
+import json
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import ClientImportOptions
 
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
@@ -254,6 +256,356 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateEnabledControls()
         
     
+
+class DateTimeButton( ClientGUICommon.BetterButton ):
+    
+    dateTimeChanged = QC.Signal()
+    
+    def __init__( self, parent, time_allowed = True, seconds_allowed = False, none_allowed = False, only_past_dates = False ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._EditDateTime )
+        
+        self._time_allowed = time_allowed
+        self._seconds_allowed = seconds_allowed
+        self._none_allowed = none_allowed
+        self._only_past_dates = only_past_dates
+        
+        self._value = None
+        
+        # XXXX-XX-XX XX:XX:XX = 19 chars, so add a bit of padding
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 23 )
+        
+        self.setMinimumWidth( min_width )
+        
+        self._UpdateLabel()
+        
+    
+    def _EditDateTime( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = DateTimeCtrl( self, time_allowed = self._time_allowed, seconds_allowed = self._seconds_allowed, none_allowed = self._none_allowed, only_past_dates = self._only_past_dates )
+            
+            control.SetValue( self._value )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                value = control.GetValue()
+                
+                self.SetValueDT( value )
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        if self._value is None:
+            
+            label = 'no date'
+            
+        else:
+            
+            if self._time_allowed:
+                
+                if self._seconds_allowed:
+                    
+                    f = 'yyyy/MM/dd hh:mm:ss'
+                    
+                else:
+                    
+                    f = 'yyyy/MM/dd hh:mm'
+                    
+                
+            else:
+                
+                f = 'yyyy/MM/dd'
+                
+            
+            label = self._value.toString( f )
+            
+        
+        self.setText( label )
+        
+    
+    def GetValueDT( self ) -> typing.Optional[ QC.QDateTime ]:
+        
+        return self._value
+        
+    
+    def GetValueTimestamp( self ) -> typing.Optional[ int ]:
+        
+        if self._value is None:
+            
+            return self._value
+            
+        else:
+            
+            return self._value.toSecsSinceEpoch()
+            
+        
+    
+    def SetValueDT( self, value: typing.Optional[ QC.QDateTime ] ):
+        
+        if value is None and not self._none_allowed:
+            
+            return
+            
+        
+        if value != self._value:
+            
+            self._value = value
+            
+            self._UpdateLabel()
+            
+            self.dateTimeChanged.emit()
+            
+        
+    
+    def SetValueTimestamp( self, value: typing.Optional[ int ] ):
+        
+        if value is None:
+            
+            value_dt = None
+            
+        else:
+            
+            timeZone = QC.QTimeZone.systemTimeZone()
+            
+            value_dt = QC.QDateTime.fromSecsSinceEpoch( value, timeZone )
+            
+        
+        self.SetValueDT( value_dt )
+        
+    
+
+class DateTimeCtrl( QW.QWidget ):
+    
+    dateTimeChanged = QC.Signal()
+    
+    def __init__( self, parent, time_allowed = True, seconds_allowed = False, none_allowed = False, only_past_dates = False ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._time_allowed = time_allowed
+        self._seconds_allowed = seconds_allowed
+        self._none_allowed = none_allowed
+        self._only_past_dates = only_past_dates
+        
+        qt_now = QC.QDateTime.currentDateTime()
+        
+        if none_allowed:
+            
+            self._value = None
+            
+        else:
+            
+            self._value = qt_now
+            
+        
+        self._none_time = QW.QCheckBox( self )
+        
+        self._date = QW.QCalendarWidget( self )
+        
+        self._time = QW.QTimeEdit( self )
+        
+        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button.setToolTip( 'Copy timestamp to the clipboard.' )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste timestamp from another datetime widget.' )
+        
+        #
+        
+        self._date.setSelectedDate( qt_now.date() )
+        self._time.setTime( qt_now.time() )
+        
+        self._none_time.setChecked( self._value is None )
+        
+        vbox = QP.VBoxLayout()
+        
+        if self._none_allowed:
+            
+            ClientGUICommon.WrapInText( self._none_time, self, 'No time: ' )
+            
+            QP.AddToLayout( vbox, self._none_time, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        else:
+            
+            self._none_time.setVisible( False )
+            
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        if self._time_allowed:
+            
+            if self._seconds_allowed:
+                
+                self._time.setDisplayFormat( 'hh:mm:ss' )
+                
+            else:
+                
+                self._time.setDisplayFormat( 'hh:mm' )
+                
+            
+            QP.AddToLayout( hbox, self._time, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        else:
+            
+            self._time.setVisible( False )
+            
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._copy_button )
+        QP.AddToLayout( button_hbox, self._paste_button )
+        
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
+        
+        vbox.addStretch( 1 )
+        
+        self.setLayout( vbox )
+        
+        self._NoneClicked()
+        
+        self._none_time.clicked.connect( self._NoneClicked )
+        
+    
+    def _Copy( self ):
+        
+        qt_time = self.GetValue()
+        
+        if qt_time is None:
+            
+            timestamp = None
+            
+        else:
+            
+            timestamp = qt_time.toSecsSinceEpoch()
+            
+        
+        text = json.dumps( timestamp )
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _NoneClicked( self ):
+        
+        editable = not self._none_time.isChecked()
+        
+        self._date.setEnabled( editable )
+        self._time.setEnabled( editable )
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            QW.QMessageBox.critical( self, 'Error', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            timestamp = json.loads( raw_text )
+            
+            if not isinstance( timestamp, typing.Optional[ int ] ):
+                
+                raise Exception( 'Not a timestamp!' )
+                
+            
+            if timestamp is None:
+                
+                qt_time = None
+                
+            else:
+                
+                qt_time = QC.QDateTime.fromSecsSinceEpoch( timestamp )
+                
+            
+        except:
+            
+            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            
+            return
+            
+        
+        self.SetValue( qt_time )
+        
+    
+    def GetValue( self ) -> typing.Optional[ QC.QDateTime ]:
+        
+        if self._none_time.isChecked():
+            
+            return None
+            
+        
+        qt_date = self._date.selectedDate()
+        
+        qt_time = self._time.time()
+        
+        qt_datetime = QC.QDateTime( qt_date, qt_time )
+        
+        now = QC.QDateTime.currentDateTime()
+        epoch = QC.QDateTime.fromSecsSinceEpoch( 0 )
+        
+        if qt_datetime < epoch:
+            
+            qt_datetime = epoch
+            
+        
+        if self._only_past_dates and qt_datetime > now:
+            
+            qt_datetime = now
+            
+        
+        return qt_datetime
+        
+    
+    def SetValue( self, value: typing.Optional[ QC.QDateTime ] ):
+        
+        if value is None and not self._none_allowed:
+            
+            return
+            
+        
+        current_value = self.GetValue()
+        
+        if value != current_value:
+            
+            if value is None:
+                
+                self._none_time.setChecked( True )
+                
+            else:
+                
+                self._none_time.setChecked( False )
+                
+                self._date.setSelectedDate( value.date() )
+                self._time.setTime( value.time() )
+                
+            
+            self._NoneClicked()
+            
+            self.dateTimeChanged.emit()
+            
+        
+    
+
 class TimeDeltaButton( QW.QPushButton ):
 
     timeDeltaChanged = QC.Signal()
@@ -543,6 +895,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         self._UpdateEnables()
         
     
+
 class VelocityCtrl( QW.QWidget ):
     
     velocityChanged = QC.Signal()
