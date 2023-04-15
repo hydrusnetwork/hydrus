@@ -69,8 +69,8 @@ class MenuBitmapButton( MenuMixin, ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, bitmap, menu_items ):
         
-        MenuMixin.__init__( self, menu_items )
         ClientGUICommon.BetterBitmapButton.__init__( self, parent, bitmap, self.DoMenu )
+        MenuMixin.__init__( self, menu_items )
         
     
     def DoMenu( self ):
@@ -91,8 +91,8 @@ class MenuButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, label, menu_items ):
         
-        MenuMixin.__init__( self, menu_items )
         ClientGUICommon.BetterButton.__init__( self, parent, label, self.DoMenu )
+        MenuMixin.__init__( self, menu_items )
         
     
     def DoMenu( self ):
@@ -122,8 +122,8 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
         
         menu_items = self._GenerateMenuItems()
         
-        MenuMixin.__init__( self, menu_items )
         ClientGUICommon.BetterButton.__init__( self, parent, label, self.DoMenu )
+        MenuMixin.__init__( self, menu_items )
         
     
     def _GenerateMenuItems( self ):

@@ -12,13 +12,13 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 
-class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizesWithHovers, CAC.ApplicationCommandProcessorMixin ):
+class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
     
     def __init__( self, parent ):            
         
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         # Parent is set to None here so that this window shows up as a separate entry on the taskbar
         ClientGUITopLevelWindows.FrameThatResizesWithHovers.__init__( self, None, 'hydrus client media viewer', 'media_viewer' )
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._canvas_window = None
         

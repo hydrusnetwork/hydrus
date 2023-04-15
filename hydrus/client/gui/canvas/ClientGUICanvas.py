@@ -296,14 +296,14 @@ class LayoutEventSilencer( QC.QObject ):
         
     
 
-class Canvas( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
+class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
         

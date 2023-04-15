@@ -779,7 +779,7 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         
     
 
-class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
+class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     movePageLeft = QC.Signal()
     movePageRight = QC.Signal()
@@ -788,8 +788,8 @@ class AutoCompleteDropdown( QW.QWidget, CAC.ApplicationCommandProcessorMixin ):
     
     def __init__( self, parent ):
         
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QWidget.__init__( self, parent )
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._can_intercept_unusual_key_events = True
         

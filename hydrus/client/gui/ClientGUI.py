@@ -464,14 +464,14 @@ def THREADUploadPending( service_key ):
         
     
 
-class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes, CAC.ApplicationCommandProcessorMixin ):
+class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def __init__( self, controller ):
         
         self._controller = controller
         
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, 'main', 'main_gui' )
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._currently_minimised_to_system_tray = False
         

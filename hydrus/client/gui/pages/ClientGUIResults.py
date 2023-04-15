@@ -46,7 +46,7 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 
-class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.ApplicationCommandProcessorMixin ):
+class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
@@ -61,17 +61,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, QW.QScrollArea, CAC.Applicatio
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         QW.QScrollArea.__init__( self, parent )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self.setLineWidth( 2 )
         
         self.resize( QC.QSize( 20, 20 ) )
-        self.setWidget( QW.QWidget() )
+        self.setWidget( QW.QWidget( self ) )
         self.setWidgetResizable( True )
         
         ClientMedia.ListeningMediaList.__init__( self, location_context, media_results )
+        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._UpdateBackgroundColour()
         

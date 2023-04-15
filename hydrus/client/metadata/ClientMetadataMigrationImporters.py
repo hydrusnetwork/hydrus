@@ -74,7 +74,7 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
         
     
 
-class SingleFileMetadataImporterMediaNotes( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterMedia ):
+class SingleFileMetadataImporterMediaNotes( SingleFileMetadataImporterMedia, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_NOTES
     SERIALISABLE_NAME = 'Metadata Single File Importer Media Notes'
@@ -146,7 +146,7 @@ class SingleFileMetadataImporterMediaNotes( HydrusSerialisable.SerialisableBase,
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_NOTES ] = SingleFileMetadataImporterMediaNotes
 
-class SingleFileMetadataImporterMediaTags( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterMedia ):
+class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS
     SERIALISABLE_NAME = 'Metadata Single File Importer Media Tags'
@@ -267,7 +267,7 @@ class SingleFileMetadataImporterMediaTags( HydrusSerialisable.SerialisableBase, 
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS ] = SingleFileMetadataImporterMediaTags
 
-class SingleFileMetadataImporterMediaURLs( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterMedia ):
+class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_URLS
     SERIALISABLE_NAME = 'Metadata Single File Importer Media URLs'
@@ -353,7 +353,7 @@ class SingleFileMetadataImporterMediaURLs( HydrusSerialisable.SerialisableBase, 
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_URLS ] = SingleFileMetadataImporterMediaURLs
 
-class SingleFileMetadataImporterJSON( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterSidecar ):
+class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_JSON
     SERIALISABLE_NAME = 'Metadata Single File Importer JSON'
@@ -508,7 +508,7 @@ class SingleFileMetadataImporterJSON( HydrusSerialisable.SerialisableBase, Singl
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_JSON ] = SingleFileMetadataImporterJSON
 
-class SingleFileMetadataImporterTXT( HydrusSerialisable.SerialisableBase, SingleFileMetadataImporterSidecar ):
+class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_TXT
     SERIALISABLE_NAME = 'Metadata Single File Importer TXT'
