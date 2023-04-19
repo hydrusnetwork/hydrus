@@ -8,6 +8,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientFiles
@@ -629,7 +631,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        precise_time_to_stop = HydrusData.GetNowPrecise() + work_time
+        precise_time_to_stop = HydrusTime.GetNowPrecise() + work_time
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
@@ -639,7 +641,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
             i = definition_iterator_dict[ 'service_hash_ids_to_hashes' ]
             
-            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
+            for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
                 inserts = []
                 
@@ -654,7 +656,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 
                 num_rows_processed += len( inserts )
                 
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                     
                     return num_rows_processed
                     
@@ -667,7 +669,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
             i = definition_iterator_dict[ 'service_tag_ids_to_tags' ]
             
-            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
+            for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
                 inserts = []
                 
@@ -691,7 +693,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 
                 num_rows_processed += len( inserts )
                 
-                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                     
                     return num_rows_processed
                     

@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -1252,7 +1253,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         self._ExecuteMany(
             'INSERT OR IGNORE INTO {} ( hash_id, timestamp, original_timestamp ) VALUES ( ?, ?, ? );'.format( deleted_files_table_name ),

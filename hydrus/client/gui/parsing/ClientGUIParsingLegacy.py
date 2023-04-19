@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -475,7 +476,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             try:
                 
-                stop_time = HydrusData.GetNow() + 30
+                stop_time = HydrusTime.GetNow() + 30
                 
                 job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
                 
@@ -737,7 +738,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         try:
             
-            stop_time = HydrusData.GetNow() + 30
+            stop_time = HydrusTime.GetNow() + 30
             
             job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
             
@@ -814,7 +815,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         script = self.GetValue()
         
-        stop_time = HydrusData.GetNow() + 30
+        stop_time = HydrusTime.GetNow() + 30
         
         job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
         

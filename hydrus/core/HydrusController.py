@@ -13,6 +13,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNATPunch
 
 class HydrusController( object ):
@@ -58,9 +59,9 @@ class HydrusController( object ):
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
-        self._timestamps[ 'boot' ] = HydrusData.GetNow()
+        self._timestamps[ 'boot' ] = HydrusTime.GetNow()
         
-        self._timestamps[ 'last_sleep_check' ] = HydrusData.GetNow()
+        self._timestamps[ 'last_sleep_check' ] = HydrusTime.GetNow()
         
         self._sleep_lock = threading.Lock()
         
@@ -219,7 +220,7 @@ class HydrusController( object ):
             job.Cancel()
             
         
-        started = HydrusData.GetNow()
+        started = HydrusTime.GetNow()
         
         while True in ( daemon_job.CurrentlyWorking() for daemon_job in self._daemon_jobs.values() ):
             
@@ -227,7 +228,7 @@ class HydrusController( object ):
             
             time.sleep( 0.1 )
             
-            if HydrusData.TimeHasPassed( started + 30 ):
+            if HydrusTime.TimeHasPassed( started + 30 ):
                 
                 break
                 
@@ -457,7 +458,7 @@ class HydrusController( object ):
     
     def GetThreadPoolBusyStatus( self ):
         
-        if HydrusData.TimeHasPassed( self._thread_pool_busy_status_text_new_check_time ):
+        if HydrusTime.TimeHasPassed( self._thread_pool_busy_status_text_new_check_time ):
             
             with self._call_to_thread_lock:
                 
@@ -481,7 +482,7 @@ class HydrusController( object ):
                 self._thread_pool_busy_status_text = 'very busy!'
                 
             
-            self._thread_pool_busy_status_text_new_check_time = HydrusData.GetNow() + 10
+            self._thread_pool_busy_status_text_new_check_time = HydrusTime.GetNow() + 10
             
         
         return self._thread_pool_busy_status_text
@@ -755,7 +756,7 @@ class HydrusController( object ):
         
         if stop_time is not None:
             
-            if HydrusData.TimeHasPassed( stop_time ):
+            if HydrusTime.TimeHasPassed( stop_time ):
                 
                 return True
                 
@@ -831,7 +832,7 @@ class HydrusController( object ):
         
         with self._sleep_lock:
             
-            if HydrusData.TimeHasPassed( self.GetTimestamp( 'last_sleep_check' ) + 60 ): # it has been way too long since this method last fired, so we've prob been asleep
+            if HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_sleep_check' ) + 60 ): # it has been way too long since this method last fired, so we've prob been asleep
                 
                 self._just_woke_from_sleep = True
                 
@@ -839,11 +840,11 @@ class HydrusController( object ):
                 
                 wake_delay_period = self._GetWakeDelayPeriod()
                 
-                self.SetTimestamp( 'now_awake', HydrusData.GetNow() + wake_delay_period ) # enough time for ethernet to get back online and all that
+                self.SetTimestamp( 'now_awake', HydrusTime.GetNow() + wake_delay_period ) # enough time for ethernet to get back online and all that
                 
                 self._ShowJustWokeToUser()
                 
-            elif self._just_woke_from_sleep and HydrusData.TimeHasPassed( self.GetTimestamp( 'now_awake' ) ):
+            elif self._just_woke_from_sleep and HydrusTime.TimeHasPassed( self.GetTimestamp( 'now_awake' ) ):
                 
                 self._just_woke_from_sleep = False
                 
@@ -856,7 +857,7 @@ class HydrusController( object ):
         
         with self._sleep_lock:
             
-            self.SetTimestamp( 'last_sleep_check', HydrusData.GetNow() - 3600 )
+            self.SetTimestamp( 'last_sleep_check', HydrusTime.GetNow() - 3600 )
             
         
         self.SleepCheck()
@@ -871,7 +872,7 @@ class HydrusController( object ):
         
         with self._timestamps_lock:
             
-            self._timestamps[ name ] = HydrusData.GetNow()
+            self._timestamps[ name ] = HydrusTime.GetNow()
             
         
     

@@ -3,9 +3,10 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
+from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
@@ -484,13 +485,13 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            if HydrusData.TimeHasPassed( self._next_check_time ):
+            if HydrusTime.TimeHasPassed( self._next_check_time ):
                 
                 s = 'imminent'
                 
             else:
                 
-                s = ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
+                s = ClientTime.TimestampToPrettyTimeDelta( self._next_check_time )
                 
             
             if self._paused:
@@ -542,7 +543,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                file_work_time = HydrusData.GetNow() + file_bandwidth_estimate
+                file_work_time = HydrusTime.GetNow() + file_bandwidth_estimate
                 
                 work_times.add( file_work_time )
                 
@@ -627,7 +628,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + self._query_text + '" IsSyncDue test. Paused/dead/container status is {}/{}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), self.IsLogContainerOK(), HydrusData.TimeHasPassed( self._next_check_time ), self._check_now ) )
+            HydrusData.ShowText( 'Query "' + self._query_text + '" IsSyncDue test. Paused/dead/container status is {}/{}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), self.IsLogContainerOK(), HydrusTime.TimeHasPassed( self._next_check_time ), self._check_now ) )
             
         
         if not self.IsExpectingToWorkInFuture():
@@ -635,7 +636,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        return HydrusData.TimeHasPassed( self._next_check_time ) or self._check_now
+        return HydrusTime.TimeHasPassed( self._next_check_time ) or self._check_now
         
     
     def PausePlay( self ):
@@ -645,7 +646,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     
     def RegisterSyncComplete( self, checker_options: ClientImportOptions.CheckerOptions, query_log_container: SubscriptionQueryLogContainer ):
         
-        self._last_check_time = HydrusData.GetNow()
+        self._last_check_time = HydrusTime.GetNow()
         
         self._check_now = False
         

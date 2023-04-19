@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTagArchive
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
 
@@ -1111,49 +1112,47 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
             default_port = 45869
             
         
-        port_name = '{} local port'.format( name )
-        none_phrase = 'do not run {} service'.format( name )
+        self._run_the_service = QW.QCheckBox( self._client_server_options_panel )
         
-        self._port = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, port_name, none_phrase = none_phrase, min = 1, max = 65535 )
+        self._port = ClientGUICommon.BetterSpinBox( self._client_server_options_panel, min = 1, max = 65535 )
         
-        self._allow_non_local_connections = QW.QCheckBox( 'allow non-local connections', self._client_server_options_panel )
-        self._allow_non_local_connections.setToolTip( 'Allow other computers on the network to talk to use service. If unchecked, only localhost can talk to it.' )
+        self._allow_non_local_connections = QW.QCheckBox( self._client_server_options_panel )
+        self._allow_non_local_connections.setToolTip( 'Allow other computers on the network to talk to use service. If unchecked, only localhost can talk to it. On Windows, the first time you start a local service that allows non-local connections, you will get the Windows firewall popup dialog when you ok the main services dialog.' )
         
-        self._use_https = QW.QCheckBox( 'use https', self._client_server_options_panel )
+        self._use_https = QW.QCheckBox( self._client_server_options_panel )
         self._use_https.setToolTip( 'Host the server using https instead of http. This uses a self-signed certificate, stored in your db folder, which is imperfect but better than straight http. Your software (e.g. web browser testing the Client API welcome page) may need to go through a manual \'approve this ssl certificate\' process before it can work. If you host your client on a real DNS domain and acquire your own signed certificate, you can replace the cert+key file pair with that.' )
         
-        self._support_cors = QW.QCheckBox( 'support CORS headers', self._client_server_options_panel )
+        self._support_cors = QW.QCheckBox( self._client_server_options_panel )
         self._support_cors.setToolTip( 'Have this server support Cross-Origin Resource Sharing, which allows web browsers to access it off other domains. Turn this on if you want to access this service through a web-based wrapper (e.g. a booru wrapper) hosted on another domain.' )
         
-        self._log_requests = QW.QCheckBox( 'log requests', self._client_server_options_panel )
+        self._log_requests = QW.QCheckBox( self._client_server_options_panel )
         self._log_requests.setToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' )
         
-        self._use_normie_eris = QW.QCheckBox( 'normie-friendly welcome page', self._client_server_options_panel )
+        self._use_normie_eris = QW.QCheckBox( self._client_server_options_panel )
         self._use_normie_eris.setToolTip( 'Use alternate ASCII art on the root page of the server.' )
         
-        self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+        self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, none_phrase = 'do not forward port', max = 65535 )
         
-        self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'scheme (http/https) override when copying external links' )
-        self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'host override when copying external links' )
-        self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'port override when copying external links' )
+        self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
+        self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
+        self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
         
         self._external_port_override.setToolTip( 'Setting this to a non-none empty string will forego the \':\' in the URL.' )
-        
-        if service_type != HC.LOCAL_BOORU:
-            
-            self._external_scheme_override.hide()
-            self._external_host_override.hide()
-            self._external_port_override.hide()
-            
         
         self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._client_server_options_panel, dictionary[ 'bandwidth_rules' ] )
         
         #
         
-        self._port.SetValue( default_port )
+        self._port.setValue( default_port )
         self._upnp.SetValue( default_port )
         
-        self._port.SetValue( dictionary[ 'port' ] )
+        self._run_the_service.setChecked( dictionary[ 'port' ] is not None )
+        
+        if dictionary[ 'port' ] is not None:
+            
+            self._port.setValue( dictionary[ 'port' ] )
+            
+        
         self._upnp.SetValue( dictionary[ 'upnp_port' ] )
         
         self._allow_non_local_connections.setChecked( dictionary[ 'allow_non_local_connections' ] )
@@ -1168,34 +1167,70 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._client_server_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._allow_non_local_connections, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._use_https, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._support_cors, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._log_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._use_normie_eris, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._external_scheme_override, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._external_host_override, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._client_server_options_panel.Add( self._external_port_override, CC.FLAGS_EXPAND_PERPENDICULAR )
+        rows = []
+        
+        rows.append( ( 'run the {}?:'.format( name ), self._run_the_service ) )
+        rows.append( ( 'local port:', self._port ) )
+        rows.append( ( 'allow non-local connections:', self._allow_non_local_connections ) )
+        rows.append( ( 'use https', self._use_https ) )
+        rows.append( ( 'support CORS headers', self._support_cors ) )
+        rows.append( ( 'log requests', self._log_requests ) )
+        rows.append( ( 'normie-friendly welcome page', self._use_normie_eris ) )
+        rows.append( ( 'upnp port', self._upnp ) )
+        
+        if service_type == HC.LOCAL_BOORU:
+            
+            rows.append( ( 'scheme (http/https) override when copying external links', self._external_scheme_override ) )
+            rows.append( ( 'host override when copying external links', self._external_host_override ) )
+            rows.append( ( 'port override when copying external links', self._external_port_override ) )
+            
+        else:
+            
+            self._external_scheme_override.hide()
+            self._external_host_override.hide()
+            self._external_port_override.hide()
+            
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self._client_server_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._client_server_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.Add( self._client_server_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._allow_non_local_connections.clicked.connect( self._UpdateControls )
+        self._run_the_service.clicked.connect( self._UpdateControls )
+        
+        self._UpdateControls()
         
     
     def _UpdateControls( self ):
         
-        if self._allow_non_local_connections.isChecked():
+        service_running = self._run_the_service.isChecked()
+        
+        self._port.setEnabled( service_running )
+        self._allow_non_local_connections.setEnabled( service_running )
+        self._use_https.setEnabled( service_running )
+        self._support_cors.setEnabled( service_running )
+        self._log_requests.setEnabled( service_running )
+        self._use_normie_eris.setEnabled( service_running )
+        self._upnp.setEnabled( service_running )
+        self._external_scheme_override.setEnabled( service_running )
+        self._external_host_override.setEnabled( service_running )
+        self._external_port_override.setEnabled( service_running )
+        
+        if service_running:
             
-            self._upnp.SetValue( None )
-            
-            self._upnp.setEnabled( False )
-            
-        else:
-            
-            self._upnp.setEnabled( True )
+            if self._allow_non_local_connections.isChecked():
+                
+                self._upnp.SetValue( None )
+                
+                self._upnp.setEnabled( False )
+                
+            else:
+                
+                self._upnp.setEnabled( True )
+                
             
         
     
@@ -1203,7 +1238,17 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         
         dictionary_part = {}
         
-        dictionary_part[ 'port' ] = self._port.GetValue()
+        if self._run_the_service.isChecked():
+            
+            port = self._port.value()
+            
+        else:
+            
+            port = None
+            
+        
+        dictionary_part[ 'port' ] = port
+        
         dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
         dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.isChecked()
         dictionary_part[ 'use_https' ] = self._use_https.isChecked()
@@ -1749,11 +1794,11 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                 
-                precise_timestamp = HydrusData.GetNowPrecise()
+                precise_timestamp = HydrusTime.GetNowPrecise()
                 
                 self._controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
                 
-                it_took = HydrusData.GetNowPrecise() - precise_timestamp
+                it_took = HydrusTime.GetNowPrecise() - precise_timestamp
                 
                 rows_s = int( weight / it_took )
                 
@@ -3066,7 +3111,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             update_period = self._service.GetUpdatePeriod()
             
-            repo_options_text_components.append( 'update period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( update_period ) ) )
+            repo_options_text_components.append( 'update period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( update_period ) ) )
             
         except HydrusExceptions.DataMissing:
             
@@ -3077,7 +3122,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             nullification_period = self._service.GetNullificationPeriod()
             
-            repo_options_text_components.append( 'anonymisation period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( nullification_period ) ) )
+            repo_options_text_components.append( 'anonymisation period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( nullification_period ) ) )
             
         except HydrusExceptions.DataMissing:
             
@@ -3687,7 +3732,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
         
         pretty_name = name
         pretty_text = text
-        pretty_timeout = HydrusData.ConvertTimestampToPrettyExpires( timeout )
+        pretty_timeout = HydrusTime.TimestampToPrettyExpires( timeout )
         pretty_hashes = HydrusData.ToHumanInt( num_hashes )
         
         sort_timeout = ClientGUIListCtrl.SafeNoneInt( timeout )

@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
@@ -332,6 +333,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         duplicate_content_merge_options.SetRatingServiceActions( [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ] )
         duplicate_content_merge_options.SetSyncArchiveAction( ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
         duplicate_content_merge_options.SetSyncURLsAction( HC.CONTENT_MERGE_ACTION_COPY )
+        duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_COPY )
         duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_COPY )
         
         from hydrus.client.importing.options import NoteImportOptions
@@ -353,6 +355,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         duplicate_content_merge_options.SetRatingServiceActions( [ ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
         duplicate_content_merge_options.SetSyncArchiveAction( ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
         duplicate_content_merge_options.SetSyncURLsAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         duplicate_content_merge_options.SetSyncNotesAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         note_import_options = NoteImportOptions.NoteImportOptions()
@@ -1195,7 +1198,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDuplicateContentMergeOptions( self, duplicate_type ):
+    def GetDuplicateContentMergeOptions( self, duplicate_type ) -> ClientDuplicates.DuplicateContentMergeOptions:
         
         with self._lock:
             

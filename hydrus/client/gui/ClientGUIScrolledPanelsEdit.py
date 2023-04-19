@@ -11,9 +11,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -36,6 +39,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 
 class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
     
@@ -737,7 +741,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
             
-            media = ClientMedia.FilterAndReportDeleteLockFailures( media )
+            media = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( media )
             
         
         return media
@@ -874,7 +878,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 text = template.format( file_desc, deletee_service.GetName() )
                 
-                chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+                chunks_of_hashes = HydrusLists.SplitListIntoChunks( hashes, 64 )
                 
                 content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                 
@@ -897,7 +901,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     h = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
                     
-                    chunks_of_hashes = HydrusData.SplitListIntoChunks( h, 64 )
+                    chunks_of_hashes = HydrusLists.SplitListIntoChunks( h, 64 )
                     
                     content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                     
@@ -973,7 +977,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 text = 'Permanently delete {}?'.format( suffix )
                 
-                chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+                chunks_of_hashes = HydrusLists.SplitListIntoChunks( hashes, 64 )
                 
                 content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                 
@@ -1010,7 +1014,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
                     
                 
-                chunks_of_hashes = list( HydrusData.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
+                chunks_of_hashes = list( HydrusLists.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
                 
                 list_of_service_keys_to_content_updates = []
                 
@@ -1242,19 +1246,23 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         self._sync_archive_action.addItem( 'always archive both', ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
+        self._sync_file_modified_date_action = ClientGUICommon.BetterChoice( self )
         self._sync_notes_action = ClientGUICommon.BetterChoice( self )
         
-        self._sync_urls_action.addItem( 'make no change', HC.CONTENT_MERGE_ACTION_NONE )
-        self._sync_notes_action.addItem( 'make no change', HC.CONTENT_MERGE_ACTION_NONE )
+        self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_NONE ], HC.CONTENT_MERGE_ACTION_NONE )
+        self._sync_file_modified_date_action.addItem( HC.content_modified_date_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_NONE ], HC.CONTENT_MERGE_ACTION_NONE )
+        self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_NONE ], HC.CONTENT_MERGE_ACTION_NONE )
         
         if self._duplicate_action == HC.DUPLICATE_BETTER:
             
             self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
+            self._sync_file_modified_date_action.addItem( HC.content_modified_date_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
             self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
             self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_MOVE ], HC.CONTENT_MERGE_ACTION_MOVE )
             
         
         self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._sync_file_modified_date_action.addItem( HC.content_modified_date_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         self._sync_notes_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         self._sync_note_import_options_button = ClientGUICommon.BetterButton( self, 'note merge settings', self._EditNoteImportOptions )
@@ -1265,6 +1273,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         rating_service_options = duplicate_content_merge_options.GetRatingServiceActions()
         sync_archive_action = duplicate_content_merge_options.GetSyncArchiveAction()
         sync_urls_action = duplicate_content_merge_options.GetSyncURLsAction()
+        sync_file_modified_date_action = duplicate_content_merge_options.GetSyncFileModifiedDateAction()
         sync_notes_action = duplicate_content_merge_options.GetSyncNotesAction()
         self._sync_note_import_options = duplicate_content_merge_options.GetSyncNoteImportOptions()
         
@@ -1289,14 +1298,17 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE ) and not for_custom_action:
             
             self._sync_urls_action.setEnabled( False )
+            self._sync_file_modified_date_action.setEnabled( False )
             self._sync_notes_action.setEnabled( False )
             
             self._sync_urls_action.SetValue( HC.CONTENT_MERGE_ACTION_NONE )
+            self._sync_file_modified_date_action.SetValue( HC.CONTENT_MERGE_ACTION_NONE )
             self._sync_notes_action.SetValue( HC.CONTENT_MERGE_ACTION_NONE )
             
         else:
             
             self._sync_urls_action.SetValue( sync_urls_action )
+            self._sync_file_modified_date_action.SetValue( sync_file_modified_date_action )
             self._sync_notes_action.SetValue( sync_notes_action )
             
         
@@ -1318,6 +1330,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         rows = []
         
         rows.append( ( 'sync archived status?: ', self._sync_archive_action ) )
+        rows.append( ( 'sync file modified date?: ', self._sync_file_modified_date_action ) )
         rows.append( ( 'sync known urls?: ', self._sync_urls_action ) )
         rows.append( ( 'sync notes?: ', self._sync_notes_action ) )
         rows.append( ( '', self._sync_note_import_options_button ) )
@@ -1721,6 +1734,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._service_keys_to_rating_options.items() ]
         sync_archive_action = self._sync_archive_action.GetValue()
         sync_urls_action = self._sync_urls_action.GetValue()
+        sync_file_modified_date_action = self._sync_file_modified_date_action.GetValue()
         sync_notes_action = self._sync_notes_action.GetValue()
         
         duplicate_content_merge_options = ClientDuplicates.DuplicateContentMergeOptions()
@@ -1729,6 +1743,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         duplicate_content_merge_options.SetRatingServiceActions( rating_service_actions )
         duplicate_content_merge_options.SetSyncArchiveAction( sync_archive_action )
         duplicate_content_merge_options.SetSyncURLsAction( sync_urls_action )
+        duplicate_content_merge_options.SetSyncFileModifiedDateAction( sync_file_modified_date_action )
         duplicate_content_merge_options.SetSyncNotesAction( sync_notes_action )
         duplicate_content_merge_options.SetSyncNoteImportOptions( self._sync_note_import_options )
         
@@ -2117,7 +2132,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._last_viewed_media_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
         self._last_viewed_preview_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
         
-        self._file_modified_timestamp_warning_st = ClientGUICommon.BetterStaticText( self, label = 'This will also change the modified date of the file on disk!' )
+        self._file_modified_timestamp_warning_st = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
         self._file_modified_timestamp_warning_st.setObjectName( 'HydrusWarning' )
         self._file_modified_timestamp_warning_st.setAlignment( QC.Qt.AlignCenter )
         self._file_modified_timestamp_warning_st.setVisible( False )
@@ -2263,7 +2278,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         domain = timestamp_data.location
         
-        pretty_timestamp = HydrusData.ConvertTimestampToPrettyTime( timestamp_data.timestamp )
+        pretty_timestamp = HydrusTime.TimestampToPrettyTime( timestamp_data.timestamp )
         
         display_tuple = ( domain, pretty_timestamp )
         sort_tuple = ( domain, timestamp_data.timestamp )
@@ -2287,7 +2302,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_data.timestamp_type ]
         sort_timestamp_type = pretty_timestamp_type
         
-        pretty_timestamp = HydrusData.ConvertTimestampToPrettyTime( timestamp_data.timestamp )
+        pretty_timestamp = HydrusTime.TimestampToPrettyTime( timestamp_data.timestamp )
         
         if timestamp_data.timestamp is None:
             
@@ -2659,7 +2674,26 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
     
     def _ShowFileModifiedWarning( self ):
         
-        self._file_modified_timestamp_warning_st.setVisible( True )
+        for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
+            
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp is not None:
+                
+                self._file_modified_timestamp_warning_st.setVisible( True )
+                
+                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp ):
+                    
+                    self._file_modified_timestamp_warning_st.setText( 'This will also change the modified date of the file on disk!' )
+                    
+                else:
+                    
+                    self._file_modified_timestamp_warning_st.setText( 'File modified date on disk will not be changed--the timestamp is too early.' )
+                    
+                
+                return
+                
+            
+        
+        self._file_modified_timestamp_warning_st.setVisible( False )
         
     
     def GetFileModifiedUpdate( self ) -> typing.Optional[ int ]:
@@ -2668,7 +2702,10 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp is not None:
                 
-                return timestamp_data.timestamp
+                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp ):
+                    
+                    return timestamp_data.timestamp
+                    
                 
             
         

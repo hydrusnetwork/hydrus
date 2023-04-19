@@ -3,6 +3,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBDefinitionsCache
@@ -72,7 +73,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         for job_type in possible_job_types:
             
-            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), 256 ) ) )
+            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusTime.GetNow(), 256 ) ) )
             
             if len( hash_ids ) > 0:
                 
@@ -87,7 +88,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     
     def GetJobCounts( self ):
         
-        result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusData.GetNow(), ) ).fetchall()
+        result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusTime.GetNow(), ) ).fetchall()
         
         job_types_to_count = dict( result )
         

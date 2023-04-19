@@ -30,6 +30,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
@@ -43,6 +44,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -894,11 +896,6 @@ class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
         self._service.ReportDataUsed( num_bytes )
         
     
-    def _reportRequestUsed( self, request: HydrusServerRequest.HydrusRequest ):
-        
-        self._service.ReportRequestUsed()
-        
-    
     def _checkService( self, request: HydrusServerRequest.HydrusRequest ):
         
         HydrusServerResources.HydrusResource._checkService( self, request )
@@ -976,7 +973,7 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HydrusData.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HydrusTime.TimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -1051,7 +1048,7 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HydrusData.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HydrusTime.TimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -1196,9 +1193,9 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         self._service.ReportDataUsed( num_bytes )
         
     
-    def _reportRequestUsed( self, request: HydrusServerRequest.HydrusRequest ):
+    def _reportRequestStarted( self, request: HydrusServerRequest.HydrusRequest ):
         
-        self._service.ReportRequestUsed()
+        HydrusServerResources.HydrusResource._reportRequestStarted( self, request )
         
         HG.client_controller.ResetIdleTimerFromClientAPI()
         
@@ -3692,7 +3689,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                     
                     if media.HasDeleteLocked():
                         
-                        ClientMedia.ReportDeleteLockFailures( [ media ] )
+                        ClientMediaFileFilter.ReportDeleteLockFailures( [ media ] )
                         
                         continue
                         

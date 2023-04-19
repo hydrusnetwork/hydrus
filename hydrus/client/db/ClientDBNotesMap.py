@@ -4,6 +4,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule

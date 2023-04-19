@@ -3,6 +3,7 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
@@ -70,9 +71,9 @@ def CheckImporterCanDoGalleryWorkBecausePaused( paused: bool, gallery_seed_log: 
 
 def CheckCanDoNetworkWork( no_work_until: int, no_work_until_reason: str ):
     
-    if not HydrusData.TimeHasPassed( no_work_until ):
+    if not HydrusTime.TimeHasPassed( no_work_until ):
         
-        no_work_text = '{}: {}'.format( HydrusData.ConvertTimestampToPrettyExpires( no_work_until ), no_work_until_reason )
+        no_work_text = '{}: {}'.format( HydrusTime.TimestampToPrettyExpires( no_work_until ), no_work_until_reason )
         
         raise HydrusExceptions.VetoException( no_work_text )
         
@@ -93,9 +94,9 @@ def CheckImporterCanDoWorkBecauseStopped( page_key: bytes ):
 
 def GenerateLiveStatusText( text: str, paused: bool, no_work_until: int, no_work_until_reason: str ) -> str:
     
-    if not HydrusData.TimeHasPassed( no_work_until ):
+    if not HydrusTime.TimeHasPassed( no_work_until ):
         
-        return '{}: {}'.format( HydrusData.ConvertTimestampToPrettyExpires( no_work_until ), no_work_until_reason )
+        return '{}: {}'.format( HydrusTime.TimestampToPrettyExpires( no_work_until ), no_work_until_reason )
         
     
     if paused and text != 'paused':

@@ -9,8 +9,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
@@ -22,6 +24,7 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -316,7 +319,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _SerialisableChangeMade( self ):
         
-        self._last_serialisable_change_timestamp = HydrusData.GetNow()
+        self._last_serialisable_change_timestamp = HydrusTime.GetNow()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -2311,7 +2314,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         added = gallery_import.GetCreationTime()
         
-        pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
         sort_tuple = ( query_text, pretty_source, sort_files_paused, sort_gallery_paused, sort_status, progress, added )
@@ -2743,13 +2746,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _UpdateImportStatus( self ):
         
-        if HydrusData.TimeHasPassed( self._next_update_time ):
+        if HydrusTime.TimeHasPassed( self._next_update_time ):
             
             num_items = len( self._gallery_importers_listctrl.GetData() )
             
             update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
             
-            self._next_update_time = HydrusData.GetNow() + update_period
+            self._next_update_time = HydrusTime.GetNow() + update_period
             
             #
             
@@ -3146,7 +3149,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         added = watcher.GetCreationTime()
         
-        pretty_added = ClientData.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
@@ -3627,13 +3630,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _UpdateImportStatus( self ):
         
-        if HydrusData.TimeHasPassed( self._next_update_time ):
+        if HydrusTime.TimeHasPassed( self._next_update_time ):
             
             num_items = len( self._watchers_listctrl.GetData() )
             
             update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
             
-            self._next_update_time = HydrusData.GetNow() + update_period
+            self._next_update_time = HydrusTime.GetNow() + update_period
             
             #
             
@@ -5679,7 +5682,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 WAIT_PERIOD = 3.0
                 
-                search_is_lagging = HydrusData.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
+                search_is_lagging = HydrusTime.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
                 
                 self._tag_autocomplete.ShowCancelSearchButton( search_is_lagging )
                 
@@ -5868,7 +5871,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         media_results = []
         
-        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
+        for sub_query_hash_ids in HydrusLists.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
             
             if query_job_key.IsCancelled():
                 

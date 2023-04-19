@@ -31,10 +31,12 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusMemory
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -257,7 +259,7 @@ def THREADUploadPending( service_key ):
         
         while result is not None:
             
-            time_started_this_loop = HydrusData.GetNowPrecise()
+            time_started_this_loop = HydrusTime.GetNowPrecise()
             
             nums_pending = HG.client_controller.Read( 'nums_pending' )
             
@@ -314,7 +316,7 @@ def THREADUploadPending( service_key ):
                         
                         file_info_manager = media_result.GetFileInfoManager()
                         
-                        timestamp = HydrusData.GetNow()
+                        timestamp = HydrusTime.GetNow()
                         
                         content_update_row = ( file_info_manager, timestamp )
                         
@@ -378,7 +380,7 @@ def THREADUploadPending( service_key ):
             
             HG.client_controller.WaitUntilViewFree()
             
-            total_time_this_loop_took = HydrusData.GetNowPrecise() - time_started_this_loop
+            total_time_this_loop_took = HydrusTime.GetNowPrecise() - time_started_this_loop
             
             if total_time_this_loop_took > 1.5:
                 
@@ -392,7 +394,7 @@ def THREADUploadPending( service_key ):
             result = HG.client_controller.Read( 'pending', service_key, content_types_to_request, ideal_weight = current_ideal_weight )
             
         
-        finished_all_uploads = result == None
+        finished_all_uploads = result is None
         
         if initial_num_pending > 0 and no_results_found and service_type == HC.TAG_REPOSITORY:
             
@@ -825,7 +827,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'db cache size per file: {}MB'.format( HG.db_cache_size ) )
         library_version_lines.append( 'db journal mode: {}'.format( HG.db_journal_mode ) )
         library_version_lines.append( 'db synchronous mode: {}'.format( HG.db_synchronous ) )
-        library_version_lines.append( 'db transaction commit period: {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
+        library_version_lines.append( 'db transaction commit period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
         library_version_lines.append( 'db using memory for temp?: {}'.format( HG.no_db_temp_files ) )
         
         import locale
@@ -881,7 +883,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == QW.QDialog.Accepted:
             
-            stop_time = HydrusData.GetNow() + 120
+            stop_time = HydrusTime.GetNow() + 120
             
             self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
             
@@ -1015,7 +1017,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.Write( 'backup', path )
             
-            HG.client_controller.new_options.SetNoneableInteger( 'last_backup_time', HydrusData.GetNow() )
+            HG.client_controller.new_options.SetNoneableInteger( 'last_backup_time', HydrusTime.GetNow() )
             
             self._did_a_backup_this_session = True
             
@@ -1027,7 +1029,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def do_it( service ):
             
-            started = HydrusData.GetNow()
+            started = HydrusTime.GetNow()
             
             service.Request( HC.POST, 'backup' )
             
@@ -1049,9 +1051,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 result_bytes = service.Request( HC.GET, 'busy' )
                 
             
-            it_took = HydrusData.GetNow() - started
+            it_took = HydrusTime.GetNow() - started
             
-            HydrusData.ShowText( 'Server backup done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
+            HydrusData.ShowText( 'Server backup done in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
             
         
         message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests.'
@@ -1386,7 +1388,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     break
                     
                 
-                job_key.SetStatusText( 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
+                job_key.SetStatusText( 'Will auto-dismiss in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
                 job_key.SetVariable( 'popup_gauge_1', ( i, 10 ) )
                 
                 time.sleep( 1 )
@@ -1780,13 +1782,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
                 
-                gmt_time = HydrusData.ConvertTimestampToPrettyTime( timestamp, in_utc = True )
-                local_time = HydrusData.ConvertTimestampToPrettyTime( timestamp )
+                utc_time = HydrusTime.TimestampToPrettyTime( timestamp, in_utc = True )
+                local_time = HydrusTime.TimestampToPrettyTime( timestamp )
                 
                 text = 'File Hash: ' + hash.hex()
                 text += os.linesep
                 text += 'Uploader\'s IP: ' + ip
-                text += 'Upload Time (GMT): ' + gmt_time
+                text += 'Upload Time (UTC): ' + utc_time
                 text += 'Upload Time (Your time): ' + local_time
                 
                 HydrusData.Print( text )
@@ -2379,13 +2381,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if last_backup_time is not None:
                 
-                if not HydrusData.TimeHasPassed( last_backup_time + 1800 ):
+                if not HydrusTime.TimeHasPassed( last_backup_time + 1800 ):
                     
                     message += ' (did one recently)'
                     
                 else:
                     
-                    message += ' (last {})'.format( HydrusData.TimestampToPrettyTimeDelta( last_backup_time ) )
+                    message += ' (last {})'.format( HydrusTime.TimestampToPrettyTimeDelta( last_backup_time ) )
                     
                 
             
@@ -2572,7 +2574,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         for timestamp in timestamps:
                             
-                            ClientGUIMenus.AppendMenuItem( submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
+                            ClientGUIMenus.AppendMenuItem( submenu, HydrusTime.TimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
                             
                         
                         ClientGUIMenus.AppendMenu( append_backup, submenu, name )
@@ -4391,7 +4393,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 if nullification_period > HydrusNetwork.MAX_NULLIFICATION_PERIOD:
                     
-                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
+                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
                     
                     return
                     
@@ -4520,7 +4522,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 if update_period > HydrusNetwork.MAX_UPDATE_PERIOD:
                     
-                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
+                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
                     
                     return
                     
@@ -6286,7 +6288,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def do_it( service ):
             
-            started = HydrusData.GetNow()
+            started = HydrusTime.GetNow()
             
             service.Request( HC.POST, 'maintenance_regen_service_info' )
             
@@ -6308,9 +6310,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 result_bytes = service.Request( HC.GET, 'busy' )
                 
             
-            it_took = HydrusData.GetNow() - started
+            it_took = HydrusTime.GetNow() - started
             
-            HydrusData.ShowText( 'Server maintenance done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
+            HydrusData.ShowText( 'Server maintenance done in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
             
         
         message = 'This will tell the server to recalculate the cached numbers for number of files, mappings, actionable petitions and so on. It may take a little while to complete, during which time it will not be able to serve any requests.'
@@ -6865,7 +6867,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         def do_it( service ):
             
-            started = HydrusData.GetNow()
+            started = HydrusTime.GetNow()
             
             service.Request( HC.POST, 'vacuum' )
             
@@ -6887,9 +6889,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 result_bytes = service.Request( HC.GET, 'busy' )
                 
             
-            it_took = HydrusData.GetNow() - started
+            it_took = HydrusTime.GetNow() - started
             
-            HydrusData.ShowText( 'Server vacuum done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
+            HydrusData.ShowText( 'Server vacuum done in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
             
         
         message = 'This will tell the server to lock and vacuum its database files. It may take some time to complete, during which time it will not be able to serve any requests.'
@@ -7045,7 +7047,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         new_closed_pages = []
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         timeout = 60 * 60
         
@@ -7165,7 +7167,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         summary = 'Profiling animation timer: ' + repr( window )
                         
-                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
+                        HydrusProfiling.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                         
                     else:
                         
@@ -7478,7 +7480,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._clipboard_watcher_destination_page_watcher = None
             
         
-        close_time = HydrusData.GetNow()
+        close_time = HydrusTime.GetNow()
         
         self._closed_pages.append( ( close_time, page ) )
         
@@ -7867,7 +7869,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         boot_time = self._controller.GetBootTime()
         
-        time_since_boot = max( 1, HydrusData.GetNow() - boot_time )
+        time_since_boot = max( 1, HydrusTime.GetNow() - boot_time )
         
         usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
         
@@ -7965,7 +7967,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 summary = 'Profiling page timer: ' + repr( page )
                 
-                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
+                HydrusProfiling.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                 
             else:
                 
@@ -8008,7 +8010,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     summary = 'Profiling ui update timer: ' + repr( window )
                     
-                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
+                    HydrusProfiling.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
                     
                 else:
                     
@@ -8295,7 +8297,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 shutdown_work_period = self._controller.new_options.GetInteger( 'shutdown_work_period' )
                 
-                shutdown_work_due = HydrusData.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
+                shutdown_work_due = HydrusTime.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
                 
                 if shutdown_work_due:
                     
@@ -8307,7 +8309,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         idle_shutdown_max_minutes = self._controller.options[ 'idle_shutdown_max_minutes' ]
                         
-                        time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
+                        time_to_stop = HydrusTime.GetNow() + ( idle_shutdown_max_minutes * 60 )
                         
                         work_to_do = self._controller.GetIdleShutdownWorkDue( time_to_stop )
                         

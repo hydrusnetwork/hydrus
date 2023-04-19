@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -128,7 +129,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     login_possible = False
                     login_error_text = validity_error_text
                     
-                elif not HydrusData.TimeHasPassed( no_work_until ):
+                elif not HydrusTime.TimeHasPassed( no_work_until ):
                     
                     login_possible = False
                     login_error_text = no_work_until_reason
@@ -373,7 +374,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            no_work_until = HydrusData.GetNow() + 3600 * 4
+            no_work_until = HydrusTime.GetNow() + 3600 * 4
             no_work_until_reason = reason
             
             self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
@@ -1595,7 +1596,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 else:
                     
-                    pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+                    pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
                     
                 
                 s += pretty_expiry

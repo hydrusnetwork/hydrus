@@ -295,18 +295,6 @@ def ShowTextClient( text ):
     
     HG.client_controller.pub( 'message', job_key )
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
-    
-    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
-        
-        return HydrusData.ConvertTimestampToPrettyTime( timestamp )
-        
-    else:
-        
-        return HydrusData.BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, history_suffix = history_suffix, show_seconds = show_seconds, no_prefix = no_prefix )
-        
-    
-HydrusData.TimestampToPrettyTimeDelta = TimestampToPrettyTimeDelta
 
 def ToHumanBytes( size ):
     

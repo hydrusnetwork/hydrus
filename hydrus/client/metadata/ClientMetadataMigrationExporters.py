@@ -8,9 +8,11 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientStrings
+from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.metadata import ClientMetadataMigrationCore
 
@@ -242,6 +244,96 @@ class SingleFileMetadataExporterMediaTags( SingleFileMetadataExporterMedia, Hydr
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TAGS ] = SingleFileMetadataExporterMediaTags
+
+class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia, HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TIMESTAMPS
+    SERIALISABLE_NAME = 'Metadata Single File Exporter Media Timestamps'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, timestamp_data_stub: typing.Optional[ ClientTime.TimestampData ] = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataExporterMedia.__init__( self )
+        
+        if timestamp_data_stub is None:
+            
+            timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
+            
+        
+        self._timestamp_data_stub = timestamp_data_stub
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._timestamp_data_stub.GetSerialisableTuple()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_timestamp_data_stub = serialisable_info
+        
+        self._timestamp_data_stub = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_timestamp_data_stub )
+        
+    
+    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        row = list( rows )[ 0 ]
+        
+        try:
+            
+            timestamp = int( row )
+            
+        except ValueError:
+            
+            return
+            
+        
+        if timestamp > HydrusTime.GetNow():
+            
+            return
+            
+        
+        timestamp_data = self._timestamp_data_stub.Duplicate()
+        
+        timestamp_data.timestamp = timestamp
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( hash, timestamp_data ) ) ]
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates } )
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            '1681682717'
+        ]
+        
+        return examples
+        
+    
+    def GetTimestampDataStub( self ) -> ClientTime.TimestampData:
+        
+        return self._timestamp_data_stub
+        
+    
+    def SetTimestampDataStub( self, timestamp_data_stub: ClientTime.TimestampData ):
+        
+        self._timestamp_data_stub = timestamp_data_stub
+        
+    
+    def ToString( self ) -> str:
+        
+        return '{} to media'.format( self._timestamp_data_stub )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TIMESTAMPS ] = SingleFileMetadataExporterMediaTimestamps
 
 class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, HydrusSerialisable.SerialisableBase ):
     

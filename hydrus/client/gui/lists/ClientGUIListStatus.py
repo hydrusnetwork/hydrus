@@ -108,6 +108,50 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def FixMissingDefinitions( self ):
+        
+        clean_columns = []
+        
+        for ( column_type, width, shown ) in self._columns:
+            
+            if column_type not in CGLC.column_list_column_name_lookup[ self._column_list_type ]:
+                
+                if self._sort_column_type == column_type:
+                    
+                    ( self._sort_column_type, self._sort_asc ) = CGLC.default_column_list_sort_lookup[ self._column_list_type ]
+                    
+                
+                continue
+                
+            
+            clean_columns.append( ( column_type, width, shown ) )
+            
+        
+        if len( clean_columns ) != len( self._columns ):
+            
+            self._columns = clean_columns
+            
+            self._UpdateColumnCache()
+            
+        
+        new_columns_added = False
+        
+        for ( i, ( column_type, width, shown ) ) in enumerate( CGLC.default_column_list_columns_lookup[ self._column_list_type ] ):
+            
+            if column_type not in self._column_types_in_order:
+                
+                self._columns.insert( i, ( column_type, width, shown ) )
+                
+                new_columns_added = True
+                
+            
+        
+        if new_columns_added:
+            
+            self._UpdateColumnCache()
+            
+        
+    
     def GetColumnCount( self ) -> int:
         
         return len( self._column_types_in_order )

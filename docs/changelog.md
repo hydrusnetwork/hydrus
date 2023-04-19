@@ -7,6 +7,63 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 524](https://github.com/hydrusnetwork/hydrus/releases/tag/v524)
+
+### timestamp sidecars
+
+* the sidecars system now supports timestamps. it just uses the unix timestamp number, but if you need it, you can use string conversion to create a full datestring. each sidecar node only selects/sets that one timestamp, so this may get spammy if you want to migrate everything, but you can now migrate archived/imported/whatever time from one client to another! the content updates from sidecar imports apply immediately _after_ the file is fully imported, so it is safe and good to sidecar-import 'my files imported time' etc.. for new files, and it should all get set correctly, but obviously let me know otherwise. if you set 'archived time', the files have to be in an archived state immediately after import, which means importing and archiving them previously, or hitting 'archive all imports' on the respective file import options
+* sidecars are getting complex, so I expect I will soon add a button that sets up a 'full' JSON sidecar import/export in one click, basically just spamming/sucking everything the sidecar system can do, pretty soon, so it is easier to set up larger migrations
+
+### timestamp merge
+
+* the duplicate merge options now have an action for 'sync file modified date?'. you can set so both files get their earliest (the new default for 'they are the same'), or that the earlier worse can be applied to the later better (the new default for 'this is better') (issue #1203)
+* in the duplicate system, when URLs are merged, their respective domain-based timestamps are also merged according to the earliest, as above
+
+### more timestamps
+
+* hydrus now supports timestamps before 1970. should be good now, lol, back to 1AD (and my tests show BC dates seem to be working too?). it is probably a meme to apply a modified date of 1505 to some painting, but when I add timestamps to the API maybe we can have some fun. btw calendar calculations and timezones are hell on earth at times, and there's a decent chance that your pre-1970 dates may show up on hour out of phase in labels (a daylight savings time thing) of what you enter in some other area of UI. in either case, my code is not clever enough to apply DST schedules retroactively to older dates, so your search ranges may simply be an hour out back in 1953. it sounds stupid, but it may matter if we are talking midnight boundaries, so let me know how you find it
+* when you set a new file modified date, the file on disk's modified date will only be updated if the date set is after 1980-01-01 (Windows) or 1970-01-01 (Linux) due to system limitations
+* fixed a typo bug in last week's work that meant file service timestamp editing was not updating the media object (i.e. changes were not visible until a restart)
+* fixed a bug where collections that contained files with delete timestamps were throwing errors on display. (they were calculating aggregate timestamp data wrong)
+* I rejiggered how the 'is this timestamp sensible?' test applies. this test essentially discounts any timestamp before 1970-01-08 to catch any weird mis-parses and stop them nuking your aggregate modified timestamp values. it now won't apply to internal duplicate merge and so on, but it still applies when you parse timestamps in the downloader system, so you still can't parse anything pre-1970 for now
+* one thing I noticed is my '5 years 1 months ago' calculation, which uses a fixed 30 day month and doesn't count the extra day of leap years, is showing obviously increasingly inaccurate numbers here. I'll fix it up
+
+### export folders
+
+* export folders can now show a popup while they work. there's a new checkbox for it in their edit UI. default is ON, so you'll start seeing popups for export folders that run in the background. this popup is cancellable, too, so you can now stop in-progress export runs if things seem wrong
+* both import and export folders will force-show working popups whenever you trigger them manually
+* export folders no longer have the weird and confusing 'paused' and 'run regularly?' duality. this was a legacy error handling thing, now cleaned up and merged into 'run regularly?'
+* when 'run regularly?' is unchecked, the run period and new 'show popup while working regularly?' checkboxes are now disabled
+
+### misc
+
+* added 'system:ratio is square/portrait/landscape' nicer label aliases for =/taller/wider 1:1 ratio. I added them to the quick-select list on the edit panel, too. they also parse in the system predicate parser!
+* I added a bit to the 'getting started with downloading' help page about getting access to difficult sites. I refer to Hydrus Companion as a good internal login solution, and link to yt-dlp, gallery-dl, and imgbrd-grabber with a little discussion on setting up external import workflows. I tried gallery-dl on twitter this week and it was excellent. it can also take your login credentials as either user/pass or cookies.txt (or pull cookies straight from firefox/safari) and give access to nsfw. since twitter has rapidly become a pain for us recently, I will be pointing people to gallery-dl for now
+* fixed my Qt subclass definitions for PySide6 6.5.0, which strictly requires the Qt object to be the rightmost base class in multiple inheritance subclasses, wew. this his AUR users last week, I understand!
+
+### client api (and local booru lol)
+
+* if you set the Client API to not allow non-local connections, it now binds to 127.0.0.1 and ::1 specifically, which tell your OS we only want the loopback interface. this increases security, and on Windows _should_ mean it only does that first-time firewall dialog popup when 'allow non-local connections' is unchecked
+* I brushed up the manage services UI for the Client API. the widgets all line up better now, and turning the service on and off isn't the awkward '[] do not run the service' any more
+* fixed the 'disable idle mode if the client api does stuff' check, which was wired up wrong! also, the reset here now fires as a request starts, not when it is complete, meaning if you are already in idle mode, a client api request will now quickly cancel idle mode and hopefully free up any locked database situation promptly
+
+### boring cleanup and stuff
+
+* reworked all timestamp-datetime conversion to be happier with pre-1970 dates regardless of system/python support. it is broadly improved all around
+* refactored all of the HydrusData time functions and much of ClientTime to a new HydrusTime module
+* refactored the ClientData time stuff to ClientTime
+* refactored some thread/process functions from HydrusData to HydrusThreading
+* refactored some list splitting/throttling functions from HydrusData to a new HydrusLists module
+* refactored the file filter out of ClientMedia and into the new ClientMediaFileFilter, and reworked things so the medialist filter jobs now happen at the filter level. this was probably done the wrong way around, but oh well
+* expanded the new TimestampData object a bit, it can now give a nice descriptive string of itself
+* wrote a new widget to edit TimestampData stubs
+* wrote some unit tests for the new timestamp sidecar importer and exporter
+* updated my multi-column list system to handle the deprecation of a column definition (today it was the 'paused' column in manage export folders list)
+* it should also be able to handle new column definitions appearing
+* fixed an error popup that still said 'run repair invalid tags' instead of 'run fix invalid tags'
+* the FILE_SERVICES constant now holds the 'all deleted files' virtual domain. this domain keeps slipping my logic, so fingers crossed this helps. also means you can select it in 'system:file service' and stuff now
+* misc cleaning and linting work
+
 ## [Version 523](https://github.com/hydrusnetwork/hydrus/releases/tag/v523)
 
 ### timestamp editing
@@ -325,91 +382,3 @@ title: Changelog
 * thanks to a user, updated the recently note-and-ai-updated pixiv parser again to grab the canonical pixiv URL and translated tags, if present
 * thanks to a user, updated the sankaku parser to grab some more tags
 * the file location context and tag context buttons under tag autocompletes now put menu separators between each type of file/tag service in their menus. for basic users, this'll be a separator for every row, but for advanced users with multiple local domains, it will help categorise the list a bit
-
-## [Version 514](https://github.com/hydrusnetwork/hydrus/releases/tag/v514)
-
-### downloaders
-
-* twitter took down the API we were using, breaking all our nice twitter downloaders! argh!
-* a user has figured out a basic new downloader that grabs the tweets amongst the first twenty tweets-and-retweets of an account. yes, only the first twenty max, and usually fewer. because this is a big change, the client will ask about it when you update. if you have some complicated situation where you are working on the old default twitter downloaders and don't want them deleted, you can select 'no' on the dialog it throws up, but everyone else wants to say 'yes'. then check your twitter subs: make sure they moved to the new downloader, and you probably want to make them check more frequently too.
-* given the rate of changes at twitter, I think we can expect more changes and blocks in future. I don't know whether nitter will be viable alternative, so if the artists you like end up on a nice simple booru _anywhere_, I strongly recommend just moving there. twitter appears to be explicitly moving to non-third-party-friendly
-* thanks to a user's work, the 'danbooru - get webm ugoira' parser is fixed!
-* thanks to a user's work, the deviant art parser is updated to get the highest res image in more situations!
-* thanks to a user's work, the pixiv downloader now gets the artist note, in japanese (and translated, if there is one), and a 'medium:ai generated' tag!
-
-### sidecars
-
-* I wrote some sidecar help here! https://hydrusnetwork.github.io/hydrus/advanced_sidecars.html
-* when the client parses files for import, the 'does this look like a sidecar?' test now also checks that the base component of the base filename (e.g. 'Image123' from 'Image123.jpg.txt') actually appears in the list of non-txt/json/xml ext files. a random yo.txt file out of nowhere will now be inspected in case it is secretly a jpeg again, for good or ill
-* when you drop some files on the client, the number of files skipped because they looked like sidecars is now stated in the status label
-* fixed a typo bug that meant tags imported from sidecars were not being properly cleaned, despite preview appearance otherwise, for instance ':)', which in hydrus needs to be secretly stored as '::)' was being imported as ')'
-* as a special case, tags that in hydrus are secretly '::)' will be converted to ':)' on export to sidecar too, the inverse of the above problem. there may be some other tag cleaning quirks to undo here, so let me know what you run into
-
-### related tags overhaul
-
-* the 'related tags' suggestion system, turned on under _options->tag suggestions_, has several changes, including some prototype tech I'd love feedback on
-* first off, there are two new search buttons, 'new 1' and 'new 2' ('2' is available on repositories only).. these use an upgraded statistical search and scoring system that a user worked on and sent in. I have butchered his specific namespace searching system to something more general/flexible and easy for me to maintain, but it works better and more comprehensibly than my old method! give it a go and let me know how each button does--the first one will be fast but less useful on the PTR, the second will be slower but generally give richer results (although it cannot do tags with too-high count)
-* the new search routine works on multiple files, so 'related tags' now shows on tag dialogs launched from a selection of thumbnails!
-* also, all the related search buttons now search any selection of tags you make!!! so if you can't remember that character's name, just click on the series or another character they are often with and hit the search, and you should get a whole bunch appear
-* I am going to keep working on this in the future. the new buttons will become the only buttons, I'll try and mitigate the prototype search limitations, add some cancel tech, move to a time-based search length like the current buttons, and I'll add more settings, including for filtering so we aren't looking up related tags for 'page:x' and so on. I'm interested in knowing how you get on with IRL data. are there too many recommendations (is the tolerance too high?)? is the sorting good (is the stuff at the top relevant or often just noise?)?
-
-### misc
-
-* all users can now copy their service keys (which are a technical non-changing hex identifier for your client's services) from the review services window--advanced mode is no longer needed. this may be useful as the client api transitions to service keys
-* when a job in the downloader search log generates new jobs (e.g. fetches the next page), the new job(s) are now inserted after the parent. previously, they were appended to the end of the list. this changes how ngugs operate, converting their searches from interleaved to sequential!
-* restarting search log jobs now also places the new job after the restarted job
-* when you create a new export folder, if you have default metadata export sidecar settings from a previous manual file export, the program now asks if you want those for the new export folder or an empty list. previously, it just assigned the saved default, which could be jarring if it was saved from ages ago
-* added a migration guide to the running from source help. also brushed up some language and fixed a bunch of borked title weights in that document
-* the max initial and periodic file limits in subscriptions is now 50k when in advanced mode. I can't promise that would be nice though!
-* the file history chart no longer says that inbox and delete time tracking are new
-
-### misc fixes
-
-* fixed a cursor type detection test that was stopping the cursor from hiding immediately when you do a media viewer drag in Qt6
-* fixed an issue where 'clear deletion record' calls were not deleting from the newer 'all my files' domain. the erroneous extra records will be searched for and scrubbed on update
-* fixed the issue where if you had the new 'unnamespaced input gives (any namespace) wildcard results' search option on, you couldn't add any novel tags in WRITE autocomplete contexts like 'manage tags'!!! it could only offer the automatically converted wildcard tags as suggested input, which of course aren't appropriate for a WRITE context. the way I ultimately fixed this was horrible; the whole thing needs more work to deal with clever logic like this better, so let me know if you get any more trouble here
-* I think I fixed an infinite hang when trying to add certain siblings in manage tag siblings. I believe this was occuring when the dialog was testing if the new pair would create a loop when the sibling structure already contains a loop. now it throws up a message and breaks the test
-* fixed an issue where certain system:filetype predicates would spawn apparent duplicates of themselves instead of removing on double-click. images+audio+video+swf+pdf was one example. it was a 'all the image types' vs 'list of (all the) image types' conversion/comparison/sorting issue
-
-### client api
-
-* **this is later than I expected, but as was planned last year, I am clearing up several obsolete parameters and data structures this week. mostly it is bad service name-identification that seemed simple or flexible to support but just added maintenance debt, induced bad implementation practises, and hindered future expansions. if you have a custom api script, please read on--and if you have not yet moved to the alternatives, do so before updating!**
-* **all `...service_name...` parameters are officially obsolete! they will still work via some legacy hacks, so old scripts shouldn't break, but they are no longer documented. please move to the `...service_key...` alternates as soon as reasonably possible (check out `/get_services` if you need to learn about service keys)**
-* **`/add_tags/get_tag_services` is removed! use `/get_services` instead!**
-* **`hide_service_names_tags`, previously made default true, is removed and its data structures `service_names_to_statuses_to_...` are also gone! move to the new `tags` structure.**
-* **`hide_service_keys_tags` is now default true. it will be removed in 4 weeks or so. same deal as with `service_names_to_statuses_to_...`--move to `tags`**
-* **`system_inbox` and `system_archive` are removed from `/get_files/search_files`! just use 'system:inbox/archive' in the tags list**
-* **the 'set_file_relationships' command from last week has been reworked to have a nicer Object parameter with a new name. please check the updated help!** normally I wouldn't change something so quick, but we are still in early prototype, so I'm ok shifting it (and the old method still works lmao, but I'll clear that code out in a few weeks, so please move over--the Object will be much nicer to expand in future, which I forgot about in v513)
-* many Client API commands now support modern file domain objects, meaning you can search a UNION of file services and 'deleted-from' file services. affected commands are
-* * /add_files/delete_files
-* * /add_files/undelete_files
-* * /add_tags/search_tags
-* * /get_files/search_files
-* * /manage_file_relationships/get_everything
-* a new `/get_service` call now lets you ask about an individual service by service name or service key, basically a parameterised /get_services
-* the `/manage_pages/get_pages` and `/manage_pages/get_page_info` calls now give the `page_state`, a new enum that says if the page is ready, initialised, searching, or search-cancelled
-* to reduce duplicate argument spam, the client api help now specifies the complicated 'these files' and now 'this file domain' arguments into sub-sections, and the commands that use them just point to the subsections. check it out--it makes sense when you look at it.
-* `/add_tags/add_tags` now raises 400 if you give an invalid content action (e.g. pending to a local tag service). previously it skipped these rows silently
-* added and updated unit tests and help for the above changes
-* client api version is now 41
-
-### boring optimisation
-
-* when you are looking at a search log or file log, if entries are added, removed, or moved around, all the log entries that have changed row # now update (previously it just sent a redraw signal for the new rows, not the second-order affected rows that were shuffled up/down. many access routines for these logs are sped up
-* file log status checking is completely rewritten. the ways it searches, caches and optimises the 'which is the next item with x status' queues is faster and requires far less maintenance. large import queues have less overhead, so the in and outs of general download work should scale up much better now
-* the main data cache that stores rendered images, image tiles, and thumbnails now maintains itself far more efficiently. there was a hellish O(n) overhead when adding or removing an item which has been reduced to constant time. this gonk was being spammed every few minutes during normal memory maintenance, when hundreds of thumbs can be purged at once. clients with tens of thousands of thumbnails in memory will maintain that list far more smoothly
-* physical file delete is now more efficient, requiring far fewer hard drive hits to delete a media file. it is also far less aggressive, with a new setting in _options->files and trash_ that sets how long to wait between individual file deletes, default 250ms. before, it was full LFG mode with minor delays every hundred/thousand jobs, and since it takes a write lock, it was lagging out thumbnail load when hitting a lot of work. the daemon here also shuts down faster if caught working during program shut down
-
-### boring code cleanup
-
-* refactored some parsing routines to be more flexible
-* added some more dictionary and enum type testing to the client api parameter parsing routines. error messages should be better!
-* improved how `/add_tags/add_tags` parsing works. ensuring both access methods check all types and report nicer errors
-* cleaned up the `/search_files/file_metadata` call's parsing, moving to the new generalised method and smoothing out some old code flow. it now checks hashes against the last search, too
-* cleaned up `/manage_pages/add_files` similarly
-* cleaned up how tag services are parsed and their errors reported in the client api
-* the client api is better about processing the file identifiers you give it in the same order you gave
-* fixed bad 'potentials_search_type'/'search_type' inconsistency in the client api help examples
-* obviously a bunch of client api unit test and help cleanup to account for the obsolete stuff and various other changes here
-* updated a bunch of the client api unit tests to handle some of the new parsing
-* fixed the remaining 'randomly fail due to complex counting logic' potential count unit tests. turns out there were like seven more of them

@@ -32,6 +32,7 @@ try:
     from hydrus.core import HydrusLogger
     from hydrus.core import HydrusPaths
     from hydrus.core import HydrusTemp
+    from hydrus.core import HydrusTime
     
     argparser = argparse.ArgumentParser( description = 'hydrus network client' )
     
@@ -153,7 +154,7 @@ try:
     HG.boot_debug = result.boot_debug
     
     HG.profile_mode = result.profile_mode
-    HG.profile_start_time = HydrusData.GetNow()
+    HG.profile_start_time = HydrusTime.GetNow()
     
     if HC.PLATFORM_WINDOWS and result.win_qt_darkmode_test:
         

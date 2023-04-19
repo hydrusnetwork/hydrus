@@ -155,7 +155,7 @@ def FilterNamespaces( tags, namespaces ):
     
     for namespace in namespaces:
         
-        if namespace == None:
+        if namespace is None:
             
             result.update( processed_tags[ '' ] )
             

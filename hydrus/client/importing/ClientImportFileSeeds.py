@@ -18,6 +18,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -131,7 +132,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.file_seed_type = file_seed_type
         self.file_seed_data = file_seed_data
         
-        self.created = HydrusData.GetNow()
+        self.created = HydrusTime.GetNow()
         self.modified = self.created
         self.source_time = None
         self.status = CC.STATUS_UNKNOWN
@@ -359,7 +360,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _UpdateModified( self ):
         
-        self.modified = HydrusData.GetNow()
+        self.modified = HydrusTime.GetNow()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -553,9 +554,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         source_timestamp = ClientParsing.GetTimestampFromParseResults( parse_results, HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN )
         
-        if source_timestamp is not None:
+        if source_timestamp is not None and ClientTime.TimestampIsSensible( source_timestamp ):
             
-            source_timestamp = min( HydrusData.GetNow() - 30, source_timestamp )
+            source_timestamp = min( HydrusTime.GetNow() - 30, source_timestamp )
             
             self.source_time = ClientTime.MergeModifiedTimes( self.source_time, source_timestamp )
             
@@ -693,7 +694,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             if self.source_time is not None and last_modified_time is not None:
                 
                 # even with timezone weirdness, does the current source time have something reasonable?
-                current_source_time_looks_good = HydrusData.TimeHasPassed( self.source_time - 86400 )
+                current_source_time_looks_good = HydrusTime.TimeHasPassed( self.source_time - 86400 )
                 
                 # if CF is delivering a timestamp from 17 days before source time, this is probably some unusual CDN situation or delayed post
                 # we don't _really_ want this CF timestamp since it throws the domain-based timestamp ordering out
@@ -705,7 +706,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            self.source_time = ClientTime.MergeModifiedTimes( self.source_time, last_modified_time )
+            if ClientTime.TimestampIsSensible( last_modified_time ):
+                
+                self.source_time = ClientTime.MergeModifiedTimes( self.source_time, last_modified_time )
+                
             
             status_hook( 'importing file' )
             
@@ -1260,7 +1264,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        was_just_imported = not HydrusData.TimeHasPassed( self.modified + 5 )
+        was_just_imported = not HydrusTime.TimeHasPassed( self.modified + 5 )
         
         should_check_location = not was_just_imported
         
@@ -1701,13 +1705,16 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         domain_modified_timestamp = self.source_time
                         
                     
-                    timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, domain_modified_timestamp )
-                    
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
+                    if ClientTime.TimestampIsSensible( domain_modified_timestamp ):
+                        
+                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, domain_modified_timestamp )
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
+                        
                     
                     service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
                     
-                    if self._cloudflare_last_modified_time is not None:
+                    if self._cloudflare_last_modified_time is not None and ClientTime.TimestampIsSensible( self._cloudflare_last_modified_time ):
                         
                         timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( 'cloudflare.com', self._cloudflare_last_modified_time )
                         
@@ -1799,7 +1806,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        self._generation_time = HydrusData.GetNow()
+        self._generation_time = HydrusTime.GetNow()
         self._statuses_to_counts = collections.Counter()
         self._latest_added_time = 0
         

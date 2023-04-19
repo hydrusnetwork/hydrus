@@ -5,7 +5,9 @@ import weakref
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -115,7 +117,7 @@ class MediaResultCache( object ):
         
         def do_it( hash_ids ):
             
-            for group_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 256 ):
+            for group_of_hash_ids in HydrusLists.SplitListIntoChunks( hash_ids, 256 ):
                 
                 if HydrusThreading.IsThreadShuttingDown():
                     

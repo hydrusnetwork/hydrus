@@ -5,6 +5,7 @@ import time
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.external import hexagonitswfheader
 
@@ -50,7 +51,7 @@ def RenderPageToFile( path, temp_path, page_index ):
     
     cmd = [ SWFRENDER_PATH, path,  '-o', temp_path, '-p', str( page_index ) ]
     
-    timeout = HydrusData.GetNow() + 60
+    timeout = HydrusTime.GetNow() + 60
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
@@ -60,7 +61,7 @@ def RenderPageToFile( path, temp_path, page_index ):
     
     while p.poll() is None:
         
-        if HydrusData.TimeHasPassed( timeout ):
+        if HydrusTime.TimeHasPassed( timeout ):
             
             p.terminate()
             

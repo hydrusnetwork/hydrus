@@ -19,6 +19,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
@@ -2353,9 +2354,9 @@ class TestClientAPI( unittest.TestCase ):
         
         cookies = []
         
-        cookies.append( [ 'one', '1', '.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
-        cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusData.GetNow() + 86400 ] )
-        cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        cookies.append( [ 'one', '1', '.somesite.com', '/', HydrusTime.GetNow() + 86400 ] )
+        cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusTime.GetNow() + 86400 ] )
+        cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusTime.GetNow() + 86400 ] )
         cookies.append( [ 'four', '4', '.somesite.com', '/', None ] )
         
         request_dict = { 'cookies' : cookies }
@@ -2431,8 +2432,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_cookies = []
         
-        expected_cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusData.GetNow() + 86400 ] )
-        expected_cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        expected_cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusTime.GetNow() + 86400 ] )
+        expected_cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusTime.GetNow() + 86400 ] )
         expected_cookies.append( [ 'four', '4', '.somesite.com', '/', None ] )
         
         frozen_result_cookies = { tuple( row[:-1] ) for row in result_cookies }

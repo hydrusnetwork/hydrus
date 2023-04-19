@@ -15,6 +15,8 @@ from collections import defaultdict
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusProfiling
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtInit
@@ -1291,7 +1293,7 @@ class CallAfterEventCatcher( QC.QObject ):
                 
                 summary = 'Profiling CallAfter Event: {}'.format( event._fn )
                 
-                HydrusData.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
+                HydrusProfiling.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
                 
             else:
                 

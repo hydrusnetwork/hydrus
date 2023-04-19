@@ -25,6 +25,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -761,7 +762,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            stop_time = HydrusData.GetNow() + result
+            stop_time = HydrusTime.GetNow() + result
             
         
         job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
@@ -3080,7 +3081,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 eit = boned_stats[ 'earliest_import_time' ]
                 
-                eit_label = 'Earliest file import: {} ({})'.format( HydrusData.ConvertTimestampToPrettyTime( eit ), HydrusData.TimestampToPrettyTimeDelta( eit ) )
+                eit_label = 'Earliest file import: {} ({})'.format( HydrusTime.TimestampToPrettyTime( eit ), HydrusTime.TimestampToPrettyTimeDelta( eit ) )
                 
                 eit_st = ClientGUICommon.BetterStaticText( panel, label = eit_label )
                 
@@ -3101,11 +3102,11 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
             ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
             
-            media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( media_viewtime )
+            media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( media_viewtime )
             
             media_st = ClientGUICommon.BetterStaticText( panel, label = media_label )
             
-            preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( preview_viewtime )
+            preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( preview_viewtime )
             
             preview_st = ClientGUICommon.BetterStaticText( panel, label = preview_label )
             
@@ -4021,7 +4022,7 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
             
         else:
             
-            pretty_last_vacuumed = HydrusData.TimestampToPrettyTimeDelta( sort_last_vacuumed )
+            pretty_last_vacuumed = HydrusTime.TimestampToPrettyTimeDelta( sort_last_vacuumed )
             
         
         ( result, info ) = self._CanVacuumName( name )
@@ -4043,7 +4044,7 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
         
         vacuum_time_estimate = HydrusDB.GetApproxVacuumDuration( db_size )
         
-        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusData.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusData.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
+        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
         
         return ( vacuum_time_estimate, pretty_vacuum_time_estimate )
         

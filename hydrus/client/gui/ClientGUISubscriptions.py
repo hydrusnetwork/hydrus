@@ -12,10 +12,11 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientPaths
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -455,7 +456,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_latest_new_file_time = ClientData.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = ClientTime.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_check_time is None or last_check_time == 0:
@@ -464,7 +465,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_last_check_time = ClientData.TimestampToPrettyTimeDelta( last_check_time )
+            pretty_last_check_time = ClientTime.TimestampToPrettyTimeDelta( last_check_time )
             
         
         pretty_next_check_time = query_header.GetNextCheckStatusString()
@@ -484,7 +485,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                pretty_delay = 'bandwidth: ' + HydrusData.TimeDeltaToPrettyTimeDelta( estimate )
+                pretty_delay = 'bandwidth: ' + HydrusTime.TimeDeltaToPrettyTimeDelta( estimate )
                 delay = estimate
                 
             
@@ -1107,13 +1108,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateDelayText( self ):
         
-        if HydrusData.TimeHasPassed( self._no_work_until ):
+        if HydrusTime.TimeHasPassed( self._no_work_until ):
             
             status = 'no recent errors'
             
         else:
             
-            status = 'delayed--retrying ' + ClientData.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
+            status = 'delayed--retrying ' + ClientTime.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.setText( status )
@@ -1570,7 +1571,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_latest_new_file_time = ClientData.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = ClientTime.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_checked is None or last_checked == 0:
@@ -1579,7 +1580,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_last_checked = ClientData.TimestampToPrettyTimeDelta( last_checked )
+            pretty_last_checked = ClientTime.TimestampToPrettyTimeDelta( last_checked )
             
         
         #
@@ -1627,7 +1628,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if HydrusData.TimeHasPassed( no_work_until ):
+        if HydrusTime.TimeHasPassed( no_work_until ):
             
             try:
                 
@@ -1640,19 +1641,19 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 elif min_estimate == 0: # some are good to go, but there are delays
                     
-                    pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                    pretty_delay = 'bandwidth: some ok, some up to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
                     delay = max_estimate
                     
                 else:
                     
                     if min_estimate == max_estimate: # probably just one query, and it is delayed
                         
-                        pretty_delay = 'bandwidth: up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                        pretty_delay = 'bandwidth: up to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
                         delay = max_estimate
                         
                     else:
                         
-                        pretty_delay = 'bandwidth: from ' + HydrusData.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
+                        pretty_delay = 'bandwidth: from ' + HydrusTime.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
                         delay = max_estimate
                         
                     
@@ -1665,8 +1666,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_delay = 'delayed--retrying ' + ClientData.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
-            delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
+            pretty_delay = 'delayed--retrying ' + ClientTime.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
+            delay = HydrusTime.GetTimeDeltaUntilTime( no_work_until )
             
         
         file_seed_cache_status = ClientImportSubscriptionQuery.GenerateQueryHeadersStatus( query_headers )

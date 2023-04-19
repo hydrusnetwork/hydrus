@@ -11,6 +11,7 @@ from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
@@ -95,7 +96,7 @@ class DataCache( object ):
             del self._keys_fifo[ key ]
             
         
-        self._keys_fifo[ key ] = HydrusData.GetNow()
+        self._keys_fifo[ key ] = HydrusTime.GetNow()
         
     
     def Clear( self ):
@@ -209,7 +210,7 @@ class DataCache( object ):
                     
                     ( key, last_access_time ) = next( iter( self._keys_fifo.items() ) )
                     
-                    if HydrusData.TimeHasPassed( last_access_time + self._timeout ):
+                    if HydrusTime.TimeHasPassed( last_access_time + self._timeout ):
                         
                         self._DeleteItem()
                         
@@ -275,7 +276,7 @@ class LocalBooruCache( object ):
         
         timeout = info[ 'timeout' ]
         
-        if timeout is not None and HydrusData.TimeHasPassed( timeout ):
+        if timeout is not None and HydrusTime.TimeHasPassed( timeout ):
             
             raise HydrusExceptions.NotFoundException( 'This share has expired.' )
             
@@ -390,7 +391,7 @@ class ParsingCache( object ):
     
     def __init__( self ):
         
-        self._next_clean_cache_time = HydrusData.GetNow()
+        self._next_clean_cache_time = HydrusTime.GetNow()
         
         self._html_to_soups = {}
         self._json_to_jsons = {}
@@ -400,7 +401,7 @@ class ParsingCache( object ):
     
     def _CleanCache( self ):
         
-        if HydrusData.TimeHasPassed( self._next_clean_cache_time ):
+        if HydrusTime.TimeHasPassed( self._next_clean_cache_time ):
             
             for cache in ( self._html_to_soups, self._json_to_jsons ):
                 
@@ -408,7 +409,7 @@ class ParsingCache( object ):
                 
                 for ( data, ( last_accessed, parsed_object ) ) in cache.items():
                     
-                    if HydrusData.TimeHasPassed( last_accessed + 10 ):
+                    if HydrusTime.TimeHasPassed( last_accessed + 10 ):
                         
                         dead_datas.add( data )
                         
@@ -420,7 +421,7 @@ class ParsingCache( object ):
                     
                 
             
-            self._next_clean_cache_time = HydrusData.GetNow() + 5
+            self._next_clean_cache_time = HydrusTime.GetNow() + 5
             
         
     
@@ -436,7 +437,7 @@ class ParsingCache( object ):
         
         with self._lock:
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             if json_text not in self._json_to_jsons:
                 
@@ -465,7 +466,7 @@ class ParsingCache( object ):
         
         with self._lock:
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             if html not in self._html_to_soups:
                 
@@ -1149,7 +1150,7 @@ class ThumbnailCache( object ):
                 self._waterfall_event.clear()
                 
             
-            start_time = HydrusData.GetNowPrecise()
+            start_time = HydrusTime.GetNowPrecise()
             stop_time = start_time + 0.005 # a bit of a typical frame
             
             page_keys_to_rendered_medias = collections.defaultdict( list )
@@ -1157,7 +1158,7 @@ class ThumbnailCache( object ):
             num_done = 0
             max_at_once = 16
             
-            while not HydrusData.TimeHasPassedPrecise( stop_time ) and num_done <= max_at_once:
+            while not HydrusTime.TimeHasPassedPrecise( stop_time ) and num_done <= max_at_once:
                 
                 with self._lock:
                     

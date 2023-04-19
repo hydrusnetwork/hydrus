@@ -7,6 +7,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBFilesStorage
@@ -503,7 +505,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def MaintainTree( self, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None ):
         
-        time_started = HydrusData.GetNow()
+        time_started = HydrusTime.GetNow()
         pub_job_key = False
         job_key_pubbed = False
         
@@ -524,7 +526,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             while len( rebalance_perceptual_hash_ids ) > 0:
                 
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                if pub_job_key and not job_key_pubbed and HydrusTime.TimeHasPassed( time_started + 5 ):
                     
                     HG.client_controller.pub( 'modal_message', job_key )
                     
@@ -705,7 +707,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     num_cycles += 1
                     total_nodes_searched += len( current_potentials )
                     
-                    for group_of_current_potentials in HydrusData.SplitListIntoChunks( current_potentials, 10000 ):
+                    for group_of_current_potentials in HydrusLists.SplitListIntoChunks( current_potentials, 10000 ):
                         
                         # this is split into fixed lists of results of subgroups because as an iterable it was causing crashes on linux!!
                         # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching phashes it presumably was still hanging on to

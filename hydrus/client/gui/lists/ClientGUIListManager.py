@@ -43,7 +43,11 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
             self._column_list_types_to_statuses[ column_list_type ] = ClientGUIListStatus.ColumnListStatus.STATICGetDefault( column_list_type )
             
         
-        return self._column_list_types_to_statuses[ column_list_type ]
+        column_list_status = self._column_list_types_to_statuses[ column_list_type ]
+        
+        column_list_status.FixMissingDefinitions()
+        
+        return column_list_status
         
     
     def ResetToDefaults( self ):

@@ -7,10 +7,11 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientDownloading
+from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
@@ -238,13 +239,13 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            if HydrusData.TimeHasPassed( self._next_check_time ):
+            if HydrusTime.TimeHasPassed( self._next_check_time ):
                 
                 s = 'imminent'
                 
             else:
                 
-                s = ClientData.TimestampToPrettyTimeDelta( self._next_check_time )
+                s = ClientTime.TimestampToPrettyTimeDelta( self._next_check_time )
                 
             
             if self._paused:
@@ -284,7 +285,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                file_work_time = HydrusData.GetNow() + file_bandwidth_estimate
+                file_work_time = HydrusTime.GetNow() + file_bandwidth_estimate
                 
                 work_times.add( file_work_time )
                 
@@ -349,7 +350,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + self._query + '" IsSyncDue test. Paused/dead status is {}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), HydrusData.TimeHasPassed( self._next_check_time ), self._check_now ) )
+            HydrusData.ShowText( 'Query "' + self._query + '" IsSyncDue test. Paused/dead status is {}/{}, check time due is {}, and check_now is {}.'.format( self._paused, self.IsDead(), HydrusTime.TimeHasPassed( self._next_check_time ), self._check_now ) )
             
         
         if self._paused or self.IsDead():
@@ -357,7 +358,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        return HydrusData.TimeHasPassed( self._next_check_time ) or self._check_now
+        return HydrusTime.TimeHasPassed( self._next_check_time ) or self._check_now
         
     
     def PausePlay( self ):
@@ -367,7 +368,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
     
     def RegisterSyncComplete( self, checker_options: ClientImportOptions.CheckerOptions ):
         
-        self._last_check_time = HydrusData.GetNow()
+        self._last_check_time = HydrusTime.GetNow()
         
         self._check_now = False
         
@@ -545,7 +546,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             reason = reason.splitlines()[0]
             
         
-        self._no_work_until = HydrusData.GetNow() + time_delta
+        self._no_work_until = HydrusTime.GetNow() + time_delta
         self._no_work_until_reason = reason
         
     
@@ -633,7 +634,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _NoDelays( self ):
         
-        return HydrusData.TimeHasPassed( self._no_work_until )
+        return HydrusTime.TimeHasPassed( self._no_work_until )
         
     
     def _QueryFileLoginOK( self, query ):
@@ -925,7 +926,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     
     def CanScrubDelay( self ):
         
-        return not HydrusData.TimeHasPassed( self._no_work_until )
+        return not HydrusTime.TimeHasPassed( self._no_work_until )
         
     
     def CheckNow( self ):
@@ -987,7 +988,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         latest_nearby_next_work_time = max( ( work_time for work_time in next_work_times if work_time < earliest_next_work_time + LAUNCH_WINDOW ) )
         
         # but if we are expecting to launch it right now (e.g. check_now call), we won't wait
-        if HydrusData.TimeUntil( earliest_next_work_time ) < 60:
+        if HydrusTime.TimeUntil( earliest_next_work_time ) < 60:
             
             best_next_work_time = earliest_next_work_time
             
@@ -996,7 +997,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             best_next_work_time = latest_nearby_next_work_time
             
         
-        if not HydrusData.TimeHasPassed( self._no_work_until ):
+        if not HydrusTime.TimeHasPassed( self._no_work_until ):
             
             best_next_work_time = max( ( best_next_work_time, self._no_work_until ) )
             

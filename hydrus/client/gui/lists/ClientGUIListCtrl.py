@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSerialisable
@@ -41,7 +42,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._have_shown_a_column_data_error = False
         
-        self._creation_time = HydrusData.GetNow()
+        self._creation_time = HydrusTime.GetNow()
         
         self._column_list_type = column_list_type
         
@@ -845,7 +846,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         last_column_type = self._column_list_status.GetColumnTypes()[-1]
         
-        if HydrusData.TimeHasPassed( self._creation_time + 2 ):
+        if HydrusTime.TimeHasPassed( self._creation_time + 2 ):
             
             width += self.columnWidth( self.columnCount() - 1 )
             

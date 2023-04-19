@@ -11,9 +11,11 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
@@ -1023,7 +1025,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
             
             allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
-            allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
+            allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
             
             self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
             
@@ -1889,13 +1891,13 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                 
                 if watcher_status == '' and next_check_time is not None:
                     
-                    if HydrusData.TimeHasPassed( next_check_time ):
+                    if HydrusTime.TimeHasPassed( next_check_time ):
                         
                         watcher_status = 'checking imminently'
                         
                     else:
                         
-                        watcher_status = 'next check ' + ClientData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
+                        watcher_status = 'next check ' + ClientTime.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
                         
                     
                 

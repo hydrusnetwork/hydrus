@@ -1,11 +1,8 @@
 import collections
-import cProfile
 import decimal
 import fractions
-import io
 import itertools
 import os
-import pstats
 import psutil
 import random
 import re
@@ -91,6 +88,8 @@ def CleanRunningFile( db_path, instance ):
         pass
         
     
+
+# TODO: remove all the 'Convert' from these
 def ConvertFloatToPercentage( f ):
     
     return '{:.1f}%'.format( f * 100 )
@@ -171,46 +170,7 @@ def ConvertIntToUnit( unit ):
     elif unit == 1048576: return 'MB'
     elif unit == 1073741824: return 'GB'
     
-def ConvertMillisecondsToPrettyTime( ms ):
-    
-    hours = ms // 3600000
-    
-    if hours == 1: hours_result = '1 hour'
-    else: hours_result = str( hours ) + ' hours'
-    
-    ms = ms % 3600000
-    
-    minutes = ms // 60000
-    
-    if minutes == 1: minutes_result = '1 minute'
-    else: minutes_result = str( minutes ) + ' minutes'
-    
-    ms = ms % 60000
-    
-    seconds = ms // 1000
-    
-    if seconds == 1: seconds_result = '1 second'
-    else: seconds_result = str( seconds ) + ' seconds'
-    
-    detailed_seconds = ms / 1000
-    
-    detailed_seconds_result = '{:.1f} seconds'.format( detailed_seconds )
-    
-    ms = ms % 1000
-    
-    if hours > 0: return hours_result + ' ' + minutes_result
-    
-    if minutes > 0: return minutes_result + ' ' + seconds_result
-    
-    if seconds > 0: return detailed_seconds_result
-    
-    ms = int( ms )
-    
-    if ms == 1: milliseconds_result = '1 millisecond'
-    else: milliseconds_result = '{} milliseconds'.format( ms )
-    
-    return milliseconds_result
-    
+
 def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result = False, out_of = True ):
     
     rating_converted = ( rating * ( upper - lower ) ) + lower
@@ -279,231 +239,6 @@ def ConvertStatusToPrefix( status ):
     elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
     else: return '(?)'
     
-def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
-    
-    if seconds is None:
-        
-        return 'per month'
-        
-    
-    if seconds == 0:
-        
-        return '0 seconds'
-        
-    
-    if seconds < 0:
-        
-        seconds = abs( seconds )
-        
-    
-    if seconds >= 60:
-        
-        seconds = int( seconds )
-        
-        MINUTE = 60
-        HOUR = 60 * MINUTE
-        DAY = 24 * HOUR
-        MONTH = 30 * DAY
-        YEAR = 365 * DAY
-        
-        lines = []
-        
-        lines.append( ( 'year', YEAR ) )
-        lines.append( ( 'month', MONTH ) )
-        lines.append( ( 'day', DAY ) )
-        lines.append( ( 'hour', HOUR ) )
-        lines.append( ( 'minute', MINUTE ) )
-        
-        if show_seconds:
-            
-            lines.append( ( 'second', 1 ) )
-            
-        
-        result_components = []
-        
-        for ( time_string, duration ) in lines:
-            
-            time_quantity = seconds // duration
-            
-            seconds %= duration
-            
-            # little rounding thing if you get 364th day with 30 day months
-            if time_string == 'month' and time_quantity > 11:
-                
-                time_quantity = 11
-                
-            
-            if time_quantity > 0:
-                
-                s = ToHumanInt( time_quantity ) + ' ' + time_string
-                
-                if time_quantity > 1:
-                    
-                    s += 's'
-                    
-                
-                result_components.append( s )
-                
-                if len( result_components ) == 2: # we now have 1 month 2 days
-                    
-                    break
-                    
-                
-            else:
-                
-                if len( result_components ) > 0: # something like '1 year' -- in which case we do not care about the days and hours
-                    
-                    break
-                    
-                
-            
-        
-        result = ' '.join( result_components )
-        
-    elif seconds > 1:
-        
-        if int( seconds ) == seconds:
-            
-            result = ToHumanInt( seconds ) + ' seconds'
-            
-        else:
-            
-            result = '{:.1f} seconds'.format( seconds )
-            
-        
-    elif seconds == 1:
-        
-        result = '1 second'
-        
-    elif seconds > 0.1:
-        
-        result = '{} milliseconds'.format( int( seconds * 1000 ) )
-        
-    elif seconds > 0.01:
-        
-        result = '{:.1f} milliseconds'.format( int( seconds * 1000 ) )
-        
-    elif seconds > 0.001:
-        
-        result = '{:.2f} milliseconds'.format( int( seconds * 1000 ) )
-        
-    else:
-        
-        result = '{} microseconds'.format( int( seconds * 1000000 ) )
-        
-    
-    return result
-    
-def ConvertTimestampToPrettyExpires( timestamp ):
-    
-    if timestamp is None:
-        
-        return 'does not expire'
-        
-    
-    if timestamp == 0:
-        
-        return 'unknown expiration'
-        
-    
-    try:
-        
-        time_delta_string = TimestampToPrettyTimeDelta( timestamp )
-        
-        if TimeHasPassed( timestamp ):
-            
-            return 'expired ' + time_delta_string
-            
-        else:
-            return 'expires ' + time_delta_string
-            
-        
-    except:
-        
-        return 'unparseable time {}'.format( timestamp )
-        
-    
-def ConvertTimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = True ):
-    
-    if timestamp is None:
-        
-        return 'unknown time'
-        
-    
-    if include_24h_time:
-        
-        phrase = '%Y-%m-%d %H:%M:%S'
-        
-    else:
-        
-        phrase = '%Y-%m-%d'
-        
-    
-    try:
-        
-        if in_utc:
-            
-            struct_time = time.gmtime( timestamp )
-            
-            phrase = phrase + ' UTC'
-            
-        else:
-            
-            struct_time = time.localtime( timestamp )
-            
-        
-        return time.strftime( phrase, struct_time )
-        
-    except:
-        
-        return 'unparseable time {}'.format( timestamp )
-        
-    
-def BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
-    
-    if timestamp is None:
-        
-        return 'at an unknown time'
-        
-    
-    if not show_seconds:
-        
-        just_now_threshold = max( just_now_threshold, 60 )
-        
-    
-    try:
-        
-        time_delta = abs( timestamp - GetNow() )
-        
-        if time_delta <= just_now_threshold:
-            
-            return just_now_string
-            
-        
-        time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta, show_seconds = show_seconds )
-        
-        if TimeHasPassed( timestamp ):
-            
-            return '{}{}'.format( time_delta_string, history_suffix )
-            
-        else:
-            
-            if no_prefix:
-                
-                return time_delta_string
-                
-            else:
-                
-                return 'in ' + time_delta_string
-                
-            
-        
-    except:
-        
-        return 'unparseable time {}'.format( timestamp )
-        
-    
-TimestampToPrettyTimeDelta = BaseTimestampToPrettyTimeDelta
 
 def ConvertUglyNamespaceToPrettyString( namespace ):
     
@@ -538,64 +273,6 @@ def ConvertValueRangeToBytes( value, range ):
 def ConvertValueRangeToPrettyString( value, range ):
     
     return ToHumanInt( value ) + '/' + ToHumanInt( range )
-    
-def ConvertValueRangeToScanbarTimestampsMS( value_ms, range_ms ):
-    
-    value_ms = int( round( value_ms ) )
-    
-    range_hours = range_ms // 3600000
-    value_hours = value_ms // 3600000
-    range_minutes = ( range_ms % 3600000 ) // 60000
-    value_minutes = ( value_ms % 3600000 ) // 60000
-    range_seconds = ( range_ms % 60000 ) // 1000
-    value_seconds = ( value_ms % 60000 ) // 1000
-    range_ms = range_ms % 1000
-    value_ms = value_ms % 1000
-    
-    if range_hours > 0:
-        
-        # 0:01:23.033/1:12:57.067
-        
-        time_phrase = '{}:{:0>2}:{:0>2}.{:0>3}'
-        
-        args = ( value_hours, value_minutes, value_seconds, value_ms, range_hours, range_minutes, range_seconds, range_ms )
-        
-    elif range_minutes > 0:
-        
-        # 01:23.033/12:57.067 or 0:23.033/1:57.067
-        
-        if range_minutes > 9:
-            
-            time_phrase = '{:0>2}:{:0>2}.{:0>3}'
-            
-        else:
-            
-            time_phrase = '{:0>1}:{:0>2}.{:0>3}'
-            
-        
-        args = ( value_minutes, value_seconds, value_ms, range_minutes, range_seconds, range_ms )
-        
-    else:
-        
-        # 23.033/57.067 or 3.033/7.067 or 0.033/0.067
-        
-        if range_seconds > 9:
-            
-            time_phrase = '{:0>2}.{:0>3}'
-            
-        else:
-            
-            time_phrase = '{:0>1}.{:0>3}'
-            
-        
-        args = ( value_seconds, value_ms, range_seconds, range_ms )
-        
-    
-    full_phrase = '{}/{}'.format( time_phrase, time_phrase )
-    
-    result = full_phrase.format( *args )
-    
-    return result
     
 def DebugPrint( debug_info ):
     
@@ -735,18 +412,7 @@ def GetNonDupeName( original_name, disallowed_names ):
     
     return non_dupe_name
     
-def GetNow():
-    
-    return int( time.time() )
-    
-def GetNowFloat():
-    
-    return time.time()
-    
-def GetNowPrecise():
-    
-    return time.perf_counter()
-    
+
 def GetSiblingProcessPorts( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )
@@ -960,32 +626,7 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False ):
     
     return sbp_kwargs
     
-def GetTimeDeltaSinceTime( timestamp ):
-    
-    time_since = timestamp - GetNow()
-    
-    result = min( time_since, 0 )
-    
-    return - result
-    
-def GetTimeDeltaUntilTime( timestamp ):
-    
-    time_remaining = timestamp - GetNow()
-    
-    return max( time_remaining, 0 )
-    
-def GetTimeDeltaUntilTimeFloat( timestamp ):
-    
-    time_remaining = timestamp - GetNowFloat()
-    
-    return max( time_remaining, 0.0 )
-    
-def GetTimeDeltaUntilTimePrecise( t ):
-    
-    time_remaining = t - GetNowPrecise()
-    
-    return max( time_remaining, 0.0 )
-    
+
 def GetTypeName( obj_type ):
     
     if hasattr( obj_type, '__name__' ):
@@ -1220,6 +861,7 @@ def PrintException( e, do_wait = True ):
     
     PrintExceptionTuple( etype, value, tb, do_wait = do_wait )
     
+
 def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
     if etype is None:
@@ -1262,87 +904,10 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
         time.sleep( 1 )
         
     
+
 ShowException = PrintException
 ShowExceptionTuple = PrintExceptionTuple
 
-def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
-    
-    profile = cProfile.Profile()
-    
-    started = GetNowPrecise()
-    
-    profile.runctx( code, g, l )
-    
-    finished = GetNowPrecise()
-    
-    time_took = finished - started
-    time_took_ms = int( time_took * 1000.0 )
-    
-    if time_took_ms > min_duration_ms:
-        
-        output = io.StringIO()
-        
-        stats = pstats.Stats( profile, stream = output )
-        
-        stats.strip_dirs()
-        
-        stats.sort_stats( 'tottime' )
-        
-        output.write( 'Stats' )
-        output.write( os.linesep * 2 )
-        
-        stats.print_stats()
-        
-        output.write( 'Callers' )
-        output.write( os.linesep * 2 )
-        
-        stats.print_callers()
-        
-        output.seek( 0 )
-        
-        profile_text = output.read()
-        
-        with HG.profile_counter_lock:
-            
-            HG.profile_slow_count += 1
-            
-        
-        if show_summary:
-            
-            ShowText( summary )
-            
-        
-        HG.controller.PrintProfile( summary, profile_text = profile_text )
-        
-    else:
-        
-        with HG.profile_counter_lock:
-            
-            HG.profile_fast_count += 1
-            
-        
-        if show_summary:
-            
-            HG.controller.PrintProfile( summary )
-            
-        
-    
-def PullNFromIterator( iterator, n ):
-    
-    chunk = []
-    
-    for item in iterator:
-        
-        chunk.append( item )
-        
-        if len( chunk ) == n:
-            
-            return chunk
-            
-        
-    
-    return chunk
-    
 def RandomPop( population ):
     
     random_index = random.randint( 0, len( population ) - 1 )
@@ -1351,6 +916,7 @@ def RandomPop( population ):
     
     return row
     
+
 def RecordRunningStart( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )
@@ -1375,6 +941,7 @@ def RecordRunningStart( db_path, instance ):
         f.write( record_string )
         
     
+
 def RestartProcess():
     
     time.sleep( 1 ) # time for ports to unmap
@@ -1490,121 +1057,7 @@ def SplitIteratorIntoChunks( iterator, n ):
         yield chunk
         
     
-def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
-    
-    n = starting_n
-    
-    chunk = PullNFromIterator( iterator, n )
-    
-    while len( chunk ) > 0:
-        
-        time_work_started = GetNowPrecise()
-        
-        yield chunk
-        
-        work_time = GetNowPrecise() - time_work_started
-        
-        items_per_second = n / work_time
-        
-        time_remaining = precise_time_to_stop - GetNowPrecise()
-        
-        if TimeHasPassedPrecise( precise_time_to_stop ):
-            
-            n = 1
-            
-        else:
-            
-            expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
-            
-            quad_speed = n * 4
-            
-            n = min( quad_speed, expected_items_in_remaining_time )
-            
-        
-        chunk = PullNFromIterator( iterator, n )
-        
-    
-def SplitListIntoChunks( xs, n ):
-    
-    if isinstance( xs, set ):
-        
-        xs = list( xs )
-        
-    
-    for i in range( 0, len( xs ), n ):
-        
-        yield xs[ i : i + n ]
-        
-    
-def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
-    
-    n = starting_n
-    
-    chunk_weight = 0
-    chunk = []
-    
-    for ( tag_item, hash_items ) in iterator:
-        
-        chunk.append( ( tag_item, hash_items ) )
-        
-        chunk_weight += len( hash_items )
-        
-        if chunk_weight >= n:
-            
-            time_work_started = GetNowPrecise()
-            
-            yield chunk
-            
-            work_time = GetNowPrecise() - time_work_started
-            
-            chunk_weight = 0
-            chunk = []
-            
-            items_per_second = n / work_time
-            
-            time_remaining = precise_time_to_stop - GetNowPrecise()
-            
-            if TimeHasPassedPrecise( precise_time_to_stop ):
-                
-                n = 1
-                
-            else:
-                
-                expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
-                
-                quad_speed = n * 4
-                
-                n = min( quad_speed, expected_items_in_remaining_time )
-                
-            
-        
-    
-    if len( chunk ) > 0:
-        
-        yield chunk
-        
-    
-def TimeHasPassed( timestamp ):
-    
-    if timestamp is None:
-        
-        return False
-        
-    
-    return GetNow() > timestamp
-    
-def TimeHasPassedFloat( timestamp ):
-    
-    return GetNowFloat() > timestamp
-    
-def TimeHasPassedPrecise( precise_timestamp ):
-    
-    return GetNowPrecise() > precise_timestamp
-    
-def TimeUntil( timestamp ):
-    
-    return timestamp - GetNow()
-    
+
 def BaseToHumanBytes( size, sig_figs = 3 ):
     
     #
@@ -1732,47 +1185,13 @@ def ToHumanInt( num ):
     
     return text
     
-def WaitForProcessToFinish( p, timeout ):
-    
-    started = GetNow()
-    
-    while p.poll() is None:
-        
-        if TimeHasPassed( started + timeout ):
-            
-            p.kill()
-            
-            raise Exception( 'Process did not finish within ' + ToHumanInt( timeout ) + ' seconds!' )
-            
-        
-        time.sleep( 2 )
-        
-    
+
 class HydrusYAMLBase( yaml.YAMLObject ):
     
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
     
-class BigJobPauser( object ):
-    
-    def __init__( self, period = 10, wait_time = 0.1 ):
-        
-        self._period = period
-        self._wait_time = wait_time
-        
-        self._next_pause = GetNow() + self._period
-        
-    
-    def Pause( self ):
-        
-        if TimeHasPassed( self._next_pause ):
-            
-            time.sleep( self._wait_time )
-            
-            self._next_pause = GetNow() + self._period
-            
-        
-    
+
 class Call( object ):
     
     def __init__( self, func, *args, **kwargs ):

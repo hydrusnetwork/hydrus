@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -57,7 +58,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 pretty_max_allowed = '{} requests'.format( HydrusData.ToHumanInt( max_allowed ) )
                 
             
-            pretty_time_delta = HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
+            pretty_time_delta = HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta )
             
             result = {}
             
@@ -112,7 +113,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
-        pretty_time_delta = HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
+        pretty_time_delta = HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta )
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
             

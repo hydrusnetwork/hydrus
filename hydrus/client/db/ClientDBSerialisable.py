@@ -10,6 +10,7 @@ from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.db import ClientDBModule
@@ -130,12 +131,12 @@ class MaintenanceTracker( object ):
     
     def HashedSerialisableMaintenanceDue( self ):
         
-        return HydrusData.TimeHasPassed( self._last_hashed_serialisable_maintenance + 86400 ) or self._total_new_hashed_serialisable_bytes > 512 * 1048576
+        return HydrusTime.TimeHasPassed( self._last_hashed_serialisable_maintenance + 86400 ) or self._total_new_hashed_serialisable_bytes > 512 * 1048576
         
     
     def NotifyHashedSerialisableMaintenanceDone( self ):
         
-        self._last_hashed_serialisable_maintenance = HydrusData.GetNow()
+        self._last_hashed_serialisable_maintenance = HydrusTime.GetNow()
         self._total_new_hashed_serialisable_bytes = 0
         
     
@@ -705,7 +706,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
             if force_timestamp is None:
                 
-                object_timestamp = HydrusData.GetNow()
+                object_timestamp = HydrusTime.GetNow()
                 
                 if store_backups:
                     

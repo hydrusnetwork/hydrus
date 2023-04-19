@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
@@ -321,9 +322,9 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         
         if HG.autocomplete_delay_mode:
             
-            time_to_stop = HydrusData.GetNowFloat() + 3.0
+            time_to_stop = HydrusTime.GetNowFloat() + 3.0
             
-            while not HydrusData.TimeHasPassedFloat( time_to_stop ):
+            while not HydrusTime.TimeHasPassedFloat( time_to_stop ):
                 
                 time.sleep( 0.1 )
                 
@@ -355,7 +356,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
                     
                     showed_bad_tag_error = True
                     
-                    HydrusData.ShowText( 'Hey, you seem to have an invalid tag in view right now! Please run the \'repair invalid tags\' routine under the \'database\' menu asap!' )
+                    HydrusData.ShowText( 'Hey, you seem to have an invalid tag in view right now! Please run the \'fix invalid tags\' routine under the \'database\' menu asap!' )
                     
                 
                 continue

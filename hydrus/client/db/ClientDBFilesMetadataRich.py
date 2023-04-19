@@ -4,6 +4,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -253,7 +254,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                note = 'Deleted from the client {} ({}), which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), file_deletion_reason, HydrusData.BaseTimestampToPrettyTimeDelta( timestamp ) )
+                note = 'Deleted from the client {} ({}), which was {} before this check.'.format( HydrusTime.TimestampToPrettyTime( timestamp ), file_deletion_reason, HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp ) )
                 
             
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
@@ -265,7 +266,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             
             timestamp = result
             
-            note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.BaseTimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
+            note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusTime.TimestampToPrettyTime( timestamp ), HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
@@ -278,7 +279,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             
             mime = self.modules_files_metadata_basic.GetMime( hash_id )
             
-            note = 'Imported at {}, which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.BaseTimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
+            note = 'Imported at {}, which was {} before this check.'.format( HydrusTime.TimestampToPrettyTime( timestamp ), HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
             return ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, mime = mime, note = prefix + note )
             

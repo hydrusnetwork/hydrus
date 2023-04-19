@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -249,7 +250,7 @@ class FileViewingStatsManager( object ):
         
         self._pending_updates = {}
         
-        self._last_update = HydrusData.GetNow()
+        self._last_update = HydrusTime.GetNow()
         
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         

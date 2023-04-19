@@ -1,6 +1,7 @@
 import os
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -8,6 +9,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
+from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataMigrationCore
 from hydrus.client.metadata import ClientTags
@@ -266,6 +268,101 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS ] = SingleFileMetadataImporterMediaTags
+
+class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia, HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TIMESTAMPS
+    SERIALISABLE_NAME = 'Metadata Single File Importer Media Timestamps'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, string_processor = None, timestamp_data_stub = None ):
+        
+        if string_processor is None:
+            
+            string_processor = ClientStrings.StringProcessor()
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        
+        if timestamp_data_stub is None:
+            
+            timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
+            
+        
+        self._timestamp_data_stub = timestamp_data_stub
+        
+    
+    def _GetSerialisableInfo( self ):
+    
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
+        serialisable_timestamp_data_stub = self._timestamp_data_stub.GetSerialisableTuple()
+        
+        return ( serialisable_string_processor, serialisable_timestamp_data_stub )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_string_processor, serialisable_timestamp_data_stub ) = serialisable_info
+        
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+        self._timestamp_data_stub = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_timestamp_data_stub )
+        
+    
+    def GetExampleStrings( self ):
+        
+        examples = [
+            '1681682717'
+        ]
+        
+        return examples
+        
+    
+    def GetTimestampDataStub( self ) -> ClientTime.TimestampData:
+        
+        return self._timestamp_data_stub
+        
+    
+    def Import( self, media_result: ClientMediaResult.MediaResult ):
+        
+        rows = []
+        
+        timestamp = media_result.GetTimestampsManager().GetTimestampFromStub( self._timestamp_data_stub )
+        
+        if timestamp is not None:
+            
+            rows.append( str( timestamp ) )
+            
+        
+        if self._string_processor.MakesChanges():
+            
+            rows = self._string_processor.ProcessStrings( rows )
+            
+        
+        return rows
+        
+    
+    def SetTimestampDataStub( self, timestamp_data_stub: ClientTime.TimestampData ):
+        
+        self._timestamp_data_stub = timestamp_data_stub
+        
+    
+    def ToString( self ) -> str:
+        
+        if self._string_processor.MakesChanges():
+            
+            full_munge_text = ', applying {}'.format( self._string_processor.ToString() )
+            
+        else:
+            
+            full_munge_text = ''
+            
+        
+        return '{} from media{}'.format( self._timestamp_data_stub, full_munge_text )
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TIMESTAMPS ] = SingleFileMetadataImporterMediaTimestamps
 
 class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, HydrusSerialisable.SerialisableBase ):
     

@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -129,7 +130,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def _SerialisableChangeMade( self ):
         
-        self._last_serialisable_change_timestamp = HydrusData.GetNow()
+        self._last_serialisable_change_timestamp = HydrusTime.GetNow()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -668,7 +669,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def _CheckFolder( self, job_key ):
+    def _CheckFolder( self, job_key: ClientThreading.JobKey ):
     
         ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ self._path ] )
         
@@ -695,7 +696,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._file_seed_cache.AddFileSeeds( file_seeds )
         
-        self._last_checked = HydrusData.GetNow()
+        self._last_checked = HydrusTime.GetNow()
         self._check_now = False
         
     
@@ -718,7 +719,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         did_work = False
         
-        time_to_save = HydrusData.GetNow() + 600
+        time_to_save = HydrusTime.GetNow() + 600
         
         num_files_imported = 0
         presentation_hashes = []
@@ -745,11 +746,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             did_work = True
             
-            if HydrusData.TimeHasPassed( time_to_save ):
+            if HydrusTime.TimeHasPassed( time_to_save ):
                 
                 HG.client_controller.WriteSynchronous( 'serialisable', self )
                 
-                time_to_save = HydrusData.GetNow() + 600
+                time_to_save = HydrusTime.GetNow() + 600
                 
             
             gauge_num_done = num_files_imported + 1
@@ -1045,9 +1046,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_occured = False
         
-        stop_time = HydrusData.GetNow() + 3600
+        stop_time = HydrusTime.GetNow() + 3600
         
         job_key = ClientThreading.JobKey( pausable = False, cancellable = True, stop_time = stop_time )
+        
+        popup_desired = self._show_working_popup or self._check_now
         
         try:
             
@@ -1065,11 +1068,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             job_key.SetStatusTitle( 'import folder - ' + self._name )
             
             due_by_check_now = self._check_now
-            due_by_period = self._check_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
+            due_by_period = self._check_regularly and HydrusTime.TimeHasPassed( self._last_checked + self._period )
             
             if due_by_check_now or due_by_period:
                 
-                if not pubbed_job_key and self._show_working_popup:
+                if not pubbed_job_key and popup_desired:
                     
                     HG.client_controller.pub( 'message', job_key )
                     
@@ -1085,7 +1088,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if file_seed is not None:
                 
-                if not pubbed_job_key and self._show_working_popup:
+                if not pubbed_job_key and popup_desired:
                     
                     HG.client_controller.pub( 'message', job_key )
                     

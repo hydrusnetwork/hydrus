@@ -5,11 +5,14 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -561,12 +564,6 @@ class DateTimeCtrl( QW.QWidget ):
         qt_datetime = QC.QDateTime( qt_date, qt_time )
         
         now = QC.QDateTime.currentDateTime()
-        epoch = QC.QDateTime.fromSecsSinceEpoch( 0 )
-        
-        if qt_datetime < epoch:
-            
-            qt_datetime = epoch
-            
         
         if self._only_past_dates and qt_datetime > now:
             
@@ -638,7 +635,7 @@ class TimeDeltaButton( QW.QPushButton ):
             
         else:
             
-            text = HydrusData.TimeDeltaToPrettyTimeDelta( value )
+            text = HydrusTime.TimeDeltaToPrettyTimeDelta( value )
             
         
         self.setText( text )
@@ -893,6 +890,202 @@ class TimeDeltaCtrl( QW.QWidget ):
             
         
         self._UpdateEnables()
+        
+    
+
+class TimestampDataStubCtrl( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent, timestamp_data_stub = None ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        if timestamp_data_stub is None:
+            
+            timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
+            
+        
+        #
+        
+        self._timestamp_type = ClientGUICommon.BetterChoice( self )
+        
+        for timestamp_type in [ HC.TIMESTAMP_TYPE_ARCHIVED, HC.TIMESTAMP_TYPE_MODIFIED_FILE, HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_DELETED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_LAST_VIEWED ]:
+            
+            label = HC.timestamp_type_str_lookup[ timestamp_type ]
+            
+            self._timestamp_type.addItem( label, timestamp_type )
+            
+        
+        #
+        
+        self._current_file_service = ClientGUICommon.BetterChoice( self )
+        
+        for service in HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES ):
+            
+            self._current_file_service.addItem( service.GetName(), service.GetServiceKey() )
+            
+        
+        #
+        
+        self._deleted_file_service = ClientGUICommon.BetterChoice( self )
+        
+        for service in HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES_WITH_DELETE_RECORD ):
+            
+            self._deleted_file_service.addItem( service.GetName(), service.GetServiceKey() )
+            
+        
+        #
+        
+        self._canvas_type = ClientGUICommon.BetterChoice( self )
+        
+        for canvas_type in [ CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ]:
+            
+            self._canvas_type.addItem( CC.canvas_type_str_lookup[ canvas_type ], canvas_type )
+            
+        
+        #
+        
+        self._domain_panel = QW.QWidget( self )
+        
+        self._domain = QW.QLineEdit( self._domain_panel )
+        
+        rows = []
+        
+        rows.append( ( 'domain: ', self._domain ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._domain_panel, rows )
+        
+        self._domain_panel.setLayout( gridbox )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._timestamp_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._current_file_service, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._deleted_file_service, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._canvas_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._domain_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 1 )
+        
+        self.setLayout( vbox )
+        
+        self._SetValue( timestamp_data_stub )
+        
+        self._TimestampTypeChanged()
+        
+        self._timestamp_type.currentIndexChanged.connect( self._TimestampTypeChanged )
+        
+    
+    def _SetValue( self, timestamp_data_stub: ClientTime.TimestampData ):
+        
+        timestamp_type = timestamp_data_stub.timestamp_type
+        
+        self._timestamp_type.SetValue( timestamp_type )
+        
+        location = timestamp_data_stub.location
+        
+        if timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+            
+            if timestamp_type == HC.TIMESTAMP_TYPE_IMPORTED:
+                
+                self._current_file_service.SetValue( location )
+                
+            else:
+                
+                self._deleted_file_service.SetValue( location )
+                
+            
+        elif timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+            
+            self._canvas_type.SetValue( location )
+            
+        elif timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+            
+            self._domain.setText( location )
+            
+        
+    
+    def _TimestampTypeChanged( self ):
+        
+        self._current_file_service.setVisible( False )
+        self._deleted_file_service.setVisible( False )
+        self._canvas_type.setVisible( False )
+        self._domain_panel.setVisible( False )
+        
+        timestamp_type = self._timestamp_type.GetValue()
+        
+        if timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+            
+            if timestamp_type == HC.TIMESTAMP_TYPE_IMPORTED:
+                
+                self._current_file_service.setVisible( True )
+                
+            else:
+                
+                self._deleted_file_service.setVisible( True )
+                
+            
+        elif timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+            
+            self._canvas_type.setVisible( True )
+            
+        elif timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+            
+            self._domain_panel.setVisible( True )
+            
+        
+    
+    def GetValue( self ) -> ClientTime.TimestampData:
+        
+        timestamp_type = self._timestamp_type.GetValue()
+        
+        if timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
+            
+            timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( timestamp_type )
+            
+        else:
+            
+            if timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+                
+                if timestamp_type == HC.TIMESTAMP_TYPE_IMPORTED:
+                    
+                    location = self._current_file_service.GetValue()
+                    
+                else:
+                    
+                    location = self._deleted_file_service.GetValue()
+                    
+                
+            elif timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+                
+                location = self._canvas_type.GetValue()
+                
+            elif timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+                
+                location = self._domain.text()
+                
+                if location == '':
+                    
+                    raise HydrusExceptions.VetoException( 'You have to enter a domain!' )
+                    
+                
+            else:
+                
+                raise HydrusExceptions.VetoException( 'Unknown timestamp type!' )
+                
+            
+            timestamp_data_stub = ClientTime.TimestampData( timestamp_type = timestamp_type, location = location )
+            
+        
+        return timestamp_data_stub
+        
+    
+    def SetValue( self, timestamp_data_stub: ClientTime.TimestampData ):
+        
+        self._SetValue( timestamp_data_stub )
         
     
 

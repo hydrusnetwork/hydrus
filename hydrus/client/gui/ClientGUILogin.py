@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
@@ -555,7 +556,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
             
-            if not HydrusData.TimeHasPassed( no_work_until ) or no_work_until_reason != '':
+            if not HydrusTime.TimeHasPassed( no_work_until ) or no_work_until_reason != '':
                 
                 return True
                 
@@ -659,7 +660,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if login_expiry is None:
             
-            sort_login_expiry = HydrusData.GetNow() + 45 * 60
+            sort_login_expiry = HydrusTime.GetNow() + 45 * 60
             
         else:
             
@@ -668,13 +669,13 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sort_logged_in = ( logged_in, sort_login_expiry )
         
-        if HydrusData.TimeHasPassed( no_work_until ):
+        if HydrusTime.TimeHasPassed( no_work_until ):
             
             pretty_no_work_until = ''
             
         else:
             
-            pretty_no_work_until = '{} - {}'.format( HydrusData.ConvertTimestampToPrettyExpires( no_work_until ), no_work_until_reason )
+            pretty_no_work_until = '{} - {}'.format( HydrusTime.TimestampToPrettyExpires( no_work_until ), no_work_until_reason )
             
         
         pretty_login_domain = login_domain
@@ -699,7 +700,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                pretty_login_expiry = HydrusData.ConvertTimestampToPrettyExpires( login_expiry )
+                pretty_login_expiry = HydrusTime.TimestampToPrettyExpires( login_expiry )
                 
             
             pretty_logged_in = 'yes - {}'.format( pretty_login_expiry )

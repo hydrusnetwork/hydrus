@@ -3,6 +3,7 @@ import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMediaResult
@@ -111,7 +112,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                return HydrusData.GetNow() + self._never_slower_than
+                return HydrusTime.GetNow() + self._never_slower_than
                 
             
         elif self._never_faster_than == self._never_slower_than:
@@ -125,7 +126,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
                 next_check_time = last_next_check_time
                 
             
-            while HydrusData.TimeHasPassed( next_check_time ):
+            while HydrusTime.TimeHasPassed( next_check_time ):
                 
                 next_check_time += self._never_slower_than
                 
@@ -190,7 +191,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
             ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
             
-            pretty_current_velocity += HydrusData.ToHumanInt( current_files_found ) + ' files in previous ' + HydrusData.TimeDeltaToPrettyTimeDelta( current_time_delta )
+            pretty_current_velocity += HydrusData.ToHumanInt( current_files_found ) + ' files in previous ' + HydrusTime.TimeDeltaToPrettyTimeDelta( current_time_delta )
             
         
         return pretty_current_velocity
@@ -205,11 +206,11 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._never_faster_than == self._never_slower_than:
             
-            timing_statement = 'Checking every ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + '.'
+            timing_statement = 'Checking every ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + '.'
             
         else:
             
-            timing_statement = 'Trying to get ' + HydrusData.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
+            timing_statement = 'Trying to get ' + HydrusData.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
             
         
         ( death_files_found, death_time_delta ) = self._death_file_velocity
@@ -220,7 +221,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            death_statement = 'Stopping if file velocity falls below ' + HydrusData.ToHumanInt( death_files_found ) + ' files per ' + HydrusData.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
+            death_statement = 'Stopping if file velocity falls below ' + HydrusData.ToHumanInt( death_files_found ) + ' files per ' + HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
             
         
         return timing_statement + os.linesep * 2 + death_statement

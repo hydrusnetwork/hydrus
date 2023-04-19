@@ -16,6 +16,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
 
@@ -124,7 +125,7 @@ def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
     
 def CopyAndMergeTree( source, dest ):
     
-    pauser = HydrusData.BigJobPauser()
+    pauser = HydrusThreading.BigJobPauser()
     
     MakeSureDirectoryExists( dest )
     
@@ -509,22 +510,37 @@ def MakeSureDirectoryExists( path ):
     
     os.makedirs( path, exist_ok = True )
     
+
+def FileModifiedTimeIsOk( mtime: int ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # this is 1980-01-01 UTC, before which Windows can have trouble copying lmaoooooo
+        # This is the 'DOS' epoch
+        if mtime < 315532800:
+            
+            return False
+            
+        
+    else:
+        
+        # Epoch obviously
+        if mtime < 0:
+            
+            return False
+            
+        
+    
+    return True
+    
+
 def safe_copy2( source, dest ):
     
     copy_metadata = True
     
-    if HC.PLATFORM_WINDOWS:
-        
-        mtime = os.path.getmtime( source )
-        
-        # this is 1980-01-01 UTC, before which Windows can have trouble copying lmaoooooo
-        if mtime < 315532800:
-            
-            copy_metadata = False
-            
-        
+    mtime = os.path.getmtime( source )
     
-    if copy_metadata:
+    if FileModifiedTimeIsOk( mtime ):
         
         # this overwrites on conflict without hassle
         shutil.copy2( source, dest )
@@ -577,7 +593,7 @@ def MergeTree( source, dest, text_update_hook = None ):
         raise Exception( f'Woah, "{source}" and "{dest}" are the same directory!' )
         
     
-    pauser = HydrusData.BigJobPauser()
+    pauser = HydrusThreading.BigJobPauser()
     
     if not os.path.exists( dest ):
         
@@ -684,7 +700,7 @@ def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None 
         return
         
     
-    pauser = HydrusData.BigJobPauser()
+    pauser = HydrusThreading.BigJobPauser()
     
     MakeSureDirectoryExists( dest )
     

@@ -8,6 +8,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -351,6 +352,43 @@ class TimestampsManager( object ):
         return self._GetFileServiceTimestamp( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
         
     
+    def GetTimestampFromStub( self, timestamp_data_stub: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+        
+        if timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+            
+            if timestamp_data_stub.location is None:
+                
+                return None
+                
+            
+            return self._GetDomainModifiedTimestamp( timestamp_data_stub.location )
+            
+        elif timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+            
+            if timestamp_data_stub.location is None:
+                
+                return None
+                
+            
+            return self._GetLastViewedTimestamp( timestamp_data_stub.location )
+            
+        elif timestamp_data_stub.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+            
+            if timestamp_data_stub.location is None:
+                
+                return None
+                
+            
+            return self._GetFileServiceTimestamp( timestamp_data_stub.timestamp_type, timestamp_data_stub.location )
+            
+        elif timestamp_data_stub.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
+            
+            return self._GetSimpleTimestamp( timestamp_data_stub.timestamp_type )
+            
+        
+        return None
+        
+    
     def SetArchivedTimestamp( self, timestamp: int ):
         
         self._SetSimpleTimestamp( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp )
@@ -435,7 +473,7 @@ class TimestampsManager( object ):
             
             self._SetLastViewedTimestamp( timestamp_data.location, timestamp_data.timestamp )
             
-        elif timestamp_data in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
+        elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
             if timestamp_data.location is None:
                 
@@ -563,10 +601,10 @@ class FileViewingStatsManager( object ):
             
         else:
             
-            last_viewed_string = 'last {}'.format( HydrusData.TimestampToPrettyTimeDelta( max( last_viewed_times ) ) )
+            last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( max( last_viewed_times ) ) )
             
         
-        return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusData.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
         
     
     def GetTimestampsManager( self ) -> TimestampsManager:
@@ -696,7 +734,7 @@ class LocationsManager( object ):
         
         if forced_import_time is None:
             
-            import_time = HydrusData.GetNow()
+            import_time = HydrusTime.GetNow()
             
         else:
             
@@ -797,7 +835,7 @@ class LocationsManager( object ):
         
         if make_a_delete_record:
             
-            self._timestamps_manager.SetDeletedTimestamp( service_key, HydrusData.GetNow() )
+            self._timestamps_manager.SetDeletedTimestamp( service_key, HydrusTime.GetNow() )
             self._timestamps_manager.SetPreviouslyImportedTimestamp( service_key, previously_imported_timestamp )
             
             self._deleted.add( service_key )
@@ -1043,7 +1081,7 @@ class LocationsManager( object ):
                     
                     self.inbox = False
                     
-                    self._timestamps_manager.SetArchivedTimestamp( HydrusData.GetNow() )
+                    self._timestamps_manager.SetArchivedTimestamp( HydrusTime.GetNow() )
                     
                 
             elif action == HC.CONTENT_UPDATE_INBOX:

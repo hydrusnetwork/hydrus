@@ -2,7 +2,9 @@ import os
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTagArchive
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
@@ -25,7 +27,7 @@ def GetBasicSpeedStatement( num_done, time_started_precise ):
         
     else:
         
-        time_taken = HydrusData.GetNowPrecise() - time_started_precise
+        time_taken = HydrusTime.GetNowPrecise() - time_started_precise
         
         rows_s = int( num_done / time_taken )
         
@@ -80,7 +82,7 @@ class MigrationDestinationHTA( MigrationDestination ):
         
         self._hta.CommitBigJob()
         
-        if HydrusData.TimeHasPassed( self._time_started + 120 ):
+        if HydrusTime.TimeHasPassed( self._time_started + 120 ):
             
             self._hta.Optimise()
             
@@ -92,7 +94,7 @@ class MigrationDestinationHTA( MigrationDestination ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         num_done = 0
         
@@ -110,7 +112,7 @@ class MigrationDestinationHTA( MigrationDestination ):
     
     def Prepare( self ):
         
-        self._time_started = HydrusData.GetNow()
+        self._time_started = HydrusTime.GetNow()
         
         self._hta = HydrusTagArchive.HydrusTagArchive( self._path )
         
@@ -141,7 +143,7 @@ class MigrationDestinationHTPA( MigrationDestination ):
         
         self._htpa.CommitBigJob()
         
-        if HydrusData.TimeHasPassed( self._time_started + 120 ):
+        if HydrusTime.TimeHasPassed( self._time_started + 120 ):
             
             self._htpa.Optimise()
             
@@ -153,7 +155,7 @@ class MigrationDestinationHTPA( MigrationDestination ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = source.GetSomeData()
         
@@ -166,7 +168,7 @@ class MigrationDestinationHTPA( MigrationDestination ):
     
     def Prepare( self ):
         
-        self._time_started = HydrusData.GetNow()
+        self._time_started = HydrusTime.GetNow()
         
         self._htpa = HydrusTagArchive.HydrusTagPairArchive( self._path )
         
@@ -204,7 +206,7 @@ class MigrationDestinationListMappings( MigrationDestinationList ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         num_done = 0
         
@@ -224,7 +226,7 @@ class MigrationDestinationListPairs( MigrationDestinationList ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = source.GetSomeData()
         
@@ -260,7 +262,7 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = source.GetSomeData()
         
@@ -309,7 +311,7 @@ class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
     
     def DoSomeWork( self, source ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = source.GetSomeData()
         
@@ -530,7 +532,7 @@ class MigrationSourceHTA( MigrationSource ):
     
     def GetSomeData( self ):
         
-        data = HydrusData.PullNFromIterator( self._iterator, 256 )
+        data = HydrusLists.PullNFromIterator( self._iterator, 256 )
         
         if len( data ) == 0:
             
@@ -626,7 +628,7 @@ class MigrationSourceHTPA( MigrationSource ):
     
     def GetSomeData( self ):
         
-        data = HydrusData.PullNFromIterator( self._iterator, 256 )
+        data = HydrusLists.PullNFromIterator( self._iterator, 256 )
         
         if len( data ) == 0:
             
@@ -666,7 +668,7 @@ class MigrationSourceList( MigrationSource ):
     
     def GetSomeData( self ):
         
-        some_data = HydrusData.PullNFromIterator( self._iterator, 5 )
+        some_data = HydrusLists.PullNFromIterator( self._iterator, 5 )
         
         if len( some_data ) == 0:
             

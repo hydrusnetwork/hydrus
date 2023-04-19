@@ -3,6 +3,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 SIMPLE_ARCHIVE_DELETE_FILTER_BACK = 0
 SIMPLE_ARCHIVE_DELETE_FILTER_DELETE = 1
@@ -667,7 +668,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 direction_s = 'back' if direction == -1 else 'forwards'
                 
-                ms_s = HydrusData.TimeDeltaToPrettyTimeDelta( ms / 1000 )
+                ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
                 
                 s = '{} ({} {})'.format( s, direction_s, ms_s )
                 

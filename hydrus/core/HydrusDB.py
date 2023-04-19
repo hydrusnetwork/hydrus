@@ -13,6 +13,8 @@ from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusProfiling
+from hydrus.core import HydrusTime
 
 def CheckCanVacuum( db_path, stop_time = None ):
     
@@ -40,9 +42,9 @@ def CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_tim
         
         time_i_will_have_to_start = stop_time - approx_vacuum_duration
         
-        if HydrusData.TimeHasPassed( time_i_will_have_to_start ):
+        if HydrusTime.TimeHasPassed( time_i_will_have_to_start ):
             
-            raise Exception( 'I believe you need about ' + HydrusData.TimeDeltaToPrettyTimeDelta( approx_vacuum_duration ) + ' to vacuum, but there is not enough time allotted.' )
+            raise Exception( 'I believe you need about ' + HydrusTime.TimeDeltaToPrettyTimeDelta( approx_vacuum_duration ) + ' to vacuum, but there is not enough time allotted.' )
             
         
     
@@ -826,7 +828,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
                         
                         summary = 'Profiling db job: ' + job.ToString()
                         
-                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals(), min_duration_ms = HG.db_profile_min_job_time_ms )
+                        HydrusProfiling.Profile( summary, 'self._ProcessJob( job )', globals(), locals(), min_duration_ms = HG.db_profile_min_job_time_ms )
                         
                     else:
                         

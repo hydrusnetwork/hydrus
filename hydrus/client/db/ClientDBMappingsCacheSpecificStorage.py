@@ -6,6 +6,8 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMaintenance
@@ -430,7 +432,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         BLOCK_SIZE = 10000
         
-        for ( i, block_of_hash_ids ) in enumerate( HydrusData.SplitListIntoChunks( hash_ids, BLOCK_SIZE ) ):
+        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( hash_ids, BLOCK_SIZE ) ):
             
             with self._MakeTemporaryIntegerTable( block_of_hash_ids, 'hash_id' ) as temp_hash_id_table_name:
                 

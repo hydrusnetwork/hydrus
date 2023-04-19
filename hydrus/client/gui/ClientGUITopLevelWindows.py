@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
@@ -604,9 +605,9 @@ class Frame( QW.QWidget ):
         
     
 class MainFrame( QW.QMainWindow ):
-
+    
     def __init__( self, parent, title ):
-
+        
         QW.QMainWindow.__init__( self, parent )
         
         self.setWindowTitle( title )

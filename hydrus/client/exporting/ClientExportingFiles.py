@@ -7,14 +7,17 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSearch
+from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientTags
 
@@ -278,7 +281,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__(
         self,
@@ -293,9 +296,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         period = 3600,
         phrase = None,
         last_checked = 0,
-        paused = False,
         run_now = False,
-        last_error = ''
+        last_error = '',
+        show_working_popup = True
     ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
@@ -332,9 +335,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._period = period
         self._phrase = phrase
         self._last_checked = last_checked
-        self._paused = paused and not run_now
         self._run_now = run_now
         self._last_error = last_error
+        self._show_working_popup = show_working_popup
         
     
     def _GetSerialisableInfo( self ):
@@ -342,12 +345,40 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         serialisable_metadata_routers = self._metadata_routers.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error )
+        return (
+            self._path,
+            self._export_type,
+            self._delete_from_client_after_export,
+            self._export_symlinks,
+            serialisable_file_search_context,
+            serialisable_metadata_routers,
+            self._run_regularly,
+            self._period,
+            self._phrase,
+            self._last_checked,
+            self._run_now,
+            self._last_error,
+            self._show_working_popup
+        )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now, self._last_error ) = serialisable_info
+        (
+            self._path,
+            self._export_type,
+            self._delete_from_client_after_export,
+            self._export_symlinks,
+            serialisable_file_search_context,
+            serialisable_metadata_routers,
+            self._run_regularly,
+            self._period,
+            self._phrase,
+            self._last_checked,
+            self._run_now,
+            self._last_error,
+            self._show_working_popup
+        ) = serialisable_info
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
@@ -418,11 +449,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             return ( 6, new_serialisable_info )
             
-
+        
         if version == 6:
             
             ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error ) = old_serialisable_info
-
+            
             export_symlinks = False
             
             new_serialisable_info = ( path, export_type, delete_from_client_after_export, export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, paused, run_now, last_error )
@@ -430,30 +461,60 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 7, new_serialisable_info )
             
         
+        if version == 7:
+            
+            (
+                path,
+                export_type,
+                delete_from_client_after_export,
+                export_symlinks,
+                serialisable_file_search_context,
+                serialisable_metadata_routers,
+                run_regularly,
+                period,
+                phrase,
+                last_checked,
+                paused,
+                run_now,
+                last_error
+            ) = old_serialisable_info
+            
+            show_working_popup = True
+            
+            if paused:
+                
+                run_regularly = False
+                
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, export_symlinks, serialisable_file_search_context, serialisable_metadata_routers, run_regularly, period, phrase, last_checked, run_now, last_error, show_working_popup )
+            
+            return ( 8, new_serialisable_info )
+            
+        
     
-    def _DoExport( self ):
+    def _DoExport( self, job_key: ClientThreading.JobKey ):
         
         query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context, apply_implicit_limit = False )
         
         media_results = []
         
-        i = 0
+        CHUNK_SIZE = 256
         
-        base = 256
-        
-        while i < len( query_hash_ids ):
+        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( query_hash_ids, 256 ) ):
+            
+            job_key.SetStatusText( 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * CHUNK_SIZE, len( query_hash_ids ) ) ) )
+            
+            if job_key.IsCancelled():
+                
+                return
+                
             
             if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 
             
-            if i == 0: ( last_i, i ) = ( 0, base )
-            else: ( last_i, i ) = ( i, i + base )
-            
-            sub_query_hash_ids = query_hash_ids[ last_i : i ]
-            
-            more_media_results = HG.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
+            more_media_results = HG.client_controller.Read( 'media_results_from_ids', block_of_hash_ids )
             
             media_results.extend( more_media_results )
             
@@ -479,6 +540,13 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         for ( i, media_result ) in enumerate( media_results ):
             
+            job_key.SetStatusText( 'exporting: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
+            
+            if job_key.IsCancelled():
+                
+                return
+                
+            
             if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
@@ -486,7 +554,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             hash = media_result.GetHash()
             mime = media_result.GetMime()
-            size = media_result.GetSize()
             
             try:
                 
@@ -569,7 +636,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             deletee_paths = previous_paths.difference( sync_paths )
             
-            for deletee_path in deletee_paths:
+            for ( i, deletee_path ) in enumerate( deletee_paths ):
+                
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
+                job_key.SetStatusText( 'delete-synchronising: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( deletee_paths ) ) ) )
                 
                 ClientPaths.DeletePath( deletee_path )
                 
@@ -577,6 +651,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             deletee_dirs = set()
             
             for ( root, dirnames, filenames ) in os.walk( self._path, topdown = False ):
+                
+                if job_key.IsCancelled():
+                    
+                    return
+                    
                 
                 if root == self._path:
                     
@@ -615,7 +694,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             service_keys_to_deletee_hashes = collections.defaultdict( list )
             
-            for media_result in media_results:
+            for ( i, media_result ) in enumerate( media_results ):
+                
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
+                job_key.SetStatusText( 'delete-prepping: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
                 
                 if media_result.IsDeleteLocked():
                     
@@ -636,9 +722,18 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( service_key, deletee_hashes ) in service_keys_to_deletee_hashes.items():
                 
-                chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                CHUNK_SIZE = 64
                 
-                for chunk_of_hashes in chunks_of_hashes:
+                chunks_of_hashes = HydrusLists.SplitListIntoChunks( deletee_hashes, CHUNK_SIZE )
+                
+                for ( i, chunk_of_hashes ) in enumerate( chunks_of_hashes ):
+                    
+                    if job_key.IsCancelled():
+                        
+                        return
+                        
+                    
+                    job_key.SetStatusText( 'deleting: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * CHUNK_SIZE, len( deletee_hashes ) ) ) )
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
                     
@@ -647,17 +742,23 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
+        job_key.SetStatusText( 'Done!' )
+        
     
     def DoWork( self ):
         
-        regular_run_due = self._run_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
+        regular_run_due = self._run_regularly and HydrusTime.TimeHasPassed( self._last_checked + self._period )
         
-        good_to_go = ( regular_run_due or self._run_now ) and not self._paused
+        good_to_go = regular_run_due or self._run_now
         
         if not good_to_go:
             
             return
             
+        
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
+        
+        job_key.SetStatusTitle( 'export folder - ' + self._name )
         
         try:
             
@@ -676,15 +777,33 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'The path, "{}", is not a directory!'.format( self._path ) )
                 
             
-            self._DoExport()
+            popup_desired = self._show_working_popup or self._run_now
+            
+            if popup_desired:
+                
+                HG.client_controller.pub( 'message', job_key )
+                
+            
+            self._DoExport( job_key )
             
             self._last_error = ''
             
         except Exception as e:
             
-            self._paused = True
+            if self._run_regularly:
+                
+                self._run_regularly = False
+                
+                pause_str = 'It has been set to not run regularly.'
+                
+            else:
+                
+                pause_str = ''
+                
             
-            HydrusData.ShowText( 'The export folder "' + self._name + '" encountered an error! It has now been paused. Please check the folder\'s settings and maybe report to hydrus dev if the error is complicated! The error follows:' )
+            message = f'The export folder "{self._name}" encountered an error! {pause_str}Please check the folder\'s settings and maybe report to hydrus dev if the error is complicated! The error follows:'
+            
+            HydrusData.ShowText( message )
             
             HydrusData.ShowException( e )
             
@@ -692,10 +811,12 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
         finally:
             
-            self._last_checked = HydrusData.GetNow()
+            self._last_checked = HydrusTime.GetNow()
             self._run_now = False
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
+            
+            job_key.Delete()
             
         
     
@@ -711,13 +832,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def RunNow( self ):
         
-        self._paused = False
         self._run_now = True
+        
+    
+    def ShowWorkingPopup( self ) -> bool:
+        
+        return self._show_working_popup
         
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, self._file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
+        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._export_symlinks, self._file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._run_now )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder

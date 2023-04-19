@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -1046,7 +1047,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 network_infrastructure_errors = self._second_level_domains_to_network_infrastructure_errors[ domain ]
                 
-                network_infrastructure_errors = [ timestamp for timestamp in network_infrastructure_errors if not HydrusData.TimeHasPassed( timestamp + error_time_delta ) ]
+                network_infrastructure_errors = [ timestamp for timestamp in network_infrastructure_errors if not HydrusTime.TimeHasPassed( timestamp + error_time_delta ) ]
                 
                 self._second_level_domains_to_network_infrastructure_errors[ domain ] = network_infrastructure_errors
                 
@@ -1704,7 +1705,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            self._second_level_domains_to_network_infrastructure_errors[ domain ].append( HydrusData.GetNow() )
+            self._second_level_domains_to_network_infrastructure_errors[ domain ].append( HydrusTime.GetNow() )
             
         
     

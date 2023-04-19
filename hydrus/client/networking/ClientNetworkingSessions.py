@@ -6,6 +6,7 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.networking import ClientNetworkingContexts
@@ -148,12 +149,12 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             self._network_contexts_to_session_timeouts[ network_context ] = 0
             
         
-        if HydrusData.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
+        if HydrusTime.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
             
             session.cookies.clear_session_cookies()
             
         
-        self._network_contexts_to_session_timeouts[ network_context ] = HydrusData.GetNow() + self.SESSION_TIMEOUT
+        self._network_contexts_to_session_timeouts[ network_context ] = HydrusTime.GetNow() + self.SESSION_TIMEOUT
         
         session.cookies.clear_expired_cookies()
         

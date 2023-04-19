@@ -12,8 +12,10 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -325,18 +327,18 @@ class ClientFilesManager( object ):
                 check_period = 60
                 
             
-            if HydrusData.TimeHasPassed( time_fetched + check_period ):
+            if HydrusTime.TimeHasPassed( time_fetched + check_period ):
                 
                 free_space = HydrusPaths.GetFreeSpace( location )
                 
-                self._locations_to_free_space[ location ] = ( free_space, HydrusData.GetNow() )
+                self._locations_to_free_space[ location ] = ( free_space, HydrusTime.GetNow() )
                 
             
         else:
             
             free_space = HydrusPaths.GetFreeSpace( location )
             
-            self._locations_to_free_space[ location ] = ( free_space, HydrusData.GetNow() )
+            self._locations_to_free_space[ location ] = ( free_space, HydrusTime.GetNow() )
             
         
         return free_space
@@ -878,7 +880,7 @@ class ClientFilesManager( object ):
                     
                     missing_prefixes = sorted( missing_dict[ missing_location ] )
                     
-                    missing_prefixes_string = '    ' + os.linesep.join( ( ', '.join( block ) for block in HydrusData.SplitListIntoChunks( missing_prefixes, 32 ) ) )
+                    missing_prefixes_string = '    ' + os.linesep.join( ( ', '.join( block ) for block in HydrusLists.SplitListIntoChunks( missing_prefixes, 32 ) ) )
                     
                     missing_string += os.linesep
                     missing_string += missing_location
@@ -1577,11 +1579,11 @@ class ClientFilesManager( object ):
                     
                     os.utime( path, ( existing_access_time, modified_timestamp ) )
                     
-                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusData.ConvertTimestampToPrettyTime( existing_modified_time ), HydrusData.ConvertTimestampToPrettyTime( modified_timestamp ) ))
+                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusTime.TimestampToPrettyTime( existing_modified_time ), HydrusTime.TimestampToPrettyTime( modified_timestamp ) ))
                     
                 except PermissionError:
                     
-                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusData.ConvertTimestampToPrettyTime( modified_timestamp ), path ) )
+                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusTime.TimestampToPrettyTime( modified_timestamp ), path ) )
                     
                 
             
@@ -2054,7 +2056,7 @@ class FilesMaintenanceManager( object ):
                 
                 if needed_to_dupe_the_file:
                     
-                    self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusData.GetNow() + ( 7 * 86400 ) )
+                    self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + ( 7 * 86400 ) )
                     
                 
             
@@ -2254,13 +2256,13 @@ class FilesMaintenanceManager( object ):
             return
             
         
-        next_gc_collect = HydrusData.GetNow() + 10
+        next_gc_collect = HydrusTime.GetNow() + 10
         
         try:
             
-            big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
+            big_pauser = HydrusThreading.BigJobPauser( wait_time = 0.8 )
             
-            last_time_jobs_were_cleared = HydrusData.GetNow()
+            last_time_jobs_were_cleared = HydrusTime.GetNow()
             cleared_jobs = []
             
             num_to_do = len( media_results )
@@ -2424,7 +2426,7 @@ class FilesMaintenanceManager( object ):
                         
                     
                 
-                if HydrusData.TimeHasPassed( last_time_jobs_were_cleared + 10 ) or len( cleared_jobs ) > 256:
+                if HydrusTime.TimeHasPassed( last_time_jobs_were_cleared + 10 ) or len( cleared_jobs ) > 256:
                     
                     self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
                     
@@ -2604,9 +2606,9 @@ class FilesMaintenanceManager( object ):
         
         try:
             
-            time_to_start = HydrusData.GetNow() + 15
+            time_to_start = HydrusTime.GetNow() + 15
             
-            while not HydrusData.TimeHasPassed( time_to_start ):
+            while not HydrusTime.TimeHasPassed( time_to_start ):
                 
                 check_shutdown()
                 

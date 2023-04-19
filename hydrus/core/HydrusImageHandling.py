@@ -32,6 +32,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 

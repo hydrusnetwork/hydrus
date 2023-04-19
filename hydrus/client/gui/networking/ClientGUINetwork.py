@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -126,7 +127,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateExpiresText( self ):
         
-        self._expires_st.setText( HydrusData.ConvertTimestampToPrettyExpires(self._expires) )
+        self._expires_st.setText( HydrusTime.TimestampToPrettyExpires(self._expires) )
         self._expires_st_utc.setText( str(self._expires) )
         
     
@@ -134,7 +135,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         time_delta = self._expires_time_delta.GetValue()
         
-        expires = HydrusData.GetNow() + time_delta
+        expires = HydrusTime.GetNow() + time_delta
         
         self._expires = expires
         
@@ -692,7 +693,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if waiting_estimate > 0:
             
-            pretty_blocked = HydrusData.TimeDeltaToPrettyTimeDelta( waiting_estimate )
+            pretty_blocked = HydrusTime.TimeDeltaToPrettyTimeDelta( waiting_estimate )
             
         else:
             
@@ -776,7 +777,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         help_text += os.linesep * 2
         help_text += 'There are two special ephemeral \'instance\' contexts, for downloaders and thread watchers. These represent individual queries, either a single gallery search or a single watched thread. It can be useful to set default rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
         help_text += os.linesep * 2
-        help_text += 'Please note that this system bases its calendar dates on UTC/GMT time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
+        help_text += 'Please note that this system bases its calendar dates on UTC time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
         help_text += os.linesep * 2
         help_text += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. If you want to throttle your client, the simplest way is to add a simple rule like \'500MB per day\' to the global context.'
         
@@ -1271,7 +1272,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             try:
                 
                 expiry = max( expires_numbers )
-                pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+                pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
                 
             except:
                 
@@ -1435,7 +1436,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
             path = '/'
-            expires = HydrusData.GetNow() + 30 * 86400
+            expires = HydrusTime.GetNow() + 30 * 86400
             
             panel = EditCookiePanel( dlg, name, value, domain, path, expires )
             
@@ -1476,7 +1477,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+            pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
             
         
         sort_expiry = ClientGUIListCtrl.SafeNoneInt( expiry )

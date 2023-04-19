@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 # the _win32, _linux, _osx stuff here is legacy, from when I used to bundle these exes. this cause anti-virus false positive wew
 
@@ -83,7 +84,7 @@ def GetExternalIP():
         RaiseMissingUPnPcError( 'fetch external IP' )
         
     
-    if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
+    if HydrusTime.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
         cmd = [ UPNPC_PATH, '-l' ]
         
@@ -100,7 +101,7 @@ def GetExternalIP():
             RaiseMissingUPnPcError( 'fetch external IP' )
             
         
-        HydrusData.WaitForProcessToFinish( p, 30 )
+        HydrusThreading.WaitForProcessToFinish( p, 30 )
         
         ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
         
@@ -130,7 +131,7 @@ def GetExternalIP():
                 
             
             EXTERNAL_IP[ 'ip' ] = external_ip_address
-            EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
+            EXTERNAL_IP[ 'time' ] = HydrusTime.GetNow()
             
         
     
@@ -162,7 +163,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
         RaiseMissingUPnPcError( 'add UPnP port forward' )
         
     
-    HydrusData.WaitForProcessToFinish( p, 30 )
+    HydrusThreading.WaitForProcessToFinish( p, 30 )
     
     ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
@@ -226,7 +227,7 @@ def GetUPnPMappings():
         RaiseMissingUPnPcError( 'get current UPnP port forward mappings' )
         
     
-    HydrusData.WaitForProcessToFinish( p, 30 )
+    HydrusThreading.WaitForProcessToFinish( p, 30 )
     
     ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
@@ -340,7 +341,7 @@ def RemoveUPnPMapping( external_port, protocol ):
         RaiseMissingUPnPcError( 'remove UPnP port forward' )
         
     
-    HydrusData.WaitForProcessToFinish( p, 30 )
+    HydrusThreading.WaitForProcessToFinish( p, 30 )
     
     ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     

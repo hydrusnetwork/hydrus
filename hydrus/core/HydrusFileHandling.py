@@ -14,6 +14,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
 

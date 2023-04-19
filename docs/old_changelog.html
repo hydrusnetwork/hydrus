@@ -35,6 +35,52 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_524"><a href="#version_524">version 524</a></h2>
+                    <ul>
+                        <li><h3>timestamp sidecars</h3></li>
+                        <li>the sidecars system now supports timestamps. it just uses the unix timestamp number, but if you need it, you can use string conversion to create a full datestring. each sidecar node only selects/sets that one timestamp, so this may get spammy if you want to migrate everything, but you can now migrate archived/imported/whatever time from one client to another! the content updates from sidecar imports apply immediately _after_ the file is fully imported, so it is safe and good to sidecar-import 'my files imported time' etc.. for new files, and it should all get set correctly, but obviously let me know otherwise. if you set 'archived time', the files have to be in an archived state immediately after import, which means importing and archiving them previously, or hitting 'archive all imports' on the respective file import options</li>
+                        <li>sidecars are getting complex, so I expect I will soon add a button that sets up a 'full' JSON sidecar import/export in one click, basically just spamming/sucking everything the sidecar system can do, pretty soon, so it is easier to set up larger migrations</li>
+                        <li><h3>timestamp merge</h3></li>
+                        <li>the duplicate merge options now have an action for 'sync file modified date?'. you can set so both files get their earliest (the new default for 'they are the same'), or that the earlier worse can be applied to the later better (the new default for 'this is better') (issue #1203)</li>
+                        <li>in the duplicate system, when URLs are merged, their respective domain-based timestamps are also merged according to the earliest, as above</li>
+                        <li><h3>more timestamps</h3></li>
+                        <li>hydrus now supports timestamps before 1970. should be good now, lol, back to 1AD (and my tests show BC dates seem to be working too?). it is probably a meme to apply a modified date of 1505 to some painting, but when I add timestamps to the API maybe we can have some fun. btw calendar calculations and timezones are hell on earth at times, and there's a decent chance that your pre-1970 dates may show up on hour out of phase in labels (a daylight savings time thing) of what you enter in some other area of UI. in either case, my code is not clever enough to apply DST schedules retroactively to older dates, so your search ranges may simply be an hour out back in 1953. it sounds stupid, but it may matter if we are talking midnight boundaries, so let me know how you find it</li>
+                        <li>when you set a new file modified date, the file on disk's modified date will only be updated if the date set is after 1980-01-01 (Windows) or 1970-01-01 (Linux) due to system limitations</li>
+                        <li>fixed a typo bug in last week's work that meant file service timestamp editing was not updating the media object (i.e. changes were not visible until a restart)</li>
+                        <li>fixed a bug where collections that contained files with delete timestamps were throwing errors on display. (they were calculating aggregate timestamp data wrong)</li>
+                        <li>I rejiggered how the 'is this timestamp sensible?' test applies. this test essentially discounts any timestamp before 1970-01-08 to catch any weird mis-parses and stop them nuking your aggregate modified timestamp values. it now won't apply to internal duplicate merge and so on, but it still applies when you parse timestamps in the downloader system, so you still can't parse anything pre-1970 for now</li>
+                        <li>one thing I noticed is my '5 years 1 months ago' calculation, which uses a fixed 30 day month and doesn't count the extra day of leap years, is showing obviously increasingly inaccurate numbers here. I'll fix it up</li>
+                        <li><h3>export folders</h3></li>
+                        <li>export folders can now show a popup while they work. there's a new checkbox for it in their edit UI. default is ON, so you'll start seeing popups for export folders that run in the background. this popup is cancellable, too, so you can now stop in-progress export runs if things seem wrong</li>
+                        <li>both import and export folders will force-show working popups whenever you trigger them manually</li>
+                        <li>export folders no longer have the weird and confusing 'paused' and 'run regularly?' duality. this was a legacy error handling thing, now cleaned up and merged into 'run regularly?'</li>
+                        <li>when 'run regularly?' is unchecked, the run period and new 'show popup while working regularly?' checkboxes are now disabled</li>
+                        <li><h3>misc</h3></li>
+                        <li>added 'system:ratio is square/portrait/landscape' nicer label aliases for =/taller/wider 1:1 ratio. I added them to the quick-select list on the edit panel, too. they also parse in the system predicate parser!</li>
+                        <li>I added a bit to the 'getting started with downloading' help page about getting access to difficult sites. I refer to Hydrus Companion as a good internal login solution, and link to yt-dlp, gallery-dl, and imgbrd-grabber with a little discussion on setting up external import workflows. I tried gallery-dl on twitter this week and it was excellent. it can also take your login credentials as either user/pass or cookies.txt (or pull cookies straight from firefox/safari) and give access to nsfw. since twitter has rapidly become a pain for us recently, I will be pointing people to gallery-dl for now</li>
+                        <li>fixed my Qt subclass definitions for PySide6 6.5.0, which strictly requires the Qt object to be the rightmost base class in multiple inheritance subclasses, wew. this his AUR users last week, I understand!</li>
+                        <li><h3>client api (and local booru lol)</h3></li>
+                        <li>if you set the Client API to not allow non-local connections, it now binds to 127.0.0.1 and ::1 specifically, which tell your OS we only want the loopback interface. this increases security, and on Windows _should_ mean it only does that first-time firewall dialog popup when 'allow non-local connections' is unchecked</li>
+                        <li>I brushed up the manage services UI for the Client API. the widgets all line up better now, and turning the service on and off isn't the awkward '[] do not run the service' any more</li>
+                        <li>fixed the 'disable idle mode if the client api does stuff' check, which was wired up wrong! also, the reset here now fires as a request starts, not when it is complete, meaning if you are already in idle mode, a client api request will now quickly cancel idle mode and hopefully free up any locked database situation promptly</li>
+                        <li><h3>boring cleanup and stuff</h3></li>
+                        <li>reworked all timestamp-datetime conversion to be happier with pre-1970 dates regardless of system/python support. it is broadly improved all around</li>
+                        <li>refactored all of the HydrusData time functions and much of ClientTime to a new HydrusTime module</li>
+                        <li>refactored the ClientData time stuff to ClientTime</li>
+                        <li>refactored some thread/process functions from HydrusData to HydrusThreading</li>
+                        <li>refactored some list splitting/throttling functions from HydrusData to a new HydrusLists module</li>
+                        <li>refactored the file filter out of ClientMedia and into the new ClientMediaFileFilter, and reworked things so the medialist filter jobs now happen at the filter level. this was probably done the wrong way around, but oh well</li>
+                        <li>expanded the new TimestampData object a bit, it can now give a nice descriptive string of itself</li>
+                        <li>wrote a new widget to edit TimestampData stubs</li>
+                        <li>wrote some unit tests for the new timestamp sidecar importer and exporter</li>
+                        <li>updated my multi-column list system to handle the deprecation of a column definition (today it was the 'paused' column in manage export folders list)</li>
+                        <li>it should also be able to handle new column definitions appearing</li>
+                        <li>fixed an error popup that still said 'run repair invalid tags' instead of 'run fix invalid tags'</li>
+                        <li>the FILE_SERVICES constant now holds the 'all deleted files' virtual domain. this domain keeps slipping my logic, so fingers crossed this helps. also means you can select it in 'system:file service' and stuff now</li>
+                        <li>misc cleaning and linting work</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_523"><a href="#version_523">version 523</a></h2>
                     <ul>
                         <li><h3>timestamp editing</h3></li>
@@ -13148,18 +13194,22 @@
                         <li>improved some error handling code</li>
                         <li>reintroduced message printing</li>
                         <li>improved subscriptions messaging</li>
-                        <li><h3>added cancel button to</h3></li>
-                    <ul>
-                            <li>check file integrity</li>
-                            <li>export to tag archive</li>
-                        </ul>
-                        <li><h3>added pause and cancel buttons to</h3></li>
-                    <ul>
-                            <li>repository sync</li>
-                            <li>subscription sync</li>
-                            <li>pending upload</li>
-                            <li>regenerate thumbnails</li>
-                        </ul>
+                        <li>
+                            <h3>added cancel button to</h3>
+                            <ul>
+                                <li>check file integrity</li>
+                                <li>export to tag archive</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <h3>added pause and cancel buttons to</h3>
+                            <ul>
+                                <li>repository sync</li>
+                                <li>subscription sync</li>
+                                <li>pending upload</li>
+                                <li>regenerate thumbnails</li>
+                            </ul>
+                        </li>
                         <li>improved how jobs' pausability and cancelability are spawned</li>
                         <li>improved and harmonised a lot of pause and cancel and general shutdown-job-interaction logic</li>
                         <li>pausable and cancellable popups can only be dimissed with right click once they are done or cancelled</li>

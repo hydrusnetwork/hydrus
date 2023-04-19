@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -198,7 +199,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         last_next_check_time = last_check_time - 200
         
-        with patch.object( HydrusData, 'GetNow', return_value = last_check_time + 10 ):
+        with patch.object( HydrusTime, 'GetNow', return_value = last_check_time + 10 ):
             
             self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, last_next_check_time ), last_next_check_time + 3600 )
             

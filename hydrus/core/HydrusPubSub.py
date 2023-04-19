@@ -4,6 +4,8 @@ import weakref
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusProfiling
+from hydrus.core import HydrusTime
 
 class HydrusPubSub( object ):
     
@@ -121,7 +123,7 @@ class HydrusPubSub( object ):
                             
                             try:
                                 
-                                HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
+                                HydrusProfiling.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
                                 
                             except HydrusExceptions.ShutdownException:
                                 

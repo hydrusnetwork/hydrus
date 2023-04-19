@@ -8,10 +8,12 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
+from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataMigration
@@ -379,6 +381,76 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         self.assertEqual( set( result ), set( string_processor.ProcessStrings( urls ) ) )
         
     
+    def test_media_timestamps( self ):
+        
+        archived_timestamp = HydrusTime.GetNow() - 3600
+        timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
+        
+        # simple
+        
+        hash = HydrusData.GenerateKey()
+        size = 40960
+        mime = HC.IMAGE_JPEG
+        width = 640
+        height = 480
+        duration = None
+        num_frames = None
+        has_audio = False
+        num_words = None
+        
+        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        
+        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
+        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        timestamps_manager.SetArchivedTimestamp( archived_timestamp )
+        
+        inbox = True
+        
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox, set() )
+        
+        # duplicate to generate proper dicts
+        
+        tags_manager = ClientMediaManagers.TagsManager( {}, {} ).Duplicate()
+        
+        ratings_manager = ClientMediaManagers.RatingsManager( {} )
+        
+        notes_manager = ClientMediaManagers.NotesManager( {} )
+        
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        
+        #
+        
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+        
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        
+        # simple
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps()
+        importer.SetTimestampDataStub( timestamp_data_stub )
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), { str( archived_timestamp ) } )
+        
+        # with string processor
+        
+        string_processor = ClientStrings.StringProcessor()
+        
+        processing_steps = [ ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DATE_ENCODE, ( '%Y-%m-%d %H:%M:%S', 0 ) ) ] ) ]
+        
+        string_processor.SetProcessingSteps( processing_steps )
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( string_processor = string_processor )
+        importer.SetTimestampDataStub( timestamp_data_stub )
+        
+        result = importer.Import( media_result )
+        
+        self.assertTrue( len( result ) > 0 )
+        self.assertNotEqual( set( result ), { str( archived_timestamp ) } )
+        self.assertEqual( set( result ), set( string_processor.ProcessStrings( { str( archived_timestamp ) } ) ) )
+        
+    
     def test_media_txt( self ):
         
         actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
@@ -677,6 +749,49 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         exporter.Export( hash, urls )
         
         expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] }
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+    
+    def test_media_timestamps( self ):
+        
+        hash = os.urandom( 32 )
+        timestamp = HydrusTime.GetNow() - 3600
+        
+        rows = [ str( timestamp ) ]
+        
+        # no timestamps makes no write
+        
+        timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps()
+        
+        exporter.SetTimestampDataStub( timestamp_data_stub )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        exporter.Export( hash, [] )
+        
+        with self.assertRaises( Exception ):
+            
+            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            
+        
+        # simple
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps()
+        
+        exporter.SetTimestampDataStub( timestamp_data_stub )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        exporter.Export( hash, rows )
+        
+        expected_timestamp_data_result = ClientTime.TimestampData.STATICArchivedTime( timestamp )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( hash, expected_timestamp_data_result ) ) ] }
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         

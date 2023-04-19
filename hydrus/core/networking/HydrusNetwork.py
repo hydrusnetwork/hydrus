@@ -7,8 +7,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 UPDATE_CHECKING_PERIOD = 240
@@ -46,7 +48,7 @@ def GenerateDefaultServiceDictionary( service_type ):
             
             metadata = Metadata()
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             update_hashes = []
             begin = 0
@@ -223,13 +225,13 @@ class Account( object ):
             
             ( reason, created, expires ) = self._banned_info
             
-            return 'banned ' + HydrusData.TimestampToPrettyTimeDelta( created ) + ', ' + HydrusData.ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
+            return 'banned ' + HydrusTime.TimestampToPrettyTimeDelta( created ) + ', ' + HydrusTime.TimestampToPrettyExpires( expires ) + ' because: ' + reason
             
         
     
     def _GetExpiresString( self ):
         
-        return HydrusData.ConvertTimestampToPrettyExpires( self._expires )
+        return HydrusTime.TimestampToPrettyExpires( self._expires )
         
     
     def _IsAdmin( self ):
@@ -253,7 +255,7 @@ class Account( object ):
                 
             else:
                 
-                if HydrusData.TimeHasPassed( expires ):
+                if HydrusTime.TimeHasPassed( expires ):
                     
                     self._banned_info = None
                     
@@ -275,7 +277,7 @@ class Account( object ):
             
         else:
             
-            return HydrusData.TimeHasPassed( self._expires )
+            return HydrusTime.TimeHasPassed( self._expires )
             
         
     
@@ -607,7 +609,7 @@ class Account( object ):
         
         with self._lock:
             
-            return self._account_type.GetTitle() + ' -- created ' + HydrusData.TimestampToPrettyTimeDelta( self._created )
+            return self._account_type.GetTitle() + ' -- created ' + HydrusTime.TimestampToPrettyTimeDelta( self._created )
             
         
     
@@ -1449,7 +1451,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             hashes = self._content_data
             
-            for chunk_of_hashes in HydrusData.SplitListIntoChunks( hashes, 100 ):
+            for chunk_of_hashes in HydrusLists.SplitListIntoChunks( hashes, 100 ):
                 
                 content = Content( content_type = self._content_type, content_data = chunk_of_hashes )
                 
@@ -1460,7 +1462,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, hashes ) = self._content_data
             
-            for chunk_of_hashes in HydrusData.SplitListIntoChunks( hashes, 100 ):
+            for chunk_of_hashes in HydrusLists.SplitListIntoChunks( hashes, 100 ):
                 
                 content = Content( content_type = self._content_type, content_data = ( tag, chunk_of_hashes ) )
                 
@@ -1960,7 +1962,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         self._metadata = metadata
         self._next_update_due = next_update_due
@@ -2117,7 +2119,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             if self._biggest_end is None:
                 
-                return HydrusData.GetNow()
+                return HydrusTime.GetNow()
                 
             else:
                 
@@ -2142,16 +2144,16 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 update_due = self._GetNextUpdateDueTime( from_client )
                 
-                if HydrusData.TimeHasPassed( update_due ):
+                if HydrusTime.TimeHasPassed( update_due ):
                     
                     s = 'checking for updates imminently'
                     
                 else:
                     
-                    s = 'checking for updates {}'.format( HydrusData.TimestampToPrettyTimeDelta( update_due ) )
+                    s = 'checking for updates {}'.format( HydrusTime.TimestampToPrettyTimeDelta( update_due ) )
                     
                 
-                return 'metadata synced up to {}, {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._biggest_end ), s )
+                return 'metadata synced up to {}, {}'.format( HydrusTime.TimestampToPrettyTimeDelta( self._biggest_end ), s )
                 
             
         
@@ -2277,7 +2279,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             next_update_due_time = self._GetNextUpdateDueTime( from_client )
             
-            return HydrusData.TimeHasPassed( next_update_due_time )
+            return HydrusTime.TimeHasPassed( next_update_due_time )
             
         
     
@@ -2289,9 +2291,9 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             new_next_update_due = metadata_slice._next_update_due
             
-            if HydrusData.TimeHasPassed( new_next_update_due ):
+            if HydrusTime.TimeHasPassed( new_next_update_due ):
                 
-                new_next_update_due = HydrusData.GetNow() + 100000
+                new_next_update_due = HydrusTime.GetNow() + 100000
                 
             
             self._next_update_due = new_next_update_due
@@ -2799,7 +2801,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
         
         MAX_WAIT_TIME_WHEN_HEAVY_UPDATES = 120
         
-        time_started_nullifying = HydrusData.GetNow()
+        time_started_nullifying = HydrusTime.GetNow()
         time_to_stop_nullifying = time_started_nullifying + 3600
         
         while not HG.started_shutdown:
@@ -2819,7 +2821,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 nullification_period = self._service_options[ 'nullification_period' ]
                 
                 # it isn't time to do the next yet!
-                if not HydrusData.TimeHasPassed( nullification_end + nullification_period ):
+                if not HydrusTime.TimeHasPassed( nullification_end + nullification_period ):
                     
                     return
                     
@@ -2849,15 +2851,15 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 
                 HydrusData.Print( 'Nullifying account history for "{}" update {}.'.format( self._name, self._next_nullification_update_index ) )
                 
-                update_started = HydrusData.GetNowFloat()
+                update_started = HydrusTime.GetNowFloat()
                 
                 HG.server_controller.WriteSynchronous( 'nullify_history', service_key, nullification_begin, nullification_end )
                 
-                update_took = HydrusData.GetNowFloat() - update_started
+                update_took = HydrusTime.GetNowFloat() - update_started
                 
                 with self._lock:
                     
-                    HydrusData.Print( 'Account history for "{}" update {} was anonymised in {}.'.format( self._name, self._next_nullification_update_index, HydrusData.TimeDeltaToPrettyTimeDelta( update_took ) ) )
+                    HydrusData.Print( 'Account history for "{}" update {} was anonymised in {}.'.format( self._name, self._next_nullification_update_index, HydrusTime.TimeDeltaToPrettyTimeDelta( update_took ) ) )
                     
                     self._next_nullification_update_index += 1
                     
@@ -2869,7 +2871,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 HG.server_busy.release()
                 
             
-            if HydrusData.TimeHasPassed( time_to_stop_nullifying ):
+            if HydrusTime.TimeHasPassed( time_to_stop_nullifying ):
                 
                 return
                 
@@ -2881,9 +2883,9 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             time_to_wait = min( update_took, MAX_WAIT_TIME_WHEN_HEAVY_UPDATES )
             
-            resume_timestamp = HydrusData.GetNowFloat() + time_to_wait
+            resume_timestamp = HydrusTime.GetNowFloat() + time_to_wait
             
-            while not HG.started_shutdown and not HydrusData.TimeHasPassedFloat( resume_timestamp ):
+            while not HG.started_shutdown and not HydrusTime.TimeHasPassedFloat( resume_timestamp ):
                 
                 time.sleep( 1 )
                 

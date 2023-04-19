@@ -13,6 +13,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSessions
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
@@ -204,7 +206,7 @@ class Controller( HydrusController.HydrusController ):
         num_files_deleted = 0
         num_thumbnails_deleted = 0
         
-        pauser = HydrusData.BigJobPauser()
+        pauser = HydrusThreading.BigJobPauser()
         
         ( file_hash, thumbnail_hash ) = self.Read( 'deferred_physical_delete' )
         
@@ -331,7 +333,7 @@ class Controller( HydrusController.HydrusController ):
     
     def MaintainDB( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None ):
         
-        stop_time = HydrusData.GetNow() + 10
+        stop_time = HydrusTime.GetNow() + 10
         
         self.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
         

@@ -12,6 +12,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -98,7 +99,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self._external_filterable_tags = set()
         self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
-        self.created = HydrusData.GetNow()
+        self.created = HydrusTime.GetNow()
         self.modified = self.created
         self.status = CC.STATUS_UNKNOWN
         self.note = ''
@@ -171,7 +172,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def _UpdateModified( self ):
         
-        self.modified = HydrusData.GetNow()
+        self.modified = HydrusTime.GetNow()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):

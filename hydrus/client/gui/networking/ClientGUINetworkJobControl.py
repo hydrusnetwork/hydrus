@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICore as CGC
@@ -158,7 +159,7 @@ class NetworkJobControl( QW.QFrame ):
                         
                         if waiting_estimate > 0:
                             
-                            network_context_text = '{} ({})'.format( network_context_text, HydrusData.TimeDeltaToPrettyTimeDelta( waiting_estimate ) )
+                            network_context_text = '{} ({})'.format( network_context_text, HydrusTime.TimeDeltaToPrettyTimeDelta( waiting_estimate ) )
                             
                         
                     
@@ -226,7 +227,7 @@ class NetworkJobControl( QW.QFrame ):
             
         else:
             
-            if self._auto_override_bandwidth_rules and HydrusData.TimeHasPassed( self._network_job.GetCreationTime() + 5 ):
+            if self._auto_override_bandwidth_rules and HydrusTime.TimeHasPassed( self._network_job.GetCreationTime() + 5 ):
                 
                 self._network_job.OverrideBandwidth()
                 

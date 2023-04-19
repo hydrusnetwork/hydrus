@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -633,9 +634,9 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             next_timestamp = timestamps_dict[ second_level_domain ] + delay
             
-            if HydrusData.TimeHasPassed( next_timestamp ):
+            if HydrusTime.TimeHasPassed( next_timestamp ):
                 
-                timestamps_dict[ second_level_domain ] = HydrusData.GetNow()
+                timestamps_dict[ second_level_domain ] = HydrusTime.GetNow()
                 
                 return ( True, 0 )
                 

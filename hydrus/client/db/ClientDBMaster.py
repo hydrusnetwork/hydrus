@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBModule
 from hydrus.client.networking import ClientNetworkingFunctions

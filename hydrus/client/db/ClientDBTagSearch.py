@@ -8,7 +8,9 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
@@ -479,9 +481,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         if HG.autocomplete_delay_mode and not exact_match:
             
-            time_to_stop = HydrusData.GetNowFloat() + 3.0
+            time_to_stop = HydrusTime.GetNowFloat() + 3.0
             
-            while not HydrusData.TimeHasPassedFloat( time_to_stop ):
+            while not HydrusTime.TimeHasPassedFloat( time_to_stop ):
                 
                 time.sleep( 0.1 )
                 
@@ -646,7 +648,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         tag_ids_without_siblings = list( tag_ids )
         
-        for batch_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
+        for batch_of_tag_ids in HydrusLists.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
             
             with self._MakeTemporaryIntegerTable( batch_of_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
                 

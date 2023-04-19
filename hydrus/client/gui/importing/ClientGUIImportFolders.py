@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -109,7 +110,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_check_period = HydrusData.TimeDeltaToPrettyTimeDelta( check_period )
+            pretty_check_period = HydrusTime.TimeDeltaToPrettyTimeDelta( check_period )
             
         
         sort_tuple = ( name, path, paused, check_period )
@@ -258,7 +259,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         metadata_routers = self._import_folder.GetMetadataRouters()
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
-        allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ]
+        allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
         

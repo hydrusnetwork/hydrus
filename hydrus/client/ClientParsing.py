@@ -15,6 +15,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientStrings
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -129,7 +130,7 @@ def ConvertParseResultToPrettyString( result ):
             
             timestamp = int( parsed_text )
             
-            timestamp_string = HydrusData.ConvertTimestampToPrettyTime( timestamp )
+            timestamp_string = HydrusTime.TimestampToPrettyTime( timestamp )
             
         except:
             
@@ -534,7 +535,7 @@ def GetTimestampFromParseResults( results, desired_timestamp_type ):
                 
                 if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
                     
-                    timestamp = min( HydrusData.GetNow() - 5, timestamp )
+                    timestamp = min( HydrusTime.GetNow() - 5, timestamp )
                     
                 
                 timestamp_results.append( timestamp )

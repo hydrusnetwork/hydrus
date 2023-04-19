@@ -4,6 +4,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMediaManagers
@@ -49,7 +50,7 @@ def GetFakeMediaResult( hash: bytes ):
     
     timestamps_manager = ClientMediaManagers.TimestampsManager()
     
-    import_timestamp = random.randint( HydrusData.GetNow() - 1000000, HydrusData.GetNow() - 15 )
+    import_timestamp = random.randint( HydrusTime.GetNow() - 1000000, HydrusTime.GetNow() - 15 )
     
     file_modified_timestamp = random.randint( import_timestamp - 50000, import_timestamp - 1 )
     

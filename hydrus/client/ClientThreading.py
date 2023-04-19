@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client.gui import QtPorting as QP
 
@@ -16,7 +17,7 @@ class JobKey( object ):
         
         self._key = HydrusData.GenerateKey()
         
-        self._creation_time = HydrusData.GetNowFloat()
+        self._creation_time = HydrusTime.GetNowFloat()
         
         self._pausable = pausable
         self._cancellable = cancellable
@@ -25,7 +26,7 @@ class JobKey( object ):
         self._stop_time = stop_time
         self._cancel_on_shutdown = cancel_on_shutdown and maintenance_mode != HC.MAINTENANCE_SHUTDOWN
         
-        self._start_time = HydrusData.GetNow()
+        self._start_time = HydrusTime.GetNow()
         
         self._deleted = threading.Event()
         self._deletion_time = None
@@ -34,16 +35,16 @@ class JobKey( object ):
         self._paused = threading.Event()
         
         self._ui_update_pause_period = 0.1
-        self._next_ui_update_pause = HydrusData.GetNowFloat() + self._ui_update_pause_period
+        self._next_ui_update_pause = HydrusTime.GetNowFloat() + self._ui_update_pause_period
         
         self._yield_pause_period = 10
-        self._next_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+        self._next_yield_pause = HydrusTime.GetNow() + self._yield_pause_period
         
         self._bigger_pause_period = 100
-        self._next_bigger_pause = HydrusData.GetNow() + self._bigger_pause_period
+        self._next_bigger_pause = HydrusTime.GetNow() + self._bigger_pause_period
         
         self._longer_pause_period = 1000
-        self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
+        self._next_longer_pause = HydrusTime.GetNow() + self._longer_pause_period
         
         self._exception = None
         
@@ -93,7 +94,7 @@ class JobKey( object ):
             
             if self._deletion_time is not None:
                 
-                if HydrusData.TimeHasPassed( self._deletion_time ):
+                if HydrusTime.TimeHasPassed( self._deletion_time ):
                     
                     self.Finish()
                     
@@ -129,11 +130,11 @@ class JobKey( object ):
         
         if seconds is None:
             
-            self._deletion_time = HydrusData.GetNow()
+            self._deletion_time = HydrusTime.GetNow()
             
         else:
             
-            self._deletion_time = HydrusData.GetNow() + seconds
+            self._deletion_time = HydrusTime.GetNow() + seconds
             
         
     
@@ -162,11 +163,11 @@ class JobKey( object ):
                 
             
         
-        if HydrusData.TimeHasPassedFloat( self._next_ui_update_pause ):
+        if HydrusTime.TimeHasPassedFloat( self._next_ui_update_pause ):
             
             time.sleep( 0.00001 )
             
-            self._next_ui_update_pause = HydrusData.GetNowFloat() + self._ui_update_pause_period
+            self._next_ui_update_pause = HydrusTime.GetNowFloat() + self._ui_update_pause_period
             
         
     
@@ -370,17 +371,17 @@ class JobKey( object ):
         
         with self._variable_lock: self._variables[ name ] = value
         
-        if HydrusData.TimeHasPassed( self._next_ui_update_pause ):
+        if HydrusTime.TimeHasPassed( self._next_ui_update_pause ):
             
             time.sleep( 0.00001 )
             
-            self._next_ui_update_pause = HydrusData.GetNow() + self._ui_update_pause_period
+            self._next_ui_update_pause = HydrusTime.GetNow() + self._ui_update_pause_period
             
         
     
     def TimeRunning( self ):
         
-        return HydrusData.GetNow() - self._start_time
+        return HydrusTime.GetNow() - self._start_time
         
     
     def ToString( self ):
@@ -429,23 +430,23 @@ class JobKey( object ):
     
     def WaitIfNeeded( self ):
         
-        if HydrusData.TimeHasPassed( self._next_yield_pause ):
+        if HydrusTime.TimeHasPassed( self._next_yield_pause ):
             
             time.sleep( 0.1 )
             
-            self._next_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+            self._next_yield_pause = HydrusTime.GetNow() + self._yield_pause_period
             
-            if HydrusData.TimeHasPassed( self._next_bigger_pause ):
+            if HydrusTime.TimeHasPassed( self._next_bigger_pause ):
                 
                 time.sleep( 1 )
                 
-                self._next_bigger_pause = HydrusData.GetNow() + self._bigger_pause_period
+                self._next_bigger_pause = HydrusTime.GetNow() + self._bigger_pause_period
                 
-                if HydrusData.TimeHasPassed( self._longer_pause_period ):
+                if HydrusTime.TimeHasPassed( self._longer_pause_period ):
                     
                     time.sleep( 10 )
                     
-                    self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
+                    self._next_longer_pause = HydrusTime.GetNow() + self._longer_pause_period
                     
                 
             

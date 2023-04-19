@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -462,7 +463,7 @@ class TagDisplayMaintenanceManager( object ):
             
         
         # we are getting new display data pretty fast. if it is streaming in, let's take a break
-        if not HydrusData.TimeHasPassed( self._last_last_new_data_event_time + 10 ):
+        if not HydrusTime.TimeHasPassed( self._last_last_new_data_event_time + 10 ):
             
             return False
             
@@ -578,11 +579,11 @@ class TagDisplayMaintenanceManager( object ):
                     
                     work_time = self._GetWorkTime( service_key )
                     
-                    start_time = HydrusData.GetNowPrecise()
+                    start_time = HydrusTime.GetNowPrecise()
                     
                     still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, work_time )
                     
-                    finish_time = HydrusData.GetNowPrecise()
+                    finish_time = HydrusTime.GetNowPrecise()
                     
                     total_time_took = finish_time - start_time
                     
@@ -606,7 +607,7 @@ class TagDisplayMaintenanceManager( object ):
                     time.sleep( 1 )
                     
                     self._last_last_new_data_event_time = self._last_new_data_event_time
-                    self._last_new_data_event_time = HydrusData.GetNow()
+                    self._last_new_data_event_time = HydrusTime.GetNow()
                     
                     self._service_keys_to_needs_work = {}
                     

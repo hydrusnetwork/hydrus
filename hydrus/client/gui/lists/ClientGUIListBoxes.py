@@ -12,8 +12,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -3569,7 +3571,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
             terms_to_info = { term : None for term in to_lookup }
             
-            for batch_to_lookup in HydrusData.SplitListIntoChunks( to_lookup, 500 ):
+            for batch_to_lookup in HydrusLists.SplitListIntoChunks( to_lookup, 500 ):
                 
                 tags_to_terms = { term.GetTag() : term for term in batch_to_lookup }
                 

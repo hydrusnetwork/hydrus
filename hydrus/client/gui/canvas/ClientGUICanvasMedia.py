@@ -11,6 +11,7 @@ from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -378,7 +379,7 @@ class Animation( QW.QWidget ):
         self._current_frame_index = 0
         self._current_frame_drawn = False
         self._current_timestamp_ms = None
-        self._next_frame_due_at = HydrusData.GetNowPrecise()
+        self._next_frame_due_at = HydrusTime.GetNowPrecise()
         self._slow_frame_score = 1.0
         
         self._paused = True
@@ -511,9 +512,9 @@ class Animation( QW.QWidget ):
         
         next_frame_ideally_due = self._next_frame_due_at + next_frame_time_s
         
-        if HydrusData.TimeHasPassedPrecise( next_frame_ideally_due ):
+        if HydrusTime.TimeHasPassedPrecise( next_frame_ideally_due ):
             
-            self._next_frame_due_at = HydrusData.GetNowPrecise() + next_frame_time_s
+            self._next_frame_due_at = HydrusTime.GetNowPrecise() + next_frame_time_s
             
         else:
             
@@ -623,7 +624,7 @@ class Animation( QW.QWidget ):
                 self._current_frame_index = frame_index
                 self._current_timestamp_ms = None
                 
-                self._next_frame_due_at = HydrusData.GetNowPrecise()
+                self._next_frame_due_at = HydrusTime.GetNowPrecise()
                 
                 self._video_container.GetReadyForFrame( self._current_frame_index )
                 
@@ -815,7 +816,7 @@ class Animation( QW.QWidget ):
         self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
         self._current_timestamp_ms = None
-        self._next_frame_due_at = HydrusData.GetNowPrecise()
+        self._next_frame_due_at = HydrusTime.GetNowPrecise()
         self._slow_frame_score = 1.0
         
         self._paused = start_paused
@@ -856,7 +857,7 @@ class Animation( QW.QWidget ):
                 
                 if self._current_frame_drawn:
                     
-                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
+                    if not self._paused and HydrusTime.TimeHasPassedPrecise( self._next_frame_due_at ):
                         
                         num_frames = self._media.GetNumFrames()
                         
@@ -1113,7 +1114,7 @@ class AnimationBar( QW.QWidget ):
             
             if current_timestamp_ms is not None:
                 
-                progress_strings.append( HydrusData.ConvertValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+                progress_strings.append( HydrusTime.ValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
                 
             
             s = ' - '.join( progress_strings )

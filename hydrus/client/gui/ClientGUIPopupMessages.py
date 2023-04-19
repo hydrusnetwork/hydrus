@@ -8,6 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -476,10 +477,10 @@ class PopupMessage( PopupWindow ):
                 
                 self._network_job_ctrl.ClearNetworkJob()
                 
-                self._time_network_job_disappeared = HydrusData.GetNow()
+                self._time_network_job_disappeared = HydrusTime.GetNow()
                 
             
-            if self._network_job_ctrl.isVisible() and HydrusData.TimeHasPassed( self._time_network_job_disappeared + 10 ):
+            if self._network_job_ctrl.isVisible() and HydrusTime.TimeHasPassed( self._time_network_job_disappeared + 10 ):
                 
                 self._network_job_ctrl.hide()
                 

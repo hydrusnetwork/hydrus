@@ -11,8 +11,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -525,7 +527,7 @@ class Page( QW.QWidget ):
         
         self._current_session_page_container = page_container
         self._current_session_page_container_hashes_hash = self._GetCurrentSessionPageHashesHash()
-        self._current_session_page_container_timestamp = HydrusData.GetNow()
+        self._current_session_page_container_timestamp = HydrusTime.GetNow()
         
     
     def _SetPrettyStatus( self, status: str ):
@@ -1054,7 +1056,7 @@ class Page( QW.QWidget ):
             
             initial_media_results = []
             
-            for group_of_initial_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
+            for group_of_initial_hashes in HydrusLists.SplitListIntoChunks( initial_hashes, 256 ):
                 
                 more_media_results = controller.Read( 'media_results', group_of_initial_hashes )
                 
@@ -3023,7 +3025,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         current_page = self.currentWidget()
         
-        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        i_have_done_a_recent_move = not HydrusTime.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
         
         if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
@@ -3041,7 +3043,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 self.setCurrentIndex( new_index )
                 
-                self._time_of_last_move_selection_event = HydrusData.GetNow()
+                self._time_of_last_move_selection_event = HydrusTime.GetNow()
                 
             
             return True
@@ -3059,7 +3061,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         current_page = self.currentWidget()
         
-        i_have_done_a_recent_move = not HydrusData.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
+        i_have_done_a_recent_move = not HydrusTime.TimeHasPassed( self._time_of_last_move_selection_event + 3 )
         
         if isinstance( current_page, PagesNotebook ) and not i_have_done_a_recent_move:
             
@@ -3082,7 +3084,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self.setCurrentIndex( new_index )
             
-            self._time_of_last_move_selection_event = HydrusData.GetNow()
+            self._time_of_last_move_selection_event = HydrusTime.GetNow()
             
         
         return True

@@ -18,9 +18,11 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientAPI
@@ -174,7 +176,7 @@ def BlockingSafeShowMessage( message ):
     
 def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_timestamp, num_rows, row_name ):
     
-    it_took = HydrusData.GetNowPrecise() - precise_timestamp
+    it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
     rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
@@ -185,7 +187,7 @@ def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_tim
     
 def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     
-    it_took = HydrusData.GetNowPrecise() - precise_timestamp
+    it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
     rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
@@ -201,7 +203,7 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
         return
         
     
-    it_took = HydrusData.GetNowPrecise() - precise_timestamp
+    it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
     rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
@@ -579,7 +581,7 @@ class DB( HydrusDB.HydrusDB ):
         # the important change here as compared to the old system is that if you have a bunch of parents like 'character name' -> 'female', which might be a 10k-to-1 relationship, adding a new link to the chain does need much work
         # we compare the current structure, the ideal structure, and just make the needed changes
         
-        time_started = HydrusData.GetNowFloat()
+        time_started = HydrusTime.GetNowFloat()
         
         tag_service_id = self.modules_services.GetServiceId( service_key )
         
@@ -587,7 +589,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self.modules_tag_display.GetApplicationStatus( tag_service_id )
         
-        while len( sibling_rows_to_add ) + len( sibling_rows_to_remove ) + len( parent_rows_to_add ) + len( parent_rows_to_remove ) > 0 and not HydrusData.TimeHasPassedFloat( time_started + work_time ):
+        while len( sibling_rows_to_add ) + len( sibling_rows_to_remove ) + len( parent_rows_to_add ) + len( parent_rows_to_remove ) > 0 and not HydrusTime.TimeHasPassedFloat( time_started + work_time ):
             
             # ok, so it turns out that migrating entire chains at once was sometimes laggy for certain large parent chains like 'azur lane'
             # imagine the instance where we simply want to parent a hundred As to a single B--we obviously don't have to do all that in one go
@@ -1484,7 +1486,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # do delete outside, file repos and perhaps some other bananas situation can delete without ever having added
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         if service_type not in HC.FILE_SERVICES_WITH_NO_DELETE_RECORD:
             
@@ -1551,7 +1553,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE:
                 
-                now = HydrusData.GetNow()
+                now = HydrusTime.GetNow()
                 
                 rows = [ ( hash_id, now ) for hash_id in existing_hash_ids ]
                 
@@ -1575,7 +1577,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._DeleteFiles( self.modules_services.combined_local_media_service_id, trashed_hash_ids )
                     
-                    now = HydrusData.GetNow()
+                    now = HydrusTime.GetNow()
                     
                     delete_rows = [ ( hash_id, now ) for hash_id in trashed_hash_ids ]
                     
@@ -3618,7 +3620,7 @@ class DB( HydrusDB.HydrusDB ):
         
         num_we_want = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
         
-        if num_we_want == None:
+        if num_we_want is None:
             
             num_we_want = 20
             
@@ -3689,7 +3691,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def cancelled_hook():
                 
-                return HydrusData.TimeHasPassedPrecise( stop_time_for_finding_results )
+                return HydrusTime.TimeHasPassedPrecise( stop_time_for_finding_results )
                 
             
         
@@ -3760,7 +3762,7 @@ class DB( HydrusDB.HydrusDB ):
         num_tags_to_search = 0
         num_skipped = 0
         
-        stop_time_for_finding_results = HydrusData.GetNowPrecise() + ( max_time_to_take * 0.85 )
+        stop_time_for_finding_results = HydrusTime.GetNowPrecise() + ( max_time_to_take * 0.85 )
         
         search_tags = [ search_tag for search_tag in search_tags if get_weight_from_dict( search_tag, search_tag_slices_weight_dict ) != 0.0 ]
         
@@ -4309,7 +4311,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            timestamp_cutoff = HydrusData.GetNow() - minimum_age
+            timestamp_cutoff = HydrusTime.GetNow() - minimum_age
             
             age_phrase = ' WHERE timestamp < ' + str( timestamp_cutoff )
             
@@ -4337,7 +4339,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if minimum_age is not None:
                 
-                message += ' with minimum age ' + ClientData.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
+                message += ' with minimum age ' + ClientTime.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
                 
             
             message += ' I found ' + HydrusData.ToHumanInt( len( hash_ids ) ) + '.'
@@ -4441,7 +4443,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             for destination_file_service_key in destination_location_context.current_service_keys:
                 
@@ -4531,7 +4533,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_files_metadata_basic.AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ], overwrite = True )
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         self._AddFiles( self.modules_services.local_update_service_id, [ ( hash_id, now ) ] )
         
@@ -4833,7 +4835,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _MigrationGetMappings( self, database_temp_job_name, file_service_key, tag_service_key, hash_type, tag_filter, content_statuses ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = []
         
@@ -4905,7 +4907,7 @@ class DB( HydrusDB.HydrusDB ):
                 data.append( ( desired_hash, tags ) )
                 
             
-            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusData.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
+            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusTime.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
             
         
         return data
@@ -4913,7 +4915,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _MigrationGetPairs( self, database_temp_job_name, left_tag_filter, right_tag_filter ):
         
-        time_started_precise = HydrusData.GetNowPrecise()
+        time_started_precise = HydrusTime.GetNowPrecise()
         
         data = []
         
@@ -4948,7 +4950,7 @@ class DB( HydrusDB.HydrusDB ):
             
             data.append( ( left_tag, right_tag ) )
             
-            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusData.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
+            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusTime.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
             
         
         return data
@@ -5085,7 +5087,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = None, stop_time = None, work_time_float = None ):
         
-        time_started_float = HydrusData.GetNowFloat()
+        time_started_float = HydrusTime.GetNowFloat()
         
         num_done = 0
         still_work_to_do = True
@@ -5100,7 +5102,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( i, hash_id ) in enumerate( group_of_hash_ids ):
                 
-                if work_time_float is not None and HydrusData.TimeHasPassedFloat( time_started_float + work_time_float ):
+                if work_time_float is not None and HydrusTime.TimeHasPassedFloat( time_started_float + work_time_float ):
                     
                     return ( still_work_to_do, num_done )
                     
@@ -5222,7 +5224,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self.modules_service_paths.SetServiceFilename( service_id, hash_id, multihash )
                                 
-                                timestamp = HydrusData.GetNow()
+                                timestamp = HydrusTime.GetNow()
                                 
                             
                             self._AddFiles( service_id, [ ( hash_id, timestamp ) ] )
@@ -5929,7 +5931,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        precise_time_to_stop = HydrusData.GetNowPrecise() + work_time
+        precise_time_to_stop = HydrusTime.GetNowPrecise() + work_time
         
         num_rows_processed = 0
         
@@ -5941,7 +5943,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 i = content_iterator_dict[ 'new_files' ]
                 
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
                     files_info_rows = []
                     files_rows = []
@@ -5961,7 +5963,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_rows_processed += len( files_rows )
                     
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                         
                         return num_rows_processed
                         
@@ -5976,7 +5978,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 i = content_iterator_dict[ 'deleted_files' ]
                 
-                for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
                     service_hash_ids = chunk
                     
@@ -5986,7 +5988,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_rows_processed += len( hash_ids )
                     
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                         
                         return num_rows_processed
                         
@@ -6004,7 +6006,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 i = content_iterator_dict[ 'new_mappings' ]
                 
-                for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                for chunk in HydrusLists.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
                     mappings_ids = []
                     
@@ -6026,7 +6028,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_rows_processed += num_rows
                     
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                         
                         return num_rows_processed
                         
@@ -6041,7 +6043,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 i = content_iterator_dict[ 'deleted_mappings' ]
                 
-                for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                for chunk in HydrusLists.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                     
                     deleted_mappings_ids = []
                     
@@ -6061,7 +6063,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_rows_processed += num_rows
                     
-                    if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                         
                         return num_rows_processed
                         
@@ -6083,7 +6085,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     i = content_iterator_dict[ 'new_parents' ]
                     
-                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         parent_ids = []
                         tag_ids = set()
@@ -6107,7 +6109,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         num_rows_processed += len( parent_ids )
                         
-                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                             
                             return num_rows_processed
                             
@@ -6122,7 +6124,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     i = content_iterator_dict[ 'deleted_parents' ]
                     
-                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         parent_ids = []
                         tag_ids = set()
@@ -6148,7 +6150,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         num_rows_processed += num_rows
                         
-                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                             
                             return num_rows_processed
                             
@@ -6166,7 +6168,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     i = content_iterator_dict[ 'new_siblings' ]
                     
-                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         sibling_ids = []
                         tag_ids = set()
@@ -6192,7 +6194,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         num_rows_processed += num_rows
                         
-                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                             
                             return num_rows_processed
                             
@@ -6207,7 +6209,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     i = content_iterator_dict[ 'deleted_siblings' ]
                     
-                    for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
+                    for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                         
                         sibling_ids = []
                         tag_ids = set()
@@ -6231,7 +6233,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         num_rows_processed += len( sibling_ids )
                         
-                        if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                        if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                             
                             return num_rows_processed
                             
@@ -6264,7 +6266,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             tag_ids = [ self.modules_tags.GetTagId( tag ) for tag in tags ]
             
@@ -9289,6 +9291,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 523:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER )
+                
+                duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_COPY )
+                
+                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER, duplicate_content_merge_options )
+                
+                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY )
+                
+                duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+                
+                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY, duplicate_content_merge_options )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Updating some duplicate merge options failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -9717,13 +9749,13 @@ class DB( HydrusDB.HydrusDB ):
                     self._controller.frame_splash_status.SetText( 'vacuuming ' + name )
                     job_key.SetStatusText( 'vacuuming ' + name )
                     
-                    started = HydrusData.GetNowPrecise()
+                    started = HydrusTime.GetNowPrecise()
                     
                     HydrusDB.VacuumDB( db_path )
                     
-                    time_took = HydrusData.GetNowPrecise() - started
+                    time_took = HydrusTime.GetNowPrecise() - started
                     
-                    HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                    HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
                     
                 except Exception as e:
                     

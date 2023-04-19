@@ -10,7 +10,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -30,6 +33,7 @@ from hydrus.client.gui.metadata import ClientGUIMetadataMigration
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
@@ -136,7 +140,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExportingFiles.ExportFolder ):
         
-        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, last_checked, run_now ) = export_folder.ToTuple()
         
         pretty_export_type = 'regular'
         
@@ -154,7 +158,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if run_regularly:
             
-            pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
+            pretty_period = HydrusTime.TimeDeltaToPrettyTimeDelta( period )
             
         else:
             
@@ -166,22 +170,13 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_period += ' (running after dialog ok)'
             
         
-        if paused:
-            
-            pretty_paused = 'yes'
-            
-        else:
-            
-            pretty_paused = ''
-            
-        
         pretty_phrase = phrase
         
         last_error = export_folder.GetLastError()
         
-        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_paused, pretty_period, pretty_phrase, last_error )
+        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase, last_error )
         
-        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, paused, period, phrase, last_error )
+        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, period, phrase, last_error )
         
         return ( display_tuple, sort_tuple )
         
@@ -244,7 +239,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folder = export_folder
         
-        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, self._last_checked, paused, run_now ) = self._export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, self._last_checked, run_now ) = self._export_folder.ToTuple()
         
         self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
         
@@ -279,9 +274,9 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._run_regularly = QW.QCheckBox( self._period_box )
         
-        self._paused = QW.QCheckBox( self._period_box )
-        
         self._run_now = QW.QCheckBox( self._period_box )
+        
+        self._show_working_popup = QW.QCheckBox( self._period_box )
         
         #
         
@@ -304,7 +299,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._metadata_routers_box = ClientGUICommon.StaticBox( self, 'sidecar exporting' )
         
         metadata_routers = export_folder.GetMetadataRouters()
-        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self._metadata_routers_box, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
@@ -325,9 +320,9 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._run_regularly.setChecked( run_regularly )
         
-        self._paused.setChecked( paused )
-        
         self._run_now.setChecked( run_now )
+        
+        self._show_working_popup.setChecked( export_folder.ShowWorkingPopup() )
         
         self._pattern.setText( phrase )
         
@@ -367,12 +362,11 @@ If you select synchronise, be careful!'''
         
         self._query_box.Add( self._tag_autocomplete )
         
-        self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
         rows = []
         
         rows.append( ( 'run regularly?: ', self._run_regularly ) )
-        rows.append( ( 'paused: ', self._paused ) )
+        rows.append( self._period )
+        rows.append( ( 'show popup when working regularly?: ', self._show_working_popup ) )
         rows.append( ( 'run on dialog ok: ', self._run_now ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._period_box, rows )
@@ -400,9 +394,19 @@ If you select synchronise, be careful!'''
         self.widget().setLayout( vbox )
         
         self._UpdateTypeDeleteUI()
+        self._UpdateRunRegularly()
         
         self._type.currentIndexChanged.connect( self._UpdateTypeDeleteUI )
         self._delete_from_client_after_export.clicked.connect( self.EventDeleteFilesAfterExport )
+        self._run_regularly.clicked.connect( self._UpdateRunRegularly )
+        
+    
+    def _UpdateRunRegularly( self ):
+        
+        run_regularly = self._run_regularly.isChecked()
+        
+        self._period.setEnabled( run_regularly )
+        self._show_working_popup.setEnabled( run_regularly )
         
     
     def _UpdateTypeDeleteUI( self ):
@@ -485,9 +489,9 @@ If you select synchronise, be careful!'''
         
         run_now = self._run_now.isChecked()
         
-        paused = self._paused.isChecked()
-        
         last_error = self._export_folder.GetLastError()
+        
+        show_working_popup = self._show_working_popup.isChecked()
         
         export_folder = ClientExportingFiles.ExportFolder(
             name,
@@ -501,9 +505,9 @@ If you select synchronise, be careful!'''
             period = period,
             phrase = phrase,
             last_checked = self._last_checked,
-            paused = paused,
             run_now = run_now,
-            last_error = last_error
+            last_error = last_error,
+            show_working_popup = show_working_popup
         )
         
         return export_folder
@@ -566,7 +570,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
-        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ]
+        allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
@@ -807,7 +811,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             HG.client_controller.pub( 'message', job_key )
             
-            pauser = HydrusData.BigJobPauser()
+            pauser = HydrusThreading.BigJobPauser()
             
             for ( index, ( media, dest_path ) ) in enumerate( to_do ):
                 
@@ -888,11 +892,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 possible_deletee_medias = { media for ( media, path ) in to_do }
                 
-                deletee_medias = ClientMedia.FilterAndReportDeleteLockFailures( possible_deletee_medias )
+                deletee_medias = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( possible_deletee_medias )
                 
                 local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
-                chunks_of_deletee_medias = HydrusData.SplitListIntoChunks( list( deletee_medias ), 64 )
+                chunks_of_deletee_medias = HydrusLists.SplitListIntoChunks( list( deletee_medias ), 64 )
                 
                 for chunk_of_deletee_medias in chunks_of_deletee_medias:
                     

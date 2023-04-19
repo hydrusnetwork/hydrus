@@ -5,6 +5,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSearch
@@ -2071,7 +2072,10 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:num file relationships - has more than 3 not related/false positive', "system:number of file relationships > 3 false positives" ),
             ( 'system:ratio wider than 16:9', "system:ratio is wider than 16:9        " ),
             ( 'system:ratio = 16:9', "system:ratio is 16:9" ),
-            ( 'system:ratio taller than 1:1', "system:ratio taller than 1:1" ),
+            ( 'system:ratio is portrait', "system:ratio taller than 1:1" ),
+            ( 'system:ratio is square', "system:ratio is square" ),
+            ( 'system:ratio is portrait', "system:ratio is portrait" ),
+            ( 'system:ratio is landscape', "system:ratio is landscape" ),
             ( 'system:number of pixels > 50 pixels', "system:num pixels > 50 px" ),
             ( 'system:number of pixels < 1 megapixels', "system:num pixels < 1 megapixels " ),
             ( 'system:number of pixels \u2248 5 kilopixels', "system:num pixels ~= 5 kilopixel" ),

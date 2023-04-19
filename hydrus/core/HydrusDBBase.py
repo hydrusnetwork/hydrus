@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 
 def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
     
@@ -385,10 +386,10 @@ class DBCursorTransactionWrapper( DBBase ):
         self._in_transaction = False
         self._transaction_contains_writes = False
         
-        self._last_mem_refresh_time = HydrusData.GetNow()
-        self._last_wal_passive_checkpoint_time = HydrusData.GetNow()
-        self._last_wal_truncate_checkpoint_time = HydrusData.GetNow()
-        self._last_journal_zero_time = HydrusData.GetNow()
+        self._last_mem_refresh_time = HydrusTime.GetNow()
+        self._last_wal_passive_checkpoint_time = HydrusTime.GetNow()
+        self._last_wal_truncate_checkpoint_time = HydrusTime.GetNow()
+        self._last_journal_zero_time = HydrusTime.GetNow()
         
         self._pubsubs = []
         
@@ -425,7 +426,7 @@ class DBCursorTransactionWrapper( DBBase ):
             self._Execute( 'BEGIN IMMEDIATE;' )
             self._Execute( 'SAVEPOINT hydrus_savepoint;' )
             
-            self._transaction_start_time = HydrusData.GetNow()
+            self._transaction_start_time = HydrusTime.GetNow()
             self._in_transaction = True
             self._transaction_contains_writes = False
             
@@ -449,37 +450,37 @@ class DBCursorTransactionWrapper( DBBase ):
             self._in_transaction = False
             self._transaction_contains_writes = False
             
-            if HG.db_journal_mode == 'WAL' and HydrusData.TimeHasPassed( self._last_wal_passive_checkpoint_time + WAL_PASSIVE_CHECKPOINT_PERIOD ):
+            if HG.db_journal_mode == 'WAL' and HydrusTime.TimeHasPassed( self._last_wal_passive_checkpoint_time + WAL_PASSIVE_CHECKPOINT_PERIOD ):
                 
-                if HydrusData.TimeHasPassed( self._last_wal_truncate_checkpoint_time + WAL_TRUNCATE_CHECKPOINT_PERIOD ):
+                if HydrusTime.TimeHasPassed( self._last_wal_truncate_checkpoint_time + WAL_TRUNCATE_CHECKPOINT_PERIOD ):
                     
                     self._Execute( 'PRAGMA wal_checkpoint(TRUNCATE);' )
                     
-                    self._last_wal_truncate_checkpoint_time = HydrusData.GetNow()
+                    self._last_wal_truncate_checkpoint_time = HydrusTime.GetNow()
                     
                 else:
                     
                     self._Execute( 'PRAGMA wal_checkpoint(PASSIVE);' )
                     
                 
-                self._last_wal_passive_checkpoint_time = HydrusData.GetNow()
+                self._last_wal_passive_checkpoint_time = HydrusTime.GetNow()
                 
             
-            if HydrusData.TimeHasPassed( self._last_mem_refresh_time + MEM_REFRESH_PERIOD ):
+            if HydrusTime.TimeHasPassed( self._last_mem_refresh_time + MEM_REFRESH_PERIOD ):
                 
                 self._Execute( 'DETACH mem;' )
                 self._Execute( 'ATTACH ":memory:" AS mem;' )
                 
                 TemporaryIntegerTableNameCache.instance().Clear()
                 
-                self._last_mem_refresh_time = HydrusData.GetNow()
+                self._last_mem_refresh_time = HydrusTime.GetNow()
                 
             
-            if HG.db_journal_mode == 'PERSIST' and HydrusData.TimeHasPassed( self._last_journal_zero_time + JOURNAL_ZERO_PERIOD ):
+            if HG.db_journal_mode == 'PERSIST' and HydrusTime.TimeHasPassed( self._last_journal_zero_time + JOURNAL_ZERO_PERIOD ):
                 
                 self._ZeroJournal()
                 
-                self._last_journal_zero_time = HydrusData.GetNow()
+                self._last_journal_zero_time = HydrusTime.GetNow()
                 
             
         else:
@@ -570,6 +571,6 @@ class DBCursorTransactionWrapper( DBBase ):
     
     def TimeToCommit( self ):
         
-        return self._in_transaction and self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
+        return self._in_transaction and self._transaction_contains_writes and HydrusTime.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
         
     

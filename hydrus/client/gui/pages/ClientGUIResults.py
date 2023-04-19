@@ -13,6 +13,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -44,6 +45,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
 
 class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
@@ -586,7 +588,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         total_duration = sum( ( media.GetDurationMS() for media in media_source ) )
         
-        return HydrusData.ConvertMillisecondsToPrettyTime( total_duration )
+        return HydrusTime.MillisecondsToPrettyTime( total_duration )
         
     
     def _GetPrettyTotalSize( self, only_selected = False ):
@@ -825,7 +827,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             if not ctrl and not shift:
                 
-                self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NONE ) )
+                self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
                 self._SetFocusedMedia( None )
                 self._EndShiftSelect()
                 
@@ -1326,9 +1328,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         pass
         
     
-    def _Remove( self, file_filter ):
+    def _Remove( self, file_filter: ClientMediaFileFilter.FileFilter ):
         
-        hashes = self.GetFilteredHashes( file_filter )
+        hashes = file_filter.GetMediaListHashes( self )
         
         if len( hashes ) > 0:
             
@@ -1440,9 +1442,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         
     
-    def _Select( self, file_filter ):
+    def _Select( self, file_filter: ClientMediaFileFilter.FileFilter ):
         
-        matching_media = self.GetFilteredMedia( file_filter )
+        matching_media = file_filter.GetMediaListMedia( self )
         
         media_to_deselect = self._selected_media.difference( matching_media )
         media_to_select = matching_media.difference( self._selected_media )
@@ -1879,7 +1881,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             name = ''
             text = ''
-            timeout = HydrusData.GetNow() + 60 * 60 * 24
+            timeout = HydrusTime.GetNow() + 60 * 60 * 24
             hashes = self._GetSelectedHashes()
             
             with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = True ) as dlg:
@@ -1991,7 +1993,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if page_key == self._page_key:
             
-            self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NONE ) )
+            self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
             
             ClientMedia.ListeningMediaList.Collect( self, media_collect )
             
@@ -2282,7 +2284,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
             elif action == CAC.SIMPLE_REMOVE_FILE_FROM_VIEW:
                 
-                self._Remove( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_SELECTED ) )
+                self._Remove( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED ) )
                 
             elif action == CAC.SIMPLE_GET_SIMILAR_TO_EXACT:
                 
@@ -2398,7 +2400,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if page_key == self._page_key:
             
-            self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_TAGS, ( tag_service_key, and_or_or, tags ) ) )
+            self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_TAGS, ( tag_service_key, and_or_or, tags ) ) )
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
@@ -2687,7 +2689,7 @@ class MediaPanelThumbnails( MediaPanel ):
             return
             
         
-        now_precise = HydrusData.GetNowPrecise()
+        now_precise = HydrusTime.GetNowPrecise()
         
         for thumbnail in thumbnails:
             
@@ -3280,7 +3282,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if event.key() == QC.Qt.Key_Escape:
             
-            self._Select( ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NONE ) )
+            self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
             
         elif event.key() in ( QC.Qt.Key_PageUp, QC.Qt.Key_PageDown ):
             
@@ -3600,7 +3602,7 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
         QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True  )
         QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True )
-        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL ) )
+        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL ) )
         QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
         
     
@@ -4012,10 +4014,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             filter_counts = {}
             
-            filter_counts[ ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL ) ] = num_files
-            filter_counts[ ClientMedia.FileFilter( ClientMedia.FILE_FILTER_INBOX ) ] = num_inbox
-            filter_counts[ ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ARCHIVE ) ] = num_archive
-            filter_counts[ ClientMedia.FileFilter( ClientMedia.FILE_FILTER_SELECTED ) ] = num_selected
+            filter_counts[ ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL ) ] = num_files
+            filter_counts[ ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_INBOX ) ] = num_inbox
+            filter_counts[ ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ARCHIVE ) ] = num_archive
+            filter_counts[ ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED ) ] = num_selected
             
             has_local_and_remote = has_local and has_remote
             
@@ -4419,7 +4421,7 @@ class MediaPanelThumbnails( MediaPanel ):
         FRAME_DURATION = 1.0 / 60
         NUM_FRAMES_TO_FILL_IN = 15
         
-        loop_started = HydrusData.GetNowPrecise()
+        loop_started = HydrusTime.GetNowPrecise()
         loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
@@ -4529,7 +4531,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 del self._thumbnails_being_faded_in[ hash ]
                 
             
-            if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
+            if HydrusTime.TimeHasPassedPrecise( loop_should_break_time ):
                 
                 break
                 
@@ -4552,7 +4554,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
 def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domains, has_local_and_remote ):
     
-    file_filter_all = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL )
+    file_filter_all = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL )
     
     if file_filter_all.GetCount( win, filter_counts ) > 0:
         
@@ -4560,13 +4562,13 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         #
         
-        file_filter_selected = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_SELECTED )
+        file_filter_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED )
         
-        file_filter_inbox = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_INBOX )
+        file_filter_inbox = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_INBOX )
         
-        file_filter_archive = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ARCHIVE )
+        file_filter_archive = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ARCHIVE )
         
-        file_filter_not_selected = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NOT_SELECTED )
+        file_filter_not_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NOT_SELECTED )
         
         #
         
@@ -4603,7 +4605,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             for file_service_key in all_specific_file_domains:
                 
-                file_filter = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_FILE_SERVICE, file_service_key )
+                file_filter = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, file_service_key )
                 
                 ClientGUIMenus.AppendMenuItem( remove_menu, file_filter.ToString( win, filter_counts ), 'Remove all the files that are in this file domain.', win._Remove, file_filter )
                 
@@ -4611,8 +4613,8 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         if has_local_and_remote:
             
-            file_filter_local = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_LOCAL )
-            file_filter_remote = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_REMOTE )
+            file_filter_local = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_LOCAL )
+            file_filter_remote = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_REMOTE )
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
@@ -4634,7 +4636,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
     
 def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domains, has_local_and_remote ):
     
-    file_filter_all = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ALL )
+    file_filter_all = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL )
     
     if file_filter_all.GetCount( win, filter_counts ) > 0:
         
@@ -4642,13 +4644,13 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         #
         
-        file_filter_inbox = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_INBOX )
+        file_filter_inbox = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_INBOX )
         
-        file_filter_archive = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_ARCHIVE )
+        file_filter_archive = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ARCHIVE )
         
-        file_filter_not_selected = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NOT_SELECTED )
+        file_filter_not_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NOT_SELECTED )
         
-        file_filter_none = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_NONE )
+        file_filter_none = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE )
         
         #
         
@@ -4678,7 +4680,7 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             for file_service_key in all_specific_file_domains:
                 
-                file_filter = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_FILE_SERVICE, file_service_key )
+                file_filter = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, file_service_key )
                 
                 ClientGUIMenus.AppendMenuItem( select_menu, file_filter.ToString( win, filter_counts ), 'Select all the files in this file domain.', win._Select, file_filter )
                 
@@ -4686,8 +4688,8 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         if has_local_and_remote:
             
-            file_filter_local = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_LOCAL )
-            file_filter_remote = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_REMOTE )
+            file_filter_local = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_LOCAL )
+            file_filter_remote = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_REMOTE )
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
@@ -4695,7 +4697,7 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             ClientGUIMenus.AppendMenuItem( select_menu, file_filter_remote.ToString( win, filter_counts ), 'Remove all the files that are not in this client.', win._Select, file_filter_remote )
             
         
-        file_filter_selected = ClientMedia.FileFilter( ClientMedia.FILE_FILTER_SELECTED )
+        file_filter_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED )
         selected_count = file_filter_selected.GetCount( win, filter_counts )
         
         not_selected_count = file_filter_not_selected.GetCount( win, filter_counts )

@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIFunctions

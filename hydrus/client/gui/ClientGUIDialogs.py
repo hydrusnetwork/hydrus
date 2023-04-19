@@ -8,6 +8,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFrames
@@ -222,7 +223,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
         else:
             
-            expires = HydrusData.GetNow() + lifetime
+            expires = HydrusTime.GetNow() + lifetime
             
         
         service = HG.client_controller.services_manager.GetService( self._service_key )
@@ -296,7 +297,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
         else:
             
-            time_left = HydrusData.GetTimeDeltaUntilTime( timeout )
+            time_left = HydrusTime.GetTimeDeltaUntilTime( timeout )
             
             if time_left < 60 * 60 * 12: time_value = 60
             elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
@@ -406,7 +407,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         timeout = self._timeout_number.GetValue()
         
-        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetValue() + HydrusData.GetNow()
+        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetValue() + HydrusTime.GetNow()
         
         return ( self._share_key, name, text, timeout, self._hashes )
         

@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -99,9 +100,9 @@ class TestBandwidthManager( unittest.TestCase ):
         
         #
         
-        fast_forward = HydrusData.GetNow() + 3600
+        fast_forward = HydrusTime.GetNow() + 3600
         
-        with patch.object( HydrusData, 'GetNow', return_value = fast_forward ):
+        with patch.object( HydrusTime, 'GetNow', return_value = fast_forward ):
             
             bm = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
@@ -614,9 +615,9 @@ class TestNetworkingJob( unittest.TestCase ):
         
         self.assertTrue( job.IsAsleep() )
         
-        five_secs_from_now = HydrusData.GetNowFloat() + 5
+        five_secs_from_now = HydrusTime.GetNowFloat() + 5
         
-        with patch.object( HydrusData, 'GetNowFloat', return_value = five_secs_from_now ):
+        with patch.object( HydrusTime, 'GetNowFloat', return_value = five_secs_from_now ):
             
             self.assertFalse( job.IsAsleep() )
             

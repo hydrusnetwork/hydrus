@@ -8,8 +8,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -39,6 +41,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -311,7 +314,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._background_colour_generator = CanvasBackgroundColourGenerator()
         
-        self._current_media_start_time = HydrusData.GetNow()
+        self._current_media_start_time = HydrusTime.GetNow()
         
         self._new_options = HG.client_controller.new_options
         
@@ -685,7 +688,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _SaveCurrentMediaViewTime( self ):
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         view_timestamp = self._current_media_start_time
         
@@ -2077,7 +2080,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         #
         
         self._timer_cursor_hide_job = None
-        self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
+        self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
         
         # need this as we need un-button-pressed move events for cursor hide
         self.setMouseTracking( True )
@@ -2106,7 +2109,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         hide_time = hide_time_ms / 1000
         
-        can_hide = HydrusData.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
+        can_hide = HydrusTime.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
         
         can_check_again = ClientGUIFunctions.MouseIsOverWidget( self )
         
@@ -2139,7 +2142,7 @@ class CanvasWithHovers( CanvasWithDetails ):
     
     def _RestartCursorHideWait( self ):
         
-        self._last_cursor_autohide_touch_time = HydrusData.GetNowFloat()
+        self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
         
         self._RestartCursorHideCheckJob()
         
@@ -3646,7 +3649,7 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         deletee_file_service_keys = [ CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ]
         
     
-    for block_of_deleted in HydrusData.SplitListIntoChunks( deleted, 64 ):
+    for block_of_deleted in HydrusLists.SplitListIntoChunks( deleted, 64 ):
         
         service_keys_to_content_updates = {}
         
@@ -3673,7 +3676,7 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         HG.client_controller.WaitUntilViewFree()
         
     
-    for block_of_kept_hashes in HydrusData.SplitListIntoChunks( kept_hashes, 64 ):
+    for block_of_kept_hashes in HydrusLists.SplitListIntoChunks( kept_hashes, 64 ):
         
         service_keys_to_content_updates = {}
         
@@ -3732,7 +3735,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         kept = list( self._kept )
         
-        deleted = ClientMedia.FilterAndReportDeleteLockFailures( self._deleted )
+        deleted = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( self._deleted )
         
         if len( kept ) > 0 or len( deleted ) > 0:
             

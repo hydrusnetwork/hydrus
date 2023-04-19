@@ -10,12 +10,14 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
 
 hashes_to_jpeg_quality = {}
@@ -378,7 +380,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
-        statement = '{}, {} {}'.format( ClientData.TimestampToPrettyTimeDelta( s_ts, history_suffix = ' old' ), operator, ClientData.TimestampToPrettyTimeDelta( c_ts, history_suffix = ' old' ) )
+        statement = '{}, {} {}'.format( ClientTime.TimestampToPrettyTimeDelta( s_ts, history_suffix = ' old' ), operator, ClientTime.TimestampToPrettyTimeDelta( c_ts, history_suffix = ' old' ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -679,11 +681,11 @@ class DuplicatesManager( object ):
                 
                 search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
                 
-                start_time = HydrusData.GetNowPrecise()
+                start_time = HydrusTime.GetNowPrecise()
                 
                 ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = 0.5 )
                 
-                time_it_took = HydrusData.GetNowPrecise() - start_time
+                time_it_took = HydrusTime.GetNowPrecise() - start_time
                 
                 num_searched_estimate += num_done
                 
@@ -737,11 +739,50 @@ SYNC_ARCHIVE_NONE = 0
 SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
 SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
 
+def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.MediaSingleton, source_media: ClientMedia.MediaSingleton, urls: typing.Collection[ str ] ):
+    
+    from hydrus.client.networking import ClientNetworkingFunctions
+    
+    domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( url ) for url in urls }
+    
+    timestamp_datas = []
+    source_timestamp_manager = source_media.GetLocationsManager().GetTimestampsManager()
+    destination_timestamp_manager = destination_media.GetLocationsManager().GetTimestampsManager()
+    
+    for domain in domains:
+        
+        source_timestamp = source_timestamp_manager.GetDomainModifiedTimestamp( domain )
+        
+        if source_timestamp is not None:
+            
+            timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, source_timestamp )
+            
+            destination_timestamp = destination_timestamp_manager.GetDomainModifiedTimestamp( domain )
+            
+            if destination_timestamp is None or ClientTime.ShouldUpdateModifiedTime( destination_timestamp, source_timestamp ):
+                
+                timestamp_datas.append( timestamp_data )
+                
+            
+        
+    
+    return timestamp_datas
+    
+
+def get_domain_modified_content_updates( destination_media: ClientMedia.MediaSingleton, source_media: ClientMedia.MediaSingleton, urls: typing.Collection[ str ] ):
+    
+    timestamp_datas = get_updated_domain_modified_timestamp_datas( destination_media, source_media, urls )
+    
+    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( destination_media.GetHash(), timestamp_data ) ) for timestamp_data in timestamp_datas ]
+    
+    return content_updates
+    
+
 class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS
     SERIALISABLE_NAME = 'Duplicate Content Merge Options'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self ):
         
@@ -753,6 +794,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_note_import_options = NoteImportOptions.NoteImportOptions()
         self._sync_archive_action = SYNC_ARCHIVE_NONE
         self._sync_urls_action = HC.CONTENT_MERGE_ACTION_NONE
+        self._sync_file_modified_date_action = HC.CONTENT_MERGE_ACTION_COPY
         
     
     def _GetSerialisableInfo( self ):
@@ -770,12 +812,28 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         serialisable_sync_note_import_options = self._sync_note_import_options.GetSerialisableTuple()
         
-        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_notes_action, serialisable_sync_note_import_options, self._sync_archive_action, self._sync_urls_action )
+        return (
+            serialisable_tag_service_actions,
+            serialisable_rating_service_actions,
+            self._sync_notes_action,
+            serialisable_sync_note_import_options,
+            self._sync_archive_action,
+            self._sync_urls_action,
+            self._sync_file_modified_date_action
+        )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_notes_action, serialisable_sync_note_import_options, self._sync_archive_action, self._sync_urls_action ) = serialisable_info
+        (
+            serialisable_tag_service_actions,
+            serialisable_rating_service_actions,
+            self._sync_notes_action,
+            serialisable_sync_note_import_options,
+            self._sync_archive_action,
+            self._sync_urls_action,
+            self._sync_file_modified_date_action
+        ) = serialisable_info
         
         self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
@@ -872,6 +930,32 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             return ( 6, new_serialisable_info )
             
         
+        if version == 6:
+            
+            (
+                serialisable_tag_service_actions,
+                serialisable_rating_service_actions,
+                sync_notes_action,
+                serialisable_sync_note_import_options,
+                sync_archive_action,
+                sync_urls_action
+            ) = old_serialisable_info
+            
+            sync_file_modified_date_action = HC.CONTENT_MERGE_ACTION_NONE
+            
+            new_serialisable_info = (
+                serialisable_tag_service_actions,
+                serialisable_rating_service_actions,
+                sync_notes_action,
+                serialisable_sync_note_import_options,
+                sync_archive_action,
+                sync_urls_action,
+                sync_file_modified_date_action
+            )
+            
+            return ( 7, new_serialisable_info )
+            
+        
     
     def GetRatingServiceActions( self ) -> typing.Collection[ tuple ]:
         
@@ -886,6 +970,11 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     def GetSyncArchiveAction( self ) -> int:
         
         return self._sync_archive_action
+        
+    
+    def GetSyncFileModifiedDateAction( self ) -> int:
+        
+        return self._sync_file_modified_date_action
         
     
     def GetSyncNotesAction( self ) -> int:
@@ -916,6 +1005,11 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     def SetSyncArchiveAction( self, sync_archive_action: int ):
         
         self._sync_archive_action = sync_archive_action
+        
+    
+    def SetSyncFileModifiedDateAction( self, sync_file_modified_date_action: int ):
+        
+        self._sync_file_modified_date_action = sync_file_modified_date_action
         
     
     def SetSyncNotesAction( self, sync_notes_action: int ):
@@ -1199,12 +1293,37 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        if self._sync_file_modified_date_action != HC.CONTENT_MERGE_ACTION_NONE:
+            
+            first_timestamp = first_media.GetMediaResult().GetTimestampsManager().GetFileModifiedTimestamp()
+            second_timestamp = second_media.GetMediaResult().GetTimestampsManager().GetFileModifiedTimestamp()
+            
+            if self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                
+                if ClientTime.ShouldUpdateModifiedTime( first_timestamp, second_timestamp ):
+                    
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp ) ) ) )
+                    
+                elif ClientTime.ShouldUpdateModifiedTime( second_timestamp, first_timestamp ):
+                    
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( second_hash, ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp ) ) ) )
+                    
+                
+            elif self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_COPY:
+                
+                if ClientTime.ShouldUpdateModifiedTime( first_timestamp, second_timestamp ):
+                    
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp ) ) ) )
+                    
+                
+            
+        
+        #
+        
         if self._sync_urls_action != HC.CONTENT_MERGE_ACTION_NONE:
             
             first_urls = set( first_media.GetLocationsManager().GetURLs() )
             second_urls = set( second_media.GetLocationsManager().GetURLs() )
-            
-            content_updates = []
             
             if self._sync_urls_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
@@ -1213,12 +1332,16 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( first_media, second_media, first_needs ) )
                     
                 
                 if len( second_needs ) > 0:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                    
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( second_media, first_media, second_needs ) )
                     
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
@@ -1227,13 +1350,10 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
                     
-                
-            
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( content_updates )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( first_media, second_media, first_needs ) )
+                    
                 
             
         
@@ -1260,7 +1380,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             if media.HasDeleteLocked():
                 
-                ClientMedia.ReportDeleteLockFailures( [ media ] )
+                ClientMediaFileFilter.ReportDeleteLockFailures( [ media ] )
                 
                 continue
                 

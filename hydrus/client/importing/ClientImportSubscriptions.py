@@ -10,10 +10,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientThreading
-from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportSubscriptionQuery
@@ -123,7 +125,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             reason = reason.splitlines()[0]
             
         
-        self._no_work_until = HydrusData.GetNow() + time_delta
+        self._no_work_until = HydrusTime.GetNow() + time_delta
         self._no_work_until_reason = reason
         
     
@@ -233,7 +235,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _NoDelays( self ):
         
-        return HydrusData.TimeHasPassed( self._no_work_until )
+        return HydrusTime.TimeHasPassed( self._no_work_until )
         
     
     def _ShowHitPeriodicFileLimitMessage( self, query_name: int, query_text: int, file_limit: int ):
@@ -701,7 +703,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( death_files_found, death_time_delta ) = death_file_velocity
                 
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusData.TimeDeltaToPrettyTimeDelta( death_time_delta ) ) )
+                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) ) )
                 
             
         else:
@@ -1223,7 +1225,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def CanScrubDelay( self ):
         
-        return not HydrusData.TimeHasPassed( self._no_work_until )
+        return not HydrusTime.TimeHasPassed( self._no_work_until )
         
     
     def CheckNow( self ):
@@ -1327,7 +1329,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         best_next_work_time = min( next_work_times )
         
-        if not HydrusData.TimeHasPassed( self._no_work_until ):
+        if not HydrusTime.TimeHasPassed( self._no_work_until ):
             
             best_next_work_time = max( ( best_next_work_time, self._no_work_until ) )
             
@@ -1826,7 +1828,7 @@ class SubscriptionsManager( object ):
         
         self._wake_event = threading.Event()
         
-        self._big_pauser = HydrusData.BigJobPauser( wait_time = 0.8 )
+        self._big_pauser = HydrusThreading.BigJobPauser( wait_time = 0.8 )
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'Wake', 'notify_network_traffic_unpaused' )
@@ -1900,7 +1902,7 @@ class SubscriptionsManager( object ):
         # just a couple of seconds for calculation and human breathing room
         SUB_WORK_DELAY_BUFFER = 3
         
-        names_not_due = { name for ( name, next_work_time ) in self._names_to_next_work_time.items() if not HydrusData.TimeHasPassed( next_work_time + SUB_WORK_DELAY_BUFFER ) }
+        names_not_due = { name for ( name, next_work_time ) in self._names_to_next_work_time.items() if not HydrusTime.TimeHasPassed( next_work_time + SUB_WORK_DELAY_BUFFER ) }
         
         possible_names.difference_update( names_not_due )
         
@@ -1969,7 +1971,7 @@ class SubscriptionsManager( object ):
                     # this sets min resolution of a single sub repeat cycle
                     BUFFER_TIME = 120
                     
-                    next_work_time = max( next_work_time, HydrusData.GetNow() + BUFFER_TIME )
+                    next_work_time = max( next_work_time, HydrusTime.GetNow() + BUFFER_TIME )
                     
                 
                 self._names_to_next_work_time[ name ] = next_work_time
@@ -2111,7 +2113,7 @@ class SubscriptionsManager( object ):
             message += os.linesep * 2
             message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
             message += os.linesep * 2
-            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientData.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
+            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientTime.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
             
             HydrusData.ShowText( message )
             

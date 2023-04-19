@@ -1,5 +1,6 @@
 import base64
 import calendar
+import datetime
 import hashlib
 import html
 import re
@@ -12,6 +13,9 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
+
+from hydrus.client import ClientTime
 
 STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING = 0
 STRING_CONVERSION_REMOVE_TEXT_FROM_END = 1
@@ -245,34 +249,27 @@ class StringConverter( StringProcessingStep ):
                     
                     ( phrase, timezone, timezone_offset ) = data
                     
-                    struct_time = time.strptime( s, phrase )
+                    dt = datetime.datetime.strptime( s, phrase )
                     
-                    if timezone == HC.TIMEZONE_GMT:
+                    if timezone in ( HC.TIMEZONE_UTC, HC.TIMEZONE_OFFSET ):
                         
-                        # the given struct is in GMT, so calendar.timegm is appropriate here
+                        dt = datetime.datetime(
+                            dt.year,
+                            dt.month,
+                            dt.day,
+                            dt.hour,
+                            dt.minute,
+                            dt.second,
+                            tzinfo = datetime.timezone.utc
+                        )
                         
-                        timestamp = int( calendar.timegm( struct_time ) )
-                        
-                    elif timezone == HC.TIMEZONE_LOCAL:
-                        
-                        # the given struct is in local time, so time.mktime is correct
-                        
-                        try:
+                        if timezone == HC.TIMEZONE_OFFSET:
                             
-                            timestamp = int( time.mktime( struct_time ) )
-                            
-                        except:
-                            
-                            timestamp = HydrusData.GetNow()
+                            dt = dt - datetime.timedelta( seconds = timezone_offset )
                             
                         
-                    elif timezone == HC.TIMEZONE_OFFSET:
-                        
-                        # the given struct is in server time, which is the same as GMT minus an offset
-                        # if we are 7200 seconds ahead, the correct GMT timestamp needs to be 7200 smaller
-                        
-                        timestamp = int( calendar.timegm( struct_time ) ) - timezone_offset
-                        
+                    
+                    timestamp = HydrusTime.DateTimeToTimestamp( dt )
                     
                     s = str( timestamp )
                     
@@ -289,20 +286,9 @@ class StringConverter( StringProcessingStep ):
                         raise Exception( '"{}" was not an integer!'.format( s ) )
                         
                     
-                    if timezone == HC.TIMEZONE_GMT:
-                        
-                        # user wants a UTC string, so we need UTC struct
-                        
-                        struct_time = time.gmtime( timestamp )
-                        
-                    elif timezone == HC.TIMEZONE_LOCAL:
-                        
-                        # user wants a local string, so we need localtime
-                        
-                        struct_time = time.localtime( timestamp )
-                        
+                    dt = HydrusTime.TimestampToDateTime( timestamp, timezone )
                     
-                    s = time.strftime( phrase, struct_time )
+                    s = dt.strftime( phrase )
                     
                 elif conversion_type == STRING_CONVERSION_INTEGER_ADDITION:
                     

@@ -6,6 +6,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
@@ -213,7 +214,7 @@ class FileImportJob( object ):
                 if len( file_service_keys_to_add_to ) > 0:
                     
                     file_info_manager = media_result.GetFileInfoManager()
-                    now = HydrusData.GetNow()
+                    now = HydrusTime.GetNow()
                     
                     service_keys_to_content_updates = {}
                     

@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBModule
@@ -77,15 +78,15 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                     
                     time.sleep( 0.02 )
                     
-                    started = HydrusData.GetNowPrecise()
+                    started = HydrusTime.GetNowPrecise()
                     
                     self.AnalyzeTable( name )
                     
-                    time_took = HydrusData.GetNowPrecise() - started
+                    time_took = HydrusTime.GetNowPrecise() - started
                     
                     if time_took > 1:
                         
-                        HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                        HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
                         
                     
                     p1 = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
@@ -139,7 +140,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
-        self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusData.GetNow() ) )
+        self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNow() ) )
         
     
     def GetLastShutdownWorkTime( self ):
@@ -203,7 +204,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                             continue
                             
                         
-                        if not HydrusData.TimeHasPassed( timestamp + period ):
+                        if not HydrusTime.TimeHasPassed( timestamp + period ):
                             
                             continue
                             
@@ -284,14 +285,14 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM last_shutdown_work_time;' )
         
-        self._Execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( HydrusData.GetNow(), ) )
+        self._Execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( HydrusTime.GetNow(), ) )
         
     
     def RegisterSuccessfulVacuum( self, name: str ):
         
         self._Execute( 'DELETE FROM vacuum_timestamps WHERE name = ?;', ( name, ) )
         
-        self._Execute( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+        self._Execute( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusTime.GetNow() ) )
         
     
     def TouchAnalyzeNewTables( self ):

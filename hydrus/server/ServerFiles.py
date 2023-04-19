@@ -3,6 +3,7 @@ import os
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 def GetAllHashes( file_type ):
     

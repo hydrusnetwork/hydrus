@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
@@ -19,7 +20,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._time_started = HydrusData.GetNow()
+        self._time_started = HydrusTime.GetNow()
         
         self._api_permissions = None
         

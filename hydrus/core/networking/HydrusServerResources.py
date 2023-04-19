@@ -1,6 +1,5 @@
 import os
 import time
-import traceback
 
 import twisted.internet.error
 from twisted.internet import reactor, defer
@@ -13,8 +12,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTemp
+from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusServerRequest
 
 def GetServerSummaryTexts( service ):
@@ -759,7 +760,7 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request: HydrusServerRequest.HydrusRequest ):
         
-        HydrusData.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
+        HydrusProfiling.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
         
         return request.result_lmao
         
@@ -1028,6 +1029,11 @@ class HydrusResource( Resource ):
         HG.controller.ReportDataUsed( num_bytes )
         
     
+    def _reportRequestStarted( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        pass
+        
+    
     def _reportRequestUsed( self, request: HydrusServerRequest.HydrusRequest ):
         
         self._service.ReportRequestUsed()
@@ -1105,6 +1111,8 @@ class HydrusResource( Resource ):
     
     def render_GET( self, request: HydrusServerRequest.HydrusRequest ):
         
+        self._reportRequestStarted( request )
+        
         d = defer.Deferred()
         
         d.addCallback( self._callbackCheckServiceRestrictions )
@@ -1132,6 +1140,8 @@ class HydrusResource( Resource ):
     
     def render_OPTIONS( self, request: HydrusServerRequest.HydrusRequest ):
         
+        self._reportRequestStarted( request )
+        
         d = defer.Deferred()
         
         d.addCallback( self._callbackCheckServiceRestrictions )
@@ -1150,6 +1160,8 @@ class HydrusResource( Resource ):
         
     
     def render_POST( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        self._reportRequestStarted( request )
         
         d = defer.Deferred()
         

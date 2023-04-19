@@ -9,6 +9,8 @@ from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
+
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC

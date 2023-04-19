@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -420,7 +421,7 @@ class RelatedTagsPanel( QW.QWidget ):
                     num_done_s = '{} {} searched fully in '.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), tags_s )
                     
                 
-                label = '{}{}.'.format( num_done_s, HydrusData.TimeDeltaToPrettyTimeDelta( total_time_took ) )
+                label = '{}{}.'.format( num_done_s, HydrusTime.TimeDeltaToPrettyTimeDelta( total_time_took ) )
                 
                 self._status_label.setText( label )
                 
@@ -431,7 +432,7 @@ class RelatedTagsPanel( QW.QWidget ):
                 self._have_done_search_with_this_media = True
                 
             
-            start_time = HydrusData.GetNowPrecise()
+            start_time = HydrusTime.GetNowPrecise()
             
             concurrence_threshold = HG.client_controller.new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) / 100
             search_tag_slices_weight_dict = { ':' : 1.0, '' : 1.0 }
@@ -477,7 +478,7 @@ class RelatedTagsPanel( QW.QWidget ):
                 other_tags_to_exclude = other_tags_to_exclude
             )
             
-            total_time_took = HydrusData.GetNowPrecise() - start_time
+            total_time_took = HydrusTime.GetNowPrecise() - start_time
             
             predicates = ClientSearch.SortPredicates( predicates )
             
@@ -720,7 +721,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             file_identifier = script.ConvertMediaToFileIdentifier( m )
             
         
-        stop_time = HydrusData.GetNow() + 30
+        stop_time = HydrusTime.GetNow() + 30
         
         job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
         

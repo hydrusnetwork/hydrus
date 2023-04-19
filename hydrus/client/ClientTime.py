@@ -1,9 +1,13 @@
+import calendar
 import datetime
 import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+
+from hydrus.client import ClientConstants as CC
 
 try:
     
@@ -17,21 +21,7 @@ except:
     
 
 from hydrus.core import HydrusData
-
-def CalendarToTimestamp( dt: datetime.datetime ) -> int:
-    
-    try:
-        
-        # mktime is local calendar time to timestamp, so this is client specific
-        timestamp = int( time.mktime( dt.timetuple() ) )
-        
-    except:
-        
-        timestamp = HydrusData.GetNow()
-        
-    
-    return timestamp
-    
+from hydrus.core import HydrusTime
 
 def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
     
@@ -49,21 +39,7 @@ def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> da
         
     
 
-def GetDateTime( year: int, month: int, day: int, hour: int, minute: int ) -> datetime.datetime:
-    
-    return datetime.datetime( year, month, day, hour, minute )
-    
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:
-    
-    if not TimestampIsSensible( existing_timestamp ):
-        
-        existing_timestamp = None
-        
-    
-    if not TimestampIsSensible( new_timestamp ):
-        
-        new_timestamp = None
-        
     
     if ShouldUpdateModifiedTime( existing_timestamp, new_timestamp ):
         
@@ -77,12 +53,12 @@ def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestam
 
 def ShouldUpdateModifiedTime( existing_timestamp: int, new_timestamp: typing.Optional[ int ] ) -> bool:
     
-    if not TimestampIsSensible( new_timestamp ):
+    if new_timestamp is None:
         
         return False
         
     
-    if not TimestampIsSensible( existing_timestamp ):
+    if existing_timestamp is None:
         
         return True
         
@@ -111,6 +87,20 @@ def TimestampIsSensible( timestamp: typing.Optional[ int ] ) -> bool:
     
     return True
     
+
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
+    
+    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
+        
+        return HydrusTime.TimestampToPrettyTime( timestamp )
+        
+    else:
+        
+        return HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = just_now_string, just_now_threshold = just_now_threshold, history_suffix = history_suffix, show_seconds = show_seconds, no_prefix = no_prefix )
+        
+    
+
+HydrusTime.TimestampToPrettyTimeDelta = TimestampToPrettyTimeDelta
 
 REAL_SIMPLE_TIMESTAMP_TYPES = {
     HC.TIMESTAMP_TYPE_ARCHIVED,
@@ -159,6 +149,11 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
         return ( self.timestamp_type, self.location, self.timestamp ).__hash__()
         
     
+    def __repr__( self ):
+        
+        return self.ToString()
+        
+    
     def _GetSerialisableInfo( self ):
         
         if self.timestamp_type in FILE_SERVICE_TIMESTAMP_TYPES:
@@ -186,6 +181,53 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
             self.location = serialisable_location
             
         
+    
+    def ToString( self ) -> str:
+        
+        if self.timestamp_type in SIMPLE_TIMESTAMP_TYPES:
+            
+            type_base = HC.timestamp_type_str_lookup[ self.timestamp_type ]
+            
+        else:
+            
+            if self.timestamp_type in FILE_SERVICE_TIMESTAMP_TYPES:
+                
+                try:
+                    
+                    service_string = HG.client_controller.services_manager.GetName( self.location )
+                    
+                except:
+                    
+                    service_string = 'unknown service'
+                    
+                
+                type_base = '"{}" {}'.format( service_string, HC.timestamp_type_str_lookup[ self.timestamp_type ] )
+                
+            elif self.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+                
+                type_base = '{} {}'.format( CC.canvas_type_str_lookup[ self.location ], HC.timestamp_type_str_lookup[ self.timestamp_type ] )
+                
+            elif self.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+                
+                type_base = '"{}" {}'.format( self.location, HC.timestamp_type_str_lookup[ self.timestamp_type ] )
+                
+            else:
+                
+                type_base = 'unknown timestamp type'
+                
+            
+        
+        if self.timestamp is None:
+            
+            # we are a stub, type summary is appropriate
+            return type_base
+            
+        else:
+            
+            return '{}: {}'.format( type_base, HydrusTime.TimestampToPrettyTime( self.timestamp ) )
+            
+        
+    
     
     @staticmethod
     def STATICArchivedTime( timestamp: int ) -> "TimestampData":
@@ -241,6 +283,5 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
         return TimestampData( timestamp_type = timestamp_type )
         
     
-
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TIMESTAMP_DATA ] = TimestampData

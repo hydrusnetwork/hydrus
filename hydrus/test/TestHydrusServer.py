@@ -15,6 +15,7 @@ from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 from hydrus.core.networking import HydrusServerRequest
@@ -68,7 +69,7 @@ class TestServer( unittest.TestCase ):
         
         account_key = HydrusData.GenerateKey()
         account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( HC.SERVER_ADMIN )
-        created = HydrusData.GetNow() - 100000
+        created = HydrusTime.GetNow() - 100000
         expires = None
         
         cls._account = HydrusNetwork.Account( account_key, account_type, created, expires )
@@ -205,7 +206,7 @@ class TestServer( unittest.TestCase ):
         
         # ip
         
-        ( ip, timestamp ) = ( '94.45.87.123', HydrusData.GetNow() - 100000 )
+        ( ip, timestamp ) = ( '94.45.87.123', HydrusTime.GetNow() - 100000 )
         
         HG.test_controller.SetRead( 'ip', ( ip, timestamp ) )
         
@@ -474,7 +475,7 @@ class TestServer( unittest.TestCase ):
         
         metadata = HydrusNetwork.Metadata()
         
-        metadata.AppendUpdate( [ definitions_update_hash, content_update_hash ], HydrusData.GetNow() - 101000, HydrusData.GetNow() - 1000, HydrusData.GetNow() + 100000 )
+        metadata.AppendUpdate( [ definitions_update_hash, content_update_hash ], HydrusTime.GetNow() - 101000, HydrusTime.GetNow() - 1000, HydrusTime.GetNow() + 100000 )
         
         service._metadata = metadata
         
@@ -581,7 +582,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'registration_keys', [ registration_key ] )
         
-        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ), 'expires' : HydrusData.GetNow() + 1200 } )
+        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ), 'expires' : HydrusTime.GetNow() + 1200 } )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         

@@ -3,6 +3,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -66,7 +67,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
             self.inbox_hash_ids.difference_update( archiveable_hash_ids )
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             self.modules_files_metadata_timestamps.SetSimpleTimestamps( HC.TIMESTAMP_TYPE_ARCHIVED, [ ( hash_id, now ) for hash_id in archiveable_hash_ids ] )
             

@@ -8,11 +8,13 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
@@ -298,8 +300,8 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_gallery_seed_index = HydrusData.ToHumanInt( gallery_seed_index )
         pretty_url = url
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = ClientData.TimestampToPrettyTimeDelta( added )
-        pretty_modified = ClientData.TimestampToPrettyTimeDelta( modified )
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
+        pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
         pretty_note = note.split( os.linesep )[0]
         
         display_tuple = ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )

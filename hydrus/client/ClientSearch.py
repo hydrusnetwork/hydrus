@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -454,7 +455,7 @@ class FileSystemPredicates( object ):
                     
                     age = ( years * 365 * 86400 ) + ( ( ( ( ( months * 30 ) + days ) * 24 ) + hours ) * 3600 )
                     
-                    now = HydrusData.GetNow()
+                    now = HydrusTime.GetNow()
                     
                     # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
                     
@@ -487,14 +488,14 @@ class FileSystemPredicates( object ):
                     
                     ( year, month, day, hour, minute ) = age_value
                     
-                    dt = ClientTime.GetDateTime( year, month, day, hour, minute )
+                    dt = HydrusTime.GetDateTime( year, month, day, hour, minute )
                     
-                    time_pivot = ClientTime.CalendarToTimestamp( dt )
+                    time_pivot = HydrusTime.DateTimeToTimestamp( dt )
                     
-                    dt_day_of_start = ClientTime.GetDateTime( year, month, day, 0, 0 )
+                    dt_day_of_start = HydrusTime.GetDateTime( year, month, day, 0, 0 )
                     
-                    day_of_start = ClientTime.CalendarToTimestamp( dt_day_of_start )
-                    day_of_end = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
+                    day_of_start = HydrusTime.DateTimeToTimestamp( dt_day_of_start )
+                    day_of_end = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
                     
                     # the before/since semantic logic is:
                     # '<' 2022-05-05 means 'before that date'
@@ -515,8 +516,8 @@ class FileSystemPredicates( object ):
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        previous_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
-                        next_month_timestamp = ClientTime.CalendarToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
+                        previous_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
+                        next_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
                         
                         self._timestamp_ranges[ predicate_type ][ '>' ] = previous_month_timestamp
                         self._timestamp_ranges[ predicate_type ][ '<' ] = next_month_timestamp
@@ -2337,7 +2338,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        base += ' {} {}'.format( operator, HydrusData.ConvertMillisecondsToPrettyTime( value ) )
+                        base += ' {} {}'.format( operator, HydrusTime.MillisecondsToPrettyTime( value ) )
                         
                     
                 
@@ -2427,6 +2428,22 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     base += ' ' + operator + ' ' + str( ratio_width ) + ':' + str( ratio_height )
                     
+                    if ratio_width == 1 and ratio_height == 1:
+                        
+                        if operator == 'wider than':
+                            
+                            base = 'ratio is landscape'
+                            
+                        elif operator == 'taller than':
+                            
+                            base = 'ratio is portrait'
+                            
+                        elif operator == '=':
+                            
+                            base = 'ratio is square'
+                            
+                        
+                    
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
                 
@@ -2505,7 +2522,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             pretty_operator = 'unknown operator '
                             
                         
-                        base += ': ' + pretty_operator + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta ) + ' ago'
+                        base += ': ' + pretty_operator + HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta ) + ' ago'
                         
                     elif age_type == 'date':
                         
@@ -2513,7 +2530,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         dt = datetime.datetime( year, month, day, hour, minute )
                         
-                        timestamp = ClientTime.CalendarToTimestamp( dt )
+                        timestamp = HydrusTime.DateTimeToTimestamp( dt )
                         
                         if operator == '<':
                             
@@ -2534,8 +2551,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         include_24h_time = operator != '=' and ( hour > 0 or minute > 0 )
                         
-                        # convert this GMT TIMESTAMP to a pretty local string
-                        base += ': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = include_24h_time )
+                        base += ': ' + pretty_operator + HydrusTime.TimestampToPrettyTime( timestamp, include_24h_time = include_24h_time )
                         
                     
                 
@@ -2865,7 +2881,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     elif view_type == 'viewtime':
                         
-                        value_string = HydrusData.TimeDeltaToPrettyTimeDelta( viewing_value )
+                        value_string = HydrusTime.TimeDeltaToPrettyTimeDelta( viewing_value )
                         
                     
                     base = '{} {} {} {}'.format( domain, view_type, operator, value_string )

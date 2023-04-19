@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusTime
 
 if cv2.__version__.startswith( '2' ):
     

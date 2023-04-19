@@ -11,6 +11,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusNetworking
@@ -197,7 +198,7 @@ class HydrusResourceSessionKey( HydrusResourceHydrusNetwork ):
         
         ( session_key, expires ) = HG.server_controller.server_session_manager.AddSession( self._service_key, access_key )
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         max_age = expires - now
         
@@ -409,12 +410,12 @@ class HydrusResourceRestrictedOptionsModifyNullificationPeriod( HydrusResourceRe
         
         if nullification_period < HydrusNetwork.MIN_NULLIFICATION_PERIOD:
             
-            raise HydrusExceptions.BadRequestException( 'The anonymisation period was too low. It needs to be at least {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MIN_NULLIFICATION_PERIOD ) ) )
+            raise HydrusExceptions.BadRequestException( 'The anonymisation period was too low. It needs to be at least {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MIN_NULLIFICATION_PERIOD ) ) )
             
         
         if nullification_period > HydrusNetwork.MAX_NULLIFICATION_PERIOD:
             
-            raise HydrusExceptions.BadRequestException( 'The anonymisation period was too high. It needs to be lower than {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
+            raise HydrusExceptions.BadRequestException( 'The anonymisation period was too high. It needs to be lower than {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
             
         
         old_nullification_period = self._service.GetNullificationPeriod()
@@ -426,8 +427,8 @@ class HydrusResourceRestrictedOptionsModifyNullificationPeriod( HydrusResourceRe
             HydrusData.Print(
                 'Account {} changed the anonymisation period from "{}" to "{}".'.format(
                     request.hydrus_account.GetAccountKey().hex(),
-                    HydrusData.TimeDeltaToPrettyTimeDelta( old_nullification_period ),
-                    HydrusData.TimeDeltaToPrettyTimeDelta( nullification_period )
+                    HydrusTime.TimeDeltaToPrettyTimeDelta( old_nullification_period ),
+                    HydrusTime.TimeDeltaToPrettyTimeDelta( nullification_period )
                 )
             )
             
@@ -446,12 +447,12 @@ class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestricte
         
         if update_period < HydrusNetwork.MIN_UPDATE_PERIOD:
             
-            raise HydrusExceptions.BadRequestException( 'The update period was too low. It needs to be at least {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MIN_UPDATE_PERIOD ) ) )
+            raise HydrusExceptions.BadRequestException( 'The update period was too low. It needs to be at least {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MIN_UPDATE_PERIOD ) ) )
             
         
         if update_period > HydrusNetwork.MAX_UPDATE_PERIOD:
             
-            raise HydrusExceptions.BadRequestException( 'The update period was too high. It needs to be lower than {}.'.format( HydrusData.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
+            raise HydrusExceptions.BadRequestException( 'The update period was too high. It needs to be lower than {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
             
         
         old_update_period = self._service.GetUpdatePeriod()
@@ -463,8 +464,8 @@ class HydrusResourceRestrictedOptionsModifyUpdatePeriod( HydrusResourceRestricte
             HydrusData.Print(
                 'Account {} changed the update period from "{}" to "{}".'.format(
                     request.hydrus_account.GetAccountKey().hex(),
-                    HydrusData.TimeDeltaToPrettyTimeDelta( old_update_period ),
-                    HydrusData.TimeDeltaToPrettyTimeDelta( update_period )
+                    HydrusTime.TimeDeltaToPrettyTimeDelta( old_update_period ),
+                    HydrusTime.TimeDeltaToPrettyTimeDelta( update_period )
                 )
             )
             

@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTime
 
 STYLESHEET_DIR = os.path.join( HC.STATIC_DIR, 'qss' )
 

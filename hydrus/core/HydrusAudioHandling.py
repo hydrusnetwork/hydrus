@@ -2,6 +2,7 @@ import re
 import subprocess
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 def ParseFFMPEGAudio( lines ):
     

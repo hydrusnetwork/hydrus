@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientData
@@ -1282,7 +1283,7 @@ class ShortcutsHandler( QC.QObject ):
                     
                     CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
                 
-                #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusData.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
                 if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
                     
                     if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:

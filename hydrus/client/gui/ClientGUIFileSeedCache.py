@@ -10,12 +10,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
@@ -349,8 +350,8 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_file_seed_data = str( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = ClientData.TimestampToPrettyTimeDelta( added )
-        pretty_modified = ClientData.TimestampToPrettyTimeDelta( modified )
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
+        pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
         
         if source_time is None:
             
@@ -358,7 +359,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_source_time = ClientData.TimestampToPrettyTimeDelta( source_time )
+            pretty_source_time = ClientTime.TimestampToPrettyTimeDelta( source_time )
             
         
         sort_source_time = ClientGUIListCtrl.SafeNoneInt( source_time )

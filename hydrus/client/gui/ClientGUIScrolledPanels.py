@@ -3,6 +3,7 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -128,7 +129,7 @@ class ResizingScrolledPanel( QW.QScrollArea ):
             
             # ok this is a stupid sizing hack to stop the ever-growing window that has a sizeHint three pixels bigger than its current size causing a resize growth loop
             # if we get a bunch of resizes real quick, we cut them off, hopefully breaking the cycle
-            if not HydrusData.TimeHasPassedFloat( self._last_just_sized_cascade_start_time + 1.0 ):
+            if not HydrusTime.TimeHasPassedFloat( self._last_just_sized_cascade_start_time + 1.0 ):
                 
                 self._number_of_just_sizedes += 1
                 
@@ -139,7 +140,7 @@ class ResizingScrolledPanel( QW.QScrollArea ):
                 
             else:
                 
-                self._last_just_sized_cascade_start_time = HydrusData.GetNowFloat()
+                self._last_just_sized_cascade_start_time = HydrusTime.GetNowFloat()
                 
                 self._number_of_just_sizedes = 1
                 

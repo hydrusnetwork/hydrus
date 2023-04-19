@@ -13,6 +13,7 @@ from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
+from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -25,6 +26,7 @@ choice_tuple_label_lookup = {
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes : 'a file\'s notes',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags : 'a file\'s tags',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs : 'a file\'s URLs',
+    ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps : 'a file\'s timestamps',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT : 'a .txt sidecar',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON : 'a .json sidecar'
 }
@@ -33,6 +35,7 @@ choice_tuple_description_lookup = {
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes : 'The notes that a file has.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags : 'The tags that a file has on a particular service.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs : 'The known URLs that a file has.',
+    ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps : 'A recorded timestamp that a file has.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT : 'A list of raw newline-separated texts in a .txt file.',
     ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON : 'Strings somewhere in a JSON file.'
 }
@@ -79,6 +82,14 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._timestamp_data_stub_panel = ClientGUICommon.StaticBox( self, 'timestamp type' )
+        
+        self._timestamp_data_stub = ClientGUITime.TimestampDataStubCtrl( self._timestamp_data_stub_panel )
+        
+        self._timestamp_data_stub_panel.Add( self._timestamp_data_stub, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
         self._json_parsing_formula_panel = QW.QWidget( self )
         
         self._json_parsing_formula_button = ClientGUICommon.BetterButton( self, 'edit parsing formula', self._EditJSONParsingFormula )
@@ -116,6 +127,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._change_type_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._service_selection_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._timestamp_data_stub_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._json_parsing_formula_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._txt_separator_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sidecar_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -177,6 +189,10 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pass
             
+        elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ):
+            
+            importer.SetTimestampDataStub( self._timestamp_data_stub.GetValue() )
+            
         elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT ):
             
             importer.SetSeparator( self._txt_separator_panel.GetValue() )
@@ -237,6 +253,12 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs( string_processor = string_processor )
             
+        elif self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps:
+            
+            importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( string_processor = string_processor )
+            
+            importer.SetTimestampDataStub( self._timestamp_data_stub.GetValue() )
+            
         elif self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT:
             
             remove_actual_filename_ext = self._sidecar_panel.GetRemoveActualFilenameExt()
@@ -290,6 +312,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._json_parsing_formula_panel.setVisible( False )
         self._txt_separator_panel.setVisible( False )
         self._sidecar_panel.setVisible( False )
+        self._timestamp_data_stub_panel.setVisible( False )
         
         if isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar ):
             
@@ -315,6 +338,12 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         elif isinstance( importer, ( ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ) ):
             
             pass
+            
+        elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ):
+            
+            self._timestamp_data_stub.SetValue( importer.GetTimestampDataStub() )
+            
+            self._timestamp_data_stub_panel.setVisible( True )
             
         elif isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT ):
             

@@ -44,6 +44,26 @@ class DummyFormula( ClientParsing.ParseFormula ):
         
     
 
+class TestParseFormulaCompound( unittest.TestCase ):
+    
+    def test_complex_unicode( self ):
+        
+        a = 'test \u2014\u201D test'
+        b = 'test \u2019\u201C test'
+        
+        formulae = [
+            DummyFormula( [ a ] ),
+            DummyFormula( [ b ] )
+        ]
+        
+        pfc = ClientParsing.ParseFormulaCompound( formulae = formulae, sub_phrase = '\\1 \\2' )
+        
+        result = pfc.Parse( {}, 'gumpf', False )
+        
+        self.assertEqual( result, [ '{} {}'.format( a, b ) ])
+        
+    
+
 class TestContentParser( unittest.TestCase ):
     
     def test_mappings( self ):
@@ -189,7 +209,7 @@ class TestStringConverter( unittest.TestCase ):
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_GMT, 0 ) ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DATE_DECODE, ( '%Y-%m-%d %H:%M:%S', HC.TIMEZONE_UTC, 0 ) ) ] )
         
         self.assertEqual( string_converter.Convert( '1970-01-02 00:00:00' ), '86400' )
         

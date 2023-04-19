@@ -16,15 +16,16 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNATPunch
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
 from hydrus.client.metadata import ClientRatings
@@ -857,12 +858,12 @@ class ServiceRemote( Service ):
             duration = self._GetErrorWaitPeriod()
             
         
-        next_no_requests_until = HydrusData.GetNow() + duration
+        next_no_requests_until = HydrusTime.GetNow() + duration
         
         if next_no_requests_until > self._no_requests_until:
             
             self._no_requests_reason = reason
-            self._no_requests_until = HydrusData.GetNow() + duration
+            self._no_requests_until = HydrusTime.GetNow() + duration
             
         
         self._SetDirty()
@@ -894,9 +895,9 @@ class ServiceRemote( Service ):
     
     def _CheckCanCommunicateExternally( self, including_bandwidth = True ):
         
-        if not HydrusData.TimeHasPassed( self._no_requests_until ):
+        if not HydrusTime.TimeHasPassed( self._no_requests_until ):
             
-            raise HydrusExceptions.InsufficientCredentialsException( self._no_requests_reason + ' - next request ' + ClientData.TimestampToPrettyTimeDelta( self._no_requests_until ) )
+            raise HydrusExceptions.InsufficientCredentialsException( self._no_requests_reason + ' - next request ' + ClientTime.TimestampToPrettyTimeDelta( self._no_requests_until ) )
             
         
         if including_bandwidth:
@@ -1002,7 +1003,7 @@ class ServiceRestricted( ServiceRemote ):
         
         HG.client_controller.pub( 'notify_account_sync_due' )
         
-        self._next_account_sync = HydrusData.GetNow()
+        self._next_account_sync = HydrusTime.GetNow()
         
         HG.client_controller.network_engine.session_manager.ClearSession( self.network_context )
         
@@ -1017,7 +1018,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateUnknownAccount( account_key )
         
-        self._next_account_sync = HydrusData.GetNow() + ACCOUNT_SYNC_PERIOD
+        self._next_account_sync = HydrusTime.GetNow() + ACCOUNT_SYNC_PERIOD
         
         self._SetDirty()
         
@@ -1081,7 +1082,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateUnknownAccount( account_key )
         
-        self._next_account_sync = HydrusData.GetNow()
+        self._next_account_sync = HydrusTime.GetNow()
         
         self._SetDirty()
         
@@ -1165,13 +1166,13 @@ class ServiceRestricted( ServiceRemote ):
     
     def GetNextAccountSyncStatus( self ):
         
-        if HydrusData.TimeHasPassed( self._next_account_sync ):
+        if HydrusTime.TimeHasPassed( self._next_account_sync ):
             
             s = 'imminently'
             
         else:
             
-            s = ClientData.TimestampToPrettyTimeDelta( self._next_account_sync )
+            s = ClientTime.TimestampToPrettyTimeDelta( self._next_account_sync )
             
         
         return 'next account sync ' + s
@@ -1409,7 +1410,7 @@ class ServiceRestricted( ServiceRemote ):
         
         with self._lock:
             
-            self._next_account_sync = HydrusData.GetNow() - 1
+            self._next_account_sync = HydrusTime.GetNow() - 1
             
             self._SetDirty()
             
@@ -1446,13 +1447,13 @@ class ServiceRestricted( ServiceRemote ):
                     
                     do_it = False
                     
-                    self._next_account_sync = HydrusData.GetNow() + SHORT_DELAY_PERIOD
+                    self._next_account_sync = HydrusTime.GetNow() + SHORT_DELAY_PERIOD
                     
                     self._SetDirty()
                     
                 else:
                     
-                    do_it = HydrusData.TimeHasPassed( self._next_account_sync )
+                    do_it = HydrusTime.TimeHasPassed( self._next_account_sync )
                     
                 
             
@@ -1469,7 +1470,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     ( message, message_created ) = self._account.GetMessageAndTimestamp()
                     
-                    if message != '' and message_created != original_message_created and not HydrusData.TimeHasPassed( message_created + ( 86400 * 5 ) ):
+                    if message != '' and message_created != original_message_created and not HydrusTime.TimeHasPassed( message_created + ( 86400 * 5 ) ):
                         
                         m = 'New message for your account on {}:'.format( self._name )
                         m += os.linesep * 2
@@ -1570,7 +1571,7 @@ class ServiceRestricted( ServiceRemote ):
                 
                 with self._lock:
                     
-                    self._next_account_sync = HydrusData.GetNow() + ACCOUNT_SYNC_PERIOD
+                    self._next_account_sync = HydrusTime.GetNow() + ACCOUNT_SYNC_PERIOD
                     
                     self._SetDirty()
                     
@@ -1704,7 +1705,7 @@ class ServiceRepository( ServiceRestricted ):
             return
             
         
-        it_took = HydrusData.GetNowPrecise() - precise_timestamp
+        it_took = HydrusTime.GetNowPrecise() - precise_timestamp
         
         rows_s = HydrusData.ToHumanInt( int( total_rows / it_took ) )
         
@@ -1715,7 +1716,7 @@ class ServiceRepository( ServiceRestricted ):
     
     def _ReportOngoingRowSpeed( self, job_key, rows_done, total_rows, precise_timestamp, rows_done_in_last_packet, row_name ):
         
-        it_took = HydrusData.GetNowPrecise() - precise_timestamp
+        it_took = HydrusTime.GetNowPrecise() - precise_timestamp
         
         rows_s = HydrusData.ToHumanInt( int( rows_done_in_last_packet / it_took ) )
         
@@ -2029,7 +2030,7 @@ class ServiceRepository( ServiceRestricted ):
             did_definition_analyze = False
             did_content_analyze = False
             
-            definition_start_time = HydrusData.GetNowPrecise()
+            definition_start_time = HydrusTime.GetNowPrecise()
             
             try:
                 
@@ -2090,7 +2091,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     while len( iterator_dict ) > 0:
                         
-                        this_work_start_time = HydrusData.GetNowPrecise()
+                        this_work_start_time = HydrusTime.GetNowPrecise()
                         
                         if HG.client_controller.CurrentlyVeryIdle():
                             
@@ -2108,11 +2109,11 @@ class ServiceRepository( ServiceRestricted ):
                             break_percentage = 0.1
                             
                         
-                        start_time = HydrusData.GetNowPrecise()
+                        start_time = HydrusTime.GetNowPrecise()
                         
                         num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_definitions', self._service_key, definition_hash, iterator_dict, content_types, job_key, work_time )
                         
-                        time_it_took = HydrusData.GetNowPrecise() - start_time
+                        time_it_took = HydrusTime.GetNowPrecise() - start_time
                         
                         rows_done_in_this_update += num_rows_done
                         total_definition_rows_completed += num_rows_done
@@ -2156,7 +2157,7 @@ class ServiceRepository( ServiceRestricted ):
                 return
                 
             
-            content_start_time = HydrusData.GetNowPrecise()
+            content_start_time = HydrusTime.GetNowPrecise()
             
             try:
                 
@@ -2238,7 +2239,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     while len( iterator_dict ) > 0:
                         
-                        this_work_start_time = HydrusData.GetNowPrecise()
+                        this_work_start_time = HydrusTime.GetNowPrecise()
                         
                         if HG.client_controller.CurrentlyVeryIdle():
                             
@@ -2256,11 +2257,11 @@ class ServiceRepository( ServiceRestricted ):
                             break_percentage = 0.1
                             
                         
-                        start_time = HydrusData.GetNowPrecise()
+                        start_time = HydrusTime.GetNowPrecise()
                         
                         num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_content', self._service_key, content_hash, iterator_dict, content_types, job_key, work_time )
                         
-                        time_it_took = HydrusData.GetNowPrecise() - start_time
+                        time_it_took = HydrusTime.GetNowPrecise() - start_time
                         
                         rows_done_in_this_update += num_rows_done
                         total_content_rows_completed += num_rows_done
@@ -2531,7 +2532,7 @@ class ServiceRepository( ServiceRestricted ):
         # if a user is more than two weeks behind, let's assume they aren't 'caught up'
         CAUGHT_UP_BUFFER = 14 * 86400
         
-        two_weeks_ago = HydrusData.GetNow() - CAUGHT_UP_BUFFER
+        two_weeks_ago = HydrusTime.GetNow() - CAUGHT_UP_BUFFER
         
         with self._lock:
             

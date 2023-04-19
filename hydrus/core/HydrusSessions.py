@@ -5,6 +5,7 @@ import threading
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
 
@@ -72,7 +73,7 @@ class HydrusSessionManagerServer( object ):
             
             session_key = HydrusData.GenerateKey()
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             expires = now + HYDRUS_SESSION_LIFETIME
             
@@ -94,7 +95,7 @@ class HydrusSessionManagerServer( object ):
                 
                 ( account_key, expires ) = session_keys_to_sessions[ session_key ]
                 
-                if HydrusData.TimeHasPassed( expires ):
+                if HydrusTime.TimeHasPassed( expires ):
                     
                     del session_keys_to_sessions[ session_key ]
                     

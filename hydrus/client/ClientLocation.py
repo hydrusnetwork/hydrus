@@ -4,6 +4,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 
@@ -59,6 +60,8 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
         if advanced_mode:
             
             service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
+            
+            service_types_in_order.append( HC.COMBINED_DELETED_FILE )
             
         
         service_types_in_order.append( HC.FILE_REPOSITORY )

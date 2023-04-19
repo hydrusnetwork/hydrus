@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
@@ -748,11 +749,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._data_decoding.addItem( e, e )
                 
             
-            self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_UTC )
             self._data_timezone_decode.addItem( 'Local', HC.TIMEZONE_LOCAL )
             self._data_timezone_decode.addItem( 'Offset', HC.TIMEZONE_OFFSET )
             
-            self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_UTC )
             self._data_timezone_encode.addItem( 'Local', HC.TIMEZONE_LOCAL )
             
             for e in ( 'md5', 'sha1', 'sha256', 'sha512' ):

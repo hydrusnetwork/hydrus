@@ -21,6 +21,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -142,13 +143,13 @@ class App( QW.QApplication ):
             
             if HG.client_controller.ProgramIsShuttingDown():
                 
-                screw_it_time = HydrusData.GetNow() + 30
+                screw_it_time = HydrusTime.GetNow() + 30
                 
                 while not HG.client_controller.ProgramIsShutDown():
                     
                     time.sleep( 0.5 )
                     
-                    if HydrusData.TimeHasPassed( screw_it_time ):
+                    if HydrusTime.TimeHasPassed( screw_it_time ):
                         
                         return
                         
@@ -322,7 +323,7 @@ class Controller( HydrusController.HydrusController ):
                     wake_time = self.GetTimestamp( 'now_awake' )
                     
                 
-                if HydrusData.TimeHasPassed( wake_time ):
+                if HydrusTime.TimeHasPassed( wake_time ):
                     
                     job_key.Delete()
                     
@@ -330,7 +331,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 else:
                     
-                    job_key.SetStatusText( 'enabling I/O {}'.format( HydrusData.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
+                    job_key.SetStatusText( 'enabling I/O {}'.format( HydrusTime.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
                     
                 
                 time.sleep( 0.5 )
@@ -359,7 +360,7 @@ class Controller( HydrusController.HydrusController ):
             manager.Shutdown()
             
         
-        started = HydrusData.GetNow()
+        started = HydrusTime.GetNow()
         
         while False in ( manager.IsShutdown() for manager in managers ):
             
@@ -367,7 +368,7 @@ class Controller( HydrusController.HydrusController ):
             
             time.sleep( 0.1 )
             
-            if HydrusData.TimeHasPassed( started + 30 ):
+            if HydrusTime.TimeHasPassed( started + 30 ):
                 
                 break
                 
@@ -679,7 +680,7 @@ class Controller( HydrusController.HydrusController ):
             return True
             
         
-        if not HydrusData.TimeHasPassed( self.GetBootTime() + 120 ):
+        if not HydrusTime.TimeHasPassed( self.GetBootTime() + 120 ):
             
             return False
             
@@ -694,7 +695,7 @@ class Controller( HydrusController.HydrusController ):
             
             if idle_period is not None:
                 
-                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_user_action' ) + idle_period ):
+                if not HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_user_action' ) + idle_period ):
                     
                     currently_idle = False
                     
@@ -704,7 +705,7 @@ class Controller( HydrusController.HydrusController ):
             
             if idle_mouse_period is not None:
                 
-                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_mouse_action' ) + idle_mouse_period ):
+                if not HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_mouse_action' ) + idle_mouse_period ):
                     
                     currently_idle = False
                     
@@ -714,7 +715,7 @@ class Controller( HydrusController.HydrusController ):
             
             if idle_mode_client_api_timeout is not None:
                 
-                if not HydrusData.TimeHasPassed( self.GetTimestamp( 'last_client_api_action' ) + idle_mode_client_api_timeout ):
+                if not HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_client_api_action' ) + idle_mode_client_api_timeout ):
                     
                     currently_idle = False
                     
@@ -731,7 +732,7 @@ class Controller( HydrusController.HydrusController ):
         
         if turning_idle:
             
-            self._idle_started = HydrusData.GetNow()
+            self._idle_started = HydrusTime.GetNow()
             
             self.pub( 'wake_daemons' )
             
@@ -751,7 +752,7 @@ class Controller( HydrusController.HydrusController ):
             return False
             
         
-        if self._idle_started is not None and HydrusData.TimeHasPassed( self._idle_started + 3600 ):
+        if self._idle_started is not None and HydrusTime.TimeHasPassed( self._idle_started + 3600 ):
             
             return True
             
@@ -763,7 +764,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetSubtext( 'db' )
         
-        stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
+        stop_time = HydrusTime.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
         
         self.MaintainDB( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
         
@@ -773,7 +774,7 @@ class Controller( HydrusController.HydrusController ):
             
             for service in services:
                 
-                if HydrusData.TimeHasPassed( stop_time ):
+                if HydrusTime.TimeHasPassed( stop_time ):
                     
                     return
                     
@@ -841,7 +842,7 @@ class Controller( HydrusController.HydrusController ):
         
         if not HG.query_planner_mode:
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             HG.query_planner_start_time = now
             HG.query_planner_query_count = 0
@@ -864,7 +865,7 @@ class Controller( HydrusController.HydrusController ):
         
         if not HG.profile_mode:
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             with HG.profile_counter_lock:
                 
@@ -1354,7 +1355,7 @@ class Controller( HydrusController.HydrusController ):
         
         if tree_stop_time is None:
             
-            tree_stop_time = HydrusData.GetNow() + 30
+            tree_stop_time = HydrusTime.GetNow() + 30
             
         
         self.WriteSynchronous( 'maintain_similar_files_tree', maintenance_mode = maintenance_mode, stop_time = tree_stop_time )
@@ -1372,7 +1373,7 @@ class Controller( HydrusController.HydrusController ):
             
             if search_stop_time is None:
                 
-                search_stop_time = HydrusData.GetNow() + 60
+                search_stop_time = HydrusTime.GetNow() + 60
                 
             
             self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = maintenance_mode, stop_time = search_stop_time )
@@ -1411,7 +1412,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.MaintainMemorySlow( self )
         
-        if HydrusData.TimeHasPassed( self.GetTimestamp( 'last_page_change' ) + 30 * 60 ):
+        if HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_page_change' ) + 30 * 60 ):
             
             self.pub( 'delete_old_closed_pages' )
             
@@ -1542,7 +1543,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ResetIdleTimerFromClientAPI( self ):
         
-        self.TouchTimestamp( 'last_client_api_request' )
+        self.TouchTimestamp( 'last_client_api_action' )
         
     
     def ResetPageChangeTimer( self ):
@@ -1832,13 +1833,22 @@ class Controller( HydrusController.HydrusController ):
                         
                         try:
                             
-                            if use_https:
+                            if allow_non_local_connections:
                                 
-                                ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = '::' )
+                                interface = '::1'
                                 
                             else:
                                 
-                                ipv6_port = reactor.listenTCP( port, http_factory, interface = '::' )
+                                interface = '::'
+                                
+                            
+                            if use_https:
+                                
+                                ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = interface )
+                                
+                            else:
+                                
+                                ipv6_port = reactor.listenTCP( port, http_factory, interface = interface )
                                 
                             
                         except Exception as e:
@@ -1852,13 +1862,22 @@ class Controller( HydrusController.HydrusController ):
                         
                         try:
                             
-                            if use_https:
+                            if allow_non_local_connections:
                                 
-                                ipv4_port = reactor.listenSSL( port, http_factory, context_factory )
+                                interface = ''
                                 
                             else:
                                 
-                                ipv4_port = reactor.listenTCP( port, http_factory )
+                                interface = '127.0.0.1'
+                                
+                            
+                            if use_https:
+                                
+                                ipv4_port = reactor.listenSSL( port, http_factory, context_factory, interface = interface )
+                                
+                            else:
+                                
+                                ipv4_port = reactor.listenTCP( port, http_factory, interface = interface )
                                 
                             
                         except:
@@ -2099,7 +2118,7 @@ class Controller( HydrusController.HydrusController ):
             
         else:
             
-            if HydrusData.TimeHasPassed( self.GetTimestamp( 'last_cpu_check' ) + 60 ):
+            if HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_cpu_check' ) + 60 ):
                 
                 cpu_times = psutil.cpu_percent( percpu = True )
                 
@@ -2274,7 +2293,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 while not image_renderer.IsReady():
                     
-                    if HydrusData.TimeHasPassed( start_time + 15 ):
+                    if HydrusTime.TimeHasPassed( start_time + 15 ):
                         
                         HydrusData.ShowText( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
                         

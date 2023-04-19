@@ -5,7 +5,9 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client.gui import QtPorting as QP
 
@@ -239,7 +241,7 @@ def GetEventCallable( callable, *args, **kwargs ):
             
             summary = 'Profiling menu: ' + repr( callable )
             
-            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.menu_profile_min_job_time_ms )
+            HydrusProfiling.Profile( summary, 'callable( *args, **kwargs )', globals(), locals(), min_duration_ms = HG.menu_profile_min_job_time_ms )
             
         else:
             

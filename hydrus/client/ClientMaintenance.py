@@ -4,6 +4,7 @@ import threading
 import time
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 class GlobalMaintenanceJobInterface( object ):
     
@@ -60,14 +61,14 @@ class GlobalMaintenanceJobScheduler( object ):
     
     def CanRun( self ):
         
-        if not HydrusData.TimeHasPassed( self._no_work_until_time ):
+        if not HydrusTime.TimeHasPassed( self._no_work_until_time ):
             
             return False
             
         
         # check shutdown, idle, foreground status
         
-        if not HydrusData.TimeHasPassed( self._next_run_time ):
+        if not HydrusTime.TimeHasPassed( self._next_run_time ):
             
             return False
             
@@ -87,7 +88,7 @@ class GlobalMaintenanceJobScheduler( object ):
     
     def WorkCompleted( self ):
         
-        self._next_run_time = HydrusData.GetNow() + self._period
+        self._next_run_time = HydrusTime.GetNow() + self._period
         
     
 # make this serialisable. it'll save like domain manager

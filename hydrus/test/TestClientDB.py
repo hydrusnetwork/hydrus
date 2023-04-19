@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
@@ -1290,7 +1291,7 @@ class TestClientDB( unittest.TestCase ):
             
             mr_inbox = mr_locations_manager.inbox
             
-            now = HydrusData.GetNow()
+            now = HydrusTime.GetNow()
             
             self.assertEqual( mr_hash, hash )
             self.assertEqual( mr_inbox, True )
@@ -1528,7 +1529,7 @@ class TestClientDB( unittest.TestCase ):
         
         mr_inbox = mr_locations_manager.inbox
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         self.assertEqual( mr_hash, hash )
         self.assertEqual( mr_inbox, True )
@@ -1550,7 +1551,7 @@ class TestClientDB( unittest.TestCase ):
         
         mr_inbox = mr_locations_manager.inbox
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
         self.assertEqual( mr_hash, hash )
         self.assertEqual( mr_inbox, True )

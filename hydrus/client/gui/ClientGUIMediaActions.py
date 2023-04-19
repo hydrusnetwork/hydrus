@@ -9,6 +9,9 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -598,13 +601,13 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
             HG.client_controller.pub( 'message', job_key )
             
         
-        pauser = HydrusData.BigJobPauser()
+        pauser = HydrusThreading.BigJobPauser()
         
         num_to_do = len( applicable_media )
         
-        now = HydrusData.GetNow()
+        now = HydrusTime.GetNow()
         
-        for ( i, block_of_media ) in enumerate( HydrusData.SplitListIntoChunks( applicable_media, BLOCK_SIZE ) ):
+        for ( i, block_of_media ) in enumerate( HydrusLists.SplitListIntoChunks( applicable_media, BLOCK_SIZE ) ):
             
             if job_key.IsCancelled():
                 

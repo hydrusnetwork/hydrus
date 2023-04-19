@@ -4,6 +4,7 @@ import threading
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusTime
 
 TEMP_PATH_LOCK = threading.Lock()
 IN_USE_TEMP_PATHS = set()
@@ -36,7 +37,7 @@ def CleanUpTempPath( os_file_handle, temp_path ):
         
         with TEMP_PATH_LOCK:
             
-            IN_USE_TEMP_PATHS.add( ( HydrusData.GetNow(), temp_path ) )
+            IN_USE_TEMP_PATHS.add( ( HydrusTime.GetNow(), temp_path ) )
             
         
     
@@ -50,7 +51,7 @@ def CleanUpOldTempPaths():
             
             ( time_failed, temp_path ) = row
             
-            if HydrusData.TimeHasPassed( time_failed + 60 ):
+            if HydrusTime.TimeHasPassed( time_failed + 60 ):
                 
                 try:
                     
@@ -60,7 +61,7 @@ def CleanUpOldTempPaths():
                     
                 except OSError:
                     
-                    if HydrusData.TimeHasPassed( time_failed + 600 ):
+                    if HydrusTime.TimeHasPassed( time_failed + 600 ):
                         
                         IN_USE_TEMP_PATHS.discard( row )
                         

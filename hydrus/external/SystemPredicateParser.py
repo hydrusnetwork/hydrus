@@ -88,6 +88,7 @@ class Predicate( Enum ):
     FILE_SERVICE = auto()
     NUM_FILE_RELS = auto()
     RATIO = auto()
+    RATIO_SPECIAL = auto()
     NUM_PIXELS = auto()
     MEDIA_VIEWS = auto()
     PREVIEW_VIEWS = auto()
@@ -127,6 +128,7 @@ class Value( Enum ):
     TIME_INTERVAL = auto()  # A tuple of 4 non-negative integers: (days, hours, minutes, seconds) where hours < 24, minutes < 60, seconds < 60
     INTEGER = auto()  # An integer
     RATIO = auto()  # A tuple of 2 ints, both non-negative
+    RATIO_SPECIAL = auto() # 1:1
 
 
 # Possible operator formats
@@ -139,6 +141,7 @@ class Operators( Enum ):
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
     ONLY_EQUAL = auto()  # None (meaning =, since thats the only accepted operator)
     RATIO_OPERATORS = auto()  # One of '=', 'wider than','taller than', '\u2248' ('≈') (takes '~=' too)
+    RATIO_OPERATORS_SPECIAL = auto() # 'square', 'portrait', 'landscape'
 
 
 # Possible unit formats
@@ -191,7 +194,8 @@ SYSTEM_PREDICATES = {
     'number of frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
-    'ratio': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
+    'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
+    'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
     'num pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
     'media views': (Predicate.MEDIA_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
     'preview views': (Predicate.PREVIEW_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
@@ -372,6 +376,12 @@ def parse_value( string: str, spec ):
         match = re.match( '(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
         if match: return string[ len( match[ 0 ] ): ], (int( match[ 'first' ] ), int( match[ 'second' ] ))
         raise ValueError( "Invalid value, expected a ratio" )
+    elif spec == Value.RATIO_SPECIAL:
+        
+        if string == 'square': return ( '', ( 1, 1 ) )
+        if string == 'landscape': return ( '', ( 1, 1 ) )
+        if string == 'portrait': return ( '', ( 1, 1 ) )
+        
     raise ValueError( "Invalid value specification" )
 
 
@@ -438,6 +448,12 @@ def parse_operator( string: str, spec ):
         if string.startswith( '~=' ): return string[ 2: ], '\u2248'
         if string.startswith( '\u2248' ): return string[ 1: ], '\u2248'
         raise ValueError( "Invalid ratio operator" )
+    elif spec == Operators.RATIO_OPERATORS_SPECIAL:
+        
+        if 'square' in string: return 'square', '='
+        if 'portrait' in string: return 'portrait', 'taller than'
+        if 'landscape' in string: return 'landscape', 'wider than'
+        
     raise ValueError( "Invalid operator specification" )
 
 
