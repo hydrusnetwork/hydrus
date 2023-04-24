@@ -62,12 +62,14 @@ elif [ "$install_type" = "a" ]; then
 	fi
 	
 	echo
-	echo "If you are >=Python 3.10, choose n."
-	echo "Do you want (o)ld OpenCV or (n)ew OpenCV? "
+	echo "If you are Python 3.10, choose n. >=3.11 should try the test"
+    echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
 	read -r opencv
 	if [ "$opencv" = "o" ]; then
 		:
 	elif [ "$opencv" = "n" ]; then
+		:
+	elif [ "$opencv" = "t" ]; then
 		:
 	else
 		echo "Sorry, did not understand that input!"
@@ -109,15 +111,17 @@ elif [ "$install_type" = "a" ]; then
 	fi
 	
 	if [ "$mpv" = "o" ]; then
-		python -m pip install -r static/requirements/advanced/requirements_old_mpv.txt
+		python -m pip install -r static/requirements/advanced/requirements_mpv_old.txt
 	elif [ "$mpv" = "n" ]; then
-		python -m pip install -r static/requirements/advanced/requirements_new_mpv.txt
+		python -m pip install -r static/requirements/advanced/requirements_mpv_new.txt
 	fi
 	
 	if [ "$opencv" = "o" ]; then
-		python -m pip install -r static/requirements/advanced/requirements_old_opencv.txt
+		python -m pip install -r static/requirements/advanced/requirements_opencv_old.txt
 	elif [ "$opencv" = "n" ]; then
-		python -m pip install -r static/requirements/advanced/requirements_new_opencv.txt
+		python -m pip install -r static/requirements/advanced/requirements_opencv_new.txt
+	elif [ "$opencv" = "t" ]; then
+		python -m pip install -r static/requirements/advanced/requirements_opencv_test.txt
 	fi
 fi
 
