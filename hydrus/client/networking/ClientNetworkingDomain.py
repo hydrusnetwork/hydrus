@@ -239,7 +239,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if api_url_class is None:
                 
-                raise HydrusExceptions.URLClassException( 'Could not find an API URL Class for ' + api_url + ' URL, which originally came from ' + url + '!' )
+                raise HydrusExceptions.URLClassException( 'Could not find an API/Redirect URL Class for ' + api_url + ' URL, which originally came from ' + url + '!' )
                 
             
             if api_url_class in seen_url_classes:
@@ -248,15 +248,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 if loop_size == 1:
                     
-                    message = 'Could not find an API URL Class for ' + url + ' as the url class API-linked to itself!'
+                    message = 'Could not find an API/Redirect URL Class for ' + url + ' as the url class API-linked to itself!'
                     
                 elif loop_size == 2:
                     
-                    message = 'Could not find an API URL Class for ' + url + ' as the url class and its API url class API-linked to each other!'
+                    message = 'Could not find an API/Redirect URL Class for ' + url + ' as the url class and its API url class API-linked to each other!'
                     
                 else:
                     
-                    message = 'Could not find an API URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ToHumanInt( loop_size ) + '!'
+                    message = 'Could not find an API/Redirect URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ToHumanInt( loop_size ) + '!'
                     
                 
                 raise HydrusExceptions.URLClassException( message )
@@ -323,6 +323,27 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return None
         
     
+    def _GetURLToFetch( self, url: str ):
+        
+        url_class = self._GetURLClass( url )
+        
+        if url_class is None:
+            
+            return url
+            
+        
+        try:
+            
+            ( url_class, url_to_fetch ) = self._GetNormalisedAPIURLClassAndURL( url )
+            
+        except HydrusExceptions.URLClassException as e:
+            
+            raise HydrusExceptions.URLClassException( 'Could not find a URL class for ' + url + '!' + os.linesep * 2 + str( e ) )
+            
+        
+        return url_to_fetch
+        
+    
     def _GetURLToFetchAndParser( self, url ):
         
         try:
@@ -331,7 +352,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.URLClassException as e:
             
-            raise HydrusExceptions.URLClassException( 'Could not find a parser for ' + url + '!' + os.linesep * 2 + str( e ) )
+            raise HydrusExceptions.URLClassException( 'Could not find a URL class for ' + url + '!' + os.linesep * 2 + str( e ) )
             
         
         url_class_key = parser_url_class.GetClassKey()
@@ -1390,6 +1411,21 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         return ( url_type, match_name, can_parse, cannot_parse_reason )
+        
+    
+    def GetURLToFetch( self, url ):
+        
+        with self._lock:
+            
+            url_to_fetch = self._GetURLToFetch( url )
+            
+            if HG.network_report_mode:
+                
+                HydrusData.ShowText( 'request for URL to fetch: {} -> {}'.format( url, url_to_fetch ) )
+                
+            
+            return url_to_fetch
+            
         
     
     def GetURLToFetchAndParser( self, url ):

@@ -341,7 +341,7 @@ def LoadFromNumPyImage( numpy_image: numpy.array ):
         
         HydrusData.PrintException( e )
         
-        message = 'The image loaded, but it did not seem to be a hydrus serialised png! The error was: {}'.format( str( e ) )
+        message = 'The image loaded, but it did not seem to be a hydrus serialised png! The error was: {}'.format( repr( e ) )
         message += os.linesep * 2
         message += 'If you believe this is a legit non-resized, non-converted hydrus serialised png, please send it to hydrus_dev.'
         

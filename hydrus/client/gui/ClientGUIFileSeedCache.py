@@ -18,6 +18,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -106,13 +107,12 @@ def ImportFromClipboard( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds
         
         ImportSources( file_seed_cache, sources )
         
-    except:
+    except Exception as e:
         
-        QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
-        
-        raise
+        ClientGUIFunctions.PresentClipboardParseError( win, raw_text, 'Lines of URLs or file paths', e )
         
     
+
 def ImportFromPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     with QP.FileDialog( win, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:

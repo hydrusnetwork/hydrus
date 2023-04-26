@@ -425,7 +425,7 @@ def ParseClientAPIPOSTArgs( request ):
                 
             except json.decoder.JSONDecodeError as e:
                 
-                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand the JSON you gave me: {}'.format( str( e ) ) )
+                raise HydrusExceptions.BadRequestException( 'Sorry, did not understand the JSON you gave me: {}'.format( e ) )
                 
             
             parsed_request_args = ParseClientAPIPOSTByteArgs( args )
@@ -1948,7 +1948,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         if service_keys_to_actions_to_tags is None:
             
-            raise HydrusExceptions.BadRequestException( 'Need a service-names-to-tags parameter!' )
+            raise HydrusExceptions.BadRequestException( 'Need a service_keys_to_tags or service_keys_to_actions_to_tags parameter!' )
             
         
         service_keys_to_content_updates = collections.defaultdict( list )

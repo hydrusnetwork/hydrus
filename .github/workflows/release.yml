@@ -94,20 +94,6 @@ jobs:
         name: Build docs to /help
         run: mkdocs build -d help
         working-directory: hydrus
-      #- name: Cache Qt
-      #  id: cache-qt
-      #  uses: actions/cache@v1
-      #  with:
-      #    path: Qt
-      #    key: ${{ runner.os }}-QtCache
-      #-
-      #  name: Install Qt
-      #  uses: jurplel/install-qt-action@v2
-      #  with:
-      #    install-deps: true
-      #    setup-python: 'false'
-      #    modules: qtcharts qtwidgets qtgui qtcore
-      #    cached: ${{ steps.cache-qt.outputs.cache-hit }}
       -
         name: Build Hydrus
         run: |
@@ -171,21 +157,6 @@ jobs:
         name: Build docs to /help
         run: mkdocs build -d help
         working-directory: hydrus
-      #-
-      #  name: Cache Qt
-      #  id: cache_qt
-      #  uses: actions/cache@v1
-      #  with:
-      #    path: ../Qt
-      #    key: ${{ runner.os }}-QtCache
-      #-
-      #  name: Install Qt
-      #  uses: jurplel/install-qt-action@v2
-      #  with:
-      #    install-deps: true
-      #    setup-python: 'false'
-      #    modules: qtcharts qtwidgets qtgui qtcore
-      #    cached: ${{ steps.cache_qt.outputs.cache-hit }}
       -
         name: Download mpv-dev
         uses: carlosperate/download-file-action@v1.1.1

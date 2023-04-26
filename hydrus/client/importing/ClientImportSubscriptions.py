@@ -1649,7 +1649,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._paused = True
                 
-                self._DelayWork( 300, 'error: {}'.format( str( e ) ) )
+                self._DelayWork( 300, 'error: {}'.format( repr( e ) ) )
                 
                 return
                 

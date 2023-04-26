@@ -3910,6 +3910,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
+                # TODO: move away from this hell function GetPrettyInfoLines and set the timestamp tooltips to the be the full ISO time
+                
                 pretty_info_lines = list( focus_singleton.GetPrettyInfoLines() )
                 
                 top_line = pretty_info_lines.pop( 0 )

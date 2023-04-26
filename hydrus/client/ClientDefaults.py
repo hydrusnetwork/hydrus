@@ -511,7 +511,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
             
         except Exception as e:
             
-            HydrusData.Print( 'Object at location "{}" failed to load: {}'.format( path, e ) )
+            HydrusData.Print( 'Object at location "{}" failed to load: {}'.format( path, repr( e ) ) )
             
         
     

@@ -820,7 +820,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
-        library_version_lines.append( 'speedcopy present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
+        library_version_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
         library_version_lines.append( 'db dir: {}'.format( HG.client_controller.db_dir ) )
         library_version_lines.append( 'temp dir: {}'.format( HydrusTemp.GetCurrentTempDir() ) )
@@ -3352,9 +3352,10 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if HydrusMemory.PYMPLER_OK:
             
-            ClientGUIMenus.AppendMenuItem( memory_actions, 'print memory-use summary', 'Print some information about the python memory use to the log.', self._DebugPrintMemoryUse )
-            ClientGUIMenus.AppendMenuItem( memory_actions, 'take memory-use snapshot', 'Capture current memory use.', self._DebugTakeMemoryUseSnapshot )
-            ClientGUIMenus.AppendMenuItem( memory_actions, 'print memory-use snapshot diff', 'Show memory use differences since the last snapshot.', self._DebugShowMemoryUseDifferences )
+            ClientGUIMenus.AppendSeparator( memory_actions )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'WARNING, MEGA-LAGGY: print memory-use summary', 'Print some information about the python memory use to the log.', self._DebugPrintMemoryUse )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'WARNING, MEGA-LAGGY: take memory-use snapshot', 'Capture current memory use.', self._DebugTakeMemoryUseSnapshot )
+            ClientGUIMenus.AppendMenuItem( memory_actions, 'WARNING, MEGA-LAGGY: print memory-use snapshot diff', 'Show memory use differences since the last snapshot.', self._DebugShowMemoryUseDifferences )
             
         
         ClientGUIMenus.AppendMenu( debug, memory_actions, 'memory actions' )

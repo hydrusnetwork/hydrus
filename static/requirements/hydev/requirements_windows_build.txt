@@ -4,7 +4,4 @@ mock>=4.0.0
 httmock>=1.4.0
 mkdocs-material
 
-PyWin32
-pypiwin32
-pywin32-ctypes
 pefile

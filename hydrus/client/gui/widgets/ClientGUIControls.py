@@ -485,9 +485,9 @@ class TextAndPasteCtrl( QW.QWidget ):
                 self._add_callable( texts )
                 
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of text', e )
             
         
     

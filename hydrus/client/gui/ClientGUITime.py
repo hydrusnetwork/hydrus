@@ -540,9 +540,9 @@ class DateTimeCtrl( QW.QWidget ):
                 qt_time = QC.QDateTime.fromSecsSinceEpoch( timestamp )
                 
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A simple integer timestamp', e )
             
             return
             

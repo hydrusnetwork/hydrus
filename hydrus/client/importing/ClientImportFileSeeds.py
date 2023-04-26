@@ -624,7 +624,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'downloading file' )
             
-            network_job = network_job_factory( 'GET', file_url, temp_path = temp_path, referral_url = referral_url )
+            url_to_fetch = HG.client_controller.network_engine.domain_manager.GetURLToFetch( file_url )
+            
+            network_job = network_job_factory( 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 
@@ -645,9 +647,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 network_job.WaitUntilDone()
                 
             
+            if url_to_fetch != file_url:
+                
+                self._AddPrimaryURLs( ( url_to_fetch, ) )
+                
+            
             actual_fetched_url = network_job.GetActualFetchedURL()
             
-            if actual_fetched_url != file_url:
+            if actual_fetched_url not in ( file_url, url_to_fetch ):
                 
                 self._AddPrimaryURLs( ( actual_fetched_url, ) )
                 
@@ -1357,7 +1364,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
                     
                     for ( key, value ) in self._request_headers.items():
-                    
+                        
                         network_job.AddAdditionalHeader( key, value )
                         
                     

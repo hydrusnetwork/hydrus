@@ -100,7 +100,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 524
+SOFTWARE_VERSION = 525
 CLIENT_API_VERSION = 44
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -1058,7 +1058,7 @@ URL_TYPE_SUB_GALLERY = 9
 
 url_type_string_lookup = {
     URL_TYPE_POST : 'post url',
-    URL_TYPE_API : 'api url',
+    URL_TYPE_API : 'api/redirect url',
     URL_TYPE_FILE : 'file url',
     URL_TYPE_GALLERY : 'gallery url',
     URL_TYPE_WATCHABLE : 'watchable url',

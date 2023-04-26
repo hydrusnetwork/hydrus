@@ -15,6 +15,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -1883,9 +1884,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
-            
-            HydrusData.ShowException( e )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised File Import Options', e )
             
             return
             
@@ -1924,9 +1923,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
-            
-            HydrusData.ShowException( e )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Note Import Options', e )
             
             return
             
@@ -1965,9 +1962,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( e ) )
-            
-            HydrusData.ShowException( e )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Import Options', e )
             
             return
             

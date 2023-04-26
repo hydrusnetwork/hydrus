@@ -802,7 +802,7 @@ class HydrusResource( Resource ):
             
             if isinstance( e, HydrusExceptions.DBException ):
                 
-                e = e.db_e # could well be a DataException
+                e = e.db_e # could well be a DataException, which we want to promote
                 
             
             try: self._CleanUpTempFile( request )

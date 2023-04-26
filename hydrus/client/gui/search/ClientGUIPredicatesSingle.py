@@ -515,10 +515,10 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         
         self._sign = TimeDeltaOperator( self )
         
-        self._years = ClientGUICommon.BetterSpinBox( self, max = 30, width = 60 )
-        self._months = ClientGUICommon.BetterSpinBox( self, max = 60, width = 60 )
-        self._days = ClientGUICommon.BetterSpinBox( self, max = 90, width = 60 )
-        self._hours = ClientGUICommon.BetterSpinBox( self, max = 24, width = 60 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max = 50000 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max = 10000 )
         
         #
         
@@ -575,10 +575,10 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         
         self._sign = TimeDeltaOperator( self )
         
-        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
-        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
-        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
-        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max = 50000 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max = 10000 )
         
         #
         
@@ -634,10 +634,10 @@ class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
         
         self._sign = TimeDeltaOperator( self )
         
-        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
-        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
-        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
-        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max = 50000 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max = 10000 )
         
         #
         
@@ -693,10 +693,10 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         self._sign = TimeDeltaOperator( self )
         
-        self._years = ClientGUICommon.BetterSpinBox( self, max=30 )
-        self._months = ClientGUICommon.BetterSpinBox( self, max=60 )
-        self._days = ClientGUICommon.BetterSpinBox( self, max=90 )
-        self._hours = ClientGUICommon.BetterSpinBox( self, max=24 )
+        self._years = ClientGUICommon.BetterSpinBox( self, max = 50000 )
+        self._months = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._days = ClientGUICommon.BetterSpinBox( self, max = 1000 )
+        self._hours = ClientGUICommon.BetterSpinBox( self, max = 10000 )
         
         #
         

@@ -41,6 +41,7 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         
     
+
 def CleanUpOldTempPaths():
     
     with TEMP_PATH_LOCK:
@@ -61,7 +62,7 @@ def CleanUpOldTempPaths():
                     
                 except OSError:
                     
-                    if HydrusTime.TimeHasPassed( time_failed + 600 ):
+                    if HydrusTime.TimeHasPassed( time_failed + 1200 ):
                         
                         IN_USE_TEMP_PATHS.discard( row )
                         
@@ -70,14 +71,28 @@ def CleanUpOldTempPaths():
             
         
     
+
 def GetCurrentTempDir():
     
     return tempfile.gettempdir()
     
-def GetTempDir( dir = None ):
+
+HYDRUS_TEMP_DIR = None
+
+def GetHydrusTempDir():
     
-    return tempfile.mkdtemp( prefix = 'hydrus', dir = dir )
+    path = tempfile.mkdtemp( prefix = 'hydrus' )
     
+    global HYDRUS_TEMP_DIR
+    
+    if HYDRUS_TEMP_DIR is None:
+        
+        HYDRUS_TEMP_DIR = path
+        
+    
+    return path
+    
+
 def SetEnvTempDir( path ):
     
     if os.path.exists( path ) and not os.path.isdir( path ):
@@ -109,7 +124,22 @@ def SetEnvTempDir( path ):
     
     tempfile.tempdir = path
     
+
 def GetTempPath( suffix = '', dir = None ):
+    
+    global HYDRUS_TEMP_DIR
+    
+    if dir is None and HYDRUS_TEMP_DIR is not None:
+        
+        dir = HYDRUS_TEMP_DIR
+        
+        if not os.path.exists( dir ):
+            
+            HYDRUS_TEMP_DIR = None
+            
+            dir = GetHydrusTempDir()
+            
+        
     
     return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus', dir = dir )
     

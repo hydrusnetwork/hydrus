@@ -855,8 +855,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             has_exif = self._current_media.GetMediaResult().GetFileInfoManager().has_exif
             has_human_readable_embedded_metadata = self._current_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+            has_extra_rows = self._current_media.GetMime() == HC.IMAGE_JPEG
             
-            if has_exif or has_human_readable_embedded_metadata:
+            stuff_to_show = has_exif or has_human_readable_embedded_metadata or has_extra_rows
+            
+            if stuff_to_show:
                 
                 tt_components = []
                 
@@ -870,12 +873,17 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                     tt_components.append( 'non-exif human-readable embedded metadata')
                     
                 
+                if has_extra_rows:
+                    
+                    tt_components.append( 'extra info' )
+                    
+                
                 tt = 'show {}'.format( ' and '.join( tt_components ) )
                 
                 self._show_embedded_metadata_button.setToolTip( tt )
                 
             
-            self._show_embedded_metadata_button.setVisible( has_exif or has_human_readable_embedded_metadata )
+            self._show_embedded_metadata_button.setVisible( stuff_to_show )
             
         
     

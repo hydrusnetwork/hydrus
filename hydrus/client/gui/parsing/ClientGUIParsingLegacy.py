@@ -18,6 +18,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -278,9 +279,9 @@ class EditNodes( QW.QWidget ):
             
             self._ImportObject( obj )
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Nodes', e )
             
         
     
@@ -1136,7 +1137,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Parsing Scripts', e )
             
         
     

@@ -2857,9 +2857,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             self.tagsPasted.emit( list( tags ) )
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
             
             raise
             

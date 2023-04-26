@@ -869,10 +869,10 @@ class COLUMN_LIST_URL_CLASS_API_PAIRS( COLUMN_LIST_DEFINITION ):
     API_URL_CLASS = 1
     
 
-column_list_type_name_lookup[ COLUMN_LIST_URL_CLASS_API_PAIRS.ID ] = 'api links'
+column_list_type_name_lookup[ COLUMN_LIST_URL_CLASS_API_PAIRS.ID ] = 'api/redirect links'
 
 register_column_type( COLUMN_LIST_URL_CLASS_API_PAIRS.ID, COLUMN_LIST_URL_CLASS_API_PAIRS.URL_CLASS, 'url class', False, 36, True )
-register_column_type( COLUMN_LIST_URL_CLASS_API_PAIRS.ID, COLUMN_LIST_URL_CLASS_API_PAIRS.API_URL_CLASS, 'api url class', False, 36, True )
+register_column_type( COLUMN_LIST_URL_CLASS_API_PAIRS.ID, COLUMN_LIST_URL_CLASS_API_PAIRS.API_URL_CLASS, 'api/redirect url class', False, 36, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_URL_CLASS_API_PAIRS.ID ] = ( COLUMN_LIST_URL_CLASS_API_PAIRS.API_URL_CLASS, True )
 

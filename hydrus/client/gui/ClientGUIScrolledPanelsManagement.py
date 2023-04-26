@@ -3390,7 +3390,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Critical', 'Could not apply style: {}'.format( str( e ) ) )
+                QW.QMessageBox.critical( self, 'Critical', 'Could not apply style: {}'.format( repr( e ) ) )
                 
             
             try:
@@ -3406,7 +3406,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Critical', 'Could not apply stylesheet: {}'.format( str( e ) ) )
+                QW.QMessageBox.critical( self, 'Critical', 'Could not apply stylesheet: {}'.format( repr( e ) ) )
                 
             
         
@@ -4713,7 +4713,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
         except Exception as e:
             
-            QW.QMessageBox.warning( self, 'Warning', 'I could not understand what was in the clipboard: {}'.format( e ) )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
             
         
     

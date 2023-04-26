@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import time
 
@@ -121,6 +122,44 @@ def TimeUntil( timestamp ):
     return timestamp - GetNow()
     
 
+def CalendarDeltaToDateTime( years : int, months : int, days : int, hours : int ) -> datetime.datetime:
+    
+    now = datetime.datetime.now()
+    
+    day_and_hour_delta = datetime.timedelta( days = days, hours = hours )
+    
+    result = now - day_and_hour_delta
+    
+    while months > result.month:
+        
+        years += 1
+        months -= 12
+        
+    
+    new_year = result.year - years
+    new_month = result.month - months
+    
+    dayrange = calendar.monthrange( new_year, new_month )
+    
+    new_day = min( dayrange[1], result.day )
+    
+    result = datetime.datetime(
+        year = new_year,
+        month = new_month,
+        day = new_day,
+        hour = result.hour,
+        minute = result.minute,
+        second = result.second
+    )
+    
+    return result
+    
+
+def CalendarDeltaToRoughDateTimeTimeDelta( years : int, months : int, days : int, hours : int ) -> datetime.timedelta:
+    
+    return datetime.timedelta( days = days + ( months * ( 365.25 / 12 ) ) + ( years * 365.25 ), hours = hours )
+    
+
 def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
     
     if seconds is None:
@@ -145,8 +184,8 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
         MINUTE = 60
         HOUR = 60 * MINUTE
         DAY = 24 * HOUR
-        MONTH = 30 * DAY
-        YEAR = 365 * DAY
+        YEAR = 365.25 * DAY
+        MONTH = YEAR / 12
         
         lines = []
         

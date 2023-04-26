@@ -56,7 +56,7 @@ There are three external libraries. You just have to get them and put them in th
         
         1. If you are on Windows 8.1 or older, get [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z).
         2. If you are on Windows 10 or newer, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
-        2a. If you want the latest, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z/download), but you have to rename the dll to `mpv-2.dll`.
+        2a. If you want the latest, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename the dll to `mpv-2.dll`.
         
         Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into `install_dir`.
         

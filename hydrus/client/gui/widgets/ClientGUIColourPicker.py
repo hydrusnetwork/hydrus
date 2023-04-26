@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import QtInit
@@ -124,7 +125,7 @@ class ColourPickerButton( QW.QPushButton ):
         
         try:
             
-            import_string = HG.client_controller.GetClipboardText()
+            raw_text = HG.client_controller.GetClipboardText()
             
         except Exception as e:
             
@@ -132,6 +133,8 @@ class ColourPickerButton( QW.QPushButton ):
             
             return
             
+        
+        import_string = raw_text
         
         if import_string.startswith( '#' ):
             
@@ -153,9 +156,7 @@ class ColourPickerButton( QW.QPushButton ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
-            
-            HydrusData.ShowException( e )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A hex colour like #FF0050', e )
             
             return
             

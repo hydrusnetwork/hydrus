@@ -161,7 +161,7 @@ class HydrusController( object ):
     
     def _InitTempDir( self ):
         
-        self.temp_dir = HydrusTemp.GetTempDir()
+        self.temp_dir = HydrusTemp.GetHydrusTempDir()
         
     
     def _MaintainCallToThreads( self ):
@@ -792,6 +792,8 @@ class HydrusController( object ):
             
             self._slow_job_scheduler = None
             
+        
+        HydrusTemp.CleanUpOldTempPaths()
         
         if hasattr( self, 'temp_dir' ):
             

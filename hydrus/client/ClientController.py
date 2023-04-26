@@ -219,11 +219,6 @@ class Controller( HydrusController.HydrusController ):
         return ClientDB.DB( self, self.db_dir, 'client' )
         
     
-    def _InitTempDir( self ):
-        
-        self.temp_dir = HydrusTemp.GetTempDir()
-        
-    
     def _DestroySplash( self ):
         
         def qt_code( splash ):
@@ -1270,7 +1265,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 except Exception as e:
                     
-                    HydrusData.Print( 'Could not load Qt style: {}'.format( e ) )
+                    HydrusData.Print( 'Could not load Qt style: {}'.format( repr( e ) ) )
                     
                 
             
@@ -1288,7 +1283,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 except Exception as e:
                     
-                    HydrusData.Print( 'Could not load Qt stylesheet: {}'.format( e ) )
+                    HydrusData.Print( 'Could not load Qt stylesheet: {}'.format( repr( e ) ) )
                     
                 
             

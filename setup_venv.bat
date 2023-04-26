@@ -105,13 +105,14 @@ IF "%install_type%" == "s" (
 IF "%install_type%" == "d" (
 
 	python -m pip install -r static\requirements\advanced\requirements_core.txt
+	python -m pip install -r static\requirements\advanced\requirements_windows.txt
 	
 	python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 	python -m pip install pyside2
 	python -m pip install PyQtChart PyQt5
 	python -m pip install PyQt6-Charts PyQt6
 	python -m pip install -r static\requirements\advanced\requirements_mpv_new.txt
-	python -m pip install -r static\requirements\advanced\requirements_opencv_new.txt
+	python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
 	python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
 	
 )
@@ -119,6 +120,7 @@ IF "%install_type%" == "d" (
 IF "%install_type%" == "a" (
 	
 	python -m pip install -r static\requirements\advanced\requirements_core.txt
+	python -m pip install -r static\requirements\advanced\requirements_windows.txt
 	
 	IF "%qt%" == "5" python -m pip install -r static\requirements\advanced\requirements_qt5.txt
 	IF "%qt%" == "6" python -m pip install -r static\requirements\advanced\requirements_qt6.txt

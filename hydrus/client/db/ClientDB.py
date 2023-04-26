@@ -1657,6 +1657,7 @@ class DB( HydrusDB.HydrusDB ):
         # so now we just blat all tables and trust in the Lord that we don't forget to add any new ones in future
         
         self._Execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
+        self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id = ?;', ( service_id, ) )
         self._Execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
         self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
         
@@ -9319,6 +9320,46 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 524:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'sankaku chan file page (md5)'
+                ] )
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'sankaku gallery page parser',
+                    'sankaku file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            # when I brought these services in, I forgot to clear their ratings on service deletion! cleaning up here
+            self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id NOT IN ( SELECT service_id FROM services );' )
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )

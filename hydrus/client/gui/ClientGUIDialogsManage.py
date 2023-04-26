@@ -16,6 +16,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
@@ -144,9 +145,9 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
             rating_clipboard_pairs = [ ( bytes.fromhex( service_key_encoded ), rating ) for ( service_key_encoded, rating ) in rating_clipboard_pairs_encoded ]
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON pairs of service keys and rating values', e )
             
             return
             

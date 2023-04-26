@@ -117,7 +117,7 @@ def ConvertParseResultToPrettyString( result ):
             
         except Exception as e:
             
-            parsed_text = 'Could not decode a hash from {}: {}'.format( parsed_text, str( e ) )
+            parsed_text = 'Could not decode a hash from {}: {}'.format( parsed_text, repr( e ) )
             
         
         return '{} hash: {}'.format( hash_type, parsed_text )
@@ -1237,7 +1237,7 @@ class ParseFormulaHTML( ParseFormula ):
             
         except Exception as e:
             
-            raise HydrusExceptions.ParseException( 'Unable to parse that HTML: {}. HTML Sample: {}'.format( str( e ), parsing_text[:1024] ) )
+            raise HydrusExceptions.ParseException( 'Unable to parse that HTML: {}. HTML Sample: {}'.format( repr( e ), parsing_text[:1024] ) )
             
         
         tags = self._FindHTMLTags( root )
@@ -1877,7 +1877,7 @@ class ParseFormulaJSON( ParseFormula ):
                 
             else:
                 
-                message = 'Unable to parse that JSON: {}.'.format( str( e ) )
+                message = 'Unable to parse that JSON: {}.'.format( repr( e ) )
                 
             
             message += ' Parsing text sample: {}'.format( parsing_text[:1024] )

@@ -693,6 +693,15 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
         file_text = HydrusImageHandling.GetEmbeddedFileText( pil_image )
         
     
+    extra_rows = []
+    
+    if mime == HC.IMAGE_JPEG:
+        
+        extra_rows.append( ( 'progressive', 'yes' if 'progression' in pil_image.info else 'no' ) )
+        
+        extra_rows.append( ( 'subsampling', HydrusImageHandling.GetJpegSubsampling( pil_image ) ) )
+        
+    
     if exif_dict is None and file_text is None:
         
         QW.QMessageBox.information( win, 'Nothing found', 'Sorry, could not see any human-readable information in this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
@@ -702,7 +711,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
     
     frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Embedded Metadata' )
     
-    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, exif_dict, file_text )
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, exif_dict, file_text, extra_rows )
     
     frame.SetPanel( panel )
     

@@ -1136,7 +1136,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
         tt += os.linesep * 2
-        tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex conversion into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
+        tt += 'All normalisation will switch to the preferred scheme (http/https). The alphabetisation of parameters and stripping out of non-defined elements will occur for all URLs except Gallery URLs or Watchable URLs that do not use an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex conversion into an API/Redirect URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
         
         self._normalised_url.setToolTip( tt )
         
@@ -1250,8 +1250,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
-        rows.append( ( 'api url: ', self._api_url ) )
+        rows.append( ( 'optional api/redirect url converter: ', self._api_lookup_converter ) )
+        rows.append( ( 'api/redirect url: ', self._api_url ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._api_url_panel, rows )
         
@@ -1833,7 +1833,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     if url_class.Matches( api_lookup_url ):
                         
-                        self._example_url_classes.setText( 'Matches own API URL!' )
+                        self._example_url_classes.setText( 'Matches own API/Redirect URL!' )
                         self._example_url_classes.setObjectName( 'HydrusInvalid' )
                         
                     
@@ -1850,7 +1850,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._api_url.setText( 'Could not convert - ' + reason )
                 
-                self._example_url_classes.setText( 'API URL Problem!' )
+                self._example_url_classes.setText( 'API/Redirect URL Problem!' )
                 self._example_url_classes.setObjectName( 'HydrusInvalid' )
                 
             
@@ -1954,7 +1954,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.StringConvertException as e:
                 
-                raise HydrusExceptions.VetoException( 'Problem making API URL!' )
+                raise HydrusExceptions.VetoException( 'Problem making API/Redirect URL!' )
                 
             
         
@@ -1980,7 +1980,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if url_class.Matches( api_lookup_url ):
                 
-                message = 'This URL class matches its own API URL! This can break a downloader unless there is a more specific URL Class the matches the API URL before this. I recommend you fix this here, but you do not have to. Exit now?'
+                message = 'This URL class matches its own API/Redirect URL! This can break a downloader unless there is a more specific URL Class the matches the API URL before this. I recommend you fix this here, but you do not have to. Exit now?'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
@@ -2280,7 +2280,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._notebook.addTab( self._parser_list_ctrl_panel, 'parser links' )
-        self._notebook.addTab( self._api_pairs_list_ctrl, 'api link review' )
+        self._notebook.addTab( self._api_pairs_list_ctrl, 'api/redirect link review' )
         
         #
         

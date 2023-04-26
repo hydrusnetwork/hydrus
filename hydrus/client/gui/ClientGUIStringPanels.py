@@ -209,7 +209,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                results = [ 'error: {}'.format( str( e ) ) ]
+                results = [ 'error: {}'.format( repr( e ) ) ]
                 
                 stop_now = True
                 

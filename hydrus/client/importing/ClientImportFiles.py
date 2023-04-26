@@ -359,7 +359,7 @@ class FileImportJob( object ):
                 
             except Exception as e:
                 
-                raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not render a thumbnail: {}'.format( str( e ) ) )
+                raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not render a thumbnail: {}'.format( repr( e ) ) )
                 
             
         

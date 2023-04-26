@@ -185,10 +185,10 @@ SYSTEM_PREDICATES = {
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
-    'archived? date|date archived': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'modified date|date modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'last viewed time|last view time': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'time imported|import time': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'archived? (date|time)|(date|time) archived': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'modified (date|time)|(date|time) modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'last view(ed)? (date|time)|(date|time) last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'import(ed)? (date|time)|(date|time) imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
     'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL_EXACT, Value.NATURAL, Units.FPS_OR_NONE),
     'number of frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
@@ -334,8 +334,6 @@ def parse_value( string: str, spec ):
             months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
             days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
             hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
-            days += math.floor( hours / 24 )
-            hours = hours % 24
             return string[ len( match[ 0 ] ): ], (years, months, days, hours)
         match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
         if match:

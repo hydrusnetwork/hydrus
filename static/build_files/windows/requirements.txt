@@ -33,6 +33,4 @@ pyinstaller==5.5
 mkdocs-material
 
 PyWin32
-pypiwin32
-pywin32-ctypes
 pefile

@@ -453,9 +453,9 @@ class FileSystemPredicates( object ):
                     
                     ( years, months, days, hours ) = age_value
                     
-                    age = ( years * 365 * 86400 ) + ( ( ( ( ( months * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                    dt = HydrusTime.CalendarDeltaToDateTime( years, months, days, hours )
                     
-                    now = HydrusTime.GetNow()
+                    time_pivot = HydrusTime.DateTimeToTimestamp( dt )
                     
                     # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
                     
@@ -465,23 +465,24 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        time_pivot = now - age
-                        
                         self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
                         
                     elif operator == '>':
-                        
-                        time_pivot = now - age
                         
                         self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
                     elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                         
-                        earliest = now - int( age * 1.15 )
-                        latest = now - int( age * 0.85 )
+                        rough_timedelta_gap = HydrusTime.CalendarDeltaToRoughDateTimeTimeDelta( years, months, days, hours ) * 0.15
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = earliest
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = latest
+                        earliest_dt = dt - rough_timedelta_gap
+                        latest_dt = dt + rough_timedelta_gap
+                        
+                        earliest_time_pivot = HydrusTime.DateTimeToTimestamp( earliest_dt )
+                        latest_time_pivot = HydrusTime.DateTimeToTimestamp( latest_dt )
+                        
+                        self._timestamp_ranges[ predicate_type ][ '>' ] = earliest_time_pivot
+                        self._timestamp_ranges[ predicate_type ][ '<' ] = latest_time_pivot
                         
                     
                 elif age_type == 'date':
@@ -2494,35 +2495,53 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         ( years, months, days, hours ) = age_value
                         
-                        DAY = 86400
-                        MONTH = DAY * 30
-                        YEAR = DAY * 365
+                        str_components = []
                         
-                        time_delta = 0
+                        for ( quantity, label ) in [
+                            ( years, 'year' ),
+                            ( months, 'month' ),
+                            ( days, 'day' ),
+                            ( hours, 'hour' ),
+                        ]:
+                            
+                            if quantity > 0:
+                                
+                                str_component = '{} {}'.format( HydrusData.ToHumanInt( quantity ), label )
+                                
+                                if quantity > 1:
+                                    
+                                    str_component += 's'
+                                    
+                                
+                                str_components.append( str_component )
+                                
+                            
+                            if len( str_components ) == 2:
+                                
+                                break
+                                
+                            
                         
-                        time_delta += hours * 3600
-                        time_delta += days * DAY
-                        time_delta += months * MONTH
-                        time_delta += years * YEAR
+                        nice_date_string = ' '.join( str_components )
                         
                         if operator == '<':
                             
-                            pretty_operator = 'since '
+                            pretty_operator = 'since'
                             
                         elif operator == '>':
                             
-                            pretty_operator = 'before '
+                            pretty_operator = 'before'
                             
                         elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
                             
-                            pretty_operator = 'around '
+                            pretty_operator = 'around'
                             
                         else:
                             
-                            pretty_operator = 'unknown operator '
+                            pretty_operator = 'unknown operator'
                             
                         
-                        base += ': ' + pretty_operator + HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta ) + ' ago'
+                        base += ': {} {} ago'.format( pretty_operator, nice_date_string )
                         
                     elif age_type == 'date':
                         

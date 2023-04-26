@@ -1233,13 +1233,13 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except HydrusExceptions.SerialisationException as e:
                 
-                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( str( e ) ) )
+                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( repr( e ) ) )
                 
                 return
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( str( e ) ) )
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( repr( e ) ) )
                 
                 return
                 
@@ -1261,15 +1261,9 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 obj = HydrusSerialisable.CreateFromString( raw_text, raise_error_on_future_version = True )
                 
-            except HydrusExceptions.SerialisationException as e:
-                
-                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( str( e ) ) )
-                
-                return
-                
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( str( e ) ) )
+                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
                 
                 return
                 
@@ -1281,7 +1275,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Problem importing: {}'.format( str( e ) ) )
+            QW.QMessageBox.critical( self, 'Error', 'Problem importing: {}'.format( repr( e ) ) )
             
         
         self._listctrl.Sort()

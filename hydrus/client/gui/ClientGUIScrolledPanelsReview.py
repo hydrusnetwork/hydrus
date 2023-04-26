@@ -2297,7 +2297,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( str( e ) ) )
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
                 
                 return
                 
@@ -2345,7 +2345,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ] ):
+    def __init__( self, parent, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -2373,6 +2373,16 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         self._text.setReadOnly( True )
         
         text_panel.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        extra_rows_panel = ClientGUICommon.StaticBox( self, 'extra info' )
+        
+        rows = [ ( f'{key}: ', ClientGUICommon.BetterStaticText( extra_rows_panel, label = value ) ) for ( key, value ) in extra_rows ]
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        extra_rows_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2408,12 +2418,18 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
             self._text.setPlainText( file_text )
             
         
+        if len( extra_rows ) == 0:
+            
+            extra_rows_panel.setVisible( False )
+            
+        
         #
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, exif_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, text_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, extra_rows_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         

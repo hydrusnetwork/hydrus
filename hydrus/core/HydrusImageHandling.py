@@ -705,6 +705,21 @@ def GetJPEGQuantizationQualityEstimate( path ):
     return ( 'unknown', None )
     
 
+def GetJpegSubsampling( pil_image: PILImage.Image ) -> str:
+    
+    from PIL import JpegImagePlugin
+    
+    result = JpegImagePlugin.get_sampling( pil_image )
+    
+    subsampling_str_lookup = {
+        0 : '4:4:4',
+        1 : '4:2:2',
+        2 : '4:2:0'
+    }
+    
+    return subsampling_str_lookup.get( result, 'unknown' )
+    
+
 def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
     
     def render_dict( d, prefix ):

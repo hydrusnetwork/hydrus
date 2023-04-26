@@ -809,7 +809,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            pasted_text = HG.client_controller.GetClipboardText()
+            raw_text = HG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -820,11 +820,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            pasted_query_texts = HydrusText.DeserialiseNewlinedTexts( pasted_text )
+            pasted_query_texts = HydrusText.DeserialiseNewlinedTexts( raw_text )
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard!' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of Queries', e )
             
             return
             

@@ -1717,7 +1717,7 @@ class NetworkJob( object ):
                     
                     self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
                     
-                    raise HydrusExceptions.ConnectionException( 'Problem with SSL: {}'.format( str( e ) ) )
+                    raise HydrusExceptions.ConnectionException( 'Problem with SSL: {}'.format( repr( e ) ) )
                     
                 except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
                     

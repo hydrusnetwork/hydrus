@@ -1081,7 +1081,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Filter object', e )
             
             return
             
@@ -2720,7 +2720,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                text = HG.client_controller.GetClipboardText()
+                raw_text = HG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -2731,7 +2731,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                tags = HydrusText.DeserialiseNewlinedTexts( text )
+                tags = HydrusText.DeserialiseNewlinedTexts( raw_text )
                 
                 tags = HydrusTags.CleanTags( tags )
                 
@@ -2739,7 +2739,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             except Exception as e:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'I could not understand what was in the clipboard' )
+                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
                 
             
         
@@ -3590,7 +3590,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                import_string = HG.client_controller.GetClipboardText()
+                raw_text = HG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -3599,11 +3599,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 return
                 
             
-            pairs = self._DeserialiseImportString( import_string )
-            
-            self._AddPairs( pairs, add_only = add_only )
-            
-            self._UpdateListCtrlData()
+            try:
+                
+                pairs = self._DeserialiseImportString( raw_text )
+                
+                self._AddPairs( pairs, add_only = add_only )
+                
+                self._UpdateListCtrlData()
+                
+            except Exception as e:
+                
+                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of child-parent line-pairs', e )
+                
             
         
         def _ImportFromTXT( self, add_only = False ):
@@ -4899,7 +4906,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                import_string = HG.client_controller.GetClipboardText()
+                raw_text = HG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -4908,15 +4915,22 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 return
                 
             
-            pairs = self._DeserialiseImportString( import_string )
-            
-            self._AutoPetitionConflicts( pairs )
-            
-            self._AutoPetitionLoops( pairs )
-            
-            self._AddPairs( pairs, add_only = add_only )
-            
-            self._UpdateListCtrlData()
+            try:
+                
+                pairs = self._DeserialiseImportString( raw_text )
+                
+                self._AutoPetitionConflicts( pairs )
+                
+                self._AutoPetitionLoops( pairs )
+                
+                self._AddPairs( pairs, add_only = add_only )
+                
+                self._UpdateListCtrlData()
+                
+            except Exception as e:
+                
+                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of lesser-ideal sibling line-pairs', e )
+                
             
         
         def _ImportFromTXT( self, add_only = False ):

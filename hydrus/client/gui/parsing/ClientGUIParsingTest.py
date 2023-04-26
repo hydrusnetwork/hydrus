@@ -210,7 +210,14 @@ class TestPanel( QW.QWidget ):
             return
             
         
-        self._SetExampleData( raw_text, example_bytes = raw_bytes )
+        try:
+            
+            self._SetExampleData( raw_text, example_bytes = raw_bytes )
+            
+        except Exception as e:
+            
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'UTF-8 text', e )
+            
         
     
     def _SetExampleData( self, example_data, example_bytes = None ):

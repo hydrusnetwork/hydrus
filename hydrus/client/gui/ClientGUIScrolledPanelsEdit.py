@@ -36,6 +36,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
@@ -524,9 +525,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
-            
-            HydrusData.ShowException( e )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'An instance of JSON-serialised tag or note import options', e )
             
         
     
@@ -1944,9 +1943,9 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             names_and_notes = clean_names_and_notes
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON names and notes, either as an Object or a list of pairs', e )
             
             return
             
@@ -2238,11 +2237,23 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         #
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
-        self._copy_button.setToolTip( 'Copy all timestamps to the clipboard.' )
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'all times', 'Copy every time here for pasting in another file\'s dialog.', self._Copy ) )
+        
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ) )
+        
+        menu_items.append( ( 'normal', 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
+        
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ), adjust_delta = 1 )
+        
+        menu_items.append( ( 'normal', 'all file service times, plus one second', 'This is an experiment, feel free to play around with it to manually force a certain order on a handful of files. I expect to replace it will a full \'cascade\' dialog in future.', c ) )
+        
+        self._copy_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().copy, menu_items )
+        self._copy_button.setToolTip( 'Copy timestamps to the clipboard.' )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste all timestamps from another timestamps dialog.' )
+        self._paste_button.setToolTip( 'Paste timestamps from another timestamps dialog.' )
         
         #
         
@@ -2319,9 +2330,27 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         return ( display_tuple, sort_tuple )
         
     
-    def _Copy( self ):
+    def _Copy( self, allowed_timestamp_types = None, adjust_delta = 0 ):
         
-        list_of_timestamp_data = HydrusSerialisable.SerialisableList( self._GetValidTimestampDatas() )
+        list_of_timestamp_data = self._GetValidTimestampDatas()
+        
+        if allowed_timestamp_types is not None:
+            
+            list_of_timestamp_data = [ timestamp_data for timestamp_data in list_of_timestamp_data if timestamp_data.timestamp_type in allowed_timestamp_types ]
+            
+        
+        if adjust_delta != 0:
+            
+            for timestamp_data in list_of_timestamp_data:
+                
+                if timestamp_data.timestamp is not None:
+                    
+                    timestamp_data.timestamp += adjust_delta
+                    
+                
+            
+        
+        list_of_timestamp_data = HydrusSerialisable.SerialisableList( list_of_timestamp_data )
         
         text = json.dumps( list_of_timestamp_data.GetSerialisableTuple() )
         
@@ -2453,7 +2482,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
         
     
-    def _GetValidTimestampDatas( self, only_changes = False ):
+    def _GetValidTimestampDatas( self, only_changes = False ) -> typing.List[ ClientTime.TimestampData ]:
         
         timestamps_manager = self._media.GetLocationsManager().GetTimestampsManager()
         
@@ -2541,6 +2570,8 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
             
         
+        result = HydrusSerialisable.SerialisableList( result ).Duplicate()
+        
         return result
         
     
@@ -2571,9 +2602,9 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                 
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Did not understand what was in the clipboard!' )
+            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A list of JSON-serialised Timestamp Data objects', e )
             
             return
             

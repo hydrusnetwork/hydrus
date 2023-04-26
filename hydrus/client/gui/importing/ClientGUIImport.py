@@ -590,7 +590,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             try:
                 
-                text = HG.client_controller.GetClipboardText()
+                raw_text = HG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -601,15 +601,17 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             try:
                 
-                tags = HydrusText.DeserialiseNewlinedTexts( text )
+                tags = HydrusText.DeserialiseNewlinedTexts( raw_text )
                 
                 tags = HydrusTags.CleanTags( tags )
                 
                 return tags
                 
-            except:
+            except Exception as e:
                 
-                raise Exception( 'I could not understand what was in the clipboard' )
+                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
+                
+                raise
                 
             
         

@@ -16,6 +16,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -53,6 +54,7 @@ def GetURLsFromURLsString( urls_string ):
     
     return urls
     
+
 def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, can_generate_more_pages: bool ):
     
     try:
@@ -72,13 +74,12 @@ def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGalleryS
         
         ImportURLs( win, gallery_seed_log, urls, can_generate_more_pages )
         
-    except:
+    except Exception as e:
         
-        QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
-        
-        raise
+        ClientGUIFunctions.PresentClipboardParseError( win, raw_text, 'Lines of URLs', e )
         
     
+
 def ImportFromPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, can_generate_more_pages: bool ):
     
     with QP.FileDialog( win, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
