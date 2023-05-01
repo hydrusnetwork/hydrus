@@ -12,12 +12,6 @@ jobs:
         name: Checkout
         uses: actions/checkout@v3
       -
-        name: Setup FFMPEG
-        uses: FedericoCarboni/setup-ffmpeg@v1.1.0
-        id: setup_ffmpeg
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      -
         name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -33,10 +27,21 @@ jobs:
         name: Install PyOxidizer
         run: python3 -m pip install pyoxidizer==0.22.0
       -
+        name: Download ffmpeg
+        uses: carlosperate/download-file-action@v2
+        id: download_ffmpeg
+        with:
+          file-url: 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z'
+          file-name: 'ffmpeg-macos.7z'
+          location: '.'
+      -
+        name: Process ffmpeg
+        run: |
+          7z e ffmpeg-macos.7z -ohydrus/bin "ffmpeg"
+      -
         name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
-          cp ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} bin/
           cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
           cp static/build_files/macos/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
@@ -139,12 +144,6 @@ jobs:
         with:
           path: hydrus
       -
-        name: Setup FFMPEG
-        uses: FedericoCarboni/setup-ffmpeg@v1.1.0
-        id: setup_ffmpeg
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      -
         name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -159,7 +158,7 @@ jobs:
         working-directory: hydrus
       -
         name: Download mpv-dev
-        uses: carlosperate/download-file-action@v1.1.1
+        uses: carlosperate/download-file-action@v2
         id: download_mpv
         with:
             file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z'
@@ -168,12 +167,23 @@ jobs:
       -
         name: Process mpv-dev
         run: |
-          7z x ${{ steps.download_mpv.outputs.file-path }}
-          move libmpv-2.dll hydrus\mpv-2.dll
+          7z x mpv-dev-x86_64.7z -ompv
+          move mpv\libmpv-2.dll hydrus\mpv-2.dll
+      -
+        name: Download ffmpeg
+        uses: carlosperate/download-file-action@v2
+        id: download_ffmpeg
+        with:
+          file-url: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z'
+          file-name: 'ffmpeg-release-full.7z'
+          location: '.'
+      -
+        name: Process ffmpeg
+        run: |
+          7z e ffmpeg-release-full.7z -ohydrus/bin "**/bin/ffmpeg.exe"
       -
         name: Build Hydrus
         run: |
-          move ${{ steps.setup_ffmpeg.outputs.ffmpeg-path }} hydrus\bin\
           move hydrus\static\build_files\windows\sqlite3.dll hydrus\
           move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
           move hydrus\static\build_files\windows\client-win.spec client-win.spec
@@ -216,10 +226,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [build-windows, build-ubuntu, build-macos]
     steps:
-      - 
-        name: Checkout Code
-        uses: actions/checkout@v3
-      - 
+      -
         name: Get All Artifacts
         uses: actions/download-artifact@v3
       - 
