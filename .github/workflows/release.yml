@@ -37,7 +37,8 @@ jobs:
       -
         name: Process ffmpeg
         run: |
-          7z e ffmpeg-macos.7z -ohydrus/bin "ffmpeg"
+          cd $GITHUB_WORKSPACE
+          7z e ffmpeg-macos.7z -obin "ffmpeg"
       -
         name: Build Hydrus
         run: |
