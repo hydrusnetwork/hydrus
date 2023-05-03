@@ -3570,6 +3570,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_sibling_decorators_on_storage_taglists = QW.QCheckBox( general_panel )
             self._show_sibling_decorators_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
             
+            self._num_recent_petition_reasons = ClientGUICommon.BetterSpinBox( general_panel, initial = 5, min = 0, max = 100 )
+            tt = 'In manage tags, tag siblings, and tag parents, you may be asked to provide a reason with a petition you make to a hydrus repository. There are some fixed reasons, but the dialog can also remember what you recently typed. This controls how many recent reasons it will remember.'
+            self._num_recent_petition_reasons.setToolTip( tt )
+            
             self._ac_select_first_with_count = QW.QCheckBox( general_panel )
             
             #
@@ -3606,6 +3610,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_sibling_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
             self._show_sibling_decorators_on_storage_autocomplete_taglists.setToolTip( 'This affects the autocomplete results taglist.' )
             
+            self._num_recent_petition_reasons.setValue( self._new_options.GetInteger( 'num_recent_petition_reasons' ) )
+            
             self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
             
             #
@@ -3624,6 +3630,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show parents expanded by default on edit/write autocomplete taglists: ', self._expand_parents_on_storage_autocomplete_taglists ) )
             rows.append( ( 'Show sibling info by default on edit/write taglists: ', self._show_sibling_decorators_on_storage_taglists ) )
             rows.append( ( 'Show sibling info by default on edit/write autocomplete taglists: ', self._show_sibling_decorators_on_storage_autocomplete_taglists ) )
+            rows.append( ( 'Number of recent petition reasons to remember in dialogs: ', self._num_recent_petition_reasons ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
@@ -3669,6 +3676,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'expand_parents_on_storage_autocomplete_taglists', self._expand_parents_on_storage_autocomplete_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_sibling_decorators_on_storage_taglists', self._show_sibling_decorators_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists', self._show_sibling_decorators_on_storage_autocomplete_taglists.isChecked() )
+            
+            self._new_options.SetInteger( 'num_recent_petition_reasons', self._num_recent_petition_reasons.value() )
             
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
             

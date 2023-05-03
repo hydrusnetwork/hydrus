@@ -472,7 +472,7 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemDate ):
     
     def _GetSystemPredicateLabel( self ) -> str:
         
-        return 'system:last viewed date'
+        return 'system:last viewed time'
         
     
     def _GetPredicateType( self ) -> int:
@@ -485,7 +485,7 @@ class PanelPredicateSystemArchivedDate( PanelPredicateSystemDate ):
     
     def _GetSystemPredicateLabel( self ) -> str:
         
-        return 'system:archived date'
+        return 'system:archived time'
         
     
     def _GetPredicateType( self ) -> int:
@@ -498,7 +498,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemDate ):
     
     def _GetSystemPredicateLabel( self ) -> str:
         
-        return 'system:modified date'
+        return 'system:modified time'
         
     
     def _GetPredicateType( self ) -> int:
@@ -597,7 +597,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:last viewed time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -656,7 +656,7 @@ class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:archived date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:archived time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -715,7 +715,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified time'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._years, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_CENTER_PERPENDICULAR )

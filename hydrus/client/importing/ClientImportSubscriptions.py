@@ -703,7 +703,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( death_files_found, death_time_delta ) = death_file_velocity
                 
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) ) )
+                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta, no_bigger_than_days = True ) ) )
                 
             
         else:

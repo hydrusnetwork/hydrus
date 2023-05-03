@@ -70,6 +70,12 @@ SHORTCUT_KEY_SPECIAL_F9 = 25
 SHORTCUT_KEY_SPECIAL_F10 = 26
 SHORTCUT_KEY_SPECIAL_F11 = 27
 SHORTCUT_KEY_SPECIAL_F12 = 28
+SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE = 29
+SHORTCUT_KEY_SPECIAL_MEDIA_PREVIOUS = 30
+SHORTCUT_KEY_SPECIAL_MEDIA_NEXT = 31
+SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_DOWN = 32
+SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_UP = 33
+SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE = 32
 
 if HC.PLATFORM_MACOS:
     
@@ -111,7 +117,15 @@ special_key_shortcut_enum_lookup = {
     QC.Qt.Key_F9 : SHORTCUT_KEY_SPECIAL_F9,
     QC.Qt.Key_F10 : SHORTCUT_KEY_SPECIAL_F10,
     QC.Qt.Key_F11 : SHORTCUT_KEY_SPECIAL_F11,
-    QC.Qt.Key_F12 : SHORTCUT_KEY_SPECIAL_F12
+    QC.Qt.Key_F12 : SHORTCUT_KEY_SPECIAL_F12,
+    QC.Qt.Key_MediaTogglePlayPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key_MediaPlay : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key_MediaPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key_MediaPrevious : SHORTCUT_KEY_SPECIAL_MEDIA_PREVIOUS,
+    QC.Qt.Key_MediaNext : SHORTCUT_KEY_SPECIAL_MEDIA_NEXT,
+    QC.Qt.Key_VolumeDown : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_DOWN,
+    QC.Qt.Key_VolumeUp : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_UP,
+    QC.Qt.Key_VolumeMute : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE
 }
 
 special_key_shortcut_str_lookup = {
@@ -143,7 +157,13 @@ special_key_shortcut_str_lookup = {
     SHORTCUT_KEY_SPECIAL_F9 : 'f9',
     SHORTCUT_KEY_SPECIAL_F10 : 'f10',
     SHORTCUT_KEY_SPECIAL_F11 : 'f11',
-    SHORTCUT_KEY_SPECIAL_F12 : 'f12'
+    SHORTCUT_KEY_SPECIAL_F12 : 'f12',
+    SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE : 'media: play/pause',
+    SHORTCUT_KEY_SPECIAL_MEDIA_PREVIOUS : 'media: previous',
+    SHORTCUT_KEY_SPECIAL_MEDIA_NEXT : 'media: next',
+    SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_DOWN : 'volume down',
+    SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_UP : 'volume up',
+    SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE : 'volume mute/unmute'
 }
 
 SHORTCUT_MOUSE_LEFT = 0
@@ -155,15 +175,17 @@ SHORTCUT_MOUSE_SCROLL_LEFT = 5
 SHORTCUT_MOUSE_SCROLL_RIGHT = 6
 SHORTCUT_MOUSE_BACK = 7
 SHORTCUT_MOUSE_FORWARD = 8
+SHORTCUT_MOUSE_TASK = 9
 
-SHORTCUT_MOUSE_CLICKS = { SHORTCUT_MOUSE_LEFT, SHORTCUT_MOUSE_MIDDLE, SHORTCUT_MOUSE_RIGHT, SHORTCUT_MOUSE_BACK, SHORTCUT_MOUSE_FORWARD }
+SHORTCUT_MOUSE_CLICKS = { SHORTCUT_MOUSE_LEFT, SHORTCUT_MOUSE_MIDDLE, SHORTCUT_MOUSE_RIGHT, SHORTCUT_MOUSE_BACK, SHORTCUT_MOUSE_FORWARD, SHORTCUT_MOUSE_TASK }
 
 qt_mouse_buttons_to_hydrus_mouse_buttons = {
     QC.Qt.LeftButton : SHORTCUT_MOUSE_LEFT,
     QC.Qt.MiddleButton : SHORTCUT_MOUSE_MIDDLE,
     QC.Qt.RightButton : SHORTCUT_MOUSE_RIGHT,
     QC.Qt.BackButton : SHORTCUT_MOUSE_BACK,
-    QC.Qt.ForwardButton : SHORTCUT_MOUSE_FORWARD
+    QC.Qt.ForwardButton : SHORTCUT_MOUSE_FORWARD,
+    QC.Qt.TaskButton : SHORTCUT_MOUSE_TASK
 }
 
 shortcut_mouse_string_lookup = {
@@ -172,6 +194,7 @@ shortcut_mouse_string_lookup = {
     SHORTCUT_MOUSE_MIDDLE : 'middle-click',
     SHORTCUT_MOUSE_BACK : 'back',
     SHORTCUT_MOUSE_FORWARD : 'forward',
+    SHORTCUT_MOUSE_TASK : 'task button',
     SHORTCUT_MOUSE_SCROLL_UP : 'scroll up',
     SHORTCUT_MOUSE_SCROLL_DOWN : 'scroll down',
     SHORTCUT_MOUSE_SCROLL_LEFT : 'scroll left',
@@ -387,8 +410,9 @@ def ConvertKeyEventToSimpleTuple( event ):
     
     return ( modifier, key )
     
+
 GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS = 0
-ONE_TICK_ON_A_NORMAL_MOUSE_IN_DEGREES = 15 * 8 # fifteen degrees, in eighths of a degree
+ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE = 15 * 8 # fifteen degrees, in eighths of a degree
 
 def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
     
@@ -440,26 +464,25 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
         
         angle_delta = angle_delta_point.y()
         
-        if QP.WheelEventIsSynthesised( event ):
+        # we used to do QP.WheelEventIsSynthesised here, but it seems some normal mice produce a billion small wheel events for smoothscroll gubbins or something, lfg
+        # so let's just try this tech for everyone
+        if abs( angle_delta ) < ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE:
             
-            if abs( angle_delta ) < ONE_TICK_ON_A_NORMAL_MOUSE_IN_DEGREES:
+            # likely using a trackpad to generate artificial wheel events
+            
+            global GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS
+            
+            GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS += angle_delta
+            
+            if abs( GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS ) > ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE:
                 
-                # likely using a trackpad to generate artificial wheel events
+                angle_delta = GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS
                 
-                global GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS
+                GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS = 0
                 
-                GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS += angle_delta
+            else:
                 
-                if abs( GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS ) > ONE_TICK_ON_A_NORMAL_MOUSE_IN_DEGREES:
-                    
-                    angle_delta = GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS
-                    
-                    GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS = 0
-                    
-                else:
-                    
-                    return None
-                    
+                return None
                 
             
         

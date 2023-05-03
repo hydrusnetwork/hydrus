@@ -2476,7 +2476,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME:
                     
-                    base = 'last view time'
+                    base = 'last viewed time'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                     

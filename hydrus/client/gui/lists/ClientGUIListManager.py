@@ -1,5 +1,7 @@
 from hydrus.core import HydrusSerialisable
 
+from hydrus.core import HydrusGlobals as HG
+
 from hydrus.client.gui.lists import ClientGUIListStatus
 
 class ColumnListManager( HydrusSerialisable.SerialisableBase ):
@@ -50,9 +52,23 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
         return column_list_status
         
     
-    def ResetToDefaults( self ):
+    def ResetToDefaults( self, column_list_type = None ):
         
-        self._column_list_types_to_statuses = HydrusSerialisable.SerialisableDictionary()
+        if column_list_type is None:
+            
+            self._column_list_types_to_statuses = HydrusSerialisable.SerialisableDictionary()
+            
+            HG.client_controller.pub( 'reset_all_listctrl_status' )
+            
+        else:
+            
+            if column_list_type in self._column_list_types_to_statuses:
+                
+                del self._column_list_types_to_statuses[ column_list_type ]
+                
+                HG.client_controller.pub( 'reset_listctrl_status', column_list_type )
+                
+            
         
         self._dirty = True
         

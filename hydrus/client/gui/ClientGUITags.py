@@ -2518,18 +2518,27 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
                     
-                    suggestions = []
+                    fixed_suggestions = [
+                        'mangled parse/typo',
+                        'not applicable/incorrect',
+                        'clearing mass-pasted junk',
+                        'splitting filename/title/etc... into individual tags'
+                    ]
                     
-                    suggestions.append( 'mangled parse/typo' )
-                    suggestions.append( 'not applicable/incorrect' )
-                    suggestions.append( 'clearing mass-pasted junk' )
-                    suggestions.append( 'splitting filename/title/etc... into individual tags' )
+                    suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE )
+                    
+                    suggestions.extend( fixed_suggestions )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                         
                         if dlg.exec() == QW.QDialog.Accepted:
                             
                             reason = dlg.GetValue()
+                            
+                            if reason not in fixed_suggestions:
+                                
+                                HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, reason )
+                                
                             
                         else:
                             
@@ -2601,6 +2610,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             num_recent_tags = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
             
             if len( recent_tags ) > 0 and num_recent_tags is not None:
+                
+                recent_tags = list( recent_tags )
                 
                 if len( recent_tags ) > num_recent_tags:
                     
@@ -3232,16 +3243,25 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your request.'
                         
-                        suggestions = []
+                        fixed_suggestions = [
+                            'obvious by definition (a sword is a weapon)',
+                            'character/series/studio/etc... belonging (character x belongs to series y)'
+                        ]
                         
-                        suggestions.append( 'obvious by definition (a sword is a weapon)' )
-                        suggestions.append( 'character/series/studio/etc... belonging (character x belongs to series y)' )
+                        suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD )
+                        
+                        suggestions.extend( fixed_suggestions )
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
                             if dlg.exec() == QW.QDialog.Accepted:
                                 
                                 reason = dlg.GetValue()
+                                
+                                if reason not in fixed_suggestions:
+                                    
+                                    HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, reason )
+                                    
                                 
                             else:
                                 
@@ -3309,15 +3329,25 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                 message += os.linesep * 2
                                 message += 'to be removed. A janitor will review your petition.'
                                 
-                                suggestions = []
+                                fixed_suggestions = [
+                                    'obvious typo/mistake'
+                                ]
                                 
-                                suggestions.append( 'obvious typo/mistake' )
+                                suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
+                                
+                                suggestions.extend( fixed_suggestions )
                                 
                                 with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                     
                                     if dlg.exec() == QW.QDialog.Accepted:
                                         
                                         reason = dlg.GetValue()
+                                        
+                                        
+                                        if reason not in fixed_suggestions:
+                                            
+                                            HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
+                                            
                                         
                                     else:
                                         
@@ -4376,10 +4406,14 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
                             
                         
-                        suggestions = []
+                        fixed_suggestions = [
+                            'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag',
+                            'rewording/namespacing based on preference'
+                        ]
                         
-                        suggestions.append( 'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag' )
-                        suggestions.append( 'rewording/namespacing based on preference' )
+                        suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD )
+                        
+                        suggestions.extend( fixed_suggestions )
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
@@ -4388,6 +4422,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             if dlg.exec() == QW.QDialog.Accepted:
                                 
                                 reason = dlg.GetValue()
+                                
+                                if reason not in fixed_suggestions:
+                                    
+                                    HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, reason )
+                                    
                                 
                             else:
                                 
@@ -4472,17 +4511,26 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             message += os.linesep * 2
                             message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
                             
-                            suggestions = []
+                            fixed_suggestions = [
+                                'obvious typo/mistake',
+                                'disambiguation',
+                                'correcting to repository standard'
+                            ]
                             
-                            suggestions.append( 'obvious typo/mistake' )
-                            suggestions.append( 'disambiguation' )
-                            suggestions.append( 'correcting to repository standard' )
+                            suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
+                            
+                            suggestions.extend( fixed_suggestions )
                             
                             with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                 
                                 if dlg.exec() == QW.QDialog.Accepted:
                                     
                                     reason = dlg.GetValue()
+                                    
+                                    if reason not in fixed_suggestions:
+                                        
+                                        HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
+                                        
                                     
                                 else:
                                     

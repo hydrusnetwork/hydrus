@@ -516,6 +516,11 @@ class SerialisableDictionary( SerialisableBase, dict ):
                 
                 key = ConvertMetaSerialisableTupleToObject( meta_key )
                 
+                if isinstance( key, list ):
+                    
+                    key = tuple( key )
+                    
+                
                 value = ConvertMetaSerialisableTupleToObject( meta_value )
                 
             except HydrusExceptions.SerialisationException as e:

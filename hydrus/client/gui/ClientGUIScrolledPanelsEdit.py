@@ -1329,7 +1329,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         rows = []
         
         rows.append( ( 'sync archived status?: ', self._sync_archive_action ) )
-        rows.append( ( 'sync file modified date?: ', self._sync_file_modified_date_action ) )
+        rows.append( ( 'sync file modified time?: ', self._sync_file_modified_date_action ) )
         rows.append( ( 'sync known urls?: ', self._sync_urls_action ) )
         rows.append( ( 'sync notes?: ', self._sync_notes_action ) )
         rows.append( ( '', self._sync_note_import_options_button ) )
@@ -2713,11 +2713,11 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp ):
                     
-                    self._file_modified_timestamp_warning_st.setText( 'This will also change the modified date of the file on disk!' )
+                    self._file_modified_timestamp_warning_st.setText( 'This will also change the modified time of the file on disk!' )
                     
                 else:
                     
-                    self._file_modified_timestamp_warning_st.setText( 'File modified date on disk will not be changed--the timestamp is too early.' )
+                    self._file_modified_timestamp_warning_st.setText( 'File modified time on disk will not be changed--the timestamp is too early.' )
                     
                 
                 return

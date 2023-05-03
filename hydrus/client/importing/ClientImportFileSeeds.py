@@ -1237,7 +1237,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     def SetReferralURL( self, referral_url: str ):
         
         self._referral_url = referral_url
-
+        
     
     def SetRequestHeaders( self, request_headers: dict ):
         
@@ -1260,6 +1260,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.status = status
         self.note = note
+        
+        if status == CC.STATUS_UNKNOWN:
+            
+            # if user is 'try again'ing for a complicated 'the destination file changed' situation,
+            # we want to scrub any db-assigned sha256 that was allocated by a previous 'already in db' file import result
+            # also kill any md5 or whatever, just in case that was causing the original mess-up
+            self._hashes = {}
+            
         
         self._UpdateModified()
         

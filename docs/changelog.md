@@ -7,6 +7,38 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 526](https://github.com/hydrusnetwork/hydrus/releases/tag/v526)
+
+### there will be an important update next week
+
+* next week's release will have two important program changes--I will integrate an OpenCV update, which will require 'extract' users to perform a clean install, and the executables are finally changing from 'client' and 'server' to 'hydrus_client' and 'hydrus_server'! be prepared to update your shortcuts and launch scripts
+
+### time
+
+* fixed a stupid logical bug in my new date code, which was throwing errors on system:time predicates that had a month value equal to the current month (e.g. 'x years, 5 months' during May)--sorry! (issue #1362)
+* when a subscription dies, the popup note about it says the death velocity period in the neat '180 days', as you set in UI, rather than converting to a date and stating the number of months and days using the recent calendar calculation updates
+* I unified some more 'xxxified date' UI labels to be 'xxxified time'. we're generally moving to the latter format as the ideal while still accepting various combinations for system parsing input
+
+### shortcuts
+
+* added 'media play-pause/previous/next' and 'volume up/down/mute' key recognition to the shortcut system. if your keyboard/headphones have media keys, they _should_ be mappable now. note, however, that, at least on Windows, while these capture in the hydrus UI, they seem to have global OS-level hooks, and as far as I can tell Qt can't stop that event propagating, so these may have limited effectiveness if you also have an mp3 player open, since Windows will also send the 'next' call to that etc... it may be there is a nice way to properly register a Qt app as a media thing for Windows to global-hook these events to, but I'm not sure!
+* also added 'mouse task button' to the mappable buttons. this is apparently a common Mouse6 mapping, so if you have it, knock yourself out
+* the code in the shortcut system that tries to detect and merge many small scroll wheel events (such as the emulated scroll that a trackpad may generate) now applies to all mouse devices, not just synthesised events. with luck, this will mean that mice that generate like 15 smoothscroll events of one degree instead of one of fifteen degrees for every wheel tick will no longer spam-navigate the media viewer wew
+
+### misc
+
+* to save you typing/pasting time, the 'enter your reason' prompts in manage tags, tag siblings, and tag parents now remember the last five custom reasons you enter! you can change the number saved using the new option under _options->tags_, including setting it to 0 to disable the system
+* fixed pasting tags in the manage tags dialog when the number of tags you are pasting is larger than the number of allowed 'recent tags'. previously it was saying 'did not understand what was in the clipboard', so hooray for the new error reporting
+* every multi-column list in the program now has a 'reset column widths' item in its header right-click menu! when these reset events happen, the respective lists also resize themselves immediately, no restart required
+* when you set 'try again' on an import object, it now clears all saved hashes from the import object (including the SHA256 which may have been linked from the database in an 'already in db'/'previously deleted' result). this will ensure the next attempt is not poisoned by these hashes (which can happen for various reasons) in the subsequent attempt. basically 'try again' resets better now (issue #1353)
+
+### some build stuff
+
+* the main build script now only uses Node16 sub-Actions (Node12 support is deprecated and being dropped in June)
+* the main build script no longer uses set-output commands (these are deprecated and being dropped later in the year I think, in favour of some ENV stuff)
+* tidied some cruft from the main build script
+* I moved the 'new' python-mpv in the requirements.txts from 1.0.1 to 1.0.3. source users might like to rebuild their venvs again, particularly Windows users who updated to the new mpv dll recently
+
 ## [Version 525](https://github.com/hydrusnetwork/hydrus/releases/tag/v525)
 
 ### library updates
@@ -358,26 +390,3 @@ title: Changelog
 * cleaned up how popup file buttons are set and cleared
 * cleaned up how popup main and secondary texts are set and cleared
 * misc linting cleanup
-
-## [Version 516](https://github.com/hydrusnetwork/hydrus/releases/tag/v516)
-
-### misc
-
-* the 'manage sidecar routers' control, which is on manage import folders, manage export folders, path-tagging-before-manual-import, and manual export files, now has import/export/duplicate buttons. you can save and transfer your work now! if you try to import 'export to sidecar' routers to an 'import from sidecar' context or _vice versa_, it should give you a nicely worded error
-* fixed the error that was raising when you turn related tags off with the suggestions set to side-by-side layout. very sorry for the trouble!
-* apngs that are set to 'loop x times' (usually once) now only loop that many times, on both mpv and my native renderer! like gifs, the 'always loop animations' setting under _options->media_ overrides it!
-* fixed an issue with my native renderer not updating on scanbar scrubs very well. should be back to nice smooth instant draw as you scrub
-* thanks to a user, folded in another deviant art parser update to the defaults
-* updated the setuptools version in the requirements.txt due to a security note--I don't think the problem (which was about some vulnerable regex when fetching malicious package info) applies to us, but running from source users might like to run setup_venv again this week anyway
-
-### related tags
-
-* a new 'concurrence threshold' setting under _options->tag suggestions_ allows you to set how 'strict' the related tags search is. a higher percentage causes fewer but more relevant results. I'm increasing the default this week from 4% to 6%
-* two new 'namespace to weight' settings under _options->tag suggestions_ now manage how much weight the 'search' and 'suggestion' sides of related tags have. you can say 'rank the suggestions from character tags highly' or 'rank unnamespaced suggestions lower', and 'do not search x tags' and 'do not suggest y tags'. I have prepped it with some 'creator/character/series namespaces are better than unnamespaced, and title/filename/page/chapter/volume are useless' defaults, but feel free to play around with it
-* the related tags algorithm takes a larger sample now, resulting in a _little_ less ranking-variability
-
-### client api
-
-* changed and fixed an issue in the client api's new `get_file_relationships` call. previously, I said 'king' would be null if it was not on the given file domain, but this was not working correctly--it was giving pseudorandom 'fallback' kings. now it always gives the king, no matter what! a new param, `king_is_on_file_domain` says whether the king is on the given domain. `king_is_local` says whether the king is available on disk
-* added some discussion and a list of the 8 possible 'better than' and 'same quality' logical combinations to the `set_file_relationships` help so you can see how group merge involving non-kings works
-* client api is now version 42

@@ -179,6 +179,9 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
         self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
         
+        HG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
+        HG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
+        
     
     def _AddDataInfo( self, data_info ):
         
@@ -387,7 +390,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         name = CGLC.column_list_type_name_lookup[ self._column_list_type ]
         
-        ClientGUIMenus.AppendMenuLabel( menu, f'multi-column list: {name}', 'This is the name of this multi-column list widget.' )
+        ClientGUIMenus.AppendMenuItem( menu, f'reset default column widths for "{name}" lists', 'Reset the column widths and other display settings for all lists of this type', HG.client_controller.column_list_manager.ResetToDefaults, self._column_list_type )
         
         CGC.core().PopupMenu( self, menu )
         
@@ -683,6 +686,57 @@ class BetterListCtrl( QW.QTreeWidget ):
     def HasSelected( self ):
         
         return len( self.selectedItems() ) > 0 
+        
+    
+    def NotifySettingsUpdated( self, column_list_type = None ):
+        
+        if column_list_type is not None and column_list_type != self._column_list_type:
+            
+            return
+            
+        
+        self.blockSignals( True )
+        self.header().blockSignals( True )
+        
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = HG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._original_column_list_status = self._column_list_status
+        
+        #
+        
+        ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
+        
+        #
+        
+        main_tlw = HG.client_controller.GetMainTLW()
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
+            
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self.header().blockSignals( False )
+        self.blockSignals( False )
+        
+        #
+        
+        self.Sort() # note this saves the current status, so don't do it until we resize stuff
         
     
     def ProcessActivateAction( self ):

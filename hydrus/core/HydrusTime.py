@@ -130,16 +130,29 @@ def CalendarDeltaToDateTime( years : int, months : int, days : int, hours : int 
     
     result = now - day_and_hour_delta
     
-    while months > result.month:
-        
-        years += 1
-        months -= 12
-        
-    
     new_year = result.year - years
     new_month = result.month - months
     
-    dayrange = calendar.monthrange( new_year, new_month )
+    while new_month < 1:
+        
+        new_year -= 1
+        new_month += 12
+        
+    
+    while new_month > 12:
+        
+        new_year += 1
+        new_month -= 12
+        
+    
+    try:
+        
+        dayrange = calendar.monthrange( new_year, new_month )
+        
+    except:
+        
+        dayrange = ( 0, 30 )
+        
     
     new_day = min( dayrange[1], result.day )
     
@@ -160,7 +173,7 @@ def CalendarDeltaToRoughDateTimeTimeDelta( years : int, months : int, days : int
     return datetime.timedelta( days = days + ( months * ( 365.25 / 12 ) ) + ( years * 365.25 ), hours = hours )
     
 
-def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
+def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True, no_bigger_than_days = False ):
     
     if seconds is None:
         
@@ -189,8 +202,12 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
         
         lines = []
         
-        lines.append( ( 'year', YEAR ) )
-        lines.append( ( 'month', MONTH ) )
+        if not no_bigger_than_days:
+            
+            lines.append( ( 'year', YEAR ) )
+            lines.append( ( 'month', MONTH ) )
+            
+        
         lines.append( ( 'day', DAY ) )
         lines.append( ( 'hour', HOUR ) )
         lines.append( ( 'minute', MINUTE ) )

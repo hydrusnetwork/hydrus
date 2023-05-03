@@ -1886,7 +1886,7 @@ class MediaSingleton( Media ):
             
             if len( modified_timestamp_lines ) > 1:
                 
-                lines.append( ( False, ( 'all modified dates', modified_timestamp_lines ) ) )
+                lines.append( ( False, ( 'all modified times', modified_timestamp_lines ) ) )
                 
             
         

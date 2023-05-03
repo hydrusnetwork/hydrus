@@ -325,6 +325,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'recent_petition_reasons' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
         duplicate_content_merge_options = ClientDuplicates.DuplicateContentMergeOptions()
@@ -391,6 +395,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
         
         self._dictionary[ 'integers' ][ 'default_new_page_goes' ] = CC.NEW_PAGE_GOES_FAR_RIGHT
+        
+        self._dictionary[ 'integers' ][ 'num_recent_petition_reasons' ] = 5
         
         self._dictionary[ 'integers' ][ 'max_page_name_chars' ] = 20
         self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
@@ -1377,6 +1383,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             return self._dictionary[ name ]
         
     
+    def GetRecentPetitionReasons( self, content_type, action ):
+        
+        with self._lock:
+            
+            return list( self._dictionary[ 'recent_petition_reasons' ].get( ( content_type, action ), [] ) )[ : self._dictionary[ 'integers' ][ 'num_recent_petition_reasons' ] ]
+            
+        
+    
     def GetRecentPredicates( self, predicate_types ):
         
         with self._lock:
@@ -1464,6 +1478,30 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'booleans' ][ name ] = not self._dictionary[ 'booleans' ][ name ]
+            
+        
+    
+    def PushRecentPetitionReason( self, content_type, action, reason ):
+        
+        with self._lock:
+            
+            key = ( content_type, action )
+            
+            if key not in self._dictionary[ 'recent_petition_reasons' ]:
+                
+                self._dictionary[ 'recent_petition_reasons' ][ key ] = []
+                
+            
+            reasons = self._dictionary[ 'recent_petition_reasons' ][ key ]
+            
+            if reason in reasons:
+                
+                reasons.remove( reason )
+                
+            
+            reasons.insert( 0, reason )
+            
+            self._dictionary[ 'recent_petition_reasons' ][ key ] = reasons[ : self._dictionary[ 'integers' ][ 'num_recent_petition_reasons' ] ]
             
         
     

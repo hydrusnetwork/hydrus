@@ -68,6 +68,7 @@ from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
 from hydrus.test import TestHydrusSessions
 from hydrus.test import TestHydrusTags
+from hydrus.test import TestHydrusTime
 from hydrus.test import TestServerDB
 
 DB_DIR = None
@@ -784,6 +785,7 @@ class Controller( object ):
             TestClientDBDuplicates,
             TestClientDBTags,
             TestHydrusData,
+            TestHydrusTime,
             TestHydrusNATPunch,
             TestClientNetworking,
             TestHydrusNetworking,
@@ -818,6 +820,7 @@ class Controller( object ):
             TestFunctions,
             TestHydrusData,
             TestHydrusTags,
+            TestHydrusTime,
             TestHydrusSerialisable,
             TestHydrusSessions
         ]
