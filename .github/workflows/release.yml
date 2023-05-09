@@ -119,7 +119,7 @@ jobs:
       -
         name: Set Permissions
         run: |
-            sudo chown --recursive 1000:1000 dist/client
+            sudo chown --recursive 1000:1000 dist/hydrus_client
             sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
             sudo chmod +x dist/hydrus_client/client dist/hydrus_client/server dist/hydrus_client/bin/swfrender_linux
       -
@@ -193,7 +193,7 @@ jobs:
           move hydrus\static\build_files\windows\server-win.spec server-win.spec
           pyinstaller server-win.spec
           pyinstaller client-win.spec
-          move hydrus_client "Hydrus Network"
+          move dist\hydrus_client "dist\Hydrus Network"
           dir -r
       -
         # yo pretty sure we'll need to install this manually once we are on windows server 2022
