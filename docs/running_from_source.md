@@ -39,7 +39,7 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 Then, get the hydrus source. The github repo is [https://github.com/hydrusnetwork/hydrus](https://github.com/hydrusnetwork/hydrus). If you are familiar with git, you can just clone the repo to the location you want with `git clone https://github.com/hydrusnetwork/hydrus`, but if not, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere. Make sure the directory has write permissions (e.g. don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.
 
-We will call the base extract directory, the one with 'client.py' in it, `install_dir`.
+We will call the base extract directory, the one with 'hydrus_client.py' in it, `install_dir`.
 
 !!! info "Mixed Builds"
     Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. **If you need to convert between built and source releases, perform a [clean install](getting_started_installing.md#clean_installs).**  
@@ -222,7 +222,7 @@ _This is for advanced users only._
 
 _If you have never used python before, do not try this. If the easy setup scripts failed for you and you don't know what happened, please contact hydev before trying this, as the thing that went wrong there will probably go much more wrong here._
 
-You can also set up the environment yourself. Inside the extract should be client.py and server.py. You will be treating these basically the same as the 'client' and 'server' executables--with the right environment, you should be able to launch them the same way and they take the same launch parameters as the exes.
+You can also set up the environment yourself. Inside the extract should be hydrus_client.py and hydrus_server.py. You will be treating these basically the same as the 'client' and 'server' executables--with the right environment, you should be able to launch them the same way and they take the same launch parameters as the exes.
 
 Hydrus needs a whole bunch of libraries, so let's now set your python up. I **strongly** recommend you create a virtual environment. It is easy and doesn't mess up your system python.
 
@@ -240,7 +240,7 @@ To create a new venv environment:
 !!! info "venvs"
     That `source venv/bin/activate` line turns on your venv. You should see your terminal prompt note you are now in it. A venv is an isolated environment of python that you can install modules to without worrying about breaking something system-wide. **Ideally, you do not want to install python modules to your system python.**  
     
-    This activate line will be needed every time you alter your venv or run the `client.py`/`server.py` files. You can easily tuck this into a launch script--check the easy setup files for examples.  
+    This activate line will be needed every time you alter your venv or run the `hydrus_client.py`/`hydrus_server.py` files. You can easily tuck this into a launch script--check the easy setup files for examples.  
     
     On Windows Powershell, the command is `.\venv\Scripts\activate`, but you may find the whole deal is done much easier in cmd than Powershell. When in Powershell, just type `cmd` to get an old fashioned command line. In cmd, the launch command is just `venv\scripts\activate.bat`, no leading period.
 
@@ -311,11 +311,11 @@ If you don't have FFMPEG in your PATH and you want to import anything more fun t
 
 ### Running It { id="running_it" }
 
-Once you have everything set up, client.py and server.py should look for and run off client.db and server.db just like the executables. You can use the 'client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:
+Once you have everything set up, hydrus_client.py and hydrus_server.py should look for and run off client.db and server.db just like the executables. You can use the 'client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:
 
 ```
 source venv/bin/activate
-python client.py
+python hydrus_client.py
 ```
 
 This will use the 'db' directory for your database by default, but you can use the [launch arguments](launch_arguments.md) just like for the executables. For example, this could be your client-user.sh file:
@@ -324,7 +324,7 @@ This will use the 'db' directory for your database by default, but you can use t
 #!/bin/bash
 
 source venv/bin/activate
-python client.py -d="/path/to/database"
+python hydrus_client.py -d="/path/to/database"
 ```
 
 ### Building these Docs

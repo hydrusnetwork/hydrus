@@ -8,24 +8,24 @@ cloudscraper_dir = os.path.dirname( cloudscraper.__file__ )
 block_cipher = None
 
 
-a = Analysis(['hydrus\\client.pyw'],
+a = Analysis(['hydrus\\hydrus_client.pyw'],
              pathex=['.'],
-             binaries=[],
+             binaries=[
+               ('hydrus\\sqlite3.dll', '.'),
+               ('hydrus\\mpv-2.dll', '.')
+             ],
              datas=[
                ('hydrus\\bin', 'bin'),
                ('hydrus\\help', 'help'),
                ('hydrus\\static', 'static'),
-               ('dist\\server\\server.exe*', '.'),
+               ('dist\\hydrus_server\\hydrus_server.exe*', '.'),
                ('hydrus\\license.txt', '.'),
                ('hydrus\\README.md', '.'),
                ('hydrus\\help my client will not boot.txt', '.'),
                ('hydrus\\db', 'db'),
-               ('hydrus\\hydrus', 'hydrus'),
-               ('hydrus\\sqlite3.dll', '.'),
-               ('hydrus\\mpv-2.dll', '.'),
                (cloudscraper_dir, 'cloudscraper')
              ],
-             hiddenimports=['hydrus\\server.py', 'cloudscraper'],
+             hiddenimports=['hydrus\\hydrus_server.py', 'cloudscraper'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -39,12 +39,13 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='client',
+          name='hydrus_client',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False, 
+          console=False,
+          version_file='client_file_version_info.txt',
           icon='hydrus\\static\\hydrus.ico' )
 coll = COLLECT(exe,
                a.binaries,
@@ -53,4 +54,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=False,
                upx_exclude=[],
-               name='Hydrus Network')
+               name='hydrus_client')

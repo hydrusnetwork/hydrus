@@ -6128,11 +6128,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         if HC.PLATFORM_WINDOWS:
                             
-                            server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
+                            server_frozen_path = os.path.join( HC.BASE_DIR, 'hydrus_server.exe' )
                             
                         else:
                             
-                            server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
+                            server_frozen_path = os.path.join( HC.BASE_DIR, 'hydrus_server' )
                             
                         
                         if os.path.exists( server_frozen_path ):
@@ -6143,9 +6143,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                             python_executable = sys.executable
                             
-                            if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
+                            if python_executable.endswith( 'hydrus_client.exe' ) or python_executable.endswith( 'hydrus_client' ):
                                 
-                                raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
+                                raise Exception( 'Could not automatically set up the server--could not find hydrus_client executable or python executable.' )
                                 
                             
                             if 'pythonw' in python_executable:
@@ -6153,7 +6153,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                                 python_executable = python_executable.replace( 'pythonw', 'python' )
                                 
                             
-                            server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
+                            server_script_path = os.path.join( HC.BASE_DIR, 'hydrus_server.py' )
                             
                             cmd = [ python_executable, server_script_path, db_param ]
                             

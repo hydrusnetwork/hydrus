@@ -13,7 +13,7 @@ title: Running Your Own Server
 
 I will use two terms, _server_ and _service_, to mean two distinct things:
 
-*   A **server** is an instantiation of the hydrus server executable (e.g. server.exe in Windows). It has a complicated and flexible database that can run many different services in parallel.
+*   A **server** is an instantiation of the hydrus server executable (e.g. hydrus_server.exe in Windows). It has a complicated and flexible database that can run many different services in parallel.
 *   A **service** sits on a port (e.g. 45871) and responds to certain http requests (e.g. `/file` or `/update`) that the hydrus client can plug into. A service might be a repository for a certain kind of data, the administration interface to manage what services run on a server, or anything else.
 
 Setting up a hydrus server is easy compared to, say, Apache. There are no .conf files to mess about with, and everything is controlled through the client. When started, the server will place an icon in your system tray in Windows or open a small frame in Linux or macOS. To close the server, either right-click the system tray icon and select exit, or just close the frame.
@@ -31,7 +31,7 @@ Let's look at these steps in more detail:
 
 ## start the server { id="start" }
 
-Since the server and client have so much common code, I package them together. If you have the client, you have the server. If you installed in Windows, you can hit the shortcut in your start menu. Otherwise, go straight to 'server' or 'server.exe' or 'server.pyw' in your installation directory. The program will first try to take port 45870 for its administration interface, so make sure that is free. Open your firewall as appropriate.
+Since the server and client have so much common code, I package them together. If you have the client, you have the server. If you installed in Windows, you can hit the shortcut in your start menu. Otherwise, go straight to 'hydrus_server' or 'hydrus_server.exe' or 'hydrus_server.py' in your installation directory. The program will first try to take port 45870 for its administration interface, so make sure that is free. Open your firewall as appropriate.
 
 ## set up the client { id="setting_up_the_client" }
 

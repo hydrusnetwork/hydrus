@@ -110,22 +110,22 @@ jobs:
       -
         name: Remove Chonk
         run: |
-            find dist/client/ -type f -name "*.pyc" -delete
-            while read line; do find dist/client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+            find dist/hydrus_client/ -type f -name "*.pyc" -delete
+            while read line; do find dist/hydrus_client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
       -
         name: Remove Surplus File
         run: |
-          rm -f dist/client/libxkbcommon.so*
+          rm -f dist/hydrus_client/libxkbcommon.so*
       -
         name: Set Permissions
         run: |
             sudo chown --recursive 1000:1000 dist/client
-            sudo find dist/client -type d -exec chmod 0755 {} \;
-            sudo chmod +x dist/client/client dist/client/server dist/client/bin/swfrender_linux
+            sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
+            sudo chmod +x dist/hydrus_client/client dist/hydrus_client/server dist/hydrus_client/bin/swfrender_linux
       -
         name: Compress Client
         run: |
-            mv dist/client "dist/Hydrus Network"
+            mv dist/hydrus_client "dist/Hydrus Network"
             tar -czvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
       -
         name: Upload a Build Artifact
@@ -187,10 +187,13 @@ jobs:
         run: |
           move hydrus\static\build_files\windows\sqlite3.dll hydrus\
           move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
+          move hydrus\static\build_files\windows\file_version_info_maker.py file_version_info_maker.py
+          python file_version_info_maker.py ${{ github.ref_name }}
           move hydrus\static\build_files\windows\client-win.spec client-win.spec
           move hydrus\static\build_files\windows\server-win.spec server-win.spec
           pyinstaller server-win.spec
           pyinstaller client-win.spec
+          move hydrus_client "Hydrus Network"
           dir -r
       -
         # yo pretty sure we'll need to install this manually once we are on windows server 2022

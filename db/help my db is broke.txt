@@ -22,7 +22,7 @@ For a small database, this whole repair process may take an hour. For a larger, 
 
 Close the client immediately.
 
-If you are on Windows, open task manager (Ctrl+Shift+Esc) and wait for client.exe to disappear from the list. If it takes more than a couple of minutes, forcibly close it with task manager.
+If you are on Windows, open task manager (Ctrl+Shift+Esc) and wait for hydrus_client.exe to disappear from the list. If it takes more than a couple of minutes, forcibly close it with task manager.
 
 
 *** check integrity ***

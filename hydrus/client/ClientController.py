@@ -1946,7 +1946,9 @@ class Controller( HydrusController.HydrusController ):
             
             if True in ( service.GetPort() is not None for service in services ):
                 
-                HydrusData.ShowText( 'Twisted failed to import, so could not start the local booru/client api! Please contact hydrus dev!' )
+                HydrusData.ShowText( 'Twisted failed to import, so could not start the local booru/client api! Specific error has been printed to log. Please contact hydrus dev!' )
+                
+                HydrusData.Print( HG.twisted_is_broke_exception )
                 
             
         else:

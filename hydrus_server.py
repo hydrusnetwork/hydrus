@@ -4,9 +4,9 @@
 # You just DO WHAT THE FUCK YOU WANT TO.
 # https://github.com/sirkris/WTFPL/blob/master/WTFPL.md
 
-from hydrus import hydrus_server
+from hydrus import hydrus_server_boot
 
 if __name__ == '__main__':
     
-    hydrus_server.boot()
+    hydrus_server_boot.boot()
     

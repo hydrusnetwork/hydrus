@@ -16,9 +16,9 @@ fi
 
 # You can copy this file to 'client-user.sh' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
 # Just tack new params on like this:
-# python client.py -d="/path/to/hydrus/db"
+# python hydrus_client.py -d="/path/to/hydrus/db"
 
-python client.py
+python hydrus_client.py
 
 deactivate
 

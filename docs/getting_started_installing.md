@@ -84,7 +84,7 @@ Hydrus is made by an Anon out of duct tape and string. It combines file parsing 
 
 Unfortunately, we have been hit by anti-virus false positives throughout development. Every few months, one or more of the larger anti-virus programs sees some code that looks like something bad, or they run the program in a testbed and don't like something it does, and then they quarantine it. Every single instance of this so far has been a false positive. They usually go away the next week or two when the next set of definitions roll out. Some hydrus users are kind enough to report the program as a false positive to the anti-virus companies themselves, which also helps here.
 
-Some users have never had the problem, some get hit regularly. The situation is obviously worse on Windows. If you try to extract the zip and client.exe or the whole folder suddenly disappears, please check your anti-virus software.
+Some users have never had the problem, some get hit regularly. The situation is obviously worse on Windows. If you try to extract the zip and hydrus_client.exe or the whole folder suddenly disappears, please check your anti-virus software.
 
 I am interested in reports about these false-positives, just so I know what is going on. Sometimes I have been able to reduce problems by changing something in the build (one of these was, no shit, an anti-virus testbed running the installer and then opening the help html at the end, which launched Edge browser, which then triggered Windows Update, which hit UAC and was considered suspicious. I took out the 'open help' checkbox from the installer as a result).
 
@@ -103,7 +103,7 @@ To run the client:
 === "Windows"
 
     *   For the installer, run the Start menu shortcut it added.
-    *   For the extract, run 'client.exe' in the base directory, or make a shortcut to it.
+    *   For the extract, run 'hydrus_client.exe' in the base directory, or make a shortcut to it.
 
 === "macOS"
 
@@ -123,7 +123,17 @@ To run the client:
 
 Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
 
-A user has written a longer and more formal guide to updating, and information on the 334->335 step [here](update_guide.rtf).
+A user has written a longer and more formal guide to updating, and information on the 334->335 step (python2 to python3) [here](update_guide.rtf).
+
+??? note "The 526->527 step was also important."
+    527 changed the program executable name from 'client' to 'hydrus_client'. There was also a library update that caused a dll conflict with previous installs.
+    
+    If you need to update from 526 or before, then:
+    
+    * If you use the Windows installer, install as normal. Your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, but if you use a custom shortcut, you will need to update that too.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as below. You also need to update your program shortcuts.
+    * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, `git pull` as normal. If you haven't already, feel free to run setup_venv again to get the new OpenCV. Update your launch scripts to point at the new `hydrus_client.py` boot scripts.
 
 The update process:
 

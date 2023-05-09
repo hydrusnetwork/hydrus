@@ -165,8 +165,11 @@ try:
         
         from twisted.internet import reactor
         
-    except:
+    except Exception as e:
         
+        import traceback
+        
+        HG.twisted_is_broke_exception = traceback.format_exc()
         HG.twisted_is_broke = True
         
     

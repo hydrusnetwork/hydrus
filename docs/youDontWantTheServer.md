@@ -3,7 +3,7 @@ title: You don't want the server
 ---
 
 # You don't want the server
-The server.exe/server.py is the victim of many a misconception. You don't need to use the server to use Hydrus. The vast majority of features are contained in the client itself so if you're new to Hydrus, just use that.
+The hydrus_server.exe/hydrus_server.py is the victim of many a misconception. You don't need to use the server to use Hydrus. The vast majority of features are contained in the client itself so if you're new to Hydrus, just use that.
 
 The server is only really useful for a few specific cases which will not apply for the vast majority of users.
 

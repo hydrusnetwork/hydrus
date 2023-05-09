@@ -4,6 +4,8 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
+from qtpy import QtMultimediaWidgets as QMW
+from qtpy import QtMultimedia as QM
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -20,6 +22,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -308,7 +311,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    if show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV ):
+    if show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
         
         return False
         
@@ -317,7 +320,7 @@ def ShouldHaveAnimationBar( media, show_action ):
     is_audio = media.GetMime() in HC.AUDIO
     is_video = media.GetMime() in HC.VIDEO
     
-    if show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV:
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
         
         if ( is_animated_image or is_audio or is_video ) and media.HasDuration():
             
@@ -1162,7 +1165,7 @@ class AnimationBar( QW.QWidget ):
             
             self._media_window.GotoFrame( current_frame_index )
             
-        elif isinstance( self._media_window, ClientGUIMPV.MPVWidget ):
+        elif isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, QtMediaPlayer ) ):
             
             time_index_ms = int( proportion * self._duration_ms )
             
@@ -1448,7 +1451,7 @@ class MediaContainer( QW.QWidget ):
         
         if media_window is not None:
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, QtMediaPlayer )
             
             media_window.removeEventFilter( self._additional_event_filter )
             
@@ -1462,9 +1465,6 @@ class MediaContainer( QW.QWidget ):
                     
                     pass # lmao, weird 'Failed to disconnect signal launchMediaViewer()' error I couldn't figure out, I guess some out-of-order deleteLater gubbins
                     
-                
-            
-            if isinstance( media_window, launch_media_viewer_classes ):
                 
                 media_window.ClearMedia()
                 
@@ -1480,6 +1480,11 @@ class MediaContainer( QW.QWidget ):
                     HG.client_controller.gui.ReleaseMPVWidget( media_window )
                     
                 
+                if isinstance( media_window, QtMediaPlayer ):
+                    
+                    media_window.deleteLater()
+                    
+                
             else:
                 
                 media_window.deleteLater()
@@ -1489,7 +1494,7 @@ class MediaContainer( QW.QWidget ):
     
     def _GetMaxZoomDimension( self ):
         
-        if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV or isinstance( self._media_window, Animation ):
+        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ) or isinstance( self._media_window, Animation ):
             
             return 8000
             
@@ -1513,7 +1518,14 @@ class MediaContainer( QW.QWidget ):
             HydrusData.ShowText( 'MPV is not available!' )
             
         
-        if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and self._media.GetMime() == HC.IMAGE_GIF and not self._media.HasDuration():
+        if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER and QtInit.WE_ARE_QT5:
+            
+            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+            HydrusData.ShowText( 'Qt Media Player is only available on Qt6!' )
+            
+        
+        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ) and self._media.GetMime() == HC.IMAGE_GIF and not self._media.HasDuration():
             
             self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
             
@@ -1573,6 +1585,14 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.lower()
             
+        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER:
+            
+            self._media_window = QtMediaPlayer( self, self._canvas_type, self._background_colour_generator )
+            
+            self._media_window.SetMedia( self._media, start_paused = self._start_paused )
+            
+            self._media_window.lower()
+            
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
@@ -1590,7 +1610,7 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.installEventFilter( self._additional_event_filter )
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, QtMediaPlayer )
             
             if isinstance( self._media_window, launch_media_viewer_classes ):
                 
@@ -2888,6 +2908,278 @@ class OpenExternallyPanel( QW.QWidget ):
         HydrusPaths.LaunchFile( path, launch_path )
         
     
+
+class QtMediaPlayer( QW.QWidget ):
+    
+    launchMediaViewer = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, canvas_type, background_colour_generator ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._canvas_type = canvas_type
+        self._background_colour_generator = background_colour_generator
+        
+        self._my_audio_output = QM.QAudioOutput( self )
+        self._my_video_output = QMW.QVideoWidget( self )
+        self._my_audio_placeholder = QW.QWidget( self )
+        
+        QP.SetBackgroundColour( self._my_audio_placeholder, QG.QColor( 0, 0, 0 ) )
+        
+        # perhaps this stops the always on top behaviour, says several places, but it doesn't for me!
+        #self._my_video_output.setAttribute( QC.Qt.WA_TranslucentBackground, False )
+        
+        self._media_player = QM.QMediaPlayer( self )
+        
+        self._media_player.mediaStatusChanged.connect( self._MediaStatusChanged )
+        
+        self._we_are_initialised = True
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._my_video_output, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._my_audio_placeholder, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+        self._media = None
+        
+        self._playthrough_count = 0
+        
+        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
+            
+            shortcut_set = 'media_viewer_media_window'
+            
+        else:
+            
+            shortcut_set = 'preview_media_window'
+            
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
+        
+    
+    def _MediaStatusChanged( self, status ):
+        
+        if status == QM.QMediaPlayer.MediaStatus.EndOfMedia:
+            
+            self._playthrough_count += 1
+            
+            self._media_player.setPosition( 0 )
+            
+            self._media_player.play()
+            
+        
+    
+    def GetAnimationBarStatus( self ):
+        
+        buffer_indices = None
+        
+        if self._media is None:
+            
+            current_frame_index = 0
+            current_timestamp_ms = 0
+            paused = True
+            
+        else:
+            
+            current_timestamp_ms = self._media_player.position()
+            
+            num_frames = self._media.GetNumFrames()
+            
+            if num_frames is None or num_frames == 1:
+                
+                current_frame_index = 0
+                
+            else:
+                
+                current_frame_index = int( round( ( current_timestamp_ms / self._media.GetDurationMS() ) * num_frames ) )
+                
+                current_frame_index = min( current_frame_index, num_frames - 1 )
+                
+            
+            current_timestamp_ms = min( current_timestamp_ms, self._media.GetDurationMS() )
+            
+            paused = self.IsPaused()
+            
+        
+        return ( current_frame_index, current_timestamp_ms, paused, buffer_indices )
+        
+    
+    def ClearMedia( self ):
+        
+        if self._media is not None:
+            
+            self._media = None
+            
+            # ok in my experience setting media_player.setSource to anything after a first load is pretty buggy!
+            # it can just straight up hang forever. either to a null QUrl or another file
+            # it seems to be it doesn't like unloading some files
+            # so, let's spawn a new one every time
+            # EDIT: ok going from one vid to another can cause crashes, so we are moving to a system where each QtMediaPlayer just gets one use. we'll make a new one every time
+            
+            self._media_player.stop()
+            
+            #self._media_player.setParent( None )
+            
+            #QP.CallAfter( self._media_player.deleteLater )
+            
+            #self._media_player = QM.QMediaPlayer( self )
+            
+            #self._media_player.mediaStatusChanged.connect( self._MediaStatusChanged )
+            
+        
+    
+    def HasPlayedOnceThrough( self ):
+        
+        return self._playthrough_count > 0
+        
+    
+    def IsPaused( self ):
+        
+        return not self._media_player.isPlaying()
+        
+    
+    def Pause( self ):
+        
+        self._media_player.pause()
+        
+    
+    def PausePlay( self ):
+        
+        if self.IsPaused():
+            
+            self.Play()
+            
+        else:
+            
+            self.Pause()
+            
+        
+    
+    def Play( self ):
+        
+        self._media_player.play()
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        if command.IsSimpleCommand():
+            
+            action = command.GetSimpleAction()
+            
+            if action == CAC.SIMPLE_PAUSE_MEDIA:
+                
+                self.Pause()
+                
+            elif action == CAC.SIMPLE_PAUSE_PLAY_MEDIA:
+                
+                self.PausePlay()
+                
+            elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:
+                
+                ( direction, duration_ms ) = command.GetSimpleData()
+                
+                self.SeekDelta( direction, duration_ms )
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
+                
+                if self._media is not None:
+                    
+                    self.Pause()
+                    
+                    ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
+                
+                self.window().close()
+                
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER and self._canvas_type == CC.CANVAS_PREVIEW:
+                
+                self.launchMediaViewer.emit()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def Seek( self, position_ms ):
+        
+        self._media_player.setPosition( position_ms )
+        
+    
+    def SeekDelta( self, direction, duration_ms ):
+        
+        if self._media is None:
+            
+            return
+            
+        
+        current_timestamp_ms = self._media_player.position()
+        
+        new_timestamp_ms = max( 0, current_timestamp_ms + ( direction * duration_ms ) )
+        
+        if new_timestamp_ms > self._media.GetDurationMS():
+            
+            new_timestamp_ms = 0
+            
+        
+        self.Seek( new_timestamp_ms )
+        
+    
+    def SetBackgroundColourGenerator( self, background_colour_generator ):
+        
+        self._background_colour_generator = background_colour_generator
+        
+    
+    def SetMedia( self, media: ClientMedia.MediaSingleton, start_paused = False ):
+        
+        if media == self._media:
+            
+            return
+            
+        
+        self.ClearMedia()
+        
+        self._media = media
+        
+        has_audio = self._media.HasAudio()
+        is_audio = self._media.GetMime() in HC.AUDIO
+        
+        if has_audio:
+            
+            self._media_player.setAudioOutput( self._my_audio_output )
+            
+        
+        if not is_audio:
+            
+            self._media_player.setVideoOutput( self._my_video_output )
+            
+        
+        self._my_video_output.setVisible( not is_audio )
+        self._my_audio_placeholder.setVisible( is_audio )
+        
+        path = HG.client_controller.client_files_manager.GetFilePath( self._media.GetHash(), self._media.GetMime() )
+        
+        self._media_player.setSource( QC.QUrl.fromLocalFile( path ) )
+        
+        if not start_paused:
+            
+            self._media_player.play()
+            
+        
+    
+
 class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     launchMediaViewer = QC.Signal()

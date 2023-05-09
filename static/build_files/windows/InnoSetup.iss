@@ -3,13 +3,13 @@
 #endif
 
 [Icons]
-Name: {group}\hydrus client; Filename: {app}\client.exe; WorkingDir: {app}; Tasks: programgroupicons
-Name: {group}\hydrus server; Filename: {app}\server.exe; WorkingDir: {app}; Tasks: programgroupicons
-;Taking this out to stop anti-virus testbeds pursing it and launching Edge and detecting Edge update calls as suspicious DNS lmao
+Name: {group}\hydrus client; Filename: {app}\hydrus_client.exe; WorkingDir: {app}; Tasks: programgroupicons
+Name: {group}\hydrus server; Filename: {app}\hydrus_server.exe; WorkingDir: {app}; Tasks: programgroupicons
+;Taking this out to stop anti-virus testbeds pursuing it and launching Edge and detecting Edge update calls as suspicious DNS lmao
 ;Name: {group}\help; Filename: {app}\help\index.html; WorkingDir: {app}; Tasks: programgroupicons
 Name: {group}\uninstall hydrus network; Filename: {uninstallexe}; WorkingDir: {app}; Tasks: programgroupicons; IconFilename: {app}\static\cross.ico
-Name: {userdesktop}\hydrus client; Filename: {app}\client.exe; WorkingDir: {app}; Tasks: desktopicons
-Name: {userdesktop}\hydrus server; Filename: {app}\server.exe; WorkingDir: {app}; Tasks: desktopicons
+Name: {userdesktop}\hydrus client; Filename: {app}\hydrus_client.exe; WorkingDir: {app}; Tasks: desktopicons
+Name: {userdesktop}\hydrus server; Filename: {app}\hydrus_server.exe; WorkingDir: {app}; Tasks: desktopicons
 [Setup]
 InternalCompressLevel=ultra64
 OutputDir=dist
@@ -39,13 +39,14 @@ Name: install; Description: Install; Types: install; Flags: fixed
 Name: install; Description: Install
 Name: extract; Description: Extract only
 [Run]
-;Taking this out to stop anti-virus testbeds pursing it and launching Edge and detecting Edge update calls as suspicious DNS lmao
+;Taking this out to stop anti-virus testbeds pursuing it and launching Edge and detecting Edge update calls as suspicious DNS lmao
 ;Filename: {app}\help\index.html; Description: Open help/getting started guide (highly recommended for new users); Flags: postinstall unchecked shellexec
-Filename: {app}\client.exe; Description: Open the client; Flags: postinstall nowait unchecked
+Filename: {app}\hydrus_client.exe; Description: Open the client; Flags: postinstall nowait unchecked
 [Files]
 Source: dist\Hydrus Network\*; DestDir: {app}; Flags: ignoreversion recursesubdirs createallsubdirs
 [InstallDelete]
 Name: {app}\Crypto; Type: filesandordirs; Components: install
+Name: {app}\cv2; Type: filesandordirs; Components: install
 Name: {app}\tcl; Type: filesandordirs; Components: install
 Name: {app}\tk; Type: filesandordirs; Components: install
 Name: {app}\wx; Type: filesandordirs; Components: install
@@ -57,6 +58,8 @@ Name: {app}\lib2to3; Type: filesandordirs; Components: install
 Name: {app}\mpl-data; Type: filesandordirs; Components: install
 Name: {app}\matplotlib; Type: filesandordirs; Components: install
 Name: {app}\cryptography; Type: filesandordirs; Components: install
+Name: {app}\client.exe; Type: files; Components: install
+Name: {app}\server.exe; Type: files; Components: install
 Name: {app}\opencv_ffmpeg344_64.dll; Type: files; Components: install
 Name: {app}\opencv_ffmpeg400_64.dll; Type: files; Components: install
 Name: {app}\opencv_ffmpeg410_64.dll; Type: files; Components: install

@@ -73,6 +73,9 @@ venv.bak/
 /client-user.bat
 /client-user.sh
 /client-user.command
+/hydrus_client-user.bat
+/hydrus_client-user.sh
+/hydrus_client-user.command
 
 # docs builds
 /site/

@@ -26,12 +26,12 @@ IF ERRORLEVEL 1 (
 
 REM You can copy this file to 'client-user.bat' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
 REM Just tack new params on like this:
-REM start "" "pythonw" client.pyw -d="E:\hydrus"
+REM start "" "pythonw" hydrus_client.pyw -d="E:\hydrus"
 
-start "" "pythonw" client.pyw
+start "" "pythonw" hydrus_client.pyw
 
-REM Here is an alternate line that will keep the console open and see live log updates. Useful for boot/live debugging.
-REM python client.py
+REM Here is an alternate line that will keep the console open and show live log updates. Useful for boot/live debugging:
+REM python hydrus_client.py
 
 CALL venv\Scripts\deactivate.bat
 

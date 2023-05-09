@@ -7,22 +7,21 @@ cloudscraper_dir = os.path.dirname( cloudscraper.__file__ )
 block_cipher = None
 
 
-a = Analysis(['hydrus/client.py'],
+a = Analysis(['hydrus/hydrus_client.py'],
              pathex=['.'],
              binaries=[],
              datas=[
                ('hydrus/bin', 'bin'),
                ('hydrus/help', 'help'),
                ('hydrus/static', 'static'),
-               ('dist/server/server', '.'),
+               ('dist/hydrus_server/hydrus_server', '.'),
                ('hydrus/license.txt', '.'),
                ('hydrus/README.md', '.'),
                ('hydrus/help my client will not boot.txt', '.'),
                ('hydrus/db', 'db'),
-               ('hydrus/hydrus', 'hydrus'),
                (cloudscraper_dir, 'cloudscraper')
              ],
-             hiddenimports=['hydrus/server.py'],
+             hiddenimports=['hydrus/hydrus_server.py'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -36,7 +35,7 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='client',
+          name='hydrus_client',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -49,4 +48,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='client')
+               name='hydrus_client')

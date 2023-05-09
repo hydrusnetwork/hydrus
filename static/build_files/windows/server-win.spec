@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['hydrus\\server.py'],
+a = Analysis(['hydrus\\hydrus_server.py'],
              pathex=['.'],
              binaries=[],
              datas=[],
@@ -21,12 +21,13 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='server',
+          name='hydrus_server',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=False,
           console=True,
+          version_file='server_file_version_info.txt',
           icon='hydrus\\static\\hydrus.ico' )
 coll = COLLECT(exe,
                a.binaries,
@@ -35,4 +36,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=False,
                upx_exclude=[],
-               name='server')
+               name='hydrus_server')

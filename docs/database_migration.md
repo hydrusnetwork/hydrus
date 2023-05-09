@@ -10,7 +10,7 @@ A hydrus client consists of three components:
 
 1.  **the software installation**
     
-    This is the part that comes with the installer or extract release, with the executable and dlls and a handful of resource folders. It doesn't store any of your settings--it just knows how to present a database as a nice application. If you just run the client executable straight, it looks in its 'db' subdirectory for a database, and if one is not found, it creates a new one. If it sees a database running at a lower version than itself, it will update the database before booting it.
+    This is the part that comes with the installer or extract release, with the executable and dlls and a handful of resource folders. It doesn't store any of your settings--it just knows how to present a database as a nice application. If you just run the hydrus_client executable straight, it looks in its 'db' subdirectory for a database, and if one is not found, it creates a new one. If it sees a database running at a lower version than itself, it will update the database before booting it.
     
     It doesn't really matter where you put this. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like _Program Files_.
     
@@ -58,13 +58,13 @@ If you decide to move your actual database, the program will have to shut down f
 
 ## informing the software that the database is not in the default location { id="launch_parameter" }
 
-A straight call to the client executable will look for a database in _install_dir/db_. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!
+A straight call to the hydrus_client executable will look for a database in _install_dir/db_. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!
 
 So, pass it a -d or --db_dir command line argument, like so:
 
-*   `client -d="D:\media\my_hydrus_database"`
+*   `hydrus_client -d="D:\media\my_hydrus_database"`
 *   _--or--_
-*   `client --db_dir="G:\misc documents\New Folder (3)\DO NOT ENTER"`
+*   `hydrus_client --db_dir="G:\misc documents\New Folder (3)\DO NOT ENTER"`
 *   _--or, for macOS--_
 *   `open -n -a "Hydrus Network.app" --args -d="/path/to/db"`
 
@@ -102,7 +102,7 @@ Specifically:
 *   Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.
 
 *   With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.
-*   Update your shortcut to the new client.exe location and try to boot.
+*   Update your shortcut to the new hydrus_client.exe location and try to boot.
 
 *   Update your backup scheme to match your new locations.
 *   Enjoy a much faster client.
@@ -113,4 +113,4 @@ You should now have _something_ like this:
 
 ## p.s. running multiple clients { id="multiple_clients" }
 
-Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle. I do this on my laptop client to run a regular client for my media and a separate 'admin' client to do PTR petitions and so on.
+Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle. I do this on my laptop client to run a regular client for my media and a separate 'admin' client to do PTR petitions and so on.

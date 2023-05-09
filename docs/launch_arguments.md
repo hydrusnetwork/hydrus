@@ -7,16 +7,16 @@ title: Launch Arguments
 You can launch the program with several different arguments to alter core behaviour. If you are not familiar with this, you are essentially putting additional text after the launch command that runs the program. You can run this straight from a terminal console (usually good to test with), or you can bundle it into an easy shortcut that you only have to double-click. An example of a launch command with arguments:
 
 ```
-C:\Hydrus Network\client.exe -d="E:\hydrus db" --no_db_temp_files
+C:\Hydrus Network\hydrus_client.exe -d="E:\hydrus db" --no_db_temp_files
 ```
 
 You can also add --help to your program path, like this:
 
-- `client.py --help`
-- `server.exe --help`
-- `./server --help`
+- `hydrus_client.py --help`
+- `hydrus_server.exe --help`
+- `./hydrus_server --help`
 
-Which gives you a full listing of all below arguments, however this will not work with the built client executables, which are bundled as a non-console programs and will not give you text output to any console they are launched from. As client.exe is the most commonly run version of the program, here is the list, with some more help about each command:
+Which gives you a full listing of all below arguments, however this will not work with the built hydrus_client executables, which are bundled as a non-console programs and will not give you text output to any console they are launched from. As hydrus_client.exe is the most commonly run version of the program, here is the list, with some more help about each command:
 
 ##**`-d DB_DIR, --db_dir DB_DIR`**
 
