@@ -1463,6 +1463,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 tag_attributes = {}
                 
             
+        
         elif rule_type == HTML_RULE_TYPE_ASCENDING:
             
             if tag_depth is None:
@@ -1518,7 +1519,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         
         elif version == 2:
 
-            return (3, old_serialisable_info)
+            return ( 3, old_serialisable_info )
             
         
     
