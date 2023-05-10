@@ -3036,7 +3036,8 @@ class QtMediaPlayer( QW.QWidget ):
     
     def IsPaused( self ):
         
-        return not self._media_player.isPlaying()
+        # don't use isPlaying(), Qt 6.4.1 doesn't support it lol
+        return self._media_player.playbackState() != QM.QMediaPlayer.PlaybackState.PlayingState
         
     
     def Pause( self ):

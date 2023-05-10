@@ -7,6 +7,49 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 527](https://github.com/hydrusnetwork/hydrus/releases/tag/v527)
+
+### important updates
+
+* There are important technical updates this week that will require most users to update differently!
+* first, OpenCV is updated to a new version, and this causes a dll conflict on at least one platform, necessitating a clean install
+* second, the program executables are renamed from 'client' and 'server' to 'hydrus_client' and 'hydrus_server', necessitating shortcut updates
+* as always, but doubly so this week, I strongly recommend you make a backup before updating. the instructions are simple, but if there is a problem, you'll always be able to roll back
+* so, in summary, for each install type--
+* - if you use the windows installer, install as normal. your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, so you don't have to do anything there, but if you use a custom shortcut, you will need to update that too
+* - if you use one of the normal extract builds, you will have to do a 'clean install', as here https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs . you also need to update your program shortcuts
+* - macOS users have no special instructions. update as normal
+* - source users, git pull as normal. if you haven't already, feel free to run setup_venv again to get the new OpenCV. update your launch scripts to point at the new 'hydrus_client.py' scripts
+* - if you have patched my code, particularly the boot code, obviously update your patches! the 'hydrus_client.py' scripts just under 'hydrus' module all got renamed to '\_boot' too!
+* also, some related stuff like firewall rules (if you run the Client API) may need updating!
+
+### boring related update stuff
+
+* the Windows build's sqlite3.dll and exe command line interface are updated to the latest, 3.41.2
+* the 'updating' help now has a short section for the 526->527 update step, reiterating the above
+* the builds no longer include the hydrus source in the 'hydrus' subdirectory. this was an old failed test in dual-booting that was mostly forgotten about and now cleaned up. if you want to run from source, get the source
+* the windows hydrus_client and hydrus_server executables now have proper version info if you right-click->properties and look at the details tab
+
+### Qt Media Player
+
+* THIS IS VERY BUGGY AND SOMETIMES CRASHY; DISABLED FOR MOST USERS; NOT FOR NORMAL USE YET
+* I have integrated Qt's Media Player into hydrus. it is selectable in _options->media_ (if you are an advanced user and running from source) and it works like my native viewer or mpv. it has good pixels-on-screen performance and audio support, but it is buggy and my implementation is experimental. for some reason, it crashes instantly when running from a frozen executable, so it is only available for source users atm. I would like feedback from advanced source users who have had trouble with mpv--does it work? how well? any crashes?
+* this widget appears to be under active development by the Qt guys. the differences between 6.4.1 vs 6.5.0 are significant. I hope the improvements continue!
+* current limitations are:
+* - It is only available on Qt6, sorry legacy Qt5 source users
+* - this thing crashed the program like hell during development. I tightened it up and can't get it to crash any more with my test files on source, but be careful
+* - the video renderer is OpenGL and in Qt world that seems to mean it is ALWAYS ON TOP at all times. although it doesn't interfere with click events if you aim for the scanbar (so Qt's z-indexing logic is still correct), its pixels nonetheless cover the scanbar and my media viewer hover windows (I will have to figure out a different scanbar layout with this thing)
+* - longer audio-only files often stutter intolerably
+* - many videos can't scan beyond the start
+* - some videos turn into pixel wash mess
+* - some videos seem to be cropped wrong with green bars in the spare space
+* - it spams a couple lines of file parsing error/warning info to the log for many videos. sometimes it spams a lot continuously. no idea how to turn it off!
+* anyway, despite the bugs and crashing, I found this thing impressive and I hope it can be a better fallback than my rubbish native viewer in future. it is a shame it crashes when built, but I'll see what I can do. maybe it'll be ready for our purposes by Qt7
+
+### misc
+
+* if twisted fails to load, its exact error is saved, and if you try to launch a server, that error is printed to the log along with the notification popup
+
 ## [Version 526](https://github.com/hydrusnetwork/hydrus/releases/tag/v526)
 
 ### there will be an important update next week
@@ -363,30 +406,3 @@ title: Changelog
 ### windows mpv test
 
 * hey, if you are an advanced windows user and want to run a test for me, please rename your mpv-2.dll to .old and then get this https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z/download . extract the libmpv-2.dll and rename it to mpv-2.dll. does it work for you, showing api v2.1 in _help->about_? are you running the built windows release, or from source? it runs great for me from source, but I'd like to get a wider canvas before I update it for everyone. if it doesn't work, then delete the new dll and rename the .old back, and then let me know your windows version etc.., thank you!
-
-## [Version 517](https://github.com/hydrusnetwork/hydrus/releases/tag/v517)
-
-### misc
-
-* thanks to a user, export folders finally support exporting to symlinks!
-* if a symlink export-create fails on Windows, the error now tells you to try again in 'run as Admin' mode--seems like this is needed in Win 10+ unless you mess with Group Policy Editor
-* 'related tags' should no longer suggest sibling ideals or parents of existing tags! I think!
-* when a thumbnail fails to load, the error popup now has a button to open the specific problem-causing file in a new page
-* generation of video thumbnails is faster, should fail less in odd cases, and when it completely fails, it now gives the hydrus icon as a final fallback
-* generation of image thumbnails now falls back to the hydrus icon as a final fallback
-* I think I fixed a focus logic problem where the autocomplete dropdowns on the duplicate filter page would hide if you clicked a results/favourites tab or greyspace
-* fixed an error when seeking an mpv video while the video was loading or unloading
-* the max 'nullification period' (after which uploads to a hydrus repository are anonymised) is raised from 1 year to 5 (needs server and client update to work)
-
-### transparency and duplicate filter
-
-* two new options, under _media_ and _duplicates_, now control if you would like transpararency-having images to have a checkerboard background rather than the normal media canvas background! you can have it on all the time or just under the duplicate filter. it uses the same style of grid as MPV
-* I have a plan for proper native (non-MPV) transparency for gifs and apng, but I think I'll wait for an imagemagick plugin I am planning first
-* if you have a white/black media viewer background and prefer not to use the checkerboard, the duplicate filter can now adjust the background colour, either lighter or darker, for both A and B of the pair. altering A as well exposes truly transparent-having images vs ones with opaque white/black fill, which will otherwise blend into a purely white/black background colour. these options are available in the options dialog and the duplicate filter right-hand hover window cog button
-* the native image window, embed button, and animation window (with PIL gif rendering) now all adjust their background colour to any odd changes like the duplicate filter's A/B lighten/darken adjustment
-
-### boring cleanup
-
-* cleaned up how popup file buttons are set and cleared
-* cleaned up how popup main and secondary texts are set and cleared
-* misc linting cleanup

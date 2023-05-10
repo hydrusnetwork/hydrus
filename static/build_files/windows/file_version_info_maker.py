@@ -47,7 +47,7 @@ VSVersionInfo(
       [
       StringTable(
         '040904b0',
-        [StringStruct('FileDescription', 'The Hydrus Network {capitalised_name}'),
+        [StringStruct('FileDescription', 'Hydrus Network {capitalised_name}'),
         StringStruct('FileVersion', '{version}'),
         StringStruct('InternalName', 'Hydrus Network {capitalised_name}'),
         StringStruct('LegalCopyright', 'WTFPL'),

@@ -45,7 +45,7 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=False,
-          version_file='client_file_version_info.txt',
+          version='client_file_version_info.txt',
           icon='hydrus\\static\\hydrus.ico' )
 coll = COLLECT(exe,
                a.binaries,
