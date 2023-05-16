@@ -12,8 +12,8 @@ a = Analysis(['hydrus\\hydrus_client.pyw'],
              pathex=['.'],
              binaries=[
                ('hydrus\\sqlite3.dll', '.'),
-               ('hydrus\\mpv-2.dll', '.')
-               ('dist\\hydrus_server\\hydrus_server.exe*', '.'),
+               ('hydrus\\mpv-2.dll', '.'),
+               ('dist\\hydrus_server\\hydrus_server.exe*', '.')
              ],
              datas=[
                ('hydrus\\bin', 'bin'),
