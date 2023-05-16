@@ -13,19 +13,19 @@ a = Analysis(['hydrus\\hydrus_client.pyw'],
              binaries=[
                ('hydrus\\sqlite3.dll', '.'),
                ('hydrus\\mpv-2.dll', '.')
+               ('dist\\hydrus_server\\hydrus_server.exe*', '.'),
              ],
              datas=[
                ('hydrus\\bin', 'bin'),
                ('hydrus\\help', 'help'),
                ('hydrus\\static', 'static'),
-               ('dist\\hydrus_server\\hydrus_server.exe*', '.'),
                ('hydrus\\license.txt', '.'),
                ('hydrus\\README.md', '.'),
                ('hydrus\\help my client will not boot.txt', '.'),
                ('hydrus\\db', 'db'),
                (cloudscraper_dir, 'cloudscraper')
              ],
-             hiddenimports=['hydrus\\hydrus_server.py', 'cloudscraper'],
+             hiddenimports=['cloudscraper'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

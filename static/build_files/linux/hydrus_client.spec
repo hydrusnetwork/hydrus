@@ -9,19 +9,19 @@ block_cipher = None
 
 a = Analysis(['hydrus/hydrus_client.py'],
              pathex=['.'],
-             binaries=[],
+             binaries=[
+               ('dist/hydrus_server/hydrus_server', '.')
+             ],
              datas=[
                ('hydrus/bin', 'bin'),
                ('hydrus/help', 'help'),
                ('hydrus/static', 'static'),
-               ('dist/hydrus_server/hydrus_server', '.'),
                ('hydrus/license.txt', '.'),
                ('hydrus/README.md', '.'),
                ('hydrus/help my client will not boot.txt', '.'),
                ('hydrus/db', 'db'),
                (cloudscraper_dir, 'cloudscraper')
              ],
-             hiddenimports=['hydrus/hydrus_server.py'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
