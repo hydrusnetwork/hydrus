@@ -3718,9 +3718,7 @@ class DB( HydrusDB.HydrusDB ):
             
             query = 'SELECT tag_id FROM {} WHERE {};'.format( mappings_table_name, search_predicate )
             
-            cursor = self._Execute( query )
-            
-            loop_of_results = self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+            loop_of_results = self._STI( self._ExecuteCancellable( query, (), cancelled_hook ) )
             
             # counter can just take a list of gubbins like this
             results_dict.update( loop_of_results )

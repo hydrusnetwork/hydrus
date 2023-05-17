@@ -353,6 +353,13 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             BLOCK_SIZE = max( 64, int( len( hash_ids ) ** 0.5 ) ) # go for square root for now
             
+            cancelled_hook = None
+            
+            if job_key is not None:
+                
+                cancelled_hook = job_key.IsCancelled
+                
+            
             for group_of_hash_ids in HydrusData.SplitIteratorIntoChunks( hash_ids, BLOCK_SIZE ):
                 
                 with self._MakeTemporaryIntegerTable( group_of_hash_ids, 'hash_id' ) as hash_ids_table_name:
@@ -372,16 +379,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
                     
                     query = 'SELECT hash_id, COUNT( tag_id ) FROM {} GROUP BY hash_id;'.format( unions )
                     
-                    cursor = self._Execute( query )
-                    
-                    cancelled_hook = None
-                    
-                    if job_key is not None:
-                        
-                        cancelled_hook = job_key.IsCancelled
-                        
-                    
-                    loop_of_results = HydrusDB.ReadFromCancellableCursor( cursor, 64, cancelled_hook = cancelled_hook )
+                    loop_of_results = self._ExecuteCancellable( query, (), cancelled_hook )
                     
                     if job_key is not None and job_key.IsCancelled():
                         
@@ -546,9 +544,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             for query in queries:
                 
-                cursor = self._Execute( query, ( tag_id, ) )
-                
-                result_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook ) ) )
+                result_hash_ids.update( self._STI( self._ExecuteCancellable( query, ( tag_id, ), cancelled_hook ) ) )
                 
             
         else:
@@ -571,9 +567,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
                 
                 for query in queries:
                     
-                    cursor = self._Execute( query )
-                    
-                    result_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook ) ) )
+                    result_hash_ids.update( self._STI( self._ExecuteCancellable( query, (), cancelled_hook ) ) )
                     
                 
             
@@ -847,9 +841,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         
         for query in queries:
             
-            cursor = self._Execute( query )
-            
-            nonzero_tag_hash_ids.update( self._STI( HydrusDB.ReadFromCancellableCursor( cursor, 10240, cancelled_hook ) ) )
+            nonzero_tag_hash_ids.update( self._STI( self._ExecuteCancellable( query, (), cancelled_hook ) ) )
             
             if job_key is not None and job_key.IsCancelled():
                 
@@ -914,7 +906,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         ClientDBModule.ClientDBModule.__init__( self, 'client file query', cursor )
         
     
-    def _DoNotePreds( self, system_predicates: ClientSearch.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ] ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoNotePreds( self, system_predicates: ClientSearch.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_key: typing.Optional[ ClientThreading.JobKey ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
         
         simple_preds = system_predicates.GetSimpleInfo()
         
@@ -944,7 +936,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                num_notes_hash_ids = self.modules_notes_map.GetHashIdsFromNumNotes( min_num_notes, max_num_notes, temp_table_name )
+                num_notes_hash_ids = self.modules_notes_map.GetHashIdsFromNumNotes( min_num_notes, max_num_notes, temp_table_name, job_key = job_key )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, num_notes_hash_ids )
                 
@@ -960,7 +952,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     self._AnalyzeTempTable( temp_table_name )
                     
-                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteName( note_name, temp_table_name )
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteName( note_name, temp_table_name, job_key = job_key )
                     
                     query_hash_ids = intersection_update_qhi( query_hash_ids, notes_hash_ids )
                     
@@ -977,7 +969,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     self._AnalyzeTempTable( temp_table_name )
                     
-                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteName( note_name, temp_table_name )
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteName( note_name, temp_table_name, job_key = job_key )
                     
                     query_hash_ids.difference_update( notes_hash_ids )
                     
@@ -1037,7 +1029,14 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         
     
-    def _DoSimpleRatingPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ] ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoSimpleRatingPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_key: typing.Optional[ ClientThreading.JobKey ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1052,7 +1051,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if value == 'rated':
                 
-                rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) )
+                rating_hash_ids = self._STI( self._ExecuteCancellable( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ), cancelled_hook ) )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                 
@@ -1103,7 +1102,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         continue
                         
                     
-                    rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
+                    query = f'SELECT hash_id FROM local_ratings WHERE service_id = ? AND {predicate};'
+                    
+                    rating_hash_ids = self._STI( self._ExecuteCancellable( query, ( service_id, ), cancelled_hook ) )
                     
                     query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                     
@@ -1127,7 +1128,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                             predicate = 'rating {} {}'.format( operator, value )
                             
                         
-                        rating_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )
+                        query = f'SELECT hash_id FROM local_incdec_ratings WHERE service_id = ? AND {predicate};'
+                        
+                        rating_hash_ids = self._STI( self._ExecuteCancellable( query, ( service_id, ), cancelled_hook ) )
                         
                         query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
                         
@@ -1138,7 +1141,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoTimestampPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], have_cross_referenced_file_locations: bool ) -> typing.Tuple[ typing.Optional[ typing.Set[ int ] ], bool ]:
+    def _DoTimestampPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], have_cross_referenced_file_locations: bool, job_key: typing.Optional[ ClientThreading.JobKey ] = None ) -> typing.Tuple[ typing.Optional[ typing.Set[ int ] ], bool ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1146,6 +1149,13 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         not_all_known_files = not location_context.IsAllKnownFiles()
         
         timestamp_ranges = system_predicates.GetTimestampRanges()
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
         
         if not_all_known_files:
             
@@ -1174,6 +1184,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     pred_string = ' AND '.join( import_timestamp_predicates )
                     
                     table_names = []
+                    
                     table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_CURRENT ) for service_key in location_context.current_service_keys ) )
                     table_names.extend( ( ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.GetServiceId( service_key ), HC.CONTENT_STATUS_DELETED ) for service_key in location_context.deleted_service_keys ) )
                     
@@ -1181,7 +1192,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     for table_name in table_names:
                         
-                        import_timestamp_hash_ids.update( self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ) ) ) )
+                        import_timestamp_hash_ids.update( self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM {} WHERE {};'.format( table_name, pred_string ), (), cancelled_hook ) ) )
                         
                     
                     query_hash_ids = intersection_update_qhi( query_hash_ids, import_timestamp_hash_ids )
@@ -1197,7 +1208,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if len( ranges ) > 0:
                 
-                modified_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, ranges )
+                modified_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, ranges, job_key = job_key )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
                 
@@ -1209,7 +1220,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if len( ranges ) > 0:
                 
-                archived_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_ARCHIVED, ranges )
+                archived_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_ARCHIVED, ranges, job_key = job_key )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, archived_timestamp_hash_ids )
                 
@@ -1222,7 +1233,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             min_last_viewed_timestamp = ranges.get( '>', None )
             max_last_viewed_timestamp = ranges.get( '<', None )
             
-            last_viewed_timestamp_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromLastViewed( min_last_viewed_timestamp = min_last_viewed_timestamp, max_last_viewed_timestamp = max_last_viewed_timestamp )
+            last_viewed_timestamp_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromLastViewed( min_last_viewed_timestamp = min_last_viewed_timestamp, max_last_viewed_timestamp = max_last_viewed_timestamp, job_key = job_key )
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, last_viewed_timestamp_hash_ids )
             
@@ -1310,7 +1321,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         except HydrusExceptions.DataMissing:
             
-            HydrusData.ShowText( 'A file search query was run for a tag service that does not exist! If you just removed a service, you might want to try checking the search and/or restarting the client.' )
+            HydrusData.ShowText( 'A file search query was run for a tag service that does not exist! If you just removed a service, you might want to check the search and/or restart the client.' )
             
             return []
             
@@ -1352,6 +1363,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             done_or_predicates = True
             
+            if job_key.IsCancelled():
+                
+                return []
+                
+            
         
         #
         
@@ -1380,9 +1396,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
 
-        ( query_hash_ids, have_cross_referenced_file_locations ) = self._DoTimestampPreds( file_search_context, query_hash_ids, have_cross_referenced_file_locations )
+        ( query_hash_ids, have_cross_referenced_file_locations ) = self._DoTimestampPreds( file_search_context, query_hash_ids, have_cross_referenced_file_locations, job_key = job_key )
         
-        query_hash_ids = self._DoSimpleRatingPreds( file_search_context, query_hash_ids )
+        query_hash_ids = self._DoSimpleRatingPreds( file_search_context, query_hash_ids, job_key = job_key )
         
         #
         
@@ -1614,6 +1630,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             have_cross_referenced_file_locations = True
             
             done_or_predicates = True
+            
+            if job_key.IsCancelled():
+                
+                return []
+                
             
         
         # now the simple preds and desperate last shot to populate query_hash_ids
@@ -1856,6 +1877,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             done_or_predicates = True
             
+            if job_key.IsCancelled():
+                
+                return []
+                
+            
         
         # hide update files
         
@@ -1996,7 +2022,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        query_hash_ids = self._DoNotePreds( system_predicates, query_hash_ids )
+        query_hash_ids = self._DoNotePreds( system_predicates, query_hash_ids, job_key = job_key )
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             

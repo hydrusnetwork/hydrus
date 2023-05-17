@@ -196,7 +196,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for service in deletable_services:
                 
-                if service.GetServiceType() == service_type:
+                if service.GetServiceType() == service_type and service in self._original_services:
                     
                     service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
                     

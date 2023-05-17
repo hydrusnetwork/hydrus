@@ -136,6 +136,7 @@ class Value( Enum ):
 class Operators( Enum ):
     RELATIONAL = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
     RELATIONAL_EXACT = auto() # Like RELATIONAL but without the approximately equal operator
+    RELATIONAL_TIME = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
     EQUAL = auto()  # One of '=' or '!='
     FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
@@ -161,7 +162,7 @@ class Units( Enum ):
 SYSTEM_PREDICATES = {
     'everything': (Predicate.EVERYTHING, None, None, None),
     'inbox': (Predicate.INBOX, None, None, None),
-    'archive$': (Predicate.ARCHIVE, None, None, None), # $ so as not to clash with system:archive(d) date
+    'archived?$': (Predicate.ARCHIVE, None, None, None), # $ so as not to clash with system:archive(d) date
     'has duration': (Predicate.HAS_DURATION, None, None, None),
     'no duration': (Predicate.NO_DURATION, None, None, None),
     '(is the )?best quality( file)? of( its)?( duplicate)? group': (Predicate.BEST_QUALITY_OF_GROUP, None, None, None),
@@ -185,10 +186,10 @@ SYSTEM_PREDICATES = {
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
-    'archived? (date|time)|(date|time) archived': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'modified (date|time)|(date|time) modified': (Predicate.MOD_DATE, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'last view(ed)? (date|time)|(date|time) last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
-    'import(ed)? (date|time)|(date|time) imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL, Value.DATE_OR_TIME_INTERVAL, None),
+    'archived? (date|time)|(date|time) archived|archived.': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
+    'modified (date|time)|(date|time) modified|modified': (Predicate.MOD_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
+    'last view(ed)? (date|time)|(date|time) last viewed|last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
+    'import(ed)? (date|time)|(date|time) imported|imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
     'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL_EXACT, Value.NATURAL, Units.FPS_OR_NONE),
     'number of frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
@@ -334,7 +335,15 @@ def parse_value( string: str, spec ):
             months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
             days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
             hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
-            return string[ len( match[ 0 ] ): ], (years, months, days, hours)
+            
+            string_result = string[ len( match[ 0 ] ): ]
+            
+            if string_result == 'ago':
+                
+                string_result = ''
+                
+            
+            return string_result, (years, months, days, hours)
         match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
         if match:
             # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
@@ -384,12 +393,58 @@ def parse_value( string: str, spec ):
 
 
 def parse_operator( string: str, spec ):
-    string = string.strip()
+    
+    while string.startswith( ':' ) or string.startswith( ' ' ):
+        
+        string = string.strip()
+        
+        if string.startswith( ':' ):
+            
+            string = string[ 1 : ]
+            
+        
+    
     if spec is None:
         return string, None
-    elif spec == Operators.RELATIONAL or spec == Operators.RELATIONAL_EXACT:
+    elif spec in ( Operators.RELATIONAL, Operators.RELATIONAL_EXACT, Operators.RELATIONAL_TIME ):
         exact = spec == Operators.RELATIONAL_EXACT
         ops = [ '=', '<', '>' ]
+        
+        if spec == Operators.RELATIONAL_TIME:
+            
+            re_result = re.search( r'\d.*', string )
+            
+            if re_result:
+                
+                op_string = string[ : re_result.start() ]
+                string_result = re_result.group()
+                
+                looks_like_date = '-' in string_result
+                invert_ops = not looks_like_date
+                
+                if 'month' in op_string and looks_like_date:
+                    
+                    return ( string_result, '\u2248' )
+                    
+                elif 'around' in op_string and not looks_like_date:
+                    
+                    return ( string_result, '\u2248' )
+                    
+                elif 'day' in op_string and looks_like_date:
+                    
+                    return ( string_result, '=' )
+                    
+                elif 'since' in op_string:
+                    
+                    return ( string_result, '<' if invert_ops else '>' )
+                    
+                elif 'before' in op_string:
+                    
+                    return ( string_result, '>' if invert_ops else '<' )
+                    
+                
+            
+        
         if not exact:
             ops = ops + [ '\u2260', '\u2248' ]
         if string.startswith( '==' ): return string[ 2: ], '='

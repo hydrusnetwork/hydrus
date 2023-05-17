@@ -2088,7 +2088,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_zoom_center.setToolTip( tt )
             
+            self._slideshow_durations = QW.QLineEdit( self )
+            self._slideshow_durations.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' )
+            self._slideshow_durations.textChanged.connect( self.EventSlideshowDurationsChanged )
+            
             self._media_zooms = QW.QLineEdit( self )
+            self._media_zooms.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
             
             self._mpv_conf_path = QP.FilePickerCtrl( self, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
@@ -2128,6 +2133,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
             
+            slideshow_durations = self._new_options.GetSlideshowDurations()
+            
+            self._slideshow_durations.setText( ','.join( ( str( slideshow_duration ) for slideshow_duration in slideshow_durations ) ) )
+            
             media_zooms = self._new_options.GetMediaZooms()
             
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
@@ -2154,6 +2163,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
+            rows.append( ( 'Slideshow durations:', self._slideshow_durations ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
@@ -2355,6 +2365,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        def EventSlideshowDurationsChanged( self, text ):
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                self._slideshow_durations.setObjectName( '' )
+                
+            except ValueError:
+                
+                self._slideshow_durations.setObjectName( 'HydrusInvalid' )
+                
+            
+            self._slideshow_durations.style().polish( self._slideshow_durations )
+            
+            self._slideshow_durations.update()
+            
+        
         def EventZoomsChanged( self, text ):
             
             try:
@@ -2410,6 +2438,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
             
             self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                slideshow_durations = [ slideshow_duration for slideshow_duration in slideshow_durations if slideshow_duration > 0.0 ]
+                
+                if len( slideshow_durations ) > 0:
+                    
+                    self._new_options.SetSlideshowDurations( slideshow_durations )
+                    
+                
+            except ValueError:
+                
+                HydrusData.ShowText( 'Could not parse those slideshow durations, so they were not saved!' )
+                
             
             try:
                 

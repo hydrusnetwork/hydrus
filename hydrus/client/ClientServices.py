@@ -3609,6 +3609,14 @@ class ServicesManager( object ):
                     
                 
             
+            for service in self._services_sorted:
+                
+                if service.GetServiceType() in allowed_types and service.GetName().lower() == service_name.lower():
+                    
+                    return service.GetServiceKey()
+                    
+                
+            
             raise HydrusExceptions.DataMissing()
             
         

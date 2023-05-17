@@ -526,7 +526,21 @@ class DateTimeCtrl( QW.QWidget ):
             
             timestamp = json.loads( raw_text )
             
-            if not isinstance( timestamp, typing.Optional[ int ] ):
+            if isinstance( timestamp, str ):
+                
+                try:
+                    
+                    timestamp = int( timestamp )
+                    
+                except ValueError:
+                    
+                    raise Exception( 'Does not look like a number!' )
+                    
+                
+            
+            looks_good = timestamp is None or isinstance( timestamp, int )
+            
+            if not looks_good:
                 
                 raise Exception( 'Not a timestamp!' )
                 

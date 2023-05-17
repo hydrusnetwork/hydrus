@@ -437,12 +437,6 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def GetAllTagIds( self, leaf: ClientDBServices.FileSearchContextLeaf, job_key = None ):
         
-        tag_ids = set()
-        
-        query = '{};'.format( self.GetQueryPhraseForTagIds( leaf.file_service_id, leaf.tag_service_id ) )
-        
-        cursor = self._Execute( query )
-        
         cancelled_hook = None
         
         if job_key is not None:
@@ -450,14 +444,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             cancelled_hook = job_key.IsCancelled
             
         
-        loop_of_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+        query = '{};'.format( self.GetQueryPhraseForTagIds( leaf.file_service_id, leaf.tag_service_id ) )
         
-        if job_key is not None and job_key.IsCancelled():
-            
-            return set()
-            
-        
-        tag_ids.update( loop_of_tag_ids )
+        tag_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
         
         return tag_ids
         
@@ -807,6 +796,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def GetSubtagIdsFromWildcard( self, file_service_id: int, tag_service_id: int, subtag_wildcard, job_key = None ):
         
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
         if tag_service_id == self.modules_services.combined_tag_service_id:
             
             search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
@@ -829,7 +825,8 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 if subtag_wildcard == '*':
                     
                     # hellmode, but shouldn't be called normally
-                    cursor = self._Execute( 'SELECT docid FROM {};'.format( subtags_fts4_table_name ) )
+                    query = 'SELECT docid FROM {};'.format( subtags_fts4_table_name )
+                    query_args = ()
                     
                 elif ClientSearch.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
                     
@@ -846,8 +843,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                         # it also would not fix '*amu*', but with some cleverness could speed up '*amus ar*'
                         
                         query = 'SELECT docid FROM {} WHERE subtag LIKE ?;'.format( subtags_fts4_table_name )
-                        
-                        cursor = self._Execute( query, ( like_param, ) )
+                        query_args = ( like_param, )
                         
                     else:
                         
@@ -858,8 +854,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                         prefix_fts4_wildcard_param = '"{}*"'.format( prefix_fts4_wildcard )
                         
                         query = 'SELECT docid FROM {} WHERE subtag MATCH ? AND subtag LIKE ?;'.format( subtags_fts4_table_name )
-                        
-                        cursor = self._Execute( query, ( prefix_fts4_wildcard_param, like_param ) )
+                        query_args = ( prefix_fts4_wildcard_param, like_param )
                         
                     
                 else:
@@ -871,17 +866,11 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                     subtags_fts4_param = '"{}"'.format( subtag_wildcard )
                     
-                    cursor = self._Execute( 'SELECT docid FROM {} WHERE subtag MATCH ?;'.format( subtags_fts4_table_name ), ( subtags_fts4_param, ) )
+                    query = 'SELECT docid FROM {} WHERE subtag MATCH ?;'.format( subtags_fts4_table_name )
+                    query_args = ( subtags_fts4_param, )
                     
                 
-                cancelled_hook = None
-                
-                if job_key is not None:
-                    
-                    cancelled_hook = job_key.IsCancelled
-                    
-                
-                loop_of_subtag_ids = self._STL( HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook ) )
+                loop_of_subtag_ids = self._STL( self._ExecuteCancellable( query, query_args, cancelled_hook ) )
                 
             else:
                 
@@ -924,6 +913,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def GetSubtagIdsFromWildcardIntoTable( self, file_service_id: int, tag_service_id: int, subtag_wildcard, subtag_id_table_name, job_key = None ):
         
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
         if tag_service_id == self.modules_services.combined_tag_service_id:
             
             search_tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
@@ -944,7 +940,8 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 if subtag_wildcard == '*':
                     
                     # hellmode, but shouldn't be called normally
-                    cursor = self._Execute( 'SELECT docid FROM {};'.format( subtags_fts4_table_name ) )
+                    query = self._Execute( 'SELECT docid FROM {};'.format( subtags_fts4_table_name ) )
+                    query_args = ()
                     
                 elif ClientSearch.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
                     
@@ -961,8 +958,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                         # it also would not fix '*amu*', but with some cleverness could speed up '*amus ar*'
                         
                         query = 'SELECT docid FROM {} WHERE subtag LIKE ?;'.format( subtags_fts4_table_name )
-                        
-                        cursor = self._Execute( query, ( like_param, ) )
+                        query_args = ( like_param, )
                         
                     else:
                         
@@ -974,7 +970,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                         
                         query = 'SELECT docid FROM {} WHERE subtag MATCH ? AND subtag LIKE ?;'.format( subtags_fts4_table_name )
                         
-                        cursor = self._Execute( query, ( prefix_fts4_wildcard_param, like_param ) )
+                        query_args = ( prefix_fts4_wildcard_param, like_param )
                         
                     
                 else:
@@ -986,17 +982,11 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                     subtags_fts4_param = '"{}"'.format( subtag_wildcard )
                     
-                    cursor = self._Execute( 'SELECT docid FROM {} WHERE subtag MATCH ?;'.format( subtags_fts4_table_name ), ( subtags_fts4_param, ) )
+                    query = 'SELECT docid FROM {} WHERE subtag MATCH ?;'.format( subtags_fts4_table_name )
+                    query_args = ( subtags_fts4_param, )
                     
                 
-                cancelled_hook = None
-                
-                if job_key is not None:
-                    
-                    cancelled_hook = job_key.IsCancelled
-                    
-                
-                loop_of_subtag_id_tuples = HydrusDB.ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook )
+                loop_of_subtag_id_tuples = self._ExecuteCancellable( query, query_args, cancelled_hook )
                 
                 self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( subtag_id ) VALUES ( ? );'.format( subtag_id_table_name ), loop_of_subtag_id_tuples )
                 
@@ -1133,12 +1123,14 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 ( namespace_id, ) = namespace_ids
                 
-                cursor = self._Execute( 'SELECT tag_id FROM {} WHERE namespace_id = ?;'.format( tags_table_name ), ( namespace_id, ) )
+                query = 'SELECT tag_id FROM {} WHERE namespace_id = ?;'.format( tags_table_name )
+                query_args = ( namespace_id, )
                 
             else:
                 
                 # temp namespaces to tags
-                cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( temp_namespace_ids_table_name, tags_table_name ) )
+                query = 'SELECT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( temp_namespace_ids_table_name, tags_table_name )
+                query_args = ()
                 
             
             cancelled_hook = None
@@ -1148,7 +1140,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 cancelled_hook = job_key.IsCancelled
                 
             
-            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            result_tag_ids = self._STS( self._ExecuteCancellable( query, query_args, cancelled_hook ) )
             
             if job_key is not None:
                 
@@ -1182,6 +1174,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def GetTagIdsFromNamespaceIdsSubtagIdsTables( self, file_service_id: int, tag_service_id: int, namespace_ids_table_name: str, subtag_ids_table_name: str, job_key = None ):
         
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
         final_result_tag_ids = set()
         
         if tag_service_id == self.modules_services.combined_tag_service_id:
@@ -1198,16 +1197,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             tags_table_name = self.GetTagsTableName( file_service_id, search_tag_service_id )
             
             # temp subtags to tags to temp namespaces
-            cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id ) CROSS JOIN {} USING ( namespace_id );'.format( subtag_ids_table_name, tags_table_name, namespace_ids_table_name ) )
+            query = 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id ) CROSS JOIN {} USING ( namespace_id );'.format( subtag_ids_table_name, tags_table_name, namespace_ids_table_name )
             
-            cancelled_hook = None
-            
-            if job_key is not None:
-                
-                cancelled_hook = job_key.IsCancelled
-                
-            
-            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            result_tag_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
             
             if job_key is not None:
                 
@@ -1238,6 +1230,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     def GetTagIdsFromSubtagIdsTable( self, file_service_id: int, tag_service_id: int, subtag_ids_table_name: str, job_key = None ):
         
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
+        
         final_result_tag_ids = set()
         
         if tag_service_id == self.modules_services.combined_tag_service_id:
@@ -1254,16 +1253,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             tags_table_name = self.GetTagsTableName( file_service_id, search_tag_service_id )
             
             # temp subtags to tags
-            cursor = self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id );'.format( subtag_ids_table_name, tags_table_name ) )
+            query = 'SELECT tag_id FROM {} CROSS JOIN {} USING ( subtag_id );'.format( subtag_ids_table_name, tags_table_name )
             
-            cancelled_hook = None
-            
-            if job_key is not None:
-                
-                cancelled_hook = job_key.IsCancelled
-                
-            
-            result_tag_ids = self._STS( HydrusDB.ReadFromCancellableCursor( cursor, 128, cancelled_hook = cancelled_hook ) )
+            result_tag_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
             
             if job_key is not None:
                 

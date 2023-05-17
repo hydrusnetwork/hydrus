@@ -7,6 +7,8 @@ from qtpy import QtGui as QG
 
 try:
     
+    # this appears to be Python 3.8+ and/or the equivalent Qt versions
+    
     from qtpy import QtMultimediaWidgets as QMW
     from qtpy import QtMultimedia as QM
     

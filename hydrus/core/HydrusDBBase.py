@@ -1,4 +1,6 @@
 import collections
+import typing
+
 import psutil
 import sqlite3
 
@@ -72,6 +74,45 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
             
         
     
+
+def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook = None ):
+    
+    if cancelled_hook is None:
+        
+        return cursor.fetchall()
+        
+    
+    results = []
+    
+    if cancelled_hook():
+        
+        return results
+        
+    
+    NUM_TO_GET = 1
+    
+    group_of_results = cursor.fetchmany( NUM_TO_GET )
+    
+    while len( group_of_results ) > 0:
+        
+        results.extend( group_of_results )
+        
+        if cancelled_hook():
+            
+            break
+            
+        
+        if NUM_TO_GET < largest_group_size:
+            
+            NUM_TO_GET *= 2
+            
+        
+        group_of_results = cursor.fetchmany( NUM_TO_GET )
+        
+    
+    return results
+    
+
 class TemporaryIntegerTableNameCache( object ):
     
     my_instance = None
@@ -223,18 +264,25 @@ class DBBase( object ):
         self._Execute( statement )
         
     
-    def _Execute( self, query, *args ) -> sqlite3.Cursor:
+    def _Execute( self, query, *query_args ) -> sqlite3.Cursor:
         
         if HG.query_planner_mode and query not in HG.queries_planned:
             
-            plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), *args ).fetchall()
+            plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), *query_args ).fetchall()
             
             HG.query_planner_query_count += 1
             
             HG.controller.PrintQueryPlan( query, plan_lines )
             
         
-        return self._c.execute( query, *args )
+        return self._c.execute( query, *query_args )
+        
+    
+    def _ExecuteCancellable( self, query, query_args, cancelled_hook: typing.Callable[ [], bool ] ):
+        
+        cursor = self._Execute( query, query_args )
+        
+        return ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook )
         
     
     def _ExecuteMany( self, query, args_iterator ):

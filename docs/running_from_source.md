@@ -178,14 +178,20 @@ The first start will take a little longer. It will operate just like a normal bu
     If you want to redirect your database or use any other launch arguments, then copy 'client.bat' to 'client-user.bat' and edit it, inserting your desired db path. Run this instead of 'client.bat'. New `git pull` commands will not affect 'client-user.bat'.
     
     You probably can't pin your .bat file to your Taskbar or Start (and if you try and pin the running program to your taskbar, its icon may revert to Python), but you can make a shortcut to the .bat file, pin that to Start, and in its properties set a custom icon. There's a nice hydrus one in `install_dir/static`.
+    
+    However, some versions of Windows won't let you pin a shortcut to a bat to the start menu. In this case, make a shortcut like this:
+    
+    `C:\Windows\System32\cmd.exe /c "C:\hydrus\Hydrus Source\hydrus_client-user.bat"`
+    
+    This is a shortcut to tell the terminal to run the bat; it should be pinnable to start. You can give it a nice name and the hydrus icon and you should be good!
 
 === "Linux"
 
-    If you want to redirect your database or use any other launch arguments, then copy 'client.sh' to 'client-user.sh' and edit it, inserting your desired db path. Run this instead of 'client.sh'. New `git pull` commands will not affect 'client-user.sh'.
+    If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.sh' to 'hydrus_client-user.sh' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.sh'. New `git pull` commands will not affect 'hydrus_client-user.sh'.
 
 === "macOS"
 
-    If you want to redirect your database or use any other launch arguments, then copy 'client.command' to 'client-user.command' and edit it, inserting your desired db path. Run this instead of 'client.command'. New `git pull` commands will not affect 'client-user.command'.
+    If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.command' to 'hydrus_client-user.command' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.command'. New `git pull` commands will not affect 'hydrus_client-user.command'.
 
 ### Simple Updating Guide
 

@@ -35,6 +35,38 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_528"><a href="#version_528">version 528</a></h2>
+                    <ul>
+                        <li><h3>faster file search cancelling</h3></li>
+                        <li>if you start a large file search and then update or otherwise cancel it, the existing ongoing search should stop a little faster now</li>
+                        <li>all timestamp-based searches now cancel very quickly. if you do a bare 'all files imported in the last six months' search and then amend it with 'system:inbox', it should now update super fast</li>
+                        <li>all note-based searches now cancel quickly, either num_notes or note_names</li>
+                        <li>all rating-based searches now cancel quickly</li>
+                        <li>all OR searches cancel faster</li>
+                        <li>and, in all cases, the cancel tech works a little faster by skipping any remaining search more efficiently</li>
+                        <li>relatedly, I upgraded how I do the query cancel tech here to be a bit easier to integrate, and I switched the 20-odd existing cancels over to it. I'd like to add more in future, so let me know what cancels slow!</li>
+                        <li><h3>system predicate parsing</h3></li>
+                        <li>the parser is more forgiving of colons after the basename, e.g. 'system:import time: since 2023-01-01' now parses ok</li>
+                        <li>added 'since', 'before', 'around', and 'day'/month' variants to system datetime predicate parsing as more human analogues of the '>' etc... operators</li>
+                        <li>you can now say 'imported', 'modified', 'last viewed', and 'archived' without the 'time' part ('system:modified before 2020-01-01')</li>
+                        <li>also, 'system:archived' with a 'd' will now parse as 'system:archive'</li>
+                        <li>you now can stick 'ago' ('system:imported 7 days ago') on the end of a timedelta time system pred and it should parse ok! this should fix the text that is copied to clipboard from timedelta system preds</li>
+                        <li>the system predicate parser now handles 'file service' system preds when your given name doesn't match due to upper/lowercase, and more broadly when the service has upper case characters. some stages of parsing convert everything to lowercase, making this tricky, but in general it now does a sweep of what you entered and then a sweep that ignores case entirely. related pro-tip: do not give two services the same name but with different case</li>
+                        <li><h3>misc</h3></li>
+                        <li>you can now edit the default slideshow durations that show up in the media viewer right-click menu, under _options->media_. it is a bit hacky, but it works just like the custom zoom steps, with comma-separated floats</li>
+                        <li>fixed 'system:num notes < x', which was not including noteless files (i.e. num_notes = 0) in the result</li>
+                        <li>fixed a bug in _manage services_ when adding a local file service and then deleting it in the same dialog open. a test that checks if the thing is empty of files before the delete wasn't recognising it didn't exist yet</li>
+                        <li>improved type checking when pasting timestamps in the datetime widget, I think it was breaking some (older?) versions of python</li>
+                        <li><h3>some more build stuff</h3></li>
+                        <li>fixed the macOS App, which was showing a 'no' symbol rather than launching due to one more thing that needed to be redirected from 'client' to 'hydrus_client' last week (issue #1367)</li>
+                        <li>fixed a second problem with the macOS app (unlike PyInstaller, PyOxidizer needed the 'hydrus' source directory, so that change is reverted)</li>
+                        <li>I believe I've also fixed the client launching for some versions of Python/PyQt6, which had trouble with the QMediaPlayer imports</li>
+                        <li>cleaned up the PyInstall spec files a little more, removing some 'hidden-import' stuff from the pyinstaller spec files that was no longer used and pushing the server executables to the binaries section</li>
+                        <li>added a short section to the Windows 'running from source' help regarding pinning a shortcut to a bat to Start--there's a neat way to do it, if Windows won't let you</li>
+                        <li>updated a couple little more areas in the help for client->hydrus_client</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_527"><a href="#version_527">version 527</a></h2>
                     <ul>
                         <li><h3>important updates</h3></li>

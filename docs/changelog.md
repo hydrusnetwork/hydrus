@@ -7,6 +7,43 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 528](https://github.com/hydrusnetwork/hydrus/releases/tag/v528)
+
+### faster file search cancelling
+
+* if you start a large file search and then update or otherwise cancel it, the existing ongoing search should stop a little faster now
+* all timestamp-based searches now cancel very quickly. if you do a bare 'all files imported in the last six months' search and then amend it with 'system:inbox', it should now update super fast
+* all note-based searches now cancel quickly, either num_notes or note_names
+* all rating-based searches now cancel quickly
+* all OR searches cancel faster
+* and, in all cases, the cancel tech works a little faster by skipping any remaining search more efficiently
+* relatedly, I upgraded how I do the query cancel tech here to be a bit easier to integrate, and I switched the 20-odd existing cancels over to it. I'd like to add more in future, so let me know what cancels slow!
+
+### system predicate parsing
+
+* the parser is more forgiving of colons after the basename, e.g. 'system:import time: since 2023-01-01' now parses ok
+* added 'since', 'before', 'around', and 'day'/month' variants to system datetime predicate parsing as more human analogues of the '>' etc... operators
+* you can now say 'imported', 'modified', 'last viewed', and 'archived' without the 'time' part ('system:modified before 2020-01-01')
+* also, 'system:archived' with a 'd' will now parse as 'system:archive'
+* you now can stick 'ago' ('system:imported 7 days ago') on the end of a timedelta time system pred and it should parse ok! this should fix the text that is copied to clipboard from timedelta system preds
+* the system predicate parser now handles 'file service' system preds when your given name doesn't match due to upper/lowercase, and more broadly when the service has upper case characters. some stages of parsing convert everything to lowercase, making this tricky, but in general it now does a sweep of what you entered and then a sweep that ignores case entirely. related pro-tip: do not give two services the same name but with different case
+
+### misc
+
+* you can now edit the default slideshow durations that show up in the media viewer right-click menu, under _options->media_. it is a bit hacky, but it works just like the custom zoom steps, with comma-separated floats
+* fixed 'system:num notes < x', which was not including noteless files (i.e. num_notes = 0) in the result
+* fixed a bug in _manage services_ when adding a local file service and then deleting it in the same dialog open. a test that checks if the thing is empty of files before the delete wasn't recognising it didn't exist yet
+* improved type checking when pasting timestamps in the datetime widget, I think it was breaking some (older?) versions of python
+
+### some more build stuff
+
+* fixed the macOS App, which was showing a 'no' symbol rather than launching due to one more thing that needed to be redirected from 'client' to 'hydrus_client' last week (issue #1367)
+* fixed a second problem with the macOS app (unlike PyInstaller, PyOxidizer needed the 'hydrus' source directory, so that change is reverted)
+* I believe I've also fixed the client launching for some versions of Python/PyQt6, which had trouble with the QMediaPlayer imports
+* cleaned up the PyInstall spec files a little more, removing some 'hidden-import' stuff from the pyinstaller spec files that was no longer used and pushing the server executables to the binaries section
+* added a short section to the Windows 'running from source' help regarding pinning a shortcut to a bat to Start--there's a neat way to do it, if Windows won't let you
+* updated a couple little more areas in the help for client->hydrus_client
+
 ## [Version 527](https://github.com/hydrusnetwork/hydrus/releases/tag/v527)
 
 ### important updates
@@ -367,42 +404,3 @@ title: Changelog
 * all the commands in the modify accounts dialog now have nicer yes/no dialogs that say the number of accounts being affected and talk more about what is happening
 * fixed up some logical jank in the dialog. adding time to expires no longer tells you about 0 accounts having no expiry, and if circumstances mean 0 accounts are selected/valid for an operation, it no longer says 'want to set expiry for 0 accounts?' etc...
 * when modifying multiple accounts, the current account focus/selection is now preserved through list refreshes after jobs go through
-
-## [Version 518](https://github.com/hydrusnetwork/hydrus/releases/tag/v518)
-
-### autocomplete improvements
-
-* tl;dr: I went through the whole tag autocomplete search pipeline, cleaned out the cruft, and made the pre-fetch results more sensible. searching for tags on thumbnails isn't horrible any more!
-* -
-* when you type a tag search, either in search or edit autocomplete contexts, and it needs to spend some time reading from the database, the search now always does the 'exact match' search first on what you typed. if you type in 'cat', it will show 'cat' and 'species:cat' and 'character:cat' and anything else that matches 'cat' exactly, with counts, and easy to select, while you are waiting for the full autocomplete results to come back
-* in edit contexts, this exact-matching pre-fetch results here now include sibling suggestions, even if the results have no count
-* in edit contexts, the full results should more reliably include sibling suggestions, including those with no count. in some situations ('all known tags'), there may be too many siblings, so let me know!
-* the main predicate sorting method now sorts by string secondarily, stabilising the sort between same-count preds
-* when the results list transitions from pre-fetch results to full results, your current selection is now preserved!!! selecting and then hitting enter right when the full results come in should be safe now!
-* when you type on a set of full results and it quickly filters down on the results cache to a smaller result, it now preserves selection. I'm not sure how totally useful this will be, but I did it anyway. hitting backspace and filtering 'up' will reset selection
-* when you search for tags on a page of thumbnails, you should now get some early results super fast! these results are lacking sibling data and will be replaced with the better answer soon after, but if you want something simple, they'll work! no more waiting ages for anything on thumbnail tag searches!
-* fixed an issue where the edit autocomplete was not caching results properly when you had the 'unnamespaced input gives (any namespace) wildcard results' option on
-* the different loading states of autocomplete all now have clear 'loading...' labels, and each label is a little different based on what it is doing, like 'loading sibling data...'
-* I generally cleared out jank. as the results move from one type to another, or as they filter down as you type, they _should_ flicker less
-* added a new gui debug mode to force a three second delay on all autocomplete database jobs, to help simulate slow searches and play with the above
-* NOTE: autocomplete has a heap of weird options under _tags->manage tag display and search_. I'm really happy with the above changes, but I messed around with the result injection rules, so I may have broken one of the combinations of wildcard rules here. let me know how you get on and I'll fix anything that I busted.
-
-### pympler
-
-* hydrus now optionally uses 'pympler', a python memory profiling library. for now, it replaces my old python gc (garbage collection) summarising commands under _help->debug->memory actions_, and gives much nicer formatting and now various estimates of actual memory use. this is a first version that mostly just replicates old behaviour, but I added a 'spam a more accurate total mem size of all the Qt widgets' in there too. I will keep developing this in future. we should be able to track some memory leaks better in future
-* pympler is now in all the requirements.txts, so if you run from source and want to play with it, please reinstall your venv and you'll be sorted. _help->about_ says whether you have it or not
-
-### misc
-
-* the system:time predicates now allow you to specify the hh:mm time on the calendar control. if needed, you can now easily search for files viewed between 10pm-11:30pm yesterday. all existing 'date' system predicates will update to midnight. if you are a time-search nerd, note this changes the precision of existing time predicates--previously they searched _before/after_ the given date, but now they search including the given date, pivoting around the minute (default: 0:00am) rather than the integer calendar day! 'same day as' remains the same, though--midnight to midnight of the given calendar day
-* if hydrus has previously initial-booted without mpv available and so set the media view options for video/animations/audio to 'show with native viewer', and you then boot with mpv available, hydrus now sets your view options to use mpv and gives a popup saying so. trying to get mpv to work should be a bit easier to test now, since it'll popup and fix itself as soon as you get it working, and people who never realised it was missing and fix it accidentally will now get sorted without having to do anything extra
-* made some small speed and memory optimisations to content processing for busy clients with large sessions, particularly those with large collect-by'd pages
-* also boosted the speed of the content update pipeline as it consults which files are affected by which update object
-* the migrate tags dialog now lets you filter the tag source by pending only on tag repositories
-* cleaned up some calendar/time code
-* updated the Client API help on how Hydrus-Client-API-Access-Key works in GET vs POST arguments
-* patched the legacy use of 'service_names_to_tags' in `/add_urls/add_url` in the client api. this parameter is more obsolete than the other legacy names (it got renamed a while ago to 'service_names_to_additional_tags'), but I'm supporting it again, just for a bit, for Hydrus Companion users stuck on an older version. sorry for the trouble here, this missed my legacy checks!
-
-### windows mpv test
-
-* hey, if you are an advanced windows user and want to run a test for me, please rename your mpv-2.dll to .old and then get this https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z/download . extract the libmpv-2.dll and rename it to mpv-2.dll. does it work for you, showing api v2.1 in _help->about_? are you running the built windows release, or from source? it runs great for me from source, but I'd like to get a wider canvas before I update it for everyone. if it doesn't work, then delete the new dll and rename the .old back, and then let me know your windows version etc.., thank you!

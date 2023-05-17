@@ -3,10 +3,11 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBModule
 
@@ -172,7 +173,14 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp = None, max_last_viewed_timestamp = None ) -> typing.Set[ int ]:
+    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp = None, max_last_viewed_timestamp = None, job_key: typing.Optional[ ClientThreading.JobKey ] = None ) -> typing.Set[ int ]:
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
         
         last_viewed_timestamp_predicates = []
         
@@ -186,9 +194,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         
         pred_string = ' AND '.join( last_viewed_timestamp_predicates )
         
-        last_viewed_timestamp_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM file_viewing_stats WHERE canvas_type = ? AND {};'.format( pred_string ), ( CC.CANVAS_MEDIA_VIEWER, ) ) )
-        
-        return last_viewed_timestamp_hash_ids
+        return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_viewing_stats WHERE canvas_type = ? AND {};'.format( pred_string ), ( CC.CANVAS_MEDIA_VIEWER, ), cancelled_hook ) )
         
     
     def GetHashIdsToFileViewingStatsRows( self, hash_ids_table_name ):

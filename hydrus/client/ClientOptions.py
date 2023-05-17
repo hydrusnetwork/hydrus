@@ -786,6 +786,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'media_zooms' ] = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
         
+        self._dictionary[ 'slideshow_durations' ] = [ 1.0, 5.0, 10.0, 30.0, 60.0 ]
+        
         #
         
         self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
@@ -1430,6 +1432,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetSlideshowDurations( self ):
+        
+        with self._lock:
+            
+            return list( self._dictionary[ 'slideshow_durations' ] )
+            
+        
+    
     def GetString( self, name ):
         
         with self._lock:
@@ -1826,6 +1836,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList( simple_downloader_formulae )
+            
+        
+    
+    def SetSlideshowDurations( self, slideshow_durations ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'slideshow_durations' ] = slideshow_durations
             
         
     

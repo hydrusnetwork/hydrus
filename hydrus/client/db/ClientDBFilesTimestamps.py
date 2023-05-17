@@ -3,10 +3,10 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
+from hydrus.core import HydrusDB
 
 from hydrus.client import ClientTime
+from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBFilesStorage
@@ -105,7 +105,14 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         # can't clear a file timestamp or file viewing timestamp from here, can't do it from UI either, so we good for now
         
     
-    def GetHashIdsInRange( self, timestamp_type: int, ranges ):
+    def GetHashIdsInRange( self, timestamp_type: int, ranges, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+        
+        cancelled_hook = None
+        
+        if job_key is not None:
+            
+            cancelled_hook = job_key.IsCancelled
+            
         
         if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE:
             
@@ -130,7 +137,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
                 
                 query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
                 
-                modified_timestamp_hash_ids = self._STS( self._Execute( query ) )
+                modified_timestamp_hash_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
                 
                 return modified_timestamp_hash_ids
                 
@@ -161,11 +168,10 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
                 
                 query = f'SELECT hash_id FROM {table_name} WHERE {pred_string};'
                 
-                hash_ids = self._STS( self._Execute( query ) )
+                hash_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
                 
                 return hash_ids
                 
-            
             
         
         return set()
