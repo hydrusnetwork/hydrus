@@ -21,12 +21,13 @@ service-identity>=18.1.0
 six>=1.14.0
 Twisted>=20.3.0
 
-opencv-python-headless==4.5.5.64
-python-mpv==0.5.2
+opencv-python-headless==4.7.0.72
+python-mpv==1.0.3
+QtPy==2.3.1
 requests==2.31.0
+setuptools==67.8.0
 
-QtPy==2.3.0
-PySide6==6.4.1
+PySide6==6.5.1.1
 
 setuptools==65.5.1
 
