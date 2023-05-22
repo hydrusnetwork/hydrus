@@ -574,6 +574,8 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rule_type.addItem( 'search descendants', ClientParsing.HTML_RULE_TYPE_DESCENDING )
         self._rule_type.addItem( 'walk back up ancestors', ClientParsing.HTML_RULE_TYPE_ASCENDING )
+        self._rule_type.addItem( 'search next siblings', ClientParsing.HTML_RULE_TYPE_NEXT_SIBLINGS )
+        self._rule_type.addItem( 'search previous siblings', ClientParsing.HTML_RULE_TYPE_PREV_SIBLINGS )
         
         self._tag_name = QW.QLineEdit( self )
         
@@ -663,7 +665,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         rule_type = self._rule_type.GetValue()
         
-        if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
+        if rule_type in [ ClientParsing.HTML_RULE_TYPE_DESCENDING, ClientParsing.HTML_RULE_TYPE_NEXT_SIBLINGS, ClientParsing.HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
             self._tag_attributes.setEnabled( True )
             self._tag_index.setEnabled( True )
@@ -719,7 +721,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         should_test_tag_string = self._should_test_tag_string.isChecked()
         tag_string_string_match = self._tag_string_string_match.GetValue()
         
-        if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
+        if rule_type in [ ClientParsing.HTML_RULE_TYPE_DESCENDING, ClientParsing.HTML_RULE_TYPE_NEXT_SIBLINGS, ClientParsing.HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
             tag_attributes = self._tag_attributes.GetValue()
             tag_index = self._tag_index.GetValue()

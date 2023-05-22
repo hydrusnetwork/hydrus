@@ -1433,12 +1433,14 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 HTML_RULE_TYPE_DESCENDING = 0
 HTML_RULE_TYPE_ASCENDING = 1
+HTML_RULE_TYPE_NEXT_SIBLINGS = 2
+HTML_RULE_TYPE_PREV_SIBLINGS = 3
 
 class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML
     SERIALISABLE_NAME = 'HTML Parsing Rule'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, rule_type = None, tag_name = None, tag_attributes = None, tag_index = None, tag_depth = None, should_test_tag_string = False, tag_string_string_match = None ):
         
@@ -1454,13 +1456,14 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if rule_type == HTML_RULE_TYPE_DESCENDING:
+        if rule_type in [ HTML_RULE_TYPE_DESCENDING, HTML_RULE_TYPE_NEXT_SIBLINGS, HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
             if tag_attributes is None:
                 
                 tag_attributes = {}
                 
             
+        
         elif rule_type == HTML_RULE_TYPE_ASCENDING:
             
             if tag_depth is None:
@@ -1512,7 +1515,11 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = ( rule_type, tag_name, tag_attributes, tag_index, tag_depth, should_test_tag_string, serialisable_tag_string_string_match )
             
-            return ( 2, new_serialisable_info )
+            return ( 3, new_serialisable_info )
+        
+        elif version == 2:
+
+            return ( 3, old_serialisable_info )
             
         
     
@@ -1522,7 +1529,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         
         for node in nodes:
             
-            if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+            if self._rule_type in [ HTML_RULE_TYPE_DESCENDING, HTML_RULE_TYPE_NEXT_SIBLINGS, HTML_RULE_TYPE_PREV_SIBLINGS ]:
                 
                 # having class : [ 'a', 'b' ] works here, but it does OR not AND
                 # instead do node.find_all( lambda tag: 'class' in tag.attrs and 'a' in tag[ 'class' ] and 'b' in tag[ 'class' ] )
@@ -1535,8 +1542,19 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                     kwargs[ 'name' ] = self._tag_name
                     
                 
-                found_nodes = node.find_all( **kwargs )
+                if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+
+                    found_nodes = node.find_all( **kwargs )
+
+                elif self._rule_type == HTML_RULE_TYPE_NEXT_SIBLINGS:
+
+                    found_nodes = node.find_next_siblings( **kwargs )
+
+                elif self._rule_type == HTML_RULE_TYPE_PREV_SIBLINGS:
+
+                    found_nodes = node.find_previous_siblings( **kwargs )
                 
+
                 if self._tag_index is not None:
                     
                     try:
@@ -1611,9 +1629,19 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToString( self ):
         
-        if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+        if self._rule_type in [ HTML_RULE_TYPE_DESCENDING, HTML_RULE_TYPE_NEXT_SIBLINGS, HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
-            s = 'search descendants for'
+            if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+
+                s = 'search descendants for'
+
+            elif self._rule_type == HTML_RULE_TYPE_NEXT_SIBLINGS:
+
+                s = 'search next siblings for'
+
+            elif self._rule_type == HTML_RULE_TYPE_PREV_SIBLINGS:
+
+                s = 'search prev siblings for'
             
             if self._tag_index is None:
                 
