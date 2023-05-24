@@ -151,6 +151,7 @@ SIMPLE_ZOOM_100 = 142
 SIMPLE_ZOOM_DEFAULT = 143
 SIMPLE_SHOW_DUPLICATES = 144
 SIMPLE_MANAGE_FILE_TIMESTAMPS = 145
+SIMPLE_OPEN_FILE_IN_FILE_EXPLORER = 146
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -220,6 +221,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_NEW_URL_DOWNLOADER_PAGE : 'open a new page: url downloader',
     SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE : 'open a new page: thread watcher',
     SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM : 'open file in external program',
+    SIMPLE_OPEN_FILE_IN_FILE_EXPLORER : 'open file in file explorer',
     SIMPLE_OPEN_KNOWN_URL : 'open known url',
     SIMPLE_OPEN_SELECTION_IN_NEW_PAGE : 'open files in a new page',
     SIMPLE_PAN_BOTTOM_EDGE : 'pan file to bottom edge',

@@ -660,14 +660,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            hash = self._current_media.GetHash()
-            mime = self._current_media.GetMime()
-            
-            client_files_manager = HG.client_controller.client_files_manager
-            
-            path = client_files_manager.GetFilePath( hash, mime )
-            
-            HydrusPaths.OpenFileLocation( path )
+            ClientGUIMedia.OpenFileLocation( self._current_media )
             
             self._MediaFocusWentToExternalProgram()
             
@@ -946,6 +939,10 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
                 self._OpenExternally()
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
+                
+                self._OpenFileLocation()
                 
             elif action == CAC.SIMPLE_PAN_UP:
                 

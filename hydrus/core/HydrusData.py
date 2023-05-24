@@ -811,7 +811,9 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
         'md5' : 32,
         'sha1' : 40,
         'sha256' : 64,
-        'sha512' : 128
+        'sha512' : 128,
+        'pixel' : 64,
+        'perceptual' : 16
     }
     
     hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
@@ -842,6 +844,7 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     
     return hashes
     
+
 def Print( text ):
     
     try:

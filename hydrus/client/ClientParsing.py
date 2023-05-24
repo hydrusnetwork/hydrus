@@ -1515,10 +1515,11 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = ( rule_type, tag_name, tag_attributes, tag_index, tag_depth, should_test_tag_string, serialisable_tag_string_string_match )
             
-            return ( 3, new_serialisable_info )
+            return ( 2, new_serialisable_info )
+            
         
-        elif version == 2:
-
+        if version == 2:
+            
             return ( 3, old_serialisable_info )
             
         
@@ -1543,17 +1544,17 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                     
                 
                 if self._rule_type == HTML_RULE_TYPE_DESCENDING:
-
+                    
                     found_nodes = node.find_all( **kwargs )
-
+                    
                 elif self._rule_type == HTML_RULE_TYPE_NEXT_SIBLINGS:
-
+                    
                     found_nodes = node.find_next_siblings( **kwargs )
-
+                    
                 elif self._rule_type == HTML_RULE_TYPE_PREV_SIBLINGS:
-
+                    
                     found_nodes = node.find_previous_siblings( **kwargs )
-                
+                    
 
                 if self._tag_index is not None:
                     
@@ -1632,17 +1633,17 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         if self._rule_type in [ HTML_RULE_TYPE_DESCENDING, HTML_RULE_TYPE_NEXT_SIBLINGS, HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
             if self._rule_type == HTML_RULE_TYPE_DESCENDING:
-
+                
                 s = 'search descendants for'
-
+                
             elif self._rule_type == HTML_RULE_TYPE_NEXT_SIBLINGS:
-
+                
                 s = 'search next siblings for'
-
+                
             elif self._rule_type == HTML_RULE_TYPE_PREV_SIBLINGS:
-
-                s = 'search prev siblings for'
-            
+                
+                s = 'search previous siblings for'
+                
             if self._tag_index is None:
                 
                 s += ' every'

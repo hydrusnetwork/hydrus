@@ -7,6 +7,34 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 529](https://github.com/hydrusnetwork/hydrus/releases/tag/v529)
+
+### similar files search
+
+* hydrus now supports a 'SauceNAO'-style workflow on its own files, quickly looking up if you have something that looks like the given file, without having to import it, using a new variant of the 'system:similar to' search predicate. just open up the new 'system:similar files' entry, which now has two tabs, and on the first just paste image data or a file path from your clipboard and it'll calculate the data for you
+* similar files also gets a search cache this week. this makes all repeat searches massively faster, helps out successive searches (e.g. the same file at 0, 4, then 8 distance), and should accelerate all maintenance search by a good bit depending on the size and shape of your database (on my test database of only ~10k files, it sped things up 3-4x)
+* 'system:similar to' search predicates are no longer mutually exclusive in the same search--you can now have multiple
+* cleaned up a bunch of the similar files code generally. the main search function is split into pieces and common calls are spun off into their own thing
+
+### misc
+
+* added a new shortcut action, 'open file in file explorer', which opens the file in your file Explorer. if you haven't used this before, it only works on Windows and macOS and can be buggy. on Windows, if the explorer takes too long to open, it won't select the file correctly, so hit it again
+* thanks to a user, the html parsing formula can now search in a sideways direction, either finding the previous or following sibling html tags (as opposed to just search descendants/ancestors)
+* if an export folder is set to 'synchronise' and also needs to delete some symlinks (either it regularly makes symlinks, or it is clearing symlinks from an old run), _and_ those symlinks now point to since-deleted files, the dead symlinks should now delete correctly! thanks for an interesting report here
+* the docker build now has pympler support for memory profiling. note that this does not work very well--it is unfathomably laggy atm for any client of real size, so bear with me
+* the new Qt Media Player experiment is now more careful about how it deletes old windows. old players are handed off to the main gui, which takes ownership and explicitly waits for them to finish current work, then asks them to unload their media, and then, only when they are all clear sends the window delete signal. this should stop some READY/NULL errors people were seeing on unload, and hopefully without causing new stability problems (I've had crash trouble with explicitly unloading media before destroy before, but I'm doing it super safe here, so we'll see)
+* I added some more error reporting to the related area in the mpv player--if it fails to unload a media, it now prints the details to log--let's see if we can improve this too
+* when files fail to import for reasons other than veto or unsupported file, they now say the actual exception type in their first line summary
+
+### client api
+
+* when the api sends a file to be imported and it fails, the response 'note' now just has this human-readable top level line (it used to have the full error trace), and a new entry 'traceback' has the trace
+* the client api version is now 45
+
+### future build
+
+* to improve library update testing, I have set up a second, 'future' build that is the same as a normal release but uses newer library versions, for instance Python 3.10 from 3.9 and Qt 6.5.0 rather than 6.4.1. I am not sure how often I will be making this build--I don't want to spam, so I'm thinking once per month, but maybe we'll ultimately end up incorporating it into the main build and just kick it out every week--but please feel free to test them out as they do happen and let me know if you encounter any problems booting or with anything else. the idea here is to get more user situations, particularly older OSes, testing pending library updates so I can be more confident about pulling the trigger on moving up in the master build (the recent jump to Qt 6.4.1 caused several Win 10 users to have an annoying 2-second delay on opening any new search page, but 6.5.0 doesn't have this, so if you encountered this error, please try this build and let me know how it goes). the build is in the normal github releases stream, marked as a pre-release. v528-future is here: https://github.com/hydrusnetwork/hydrus/releases/tag/v528-future-1
+
 ## [Version 528](https://github.com/hydrusnetwork/hydrus/releases/tag/v528)
 
 ### faster file search cancelling
@@ -365,42 +393,3 @@ title: Changelog
 * (both server and client need to be updated to get this)
 * last week's 'delete all content' command failed IRL. it locked up the PTR for six hours and then appeared to fail (rollback) on a seemingly normal account. I am not sure what the inefficiency was here, but this job obviously has to be re-thought for real world use, so this week I am altering the command to break the job up into smaller pieces and stop safely after twenty seconds of work. the janitor client will receive a message on whether everything was deleted or not
 * this is not a total solution or a nice solution, but it should be a stopgap that still allows deletion of small accounts' content while not breaking for big accounts. the ultimate answer here is going to look like proper account content-count caching (rather than the '5000 mappings' limit), and an asynchronous 'purge' maintenance system that runs in the background that janitor clients can check up on and even cancel
-
-## [Version 519](https://github.com/hydrusnetwork/hydrus/releases/tag/v519)
-
-### inc/dec ratings service
-
-* I have written a new number 'rating' service type, called 'inc/dec'. it is simply a no-upper-limit positive integer--you left-click to increment, right to decrement. middle-click to edit directly
-* it appears and works like other ratings in the top-right media viewer hover and the manage ratings dialog. there's a section under system:ratings too. the main logical difference is every file is always rated in this system--the default for all files is 0--so there's no searching for 'unrated'
-* the duplicate merge options support this new inc/dec rating by adding/summing in one or both directions. its action labels in the dialog are a little different because of this
-
-### misc
-
-* the manage tag siblings dialog now shows all members of a chain when it filters the current in-view pairs according to the current pertinent tags. previously, it just showed the pairs that included your entered tags; now it chases everything
-* the same is also now broadly true of manage tag parents, but there's a checkbox that sets how crazy it goes. by default it won't pursue 'cousins', since that can make a really overwhelming list (imagine seeing every character nintendo ever created, including every pokemon, when you just wanted to add a samus costume variant). more work can and will be done here, also with sibling-cross referencing
-* the system:ratings panel now lists the groups of rating services in alphabetical order
-* fixed an issue where the hydrus native animation renderer was drawing animations at small size in the top-left with garbled surrounds when the monitor UI scale was >100% (issue #1334)
-* I think I have hacked an ugly fix for the 'this window keeps growing horizontally until it reaches the width of the screen' bug that hits some people. the sizing code is now supposed to recognise when this happens and stop it in place. if you get this problem, let me know if it is fixed or what! (issue #1331)
-* if a file in the duplicate filter (or any other media viewer, if you can wangle it) has a 'show action' of 'do not show in the media viewer' or 'do not show, open externally on thumbnail activate', the media viewer now falls back to 'show open externally button'. previously, it was halting in an ugly state and no longer able to proceed (issue #1329)
-* if repository processing runs into any missing/invalid file trouble, it now queues up a wider array of potential file maintenance jobs, assuming there may be a problem with the file records themselves
-* if, during repository processing, an update file is missing, the error note now asks users to run _database->maintenance->clear orphan file records_. might be that the above fix helps here too, but this will be the sledgehammer solution on top, clearing up unusual cases where one service thinks the files exist when actually they don't
-* fixed the recent 'when ffmpeg can't generate a video thumb, use hydrus thumb' routine to cover more situations
-* thanks to a user, fixed a bunch of unit tests for python 3.11
-
-### misc cleanup
-
-* updated my async updater object to handle some pre-call UI-side argument-construction and cleaned up some related garbage shared memory hacks I had before
-* in a step towards less laggy sibling/parents dialogs, I have moved the 'manage tag siblings' dialog's list-filtering routine to a thread. I'll do parents too, sometime, and plan to eventually move to very fast on-demand existing-pair fetching based on the above lookup rule improvements rather than the super laggy 'load everything on dialog boot' current system. a next big step would obviously be visual graph representation of sibling and parent chains
-* cleaned some ratings code and fixed some weird little bugs like numerical rating tooltips not updating properly after a click
-* added some unit tests for inc/dec ratings
-
-### server admin
-
-* (the server and client both need to be updated to get this)
-* I updated and reinstated the old 'superban' function for janitors! it is now just 'delete all account content' on the account modification dialog, separate from the banning process. note that since the server only remembers account ownership of content through the anonymisation period, it cannot auto-remove content older than that date!
-* the account info you see in the modify account dialog now only shows file count/bytes for file repositories and tag counts for tag repositories. to improve readability, it also shows every key/value pair on a separate line, sorted by keys
-* that account info now shows, for tag repositories, number of current, pending, and petitioned sibling and parent rows, and it shows number of petitioned mapping rows. all this stuff obviously goes to 0 if you hit 'delete all account content'--let me know if any of it doesn't!
-* the modify accounts dialog no longer shows the 'null' account type as a choice to set things to. duh! its yes/no also now confirms the account type you are settting
-* all the commands in the modify accounts dialog now have nicer yes/no dialogs that say the number of accounts being affected and talk more about what is happening
-* fixed up some logical jank in the dialog. adding time to expires no longer tells you about 0 accounts having no expiry, and if circumstances mean 0 accounts are selected/valid for an operation, it no longer says 'want to set expiry for 0 accounts?' etc...
-* when modifying multiple accounts, the current account focus/selection is now preserved through list refreshes after jobs go through

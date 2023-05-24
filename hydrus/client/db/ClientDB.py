@@ -5125,7 +5125,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 media_id = self.modules_files_duplicates.GetMediaId( hash_id )
                 
-                potential_duplicate_media_ids_and_distances = [ ( self.modules_files_duplicates.GetMediaId( duplicate_hash_id ), distance ) for ( duplicate_hash_id, distance ) in self.modules_similar_files.Search( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+                potential_duplicate_media_ids_and_distances = [ ( self.modules_files_duplicates.GetMediaId( duplicate_hash_id ), distance ) for ( duplicate_hash_id, distance ) in self.modules_similar_files.SearchFile( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
                 
                 self.modules_files_duplicates.AddPotentialDuplicates( media_id, potential_duplicate_media_ids_and_distances )
                 

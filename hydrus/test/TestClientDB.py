@@ -5,12 +5,14 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientImageHandling
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
@@ -477,8 +479,18 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( CC.UNICODE_ALMOST_EQUAL_TO, 200, 201 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( CC.UNICODE_ALMOST_EQUAL_TO, 4, 1 ), 0 ) )
         
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( hash, ), 5 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( ( hash, ), 5 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
+        
+        pixel_hash = HydrusImageHandling.GetImagePixelHash( path, HC.IMAGE_PNG )
+        
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( pixel_hash, ), (), 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( os.urandom( 32 ), ), (), 0 ), 0 ) )
+        
+        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( path, HC.IMAGE_PNG )
+        
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), tuple( perceptual_hashes ), 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), ( os.urandom( 32 ), ), 0 ), 0 ) )
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )

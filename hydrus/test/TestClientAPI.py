@@ -856,7 +856,8 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response_json[ 'status' ], CC.STATUS_ERROR )
         self.assertEqual( response_json[ 'hash' ], hash.hex() )
-        self.assertIn( 'Traceback', response_json[ 'note' ] )
+        self.assertIn( 'Unknown', response_json[ 'note' ] )
+        self.assertIn( 'Traceback', response_json[ 'traceback' ] )
         
         # success as body
         

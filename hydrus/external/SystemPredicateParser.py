@@ -74,7 +74,7 @@ class Predicate( Enum ):
     HEIGHT = auto()
     WIDTH = auto()
     FILESIZE = auto()
-    SIMILAR_TO = auto()
+    SIMILAR_TO_FILES = auto()
     LIMIT = auto()
     FILETYPE = auto()
     HASH = auto()
@@ -182,7 +182,7 @@ SYSTEM_PREDICATES = {
     'height': (Predicate.HEIGHT, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'width': (Predicate.WIDTH, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'file ?size': (Predicate.FILESIZE, Operators.RELATIONAL, Value.NATURAL, Units.FILESIZE),
-    'similar to': (Predicate.SIMILAR_TO, None, Value.HASHLIST_WITH_DISTANCE, None),
+    'similar to': (Predicate.SIMILAR_TO_FILES, None, Value.HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),

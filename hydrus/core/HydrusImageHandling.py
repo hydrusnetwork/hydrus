@@ -605,8 +605,14 @@ def GetImagePixelHash( path, mime ) -> bytes:
     
     numpy_image = GenerateNumPyImage( path, mime )
     
+    return GetImagePixelHashNumPy( numpy_image )
+    
+
+def GetImagePixelHashNumPy( numpy_image ):
+    
     return hashlib.sha256( numpy_image.data.tobytes() ).digest()
     
+
 def GetImageProperties( path, mime ):
     
     if OPENCV_OK and mime not in PIL_ONLY_MIMETYPES: # webp here too maybe eventually, or offload it all to ffmpeg

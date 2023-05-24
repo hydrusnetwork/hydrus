@@ -254,6 +254,17 @@ def OpenExternally( media ):
     
     HydrusPaths.LaunchFile( path, launch_path )
     
+
+def OpenFileLocation( media ):
+    
+    hash = media.GetHash()
+    mime = media.GetMime()
+    
+    path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    
+    HydrusPaths.OpenFileLocation( path )
+    
+
 def OpenURLs( urls ):
     
     urls = sorted( urls )

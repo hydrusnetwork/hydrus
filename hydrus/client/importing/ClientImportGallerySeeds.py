@@ -301,7 +301,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         if exception is not None:
             
-            first_line = str( exception ).split( os.linesep )[0]
+            first_line = repr( exception ).splitlines()[0]
             
             note = first_line + '\u2026 (Copy note to see full error)'
             note += os.linesep

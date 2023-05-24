@@ -241,9 +241,6 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
     
 def LoadFromQtImage( qt_image: QG.QImage ):
     
-    # assume this for now
-    depth = 3
-    
     numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
     
     return LoadFromNumPyImage( numpy_image )

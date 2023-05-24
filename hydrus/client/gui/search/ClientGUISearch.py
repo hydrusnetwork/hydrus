@@ -41,6 +41,8 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
     ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
@@ -344,9 +346,13 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemNumWords( self, predicate ) )
                 
-            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
                 
-                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemSimilarTo( self, predicate ) )
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemSimilarToData( self, predicate ) )
+                
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemSimilarToFiles( self, predicate ) )
                 
             elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE:
                 
@@ -653,7 +659,19 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
-            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemSimilarTo, predicate ) )
+            recent_predicate_types = []
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemSimilarToData, predicate ) )
+            
+            pages.append( ( 'data', recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+            
+            page_name = 'files'
+            
+            recent_predicate_types = []
+            static_pred_buttons = []
+            editable_pred_panels = []
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemSimilarToFiles, predicate ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE:
             

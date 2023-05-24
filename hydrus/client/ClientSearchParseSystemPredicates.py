@@ -164,7 +164,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.HEIGHT : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( o, v ) ),
     SystemPredicateParser.Predicate.WIDTH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( o, v ) ),
     SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusData.ConvertUnitToInt( u ) ) ),
-    SystemPredicateParser.Predicate.SIMILAR_TO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
+    SystemPredicateParser.Predicate.SIMILAR_TO_FILES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
     SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
     SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( o, v[0] * 1000 + v[1] ) ),
     SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( o, v ) ),

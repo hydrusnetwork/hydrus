@@ -7864,6 +7864,30 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._persistent_mpv_widgets.append( mpv_widget )
         
     
+    def _UnloadAndPurgeQtMediaplayer( self, qt_media_player: QW.QWidget ):
+        
+        if qt_media_player.IsCompletelyUnloaded():
+            
+            qt_media_player.deleteLater()
+            
+        else:
+            
+            qt_media_player.TryToUnload()
+            
+            self._controller.CallLaterQtSafe( self, 5.0, 'purge QMediaPlayer', self._UnloadAndPurgeQtMediaplayer, qt_media_player )
+            
+        
+    
+    def ReleaseQtMediaPlayer( self, qt_media_player: QW.QWidget ):
+        
+        if qt_media_player.parentWidget() != self:
+            
+            qt_media_player.setParent( self )
+            
+        
+        self._controller.CallLaterQtSafe( self, 5.0, 'start QMediaPlayer purge', self._UnloadAndPurgeQtMediaplayer, qt_media_player )
+        
+    
     def REPEATINGBandwidth( self ):
         
         global_tracker = self._controller.network_engine.bandwidth_manager.GetMySessionTracker()

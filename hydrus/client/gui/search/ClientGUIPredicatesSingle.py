@@ -9,10 +9,11 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
+from hydrus.core import HydrusFileHandling
+from hydrus.core import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientImageHandling
 from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
@@ -257,6 +258,11 @@ class PanelPredicateSimpleTagTypes( QW.QWidget ):
     
 
 class PanelPredicateSystem( QW.QWidget ):
+    
+    def __init__( self, parent ):
+        
+        QW.QWidget.__init__( self, parent )
+        
     
     def CheckValid( self ):
         
@@ -2032,17 +2038,29 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         return predicates
         
     
-class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
+
+class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._hashes = QW.QPlainTextEdit( self )
+        self._clear_button = ClientGUICommon.BetterButton( self, 'clear', self._Clear )
         
-        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setText( 'Paste image!')
         
-        self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
+        self._pixel_hashes = QW.QPlainTextEdit( self )
+        
+        self._perceptual_hashes = QW.QPlainTextEdit( self )
+        
+        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._pixel_hashes, ( 66, 4 ) )
+        
+        self._pixel_hashes.setMinimumWidth( init_width )
+        self._pixel_hashes.setMaximumHeight( init_height )
+        
+        self._perceptual_hashes.setMinimumWidth( init_width )
+        self._perceptual_hashes.setMaximumHeight( init_height )
         
         self._max_hamming = ClientGUICommon.BetterSpinBox( self, max=256, width = 60 )
         
@@ -2050,7 +2068,197 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
+        self._pixel_hashes.setPlaceholderText( 'enter pixel hash (64 chars each, paste newline-separated for multiple)' )
+        self._perceptual_hashes.setPlaceholderText( 'enter perceptual hash (16 chars each, paste newline-separated for multiple)' )
+        
+        ( pixel_hashes, perceptual_hashes, hamming_distance ) = predicate.GetValue()
+        
+        hashes_text = os.linesep.join( [ hash.hex() for hash in pixel_hashes ] )
+        
+        self._pixel_hashes.setPlainText( hashes_text )
+        
+        hashes_text = os.linesep.join( [ hash.hex() for hash in perceptual_hashes ] )
+        
+        self._perceptual_hashes.setPlainText( hashes_text )
+        
+        self._max_hamming.setValue( hamming_distance )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar to'), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._pixel_hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._perceptual_hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        QP.AddToLayout( hbox, QW.QLabel( CC.UNICODE_ALMOST_EQUAL_TO, self ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        big_vbox = QP.VBoxLayout()
+        
+        st = ClientGUICommon.BetterStaticText( self, label = 'Use this if you want to look up a file without importing it. Just copy its file path or image data to your clipboard and paste.' )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        QP.AddToLayout( big_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( button_hbox, self._clear_button, CC.FLAGS_CENTER )
+        
+        QP.AddToLayout( big_vbox, button_hbox, CC.FLAGS_CENTER )
+        QP.AddToLayout( big_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        big_vbox.addStretch( 1 )
+        
+        self.setLayout( big_vbox )
+        
+    
+    def _Clear( self ):
+        
+        self._pixel_hashes.setPlainText( '' )
+        self._perceptual_hashes.setPlainText( '' )
+        
+    
+    def _Paste( self ):
+        
+        if HG.client_controller.ClipboardHasImage():
+            
+            try:
+                
+                qt_image = HG.client_controller.GetClipboardImage()
+                
+                numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+                
+                pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
+                
+                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
+                
+                return
+                
+            
+        else:
+            
+            try:
+                
+                raw_text = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                QW.QMessageBox.warning( self, 'Warning', 'Did not see an image bitmap or a file path in the clipboard!' )
+                
+                return
+                
+            
+            try:
+                
+                path = raw_text
+                
+                if os.path.exists( path ) and os.path.isfile( path ):
+                    
+                    mime = HydrusFileHandling.GetMime( path )
+                    
+                    if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
+                        
+                        pixel_hash = HydrusImageHandling.GetImagePixelHash( path, mime )
+                        
+                        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+                        
+                    else:
+                        
+                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, "{}" files are not compatible with the similar file search system!'.format( HC.mime_string_lookup[ mime ] ) )
+                        
+                        return
+                        
+                    
+                else:
+                    
+                    QW.QMessageBox.warning( self, 'Warning', 'Sorry, that clipboard text did not look like a valid file path!' )
+                    
+                    return
+                    
+                
+            except Exception as e:
+                
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
+                
+                return
+                
+            
+        
+        new_text_lines = self._pixel_hashes.toPlainText().splitlines()
+        
+        new_text_lines.append( pixel_hash.hex() )
+        
+        new_text_lines = HydrusData.DedupeList( new_text_lines )
+        
+        self._pixel_hashes.setPlainText( '\n'.join( new_text_lines ) )
+        
+        new_text_lines = self._perceptual_hashes.toPlainText().splitlines()
+        
+        new_text_lines.extend( [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ] )
+        
+        new_text_lines = HydrusData.DedupeList( new_text_lines )
+        
+        self._perceptual_hashes.setPlainText( '\n'.join( new_text_lines ) )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        pixel_hashes = tuple()
+        perceptual_hashes = tuple()
+        max_hamming = 4
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, max_hamming ) )
+        
+    
+    def GetPredicates( self ):
+        
+        hex_pixel_hashes_raw = self._pixel_hashes.toPlainText()
+        
+        pixel_hashes = HydrusData.ParseHashesFromRawHexText( 'pixel', hex_pixel_hashes_raw )
+        
+        hex_perceptual_hashes_raw = self._perceptual_hashes.toPlainText()
+        
+        perceptual_hashes = HydrusData.ParseHashesFromRawHexText( 'perceptual', hex_perceptual_hashes_raw )
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, self._max_hamming.value() ) ), )
+        
+        return predicates
+        
+    
+
+class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._hashes = QW.QPlainTextEdit( self )
+        
+        ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 6 ) )
+        
+        self._hashes.setMinimumWidth( init_width )
+        self._hashes.setMaximumHeight( init_height )
+        
+        self._max_hamming = ClientGUICommon.BetterSpinBox( self, max=256, width = 60 )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        self._hashes.setPlaceholderText( 'enter file hash (64 chars each, paste newline-separated for multiple)' )
         
         ( hashes, hamming_distance ) = predicate.GetValue()
         
@@ -2064,14 +2272,26 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar_to'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar to'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, QW.QLabel( CC.UNICODE_ALMOST_EQUAL_TO, self ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
-        self.setLayout( hbox )
+        st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other, just like in the duplicates system. Paste the files\' hash(es) here, and the results will look like any of them.' )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox.addStretch( 1 )
+        
+        self.setLayout( vbox )
         
     
     def GetDefaultPredicate( self ):
@@ -2079,7 +2299,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         hashes = tuple()
         max_hamming = 4
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hashes, max_hamming ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, max_hamming ) )
         
     
     def GetPredicates( self ):
@@ -2088,11 +2308,12 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystemSingle ):
         
         hashes = HydrusData.ParseHashesFromRawHexText( 'sha256', hex_hashes_raw )
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hashes, self._max_hamming.value() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, self._max_hamming.value() ) ), )
         
         return predicates
         
     
+
 class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):

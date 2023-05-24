@@ -40,7 +40,7 @@ PREDICATE_TYPE_SYSTEM_RATIO = 15
 PREDICATE_TYPE_SYSTEM_DURATION = 16
 PREDICATE_TYPE_SYSTEM_MIME = 17
 PREDICATE_TYPE_SYSTEM_RATING = 18
-PREDICATE_TYPE_SYSTEM_SIMILAR_TO = 19
+PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES = 19
 PREDICATE_TYPE_SYSTEM_LOCAL = 20
 PREDICATE_TYPE_SYSTEM_NOT_LOCAL = 21
 PREDICATE_TYPE_SYSTEM_NUM_WORDS = 22
@@ -69,6 +69,8 @@ PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA = 44
 PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA = 45
 PREDICATE_TYPE_SYSTEM_HAS_EXIF = 46
 PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME = 47
+PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA = 48
+PREDICATE_TYPE_SYSTEM_SIMILAR_TO = 49
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -96,6 +98,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
     PREDICATE_TYPE_SYSTEM_LOCAL,
     PREDICATE_TYPE_SYSTEM_NOT_LOCAL,
@@ -370,7 +374,8 @@ class FileSystemPredicates( object ):
         self._timestamp_ranges = collections.defaultdict( dict )
         
         self._limit = None
-        self._similar_to = None
+        self._similar_to_files = None
+        self._similar_to_data = None
         
         self._required_file_service_statuses = collections.defaultdict( set )
         self._excluded_file_service_statuses = collections.defaultdict( set )
@@ -793,11 +798,18 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
                 ( hashes, max_hamming ) = value
                 
-                self._similar_to = ( hashes, max_hamming )
+                self._similar_to_files = ( hashes, max_hamming )
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
+                
+                ( pixel_hashes, perceptual_hashes, max_hamming ) = value
+                
+                self._similar_to_data = ( pixel_hashes, perceptual_hashes, max_hamming )
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
@@ -876,9 +888,14 @@ class FileSystemPredicates( object ):
         return self._ratings_predicates
         
     
-    def GetSimilarTo( self ):
+    def GetSimilarToData( self ):
         
-        return self._similar_to
+        return self._similar_to_data
+        
+    
+    def GetSimilarToFiles( self ):
+        
+        return self._similar_to_files
         
     
     def GetSimpleInfo( self ):
@@ -891,9 +908,14 @@ class FileSystemPredicates( object ):
         return self._timestamp_ranges
         
     
-    def HasSimilarTo( self ):
+    def HasSimilarToData( self ):
         
-        return self._similar_to is not None
+        return self._similar_to_data is not None
+        
+    
+    def HasSimilarToFiles( self ):
+        
+        return self._similar_to_files is not None
         
     
     def HasSystemEverything( self ):
@@ -1559,7 +1581,8 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_SYSTEM_NUM_NOTES,
     PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
     PREDICATE_TYPE_SYSTEM_NUM_WORDS,
-    PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
+    PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
     PREDICATE_TYPE_SYSTEM_SIZE,
     PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
@@ -1681,11 +1704,21 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_value = ( operator, value, service_key.hex() )
             
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
             
             ( hashes, max_hamming ) = self._value
             
             serialisable_value = ( [ hash.hex() for hash in hashes ], max_hamming )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
+            
+            ( pixel_hashes, perceptual_hashes, max_hamming ) = self._value
+            
+            serialisable_value = (
+                [ pixel_hash.hex() for pixel_hash in pixel_hashes ],
+                [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ],
+                max_hamming
+            )
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
@@ -1732,11 +1765,21 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( operator, value, bytes.fromhex( service_key ) )
             
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
             
             ( serialisable_hashes, max_hamming ) = serialisable_value
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ) , max_hamming )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
+            
+            ( serialisable_pixel_hashes, serialisable_perceptual_hashes, max_hamming ) = serialisable_value
+            
+            self._value = (
+                tuple( [ bytes.fromhex( serialisable_pixel_hash ) for serialisable_pixel_hash in serialisable_pixel_hashes ] ),
+                tuple( [ bytes.fromhex( serialisable_perceptual_hash ) for serialisable_perceptual_hash in serialisable_perceptual_hashes ] ),
+                max_hamming
+            )
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
@@ -1834,7 +1877,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
             
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_HASH, PREDICATE_TYPE_SYSTEM_SIMILAR_TO ):
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_HASH, PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES ):
                 
                 # other value is either hash type or max hamming distance
                 
@@ -2144,7 +2187,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if my_type == other_type:
             
-            if my_type in ( PREDICATE_TYPE_SYSTEM_LIMIT, PREDICATE_TYPE_SYSTEM_HASH, PREDICATE_TYPE_SYSTEM_SIMILAR_TO ):
+            if my_type in ( PREDICATE_TYPE_SYSTEM_LIMIT, PREDICATE_TYPE_SYSTEM_HASH ):
                 
                 return True
                 
@@ -2268,6 +2311,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA: base = 'embedded metadata'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO: base = 'similar files'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
@@ -2727,7 +2771,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
                 base = 'similar to'
                 
@@ -2736,6 +2780,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     ( hashes, max_hamming ) = self._value
                     
                     base += ' {} files using max hamming of {}'.format( HydrusData.ToHumanInt( len( hashes ) ), max_hamming )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
+                
+                base = 'similar to'
+                
+                if self._value is not None:
+                    
+                    ( pixel_hashes, perceptual_hashes, max_hamming ) = self._value
+                    
+                    base += ' {} similar data hashes using max hamming of {}'.format( HydrusData.ToHumanInt( len( pixel_hashes ) + len( perceptual_hashes ) ), max_hamming )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:

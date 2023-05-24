@@ -168,10 +168,12 @@ def CopyAndMergeTree( source, dest ):
             
         
     
+
 def CopyFileLikeToFileLike( f_source, f_dest ):
     
     for block in ReadFileLikeAsBlocks( f_source ): f_dest.write( block )
     
+
 def DeletePath( path ):
     
     if HG.file_report_mode:
@@ -181,7 +183,7 @@ def DeletePath( path ):
         HydrusData.ShowText( ''.join( traceback.format_stack() ) )
         
     
-    if os.path.exists( path ):
+    if os.path.lexists( path ):
         
         TryToMakeFileWriteable( path )
         
@@ -865,7 +867,7 @@ def RecyclePath( path ):
         HydrusData.ShowText( ''.join( traceback.format_stack() ) )
         
     
-    if os.path.exists( path ):
+    if os.path.lexists( path ):
         
         TryToMakeFileWriteable( path )
         

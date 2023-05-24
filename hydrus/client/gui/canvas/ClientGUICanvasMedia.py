@@ -753,6 +753,15 @@ class Animation( QW.QWidget ):
                     ClientGUIMedia.OpenExternally( self._media )
                     
                 
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
+                
+                if self._media is not None:
+                    
+                    self.Pause()
+                    
+                    ClientGUIMedia.OpenFileLocation( self._media )
+                    
+                
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
@@ -1492,7 +1501,7 @@ class MediaContainer( QW.QWidget ):
                 
                 if isinstance( media_window, QtMediaPlayer ):
                     
-                    media_window.deleteLater()
+                    HG.client_controller.gui.ReleaseQtMediaPlayer( media_window )
                     
                 
             else:
@@ -3044,6 +3053,11 @@ class QtMediaPlayer( QW.QWidget ):
         return self._playthrough_count > 0
         
     
+    def IsCompletelyUnloaded( self ):
+        
+        return self._media_player.mediaStatus() == QM.QMediaPlayer.MediaStatus.NoMedia
+        
+    
     def IsPaused( self ):
         
         # don't use isPlaying(), Qt 6.4.1 doesn't support it lol
@@ -3101,6 +3115,15 @@ class QtMediaPlayer( QW.QWidget ):
                     self.Pause()
                     
                     ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
+                
+                if self._media is not None:
+                    
+                    self.Pause()
+                    
+                    ClientGUIMedia.OpenFileLocation( self._media )
                     
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
@@ -3187,6 +3210,15 @@ class QtMediaPlayer( QW.QWidget ):
         if not start_paused:
             
             self._media_player.play()
+            
+        
+    
+    def TryToUnload( self ):
+        
+        # this call is crashtastic, so don't inject it while the player is buffering or whatever
+        if self._media_player.mediaStatus() in ( QM.QMediaPlayer.MediaStatus.LoadedMedia, QM.QMediaPlayer.MediaStatus.EndOfMedia, QM.QMediaPlayer.MediaStatus.InvalidMedia ):
+            
+            self._media_player.setSource( '' )
             
         
     
@@ -3664,6 +3696,13 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 if self._media is not None:
                     
                     ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
+                
+                if self._media is not None:
+                    
+                    ClientGUIMedia.OpenFileLocation( self._media )
                     
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:

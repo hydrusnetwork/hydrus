@@ -7,7 +7,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientThreading
@@ -24,16 +23,18 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         ClientDBModule.ClientDBModule.__init__( self, 'client similar files', cursor )
         
+        self._perceptual_hash_id_to_vp_tree_node_cache = {}
+        self._non_vp_treed_perceptual_hash_ids = set()
+        self._root_node_perceptual_hash_id = None
+        
     
     def _AddLeaf( self, perceptual_hash_id, perceptual_hash ):
         
         result = self._Execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
         
-        if result is None:
-            
-            parent_id = None
-            
-        else:
+        parent_id = None
+        
+        if result is not None:
             
             ( root_node_perceptual_hash_id, ) = result
             
@@ -62,6 +63,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                         
                         self._Execute( 'UPDATE shape_vptree SET inner_id = ?, radius = ? WHERE phash_id = ?;', ( perceptual_hash_id, distance_to_ancestor, ancestor_id ) )
                         
+                        self._ClearPerceptualHashesFromVPTreeNodeCache( ( ancestor_id, ) )
+                        
                         parent_id = ancestor_id
                         
                     
@@ -74,6 +77,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     if ancestor_outer_id is None:
                         
                         self._Execute( 'UPDATE shape_vptree SET outer_id = ? WHERE phash_id = ?;', ( perceptual_hash_id, ancestor_id ) )
+                        
+                        self._ClearPerceptualHashesFromVPTreeNodeCache( ( ancestor_id, ) )
                         
                         parent_id = ancestor_id
                         
@@ -98,6 +103,9 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             self._ExecuteMany( 'UPDATE shape_vptree SET inner_population = inner_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_inside ) )
             self._ExecuteMany( 'UPDATE shape_vptree SET outer_population = outer_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_outside ) )
             
+            self._ClearPerceptualHashesFromVPTreeNodeCache( ancestors_we_are_inside )
+            self._ClearPerceptualHashesFromVPTreeNodeCache( ancestors_we_are_outside )
+            
         
         radius = None
         inner_id = None
@@ -106,6 +114,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         outer_population = 0
         
         self._Execute( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( perceptual_hash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
+        
+        self._ClearPerceptualHashesFromVPTreeNodeCache( ( perceptual_hash_id, ) )
         
     
     def _GenerateBranch( self, job_key, parent_id, perceptual_hash_id, perceptual_hash, children ):
@@ -118,6 +128,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         num_done = 0
         num_to_do = len( children ) + 1
+        
+        all_altered_phash_ids = set()
         
         while len( process_queue ) > 0:
             
@@ -177,6 +189,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             insert_rows.append( ( perceptual_hash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
             
+            all_altered_phash_ids.add( perceptual_hash_id )
+            
             if inner_id is not None:
                 
                 process_queue.append( ( perceptual_hash_id, inner_id, inner_perceptual_hash, inner_children ) )
@@ -193,6 +207,15 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         job_key.SetStatusText( 'branch constructed, now committing', 2 )
         
         self._ExecuteMany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
+        
+        self._ClearPerceptualHashesFromVPTreeNodeCache( all_altered_phash_ids )
+        
+    
+    def _GetHashIdsWithPixelHashId( self, pixel_hash_id: int ) -> typing.Set[ int ]:
+        
+        pixel_dupe_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM pixel_hash_map WHERE pixel_hash_id = ?;', ( pixel_hash_id, ) ) )
+        
+        return pixel_dupe_hash_ids
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:
@@ -226,11 +249,26 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _GetPerceptualHashId( self, perceptual_hash ):
+    def _GetPerceptualHashes( self, perceptual_hash_ids: typing.Collection[ int ] ) -> typing.Set[ bytes ]:
+        
+        with self._MakeTemporaryIntegerTable( perceptual_hash_ids, 'phash_id' ) as temp_table_name:
+            
+            perceptual_hashes = self._STS( self._Execute( f'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN {temp_table_name};' ) )
+            
+        
+        return perceptual_hashes
+        
+    
+    def _GetPerceptualHashId( self, perceptual_hash, do_not_create = False ):
         
         result = self._Execute( 'SELECT phash_id FROM shape_perceptual_hashes WHERE phash = ?;', ( sqlite3.Binary( perceptual_hash ), ) ).fetchone()
         
         if result is None:
+            
+            if do_not_create:
+                
+                return None
+                
             
             self._Execute( 'INSERT INTO shape_perceptual_hashes ( phash ) VALUES ( ? );', ( sqlite3.Binary( perceptual_hash ), ) )
             
@@ -244,6 +282,29 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
         
         return perceptual_hash_id
+        
+    
+    def _GetPerceptualHashIdsFromHashId( self, hash_id: int ) -> typing.Set[ int ]:
+        
+        perceptual_hash_ids = self._STS( self._Execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+        
+        return perceptual_hash_ids
+        
+    
+    def _GetPixelHashId( self, hash_id: int ) -> typing.Optional[ int ]:
+        
+        result = self._Execute( 'SELECT pixel_hash_id FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            return None
+            
+        else:
+            
+            ( pixel_hash_id, ) = result
+            
+            return pixel_hash_id
+            
         
     
     def _PopBestRootNode( self, node_rows ):
@@ -361,13 +422,15 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         unbalanced_nodes = self._Execute( query, ( perceptual_hash_id, ) ).fetchall()
         
-        # removal of old branch, maintenance schedule, and orphan phashes
+        # removal of old branch, maintenance schedule, and orphan perceptual_hashes
         
         job_key.SetStatusText( HydrusData.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch', 2 )
         
         unbalanced_perceptual_hash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
         
         self._ExecuteMany( 'DELETE FROM shape_vptree WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_perceptual_hash_ids ) )
+        
+        self._ClearPerceptualHashesFromVPTreeNodeCache( unbalanced_perceptual_hash_ids )
         
         self._ExecuteMany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_perceptual_hash_ids ) )
         
@@ -423,9 +486,29 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         self._Execute( query, ( new_perceptual_hash_id, useful_population, parent_id ) )
         
+        self._ClearPerceptualHashesFromVPTreeNodeCache( ( parent_id, ) )
+        
         if useful_population > 0:
             
             self._GenerateBranch( job_key, parent_id, new_perceptual_hash_id, new_perceptual_hash, useful_nodes )
+            
+        
+    
+    def _ClearPerceptualHashesFromVPTreeNodeCache( self, perceptual_hash_ids: typing.Collection[ int ] ):
+        
+        for perceptual_hash_id in perceptual_hash_ids:
+            
+            if perceptual_hash_id in self._perceptual_hash_id_to_vp_tree_node_cache:
+                
+                del self._perceptual_hash_id_to_vp_tree_node_cache[ perceptual_hash_id ]
+                
+            
+            self._non_vp_treed_perceptual_hash_ids.discard( perceptual_hash_id )
+            
+            if self._root_node_perceptual_hash_id == perceptual_hash_id:
+                
+                self._root_node_perceptual_hash_id = None
+                
             
         
     
@@ -434,6 +517,54 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         if 'external_caches.shape_vptree' in repopulate_table_names or 'external_caches.shape_maintenance_branch_regen' in repopulate_table_names:
             
             self.RegenerateTree()
+            
+        
+    
+    def _TryToPopulatePerceptualHashToVPTreeNodeCache( self, perceptual_hash_ids: typing.Collection[ int ] ):
+        
+        if len( self._perceptual_hash_id_to_vp_tree_node_cache ) > 1000000:
+            
+            if not isinstance( perceptual_hash_ids, set ):
+                
+                perceptual_hash_ids = set( perceptual_hash_ids )
+                
+            
+            self._perceptual_hash_id_to_vp_tree_node_cache = { perceptual_hash_id : phash for ( perceptual_hash_id, phash ) in self._perceptual_hash_id_to_vp_tree_node_cache.items() if perceptual_hash_id in perceptual_hash_ids }
+            
+        
+        uncached_perceptual_hash_ids = { perceptual_hash_id for perceptual_hash_id in perceptual_hash_ids if perceptual_hash_id not in self._perceptual_hash_id_to_vp_tree_node_cache and perceptual_hash_id not in self._non_vp_treed_perceptual_hash_ids }
+        
+        if len( uncached_perceptual_hash_ids ) > 0:
+            
+            if len( uncached_perceptual_hash_ids ) == 1:
+                
+                ( uncached_perceptual_hash_id, ) = uncached_perceptual_hash_ids
+                
+                rows = self._Execute( 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes CROSS JOIN shape_vptree USING ( phash_id ) WHERE phash_id = ?;', ( uncached_perceptual_hash_id, ) ).fetchall()
+                
+            else:
+                
+                with self._MakeTemporaryIntegerTable( uncached_perceptual_hash_ids, 'phash_id' ) as temp_table_name:
+                    
+                    # temp perceptual_hash_ids to actual perceptual_hashes and tree info
+                    rows = self._Execute( 'SELECT phash_id, phash, radius, inner_id, outer_id FROM {} CROSS JOIN shape_perceptual_hashes USING ( phash_id ) CROSS JOIN shape_vptree USING ( phash_id );'.format( temp_table_name ) ).fetchall()
+                    
+                
+            
+            uncached_perceptual_hash_ids_to_vp_tree_nodes = { perceptual_hash_id : ( phash, radius, inner_id, outer_id ) for ( perceptual_hash_id, phash, radius, inner_id, outer_id ) in rows }
+            
+            if len( uncached_perceptual_hash_ids_to_vp_tree_nodes ) < len( uncached_perceptual_hash_ids ):
+                
+                for perceptual_hash_id in uncached_perceptual_hash_ids:
+                    
+                    if perceptual_hash_id not in uncached_perceptual_hash_ids_to_vp_tree_nodes:
+                        
+                        self._non_vp_treed_perceptual_hash_ids.add( perceptual_hash_id )
+                        
+                    
+                
+            
+            self._perceptual_hash_id_to_vp_tree_node_cache.update( uncached_perceptual_hash_ids_to_vp_tree_nodes )
             
         
     
@@ -623,6 +754,10 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             self._Execute( 'DELETE FROM shape_vptree;' )
             
+            self._perceptual_hash_id_to_vp_tree_node_cache = {}
+            self._non_vp_treed_perceptual_hash_ids = set()
+            self._root_node_perceptual_hash_id = None
+            
             all_nodes = self._Execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
             
             job_key.SetStatusText( HydrusData.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
@@ -649,45 +784,100 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def Search( self, hash_id, max_hamming_distance ):
+    def SearchFile( self, hash_id: int, max_hamming_distance: int ) -> typing.List:
         
-        similar_hash_ids_and_distances = []
+        similar_hash_ids_and_distances = [ ( hash_id, 0 ) ]
         
-        result = self._Execute( 'SELECT pixel_hash_id FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        pixel_hash_id = self._GetPixelHashId( hash_id )
         
-        if result is not None:
+        if pixel_hash_id is not None:
             
-            ( pixel_hash_id, ) = result
-            
-            pixel_dupe_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM pixel_hash_map WHERE pixel_hash_id = ? AND hash_id != ?;', ( pixel_hash_id, hash_id ) ) )
-            
-            similar_hash_ids_and_distances = [ ( pixel_dupe_hash_id, 0 ) for pixel_dupe_hash_id in pixel_dupe_hash_ids ]
+            similar_hash_ids_and_distances.extend( self.SearchPixelHashes( ( pixel_hash_id, ) ) )
             
         
         if max_hamming_distance == 0:
             
-            similar_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN ( SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ? );', ( hash_id, ) ) )
+            exact_match_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN ( SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ? );', ( hash_id, ) ) )
             
-            similar_hash_ids_and_distances.extend( [ ( similar_hash_id, 0 ) for similar_hash_id in similar_hash_ids ] )
+            similar_hash_ids_and_distances.extend( [ ( exact_match_hash_id, 0 ) for exact_match_hash_id in exact_match_hash_ids ] )
+            
+        else:
+            
+            perceptual_hash_ids = self._GetPerceptualHashIdsFromHashId( hash_id )
+            
+            perceptual_hashes = self._GetPerceptualHashes( perceptual_hash_ids )
+            
+            similar_hash_ids_and_distances.extend( self.SearchPerceptualHashes( perceptual_hashes, max_hamming_distance ) )
+            
+        
+        similar_hash_ids_and_distances = HydrusData.DedupeList( similar_hash_ids_and_distances )
+        
+        return similar_hash_ids_and_distances
+        
+    
+    def SearchPixelHashes( self, search_pixel_hash_ids: typing.Collection[ int ] ):
+        
+        similar_hash_ids_and_distances = []
+        
+        for search_pixel_hash_id in search_pixel_hash_ids:
+            
+            pixel_dupe_hash_ids = self._GetHashIdsWithPixelHashId( search_pixel_hash_id )
+            
+            similar_hash_ids_and_distances.extend( [ ( pixel_dupe_hash_id, 0 ) for pixel_dupe_hash_id in pixel_dupe_hash_ids ] )
+            
+        
+        similar_hash_ids_and_distances = HydrusData.DedupeList( similar_hash_ids_and_distances )
+        
+        return similar_hash_ids_and_distances
+        
+    
+    def SearchPerceptualHashes( self, search_perceptual_hashes: typing.Collection[ bytes ], max_hamming_distance: int ) -> typing.List:
+        
+        similar_hash_ids_and_distances = []
+        
+        if len( search_perceptual_hashes ) == 0:
+            
+            return similar_hash_ids_and_distances
+            
+        
+        if max_hamming_distance == 0:
+            
+            perceptual_hash_ids = set()
+            
+            for search_perceptual_hash in search_perceptual_hashes:
+                
+                perceptual_hash_id = self._GetPerceptualHashId( search_perceptual_hash, do_not_create = True )
+                
+                if perceptual_hash_id is not None:
+                    
+                    perceptual_hash_ids.add( perceptual_hash_id )
+                    
+                
+            
+            if len( perceptual_hash_ids ) > 0:
+                
+                with self._MakeTemporaryIntegerTable( perceptual_hash_ids, 'phash_id' ) as temp_table_name:
+                    
+                    similar_hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM shape_perceptual_hash_map NATURAL JOIN {temp_table_name};' ) )
+                    
+                
+                similar_hash_ids_and_distances.extend( [ ( similar_hash_id, 0 ) for similar_hash_id in similar_hash_ids ] )
+                
             
         else:
             
             search_radius = max_hamming_distance
             
-            top_node_result = self._Execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
-            
-            if top_node_result is None:
+            if self._root_node_perceptual_hash_id is None:
                 
-                return similar_hash_ids_and_distances
+                top_node_result = self._Execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
                 
-            
-            ( root_node_perceptual_hash_id, ) = top_node_result
-            
-            search = self._STL( self._Execute( 'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-            
-            if len( search ) == 0:
+                if top_node_result is None:
+                    
+                    return similar_hash_ids_and_distances
+                    
                 
-                return similar_hash_ids_and_distances
+                ( self._root_node_perceptual_hash_id, ) = top_node_result
                 
             
             similar_perceptual_hash_ids_to_distances = {}
@@ -695,9 +885,9 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             num_cycles = 0
             total_nodes_searched = 0
             
-            for search_perceptual_hash in search:
+            for search_perceptual_hash in search_perceptual_hashes:
                 
-                next_potentials = [ root_node_perceptual_hash_id ]
+                next_potentials = [ self._root_node_perceptual_hash_id ]
                 
                 while len( next_potentials ) > 0:
                     
@@ -707,70 +897,72 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     num_cycles += 1
                     total_nodes_searched += len( current_potentials )
                     
-                    for group_of_current_potentials in HydrusLists.SplitListIntoChunks( current_potentials, 10000 ):
+                    # this is no longer an iterable inside the main node SELECT because it was causing crashes on linux!!
+                    # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching perceptual_hashes it presumably was still hanging on to
+                    # the crash was in sqlite code, again presumably on subsequent fetch
+                    # adding a fake delay in seemed to fix it also. guess it was some memory maintenance buffer/bytes thing
+                    # anyway, we now just get the whole lot of results first and then work on the whole lot
+                    # UPDATE: we moved to a cache finally, so the iteration danger is less worrying, but leaving the above up anyway
+                    
+                    self._TryToPopulatePerceptualHashToVPTreeNodeCache( current_potentials )
+                    
+                    for node_perceptual_hash_id in current_potentials:
                         
-                        # this is split into fixed lists of results of subgroups because as an iterable it was causing crashes on linux!!
-                        # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching phashes it presumably was still hanging on to
-                        # the crash was in sqlite code, again presumably on subsequent fetch
-                        # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
-                        # anyway, we now just get the whole lot of results first and then work on the whole lot
-                        
-                        with self._MakeTemporaryIntegerTable( group_of_current_potentials, 'phash_id' ) as temp_table_name:
+                        if node_perceptual_hash_id not in self._perceptual_hash_id_to_vp_tree_node_cache:
                             
-                            # temp phash_ids to actual phashes and tree info
-                            results = self._Execute( 'SELECT phash_id, phash, radius, inner_id, outer_id FROM {} CROSS JOIN shape_perceptual_hashes USING ( phash_id ) CROSS JOIN shape_vptree USING ( phash_id );'.format( temp_table_name ) ).fetchall()
+                            # something crazy happened, probably a broken tree branch, move on
+                            continue
                             
                         
-                        for ( node_perceptual_hash_id, node_perceptual_hash, node_radius, inner_perceptual_hash_id, outer_perceptual_hash_id ) in results:
+                        ( node_perceptual_hash, node_radius, inner_perceptual_hash_id, outer_perceptual_hash_id ) = self._perceptual_hash_id_to_vp_tree_node_cache[ node_perceptual_hash_id ]
+                        
+                        # first check the node itself--is it similar?
+                        
+                        node_hamming_distance = HydrusData.Get64BitHammingDistance( search_perceptual_hash, node_perceptual_hash )
+                        
+                        if node_hamming_distance <= search_radius:
                             
-                            # first check the node itself--is it similar?
-                            
-                            node_hamming_distance = HydrusData.Get64BitHammingDistance( search_perceptual_hash, node_perceptual_hash )
-                            
-                            if node_hamming_distance <= search_radius:
+                            if node_perceptual_hash_id in similar_perceptual_hash_ids_to_distances:
                                 
-                                if node_perceptual_hash_id in similar_perceptual_hash_ids_to_distances:
-                                    
-                                    current_distance = similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ]
-                                    
-                                    similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ] = min( node_hamming_distance, current_distance )
-                                    
-                                else:
-                                    
-                                    similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ] = node_hamming_distance
-                                    
+                                current_distance = similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ]
+                                
+                                similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ] = min( node_hamming_distance, current_distance )
+                                
+                            else:
+                                
+                                similar_perceptual_hash_ids_to_distances[ node_perceptual_hash_id ] = node_hamming_distance
                                 
                             
-                            # now how about its children?
+                        
+                        # now how about its children--where should we search next?
+                        
+                        if node_radius is not None:
                             
-                            if node_radius is not None:
+                            # we have two spheres--node and search--their centers separated by node_hamming_distance
+                            # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
+                            # there are four possibles:
+                            # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
+                            # (----N---(-)-S--)      intersects with both
+                            # (----N-(--S-)-)        intersects with both
+                            # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                            
+                            if inner_perceptual_hash_id is not None:
                                 
-                                # we have two spheres--node and search--their centers separated by node_hamming_distance
-                                # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
-                                # there are four possibles:
-                                # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
-                                # (----N---(-)-S--)      intersects with both
-                                # (----N-(--S-)-)        intersects with both
-                                # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                                spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
                                 
-                                if inner_perceptual_hash_id is not None:
+                                if not spheres_disjoint: # i.e. they intersect at some point
                                     
-                                    spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
-                                    
-                                    if not spheres_disjoint: # i.e. they intersect at some point
-                                        
-                                        next_potentials.append( inner_perceptual_hash_id )
-                                        
+                                    next_potentials.append( inner_perceptual_hash_id )
                                     
                                 
-                                if outer_perceptual_hash_id is not None:
+                            
+                            if outer_perceptual_hash_id is not None:
+                                
+                                search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
+                                
+                                if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
                                     
-                                    search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
-                                    
-                                    if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
-                                        
-                                        next_potentials.append( outer_perceptual_hash_id )
-                                        
+                                    next_potentials.append( outer_perceptual_hash_id )
                                     
                                 
                             
@@ -783,14 +975,14 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 HydrusData.ShowText( 'Similar file search touched {} nodes over {} cycles.'.format( HydrusData.ToHumanInt( total_nodes_searched ), HydrusData.ToHumanInt( num_cycles ) ) )
                 
             
-            # so, now we have phash_ids and distances. let's map that to actual files.
-            # files can have multiple phashes, and phashes can refer to multiple files, so let's make sure we are setting the smallest distance we found
+            # so, now we have perceptual_hash_ids and distances. let's map that to actual files.
+            # files can have multiple perceptual_hashes, and perceptual_hashes can refer to multiple files, so let's make sure we are setting the smallest distance we found
             
             similar_perceptual_hash_ids = list( similar_perceptual_hash_ids_to_distances.keys() )
             
             with self._MakeTemporaryIntegerTable( similar_perceptual_hash_ids, 'phash_id' ) as temp_table_name:
                 
-                # temp phashes to hash map
+                # temp perceptual_hashes to hash map
                 similar_perceptual_hash_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT phash_id, hash_id FROM {} CROSS JOIN shape_perceptual_hash_map USING ( phash_id );'.format( temp_table_name ) ) )
                 
             

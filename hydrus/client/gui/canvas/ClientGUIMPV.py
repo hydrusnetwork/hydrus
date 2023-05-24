@@ -255,6 +255,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         player = self._player
         
+        # note that these happen on the mpv mainloop, not UI code, so we need to post events to stay stable
+        
         @player.event_callback( mpv.MpvEventID.SEEK )
         def seek_event( event ):
             
@@ -428,7 +430,18 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if self._media is not None:
                     
+                    self.Pause()
+                    
                     ClientGUIMedia.OpenExternally( self._media )
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
+                
+                if self._media is not None:
+                    
+                    self.Pause()
+                    
+                    ClientGUIMedia.OpenFileLocation( self._media )
                     
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
@@ -568,9 +581,11 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     self._player.command( 'playlist-remove', 'current' )
                     
-                except:
+                except Exception as e:
                     
-                    pass # sometimes happens after an error--screw it
+                    HydrusData.PrintException( e )
+                    
+                    pass # sometimes happens after an error, let's see if we can figure it out, like wait for buffering to finish and try again?
                     
                 
             

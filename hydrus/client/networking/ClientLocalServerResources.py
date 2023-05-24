@@ -1607,16 +1607,27 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
         
+        body_dict = {}
+        
         try:
             
             file_import_status = file_import_job.DoWork()
             
-        except:
+        except Exception as e:
             
-            file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_ERROR, file_import_job.GetHash(), note = traceback.format_exc() )
+            if isinstance( e, ( HydrusExceptions.VetoException, HydrusExceptions.UnsupportedFileException ) ):
+                
+                note = str( e )
+                
+            else:
+                
+                note = repr( e ).splitlines()[0]
+                
             
-        
-        body_dict = {}
+            file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_ERROR, file_import_job.GetHash(), note = note )
+            
+            body_dict[ 'traceback' ] = traceback.format_exc()
+            
         
         body_dict[ 'status' ] = file_import_status.status
         body_dict[ 'hash' ] = HydrusData.BytesToNoneOrHex( file_import_status.hash )
