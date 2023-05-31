@@ -12,9 +12,9 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 class FileDuplicatesManager( object ):
     

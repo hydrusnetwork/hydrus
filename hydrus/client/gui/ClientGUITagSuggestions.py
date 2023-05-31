@@ -13,7 +13,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
-from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import QtPorting as QP
@@ -24,6 +23,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
+from hydrus.client.search import ClientSearch
 
 def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearch.Predicate ]:
     

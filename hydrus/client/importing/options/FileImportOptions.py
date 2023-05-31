@@ -10,8 +10,8 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.search import ClientSearch
 
 IMPORT_TYPE_QUIET = 0
 IMPORT_TYPE_LOUD = 1

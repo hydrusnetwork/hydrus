@@ -18,7 +18,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
@@ -30,10 +29,12 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
-from hydrus.client.gui.pages import ClientGUIManagement
+from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.pages import ClientGUIManagementPanels
 from hydrus.client.gui.pages import ClientGUIResults
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
+from hydrus.client.search import ClientSearch
 
 def ConvertNumHashesToWeight( num_hashes: int ) -> int:
     
@@ -221,11 +222,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     
                 elif entry_type == 'page_duplicate_filter':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerDuplicateFilter() )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerDuplicateFilter() )
                     
                 elif entry_type == 'pages_notebook':
                     
@@ -233,25 +234,25 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                 elif entry_type == 'page_import_gallery':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportGallery() )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerImportGallery() )
                     
                 elif entry_type == 'page_import_simple_downloader':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportSimpleDownloader() )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerImportSimpleDownloader() )
                     
                 elif entry_type == 'page_import_watcher':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportMultipleWatcher() )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerImportMultipleWatcher() )
                     
                 elif entry_type == 'page_import_urls':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportURLs() )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerImportURLs() )
                     
                 elif entry_type == 'page_petitions':
                     
                     petition_service_key = obj
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerPetitions( petition_service_key ) )
+                    self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerPetitions( petition_service_key ) )
                     
                 
                 self._action_picked = True
@@ -426,7 +427,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
 class Page( QW.QWidget ):
     
-    def __init__( self, parent, controller, management_controller, initial_hashes ):
+    def __init__( self, parent, controller, management_controller: ClientGUIManagementController.ManagementController, initial_hashes ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -452,7 +453,7 @@ class Page( QW.QWidget ):
         
         self._done_split_setups = False
         
-        self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
+        self._management_panel = ClientGUIManagementPanels.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
         self._preview_panel = QW.QFrame( self._search_preview_split )
         self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -537,7 +538,7 @@ class Page( QW.QWidget ):
         self._controller.gui.SetStatusBarDirty()
         
     
-    def _SwapMediaPanel( self, new_panel ):
+    def _SwapMediaPanel( self, new_panel: ClientGUIResults.MediaPanel ):
         
         previous_sizes = self._management_media_split.sizes()
         
@@ -549,7 +550,7 @@ class Page( QW.QWidget ):
         
         if media_collect.DoesACollect():
             
-            new_panel.Collect( self._page_key, media_collect )
+            new_panel.Collect( media_collect )
             
             media_sort = self._management_panel.GetMediaSort()
             
@@ -678,6 +679,11 @@ class Page( QW.QWidget ):
         d[ 'media' ] = media_info
         
         return d
+        
+    
+    def GetCollect( self ):
+        
+        return self._management_panel.GetMediaCollect()
         
     
     def GetHashes( self ):
@@ -870,6 +876,11 @@ class Page( QW.QWidget ):
         return ( hpos, vpos )
         
     
+    def GetSort( self ):
+        
+        return self._management_panel.GetMediaSort()
+        
+    
     def GetTotalFileSize( self ):
         
         if self._initialised:
@@ -916,7 +927,7 @@ class Page( QW.QWidget ):
     
     def IsGalleryDownloaderPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY
+        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY
         
     
     def IsImporter( self ):
@@ -931,12 +942,12 @@ class Page( QW.QWidget ):
     
     def IsMultipleWatcherPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
+        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
         
     
     def IsURLImportPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_URLS
+        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_URLS
         
     
     def PageHidden( self ):
@@ -1080,9 +1091,7 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            location_context = self._management_controller.GetLocationContext()
-            
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, location_context, media_results )
+            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, self._management_controller, media_results )
             
             self._SwapMediaPanel( media_panel )
             
@@ -1103,6 +1112,11 @@ class Page( QW.QWidget ):
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
         job.start()
+        
+    
+    def SetSort( self, media_sort, do_sort = True ):
+        
+        self._management_panel.SetMediaSort( media_sort, do_sort = do_sort )
         
     
     def Start( self ):
@@ -2306,7 +2320,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             'name' : self.GetName(),
             'page_key' : self._page_key.hex(),
             'page_state' : self.GetPageState(),
-            'page_type' : ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
+            'page_type' : ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES
         }
         
     
@@ -2623,7 +2637,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_state' ] = self.GetPageState()
-        root[ 'page_type' ] = ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
+        root[ 'page_type' ] = ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES
         root[ 'selected' ] = is_selected
         root[ 'pages' ] = my_pages_list
         
@@ -3211,47 +3225,58 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def NewPageDuplicateFilter( self, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerDuplicateFilter()
+        management_controller = ClientGUIManagementController.CreateManagementControllerDuplicateFilter()
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
     def NewPageImportGallery( self, page_name = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( page_name = page_name )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportGallery( page_name = page_name )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportSimpleDownloader( self, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportSimpleDownloader()
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
     def NewPageImportMultipleWatcher( self, page_name = None, url = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( page_name = page_name, url = url )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportMultipleWatcher( page_name = page_name, url = url )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportURLs( page_name = page_name )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPagePetitions( self, service_key, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
+        management_controller = ClientGUIManagementController.CreateManagementControllerPetitions( service_key )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, location_context: ClientLocation.LocationContext, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
+    def NewPageQuery(
+        self,
+        location_context: ClientLocation.LocationContext,
+        initial_hashes = None,
+        initial_predicates = None,
+        initial_sort = None,
+        initial_collect = None,
+        page_name = None,
+        on_deepest_notebook = False,
+        do_sort = False,
+        select_page = True
+    ):
         
         if initial_hashes is None:
             
@@ -3281,20 +3306,34 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if location_context.IsAllKnownFiles() and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            location_context = location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
         tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
+        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
+        
+        if initial_sort is not None:
+            
+            management_controller.SetVariable( 'media_sort', initial_sort )
+            
+        
+        if initial_collect is not None:
+            
+            management_controller.SetVariable( 'media_collect', initial_collect )
+            
         
         page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
+        # don't need to do 'Do a Collect if needed', since SwapPanel lower down does it for us
+        
         if do_sort:
             
-            HG.client_controller.pub( 'do_page_sort', page.GetPageKey() )
+            media_sort = page.GetSort()
+            
+            page.GetMediaPanel().Sort( media_sort )
             
         
         return page

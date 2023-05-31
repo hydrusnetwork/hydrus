@@ -8,10 +8,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -22,6 +20,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 # wew lad
 # https://stackoverflow.com/questions/46456238/checkbox-not-visible-inside-combobox
@@ -305,24 +304,20 @@ class CollectComboCtrl( QW.QComboBox ):
 
 class MediaCollectControl( QW.QWidget ):
     
-    def __init__( self, parent, management_controller = None, silent = False ):
+    collectChanged = QC.Signal( ClientMedia.MediaCollect )
+    
+    def __init__( self, parent, media_collect = None ):
         
         QW.QWidget.__init__( self, parent )
         
         # this is trash, rewrite it to deal with the media_collect object, not the management controller
         
-        self._management_controller = management_controller
-        
-        if self._management_controller is not None and self._management_controller.HasVariable( 'media_collect' ):
+        if media_collect is None:
             
-            self._media_collect = self._management_controller.GetVariable( 'media_collect' )
-            
-        else:
-            
-            self._media_collect = HG.client_controller.new_options.GetDefaultCollect()
+            media_collect = HG.client_controller.new_options.GetDefaultCollect()
             
         
-        self._silent = silent
+        self._media_collect = media_collect
         
         self._collect_comboctrl = CollectComboCtrl( self, self._media_collect )
         
@@ -365,20 +360,11 @@ class MediaCollectControl( QW.QWidget ):
         self._collect_comboctrl.installEventFilter( self )
         
         HG.client_controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
-        HG.client_controller.sub( self, 'SetCollectFromPage', 'set_page_collect' )
         
     
     def _BroadcastCollect( self ):
         
-        if not self._silent and self._management_controller is not None:
-            
-            self._management_controller.SetVariable( 'media_collect', self._media_collect )
-            
-            page_key = self._management_controller.GetVariable( 'page_key' )
-            
-            HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
-            HG.client_controller.pub( 'a_collect_happened', page_key )
-            
+        self.collectChanged.emit( self._media_collect )
         
     
     def _UpdateButtonsVisible( self ):
@@ -471,25 +457,18 @@ class MediaCollectControl( QW.QWidget ):
             
         
     
-    def SetCollectFromPage( self, page_key, media_collect ):
-        
-        if page_key == self._management_controller.GetVariable( 'page_key' ):
-            
-            self.SetCollect( media_collect )
-            
-            self._BroadcastCollect()
-            
-        
-    
 class MediaSortControl( QW.QWidget ):
     
     sortChanged = QC.Signal( ClientMedia.MediaSort )
     
-    def __init__( self, parent, management_controller = None ):
+    def __init__( self, parent, media_sort = None ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._management_controller = management_controller
+        if media_sort is None:
+            
+            media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            
         
         self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
         
@@ -528,23 +507,15 @@ class MediaSortControl( QW.QWidget ):
         
         self.setLayout( hbox )
         
-        HG.client_controller.sub( self, 'ACollectHappened', 'a_collect_happened' )
-        HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
-        
-        if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
+        try:
             
-            media_sort = self._management_controller.GetVariable( 'media_sort' )
+            self.SetSort( media_sort )
             
-            try:
-                
-                self.SetSort( media_sort )
-                
-            except:
-                
-                default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-                
-                self.SetSort( default_sort )
-                
+        except:
+            
+            default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            
+            self.SetSort( default_sort )
             
         
         self._sort_tag_display_type_button.valueChanged.connect( self.EventTagDisplayTypeChoice )
@@ -555,11 +526,6 @@ class MediaSortControl( QW.QWidget ):
     def _BroadcastSort( self ):
         
         media_sort = self._GetCurrentSort()
-        
-        if self._management_controller is not None:
-            
-            self._management_controller.SetVariable( 'media_sort', media_sort )
-            
         
         self.sortChanged.emit( media_sort )
         
@@ -844,25 +810,7 @@ class MediaSortControl( QW.QWidget ):
             
         
     
-    def ACollectHappened( self, page_key ):
-        
-        if self._management_controller is not None:
-            
-            my_page_key = self._management_controller.GetVariable( 'page_key' )
-            
-            if page_key == my_page_key:
-                
-                self._BroadcastSort()
-                
-            
-        
-    
-    def BroadcastSort( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._management_controller.GetVariable( 'page_key' ):
-            
-            return
-            
+    def BroadcastSort( self ):
         
         self._BroadcastSort()
         
@@ -911,7 +859,7 @@ class MediaSortControl( QW.QWidget ):
         self._UpdateButtonsVisible()
         
     
-    def SetSort( self, media_sort: ClientMedia.MediaSort ):
+    def SetSort( self, media_sort: ClientMedia.MediaSort, do_sort = False ):
         
         self._SetSortType( media_sort.sort_type )
         
@@ -919,6 +867,11 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.SetValue( media_sort.sort_order )
         
         self._tag_context_button.SetValue( media_sort.tag_context )
+        
+        if do_sort:
+            
+            self._BroadcastSort()
+            
         
     
     def wheelEvent( self, event ):

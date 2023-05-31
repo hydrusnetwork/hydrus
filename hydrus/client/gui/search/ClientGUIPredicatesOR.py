@@ -8,10 +8,9 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.search import ClientSearch
 
 # ultimately, rewrite acread to be two classes, acread and acreadthatsupportsor
 # and then this guy only imports the base class, and only the supportsor will know about this

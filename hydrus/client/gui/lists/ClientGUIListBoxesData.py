@@ -5,8 +5,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientSearch
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 class ListBoxItem( object ):
     

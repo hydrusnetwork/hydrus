@@ -35,7 +35,6 @@ from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
-from hydrus.client import ClientSearch
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -63,6 +62,7 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
+from hydrus.client.search import ClientSearch
 
 class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
     

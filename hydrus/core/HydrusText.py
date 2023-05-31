@@ -8,8 +8,8 @@ except:
     
     CHARDET_OK = False
     
+
 import json
-import os
 import re
 
 from hydrus.core import HydrusExceptions

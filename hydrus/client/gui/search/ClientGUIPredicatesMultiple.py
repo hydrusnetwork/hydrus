@@ -7,12 +7,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIPredicatesSingle
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientRatings
+from hydrus.client.search import ClientSearch
 
 class PredicateSystemRatingIncDecControl( QW.QWidget ):
     

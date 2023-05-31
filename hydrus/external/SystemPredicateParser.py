@@ -75,6 +75,7 @@ class Predicate( Enum ):
     WIDTH = auto()
     FILESIZE = auto()
     SIMILAR_TO_FILES = auto()
+    SIMILAR_TO_DATA = auto()
     LIMIT = auto()
     FILETYPE = auto()
     HASH = auto()
@@ -116,7 +117,8 @@ class Predicate( Enum ):
 # Parsing for each of these options is implemented in parse_value
 class Value( Enum ):
     NATURAL = auto()  # An int which holds a non-negative value
-    HASHLIST_WITH_DISTANCE = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is a non-negative integer
+    SHA256_HASHLIST_WITH_DISTANCE = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is a non-negative integer
+    SIMILAR_TO_HASHLIST_WITH_DISTANCE = auto()  # A 3-tuple, where the first two parts are potential pixel and perceptual hashes (as strings), the second part is a non-negative integer
     HASHLIST_WITH_ALGORITHM = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is one of 'sha256', 'md5', 'sha1', 'sha512'
     FILETYPE_LIST = auto()  # A set of file types using the enum set in InitialiseFiletypes as defined in FILETYPES
     # Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
@@ -182,7 +184,8 @@ SYSTEM_PREDICATES = {
     'height': (Predicate.HEIGHT, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'width': (Predicate.WIDTH, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'file ?size': (Predicate.FILESIZE, Operators.RELATIONAL, Value.NATURAL, Units.FILESIZE),
-    'similar to': (Predicate.SIMILAR_TO_FILES, None, Value.HASHLIST_WITH_DISTANCE, None),
+    'similar to(?! data)( files)?': (Predicate.SIMILAR_TO_FILES, None, Value.SHA256_HASHLIST_WITH_DISTANCE, None),
+    'similar to data': (Predicate.SIMILAR_TO_DATA, None, Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
@@ -213,11 +216,11 @@ SYSTEM_PREDICATES = {
     'has (a )?url with (url )?class': (Predicate.URL_CLASS, None, Value.ANY_STRING, None),
     '(does not|doesn\'t) have (a )?url with (url )?class': (Predicate.NO_URL_CLASS, None, Value.ANY_STRING, None),
     'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None),
-    'has notes?': (Predicate.HAS_NOTES, None, None, None),
-    '(no|does not have|doesn\'t have) notes': (Predicate.NO_NOTES, None, None, None),
-    'num(ber of)? notes': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
-    '(has (a )?)?note with name': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
-    '(no|does not have|doesn\'t have) note with name': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
+    'has notes?$': (Predicate.HAS_NOTES, None, None, None),
+    '((has )?no|does not have( a)?|doesn\'t have) notes?$': (Predicate.NO_NOTES, None, None, None),
+    'num(ber of)? notes?': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
+    '(has (a )?)?note (with name|named)': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
+    '((has )?no|does not have|doesn\'t have)( a)? note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
 }
 
 
@@ -302,12 +305,21 @@ def parse_value( string: str, spec ):
         match = re.match( '0|([1-9][0-9]*)', string )
         if match: return string[ len( match[ 0 ] ): ], int( match[ 0 ] )
         raise ValueError( "Invalid value, expected a natural number" )
-    elif spec == Value.HASHLIST_WITH_DISTANCE:
+    elif spec == Value.SHA256_HASHLIST_WITH_DISTANCE:
         match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
         if match:
             hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             distance = int( match[ 'distance' ] )
             return string[ len( match[ 0 ] ): ], (hashes, distance)
+        raise ValueError( "Invalid value, expected a list of hashes with distance" )
+    elif spec == Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE:
+        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
+        if match:
+            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            pixel_hashes = { hash for hash in hashes if len( hash ) == 64 }
+            perceptual_hashes = { hash for hash in hashes if len( hash ) == 16 }
+            distance = int( match[ 'distance' ] )
+            return string[ len( match[ 0 ] ): ], (pixel_hashes, perceptual_hashes, distance)
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
         match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )

@@ -89,7 +89,8 @@ from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
-from hydrus.client.gui.pages import ClientGUIManagement
+from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.pages import ClientGUIManagementPanels
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.parsing import ClientGUIParsing
@@ -5756,7 +5757,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         page_to_process = pages_to_process.pop()
                         
-                        if page_to_process[ 'page_type' ] == ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES:
+                        if page_to_process[ 'page_type' ] == ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES:
                             
                             pages_to_process.extend( page_to_process[ 'pages' ] )
                             
@@ -7438,12 +7439,23 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPageImportHDD( self, paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportHDD( paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
         
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
     
-    def NewPageQuery( self, location_context: ClientLocation.LocationContext, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False, select_page = True, activate_window = False ):
+    def NewPageQuery(
+        self,
+        location_context: ClientLocation.LocationContext,
+        initial_hashes = None,
+        initial_predicates = None,
+        initial_sort = None,
+        initial_collect = None,
+        page_name = None,
+        do_sort = False,
+        select_page = True,
+        activate_window = False
+    ):
         
         if initial_hashes is None:
             
@@ -7455,7 +7467,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._notebook.NewPageQuery( location_context, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort, select_page = select_page )
+        self._notebook.NewPageQuery(
+            location_context,
+            initial_hashes = initial_hashes,
+            initial_predicates = initial_predicates,
+            initial_sort = initial_sort,
+            initial_collect = initial_collect,
+            page_name = page_name,
+            on_deepest_notebook = True,
+            do_sort = do_sort,
+            select_page = select_page
+        )
         
         if activate_window and not self.isActiveWindow():
             

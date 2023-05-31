@@ -2336,14 +2336,27 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                     # ->
                     # http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
                     
-                    while re.search( r'\shttp', u ) is not None:
+                    gumpf_until_scheme = r'^.*\s(?P<scheme>https?://)'
+                    
+                    result = re.search( gumpf_until_scheme, u )
+                    
+                    if result is not None:
                         
-                        u = re.sub( r'^.*\shttp', 'http', u )
+                        scheme = result.group( 'scheme' )
+                        
+                        u = re.sub( gumpf_until_scheme, scheme, u )
                         
                     
-                    while u.startswith( 'https://https://' ):
+                    # http://http://...
+                    multiple_schemes_pattern = r'^(?:https?://)+(?P<scheme>https?://)'
+                    
+                    result = re.search( multiple_schemes_pattern, u )
+                    
+                    if result is not None:
                         
-                        u = u[8:]
+                        true_scheme = result.group( 'scheme' )
+                        
+                        u = re.sub( multiple_schemes_pattern, true_scheme, u )
                         
                     
                     return u
@@ -2353,7 +2366,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 
                 for parsed_text in parsed_texts:
                     
-                    if not parsed_text.startswith( 'http' ) and ( 'http://' in parsed_text or 'https://' in parsed_text ):
+                    if not ClientNetworkingFunctions.LooksLikeAFullURL( parsed_text ) and ( 'http://' in parsed_text or 'https://' in parsed_text ):
                         
                         parsed_text = clean_url( parsed_text )
                         
@@ -2361,9 +2374,21 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                     clean_parsed_texts.append( parsed_text )
                     
                 
-                parsed_texts = clean_parsed_texts
+                parsed_texts = []
                 
-                parsed_texts = [ urllib.parse.urljoin( base_url, parsed_text ) for parsed_text in parsed_texts ]
+                for clean_parsed_text in clean_parsed_texts:
+                    
+                    try:
+                        
+                        parsed_text = urllib.parse.urljoin( base_url, clean_parsed_text )
+                        
+                    except:
+                        
+                        parsed_text = clean_parsed_text
+                        
+                    
+                    parsed_texts.append( parsed_text )
+                    
                 
             
         

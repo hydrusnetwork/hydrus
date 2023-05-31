@@ -4,10 +4,10 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.search import ClientSearch
 
 class OptionsPanel( QW.QWidget ):
     

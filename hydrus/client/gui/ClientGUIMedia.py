@@ -382,4 +382,21 @@ def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, h
         
         HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
+    else:
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
+        
+        hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
+        
+        if hashes is not None and len( hashes ) > 1:
+            
+            HydrusData.ShowText( 'Could not find the members of this group in this location, so searched all known files and found more.' )
+            
+            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+            
+        else:
+            
+            HydrusData.ShowText( 'Sorry, could not find the members of this group either at the given location or in all known files. There may be a problem here, so let hydev know.' )
+            
+        
     

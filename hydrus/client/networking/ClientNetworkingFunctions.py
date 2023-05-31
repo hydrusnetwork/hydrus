@@ -390,6 +390,31 @@ def GetSearchURLs( url ):
     
     return search_urls
     
+
+def LooksLikeAFullURL( text: str ) -> bool:
+    
+    try:
+        
+        result = urllib.parse.urlparse( text )
+        
+        if result.scheme == '':
+            
+            return False
+            
+        
+        if result.netloc == '':
+            
+            return False
+            
+        
+        return True
+        
+    except:
+        
+        return False
+        
+    
+
 def NormaliseAndFilterAssociableURLs( urls ):
     
     normalised_urls = set()

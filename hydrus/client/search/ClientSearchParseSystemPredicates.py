@@ -8,7 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
+from hydrus.client.search import ClientSearch
 
 from hydrus.external import SystemPredicateParser
 
@@ -103,6 +103,23 @@ def num_file_relationships_pred_generator( o, v, u ):
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( o, v, dupe_type ) )
     
+
+def strip_quotes( s: str ) -> str:
+    
+    if len( s ) > 2:
+        
+        for c in [ '\'', '"' ]:
+            
+            if s.startswith( c ) and s.endswith( c ):
+                
+                return s[1:-1]
+                
+            
+        
+    
+    return s
+    
+
 def url_class_pred_generator( include, url_class_name ):
     
     description = ( 'has {} url' if include else 'does not have {} url' ).format( url_class_name )
@@ -124,6 +141,22 @@ def convert_timetuple_to_seconds( v ):
     
     return days * 86400 + hours * 3600 + minutes * 60 + seconds
     
+
+def convert_double_hex_hashlist_and_other_to_double_bytes_and_other( hex_hashlist_and_other ):
+    
+    try:
+        
+        bytes_hashlist_1 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[0] ) )
+        bytes_hashlist_2 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[1] ) )
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        raise ValueError( str( e ) )
+        
+    
+    return ( bytes_hashlist_1, bytes_hashlist_2, hex_hashlist_and_other[2] )
+    
+
 def convert_hex_hashlist_and_other_to_bytes_and_other( hex_hashlist_and_other ):
     
     try:
@@ -137,6 +170,7 @@ def convert_hex_hashlist_and_other_to_bytes_and_other( hex_hashlist_and_other ):
     
     return ( bytes_hashlist, hex_hashlist_and_other[1] )
     
+
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
 
 pred_generators = {
@@ -165,6 +199,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.WIDTH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( o, v ) ),
     SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusData.ConvertUnitToInt( u ) ) ),
     SystemPredicateParser.Predicate.SIMILAR_TO_FILES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
+    SystemPredicateParser.Predicate.SIMILAR_TO_DATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, convert_double_hex_hashlist_and_other_to_double_bytes_and_other( v ) ),
     SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
     SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( o, v[0] * 1000 + v[1] ) ),
     SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( o, v ) ),
@@ -196,11 +231,11 @@ pred_generators = {
     SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '>', 0 ) ),
     SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ),
     SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( o, v ) ),
-    SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, v ) ),
-    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, v ) )
+    SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) )
 }
 
-def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ] ) -> typing.List[ ClientSearch.Predicate ]:
+def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearch.Predicate ]:
     
     system_predicates = []
     
@@ -221,12 +256,23 @@ def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Co
             
         except ValueError as e:
             
+            if discard_failures:
+                
+                continue
+                
+            
             raise HydrusExceptions.BadRequestException( 'Could not parse system predicate "{}"!'.format( s ) )
             
         except Exception as e:
+            
+            if discard_failures:
+                
+                continue
+                
             
             raise HydrusExceptions.BadRequestException( 'Problem when trying to parse this system predicate: "{}"!'.format( s ) )
             
         
     
     return system_predicates
+    

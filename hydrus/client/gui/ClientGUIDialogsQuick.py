@@ -205,7 +205,12 @@ def SelectMultipleFromList( win, title, choice_tuples ):
             
         
     
-def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None, message = 'select service' ):
+def SelectServiceKey( service_types = None, service_keys = None, unallowed = None, message = 'select service' ):
+    
+    if service_types is None:
+        
+        service_types = HC.ALL_SERVICES
+        
     
     if service_keys is None:
         

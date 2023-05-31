@@ -8,7 +8,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -96,7 +95,14 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
                     
                 else:
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ClientGUIMedia.ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
+                    if file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ] == 1:
+                        
+                        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'cannot show the best quality file of this file\'s group here, it is not in this domain', 'The king of this group has probably been deleted from this domain.' )
+                        
+                    else:
+                        
+                        ClientGUIMenus.AppendMenuItem( duplicates_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ClientGUIMedia.ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
+                        
                     
                 
                 ClientGUIMenus.AppendSeparator( duplicates_menu )

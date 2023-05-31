@@ -10,7 +10,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -20,6 +19,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.search import ClientSearch
 
 class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -33,7 +33,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._foldername = QW.QLineEdit( self )
         self._name = QW.QLineEdit( self )
         
-        self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self )
+        self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self, media_sort = media_sort )
         self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self, silent = True )
         
         page_key = HydrusData.GenerateKey()
@@ -61,12 +61,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name.setText( name )
         
-        if media_sort is not None:
-            
-            self._include_media_sort.setChecked( True )
-            
-            self._media_sort.SetSort( media_sort )
-            
+        self._include_media_sort.setChecked( media_sort is not None )
         
         if media_collect is not None:
             

@@ -17,7 +17,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -37,6 +36,7 @@ from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     

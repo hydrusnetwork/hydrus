@@ -2810,41 +2810,37 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._file_sort_panel = ClientGUICommon.StaticBox( self, 'file sort' )
             
-            self._default_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel )
+            default_sort = self._new_options.GetDefaultSort()
             
-            self._fallback_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel )
+            self._default_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel, media_sort = default_sort )
             
-            self._save_page_sort_on_change = QW.QCheckBox( self._file_sort_panel )
-            
-            self._default_media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self._file_sort_panel, silent = True )
-            
-            namespace_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
-            
-            self._namespace_sort_by = ClientGUIListBoxes.QueueListBox( namespace_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
-            
-            #
-            
-            try:
-                
-                self._default_media_sort.SetSort( self._new_options.GetDefaultSort() )
-                
-            except:
+            if self._default_media_sort.GetSort() != default_sort:
                 
                 media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
                 
                 self._default_media_sort.SetSort( media_sort )
                 
             
-            try:
-                
-                self._fallback_media_sort.SetSort( self._new_options.GetFallbackSort() )
-                
-            except:
+            fallback_sort = self._new_options.GetFallbackSort()
+            
+            self._fallback_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel, media_sort = fallback_sort )
+            
+            if self._fallback_media_sort.GetSort() != fallback_sort:
                 
                 media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
                 
                 self._fallback_media_sort.SetSort( media_sort )
                 
+            
+            self._save_page_sort_on_change = QW.QCheckBox( self._file_sort_panel )
+            
+            self._default_media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self._file_sort_panel )
+            
+            namespace_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
+            
+            self._namespace_sort_by = ClientGUIListBoxes.QueueListBox( namespace_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
+            
+            #
             
             self._namespace_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
             

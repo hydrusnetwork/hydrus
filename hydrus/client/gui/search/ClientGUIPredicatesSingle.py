@@ -14,13 +14,13 @@ from hydrus.core import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.search import ClientSearch
 
 class StaticSystemPredicateButton( QW.QWidget ):
     

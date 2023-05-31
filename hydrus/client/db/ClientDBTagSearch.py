@@ -13,7 +13,6 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientSearch
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBMaster
@@ -22,6 +21,7 @@ from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagDisplay
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 # Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1
 MIN_CACHED_INTEGER = - ( 2 ** 63 )

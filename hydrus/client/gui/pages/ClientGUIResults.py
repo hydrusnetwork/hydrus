@@ -22,7 +22,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -44,9 +43,11 @@ from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
@@ -61,7 +62,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     newMediaAdded = QC.Signal()
     
-    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
+    def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController, media_results ):
         
         QW.QScrollArea.__init__( self, parent )
         
@@ -72,14 +73,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         self.setWidget( QW.QWidget( self ) )
         self.setWidgetResizable( True )
         
-        ClientMedia.ListeningMediaList.__init__( self, location_context, media_results )
+        self._page_key = page_key
+        self._management_controller = management_controller
+        
+        ClientMedia.ListeningMediaList.__init__( self, self._management_controller.GetLocationContext(), media_results )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._UpdateBackgroundColour()
         
         self.verticalScrollBar().setSingleStep( 50 )
-        
-        self._page_key = page_key
         
         self._focused_media = None
         self._last_hit_media = None
@@ -90,7 +92,6 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         self._empty_page_status_override = None
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        HG.client_controller.sub( self, 'Collect', 'collect_media' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         HG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
@@ -1911,7 +1912,10 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes )
+            media_sort = self._management_controller.GetVariable( 'media_sort' )
+            media_collect = self._management_controller.GetVariable( 'media_collect' )
+            
+            HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
             
         
     
@@ -1989,18 +1993,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         self._page_key = b'dead media panel page key'
         
     
-    def Collect( self, page_key, media_collect = None ):
+    def Collect( self, media_collect = None ):
         
-        if page_key == self._page_key:
-            
-            self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
-            
-            ClientMedia.ListeningMediaList.Collect( self, media_collect )
-            
-            self._RecalculateVirtualSize()
-            
-            # no refresh needed since the sort call that always comes after will do it
-            
+        self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
+        
+        ClientMedia.ListeningMediaList.Collect( self, media_collect = media_collect )
+        
+        self._RecalculateVirtualSize()
+        
+        self.Sort()
         
     
     def GetTotalFileSize( self ):
@@ -2429,12 +2430,12 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
 class MediaPanelLoading( MediaPanel ):
     
-    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
+    def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController ):
         
         self._current = None
         self._max = None
         
-        MediaPanel.__init__( self, parent, page_key, location_context, [] )
+        MediaPanel.__init__( self, parent, page_key, management_controller, [] )
         
         HG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
@@ -2475,14 +2476,14 @@ class MediaPanelLoading( MediaPanel ):
     
 class MediaPanelThumbnails( MediaPanel ):
     
-    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
+    def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController, media_results ):
         
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
         self._num_rows_per_actual_page = 1
         
-        MediaPanel.__init__( self, parent, page_key, location_context, media_results )
+        MediaPanel.__init__( self, parent, page_key, management_controller, media_results )
         
         self._last_size = QC.QSize( 20, 20 )
         self._num_columns = 1

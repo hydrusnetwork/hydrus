@@ -33,7 +33,6 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
 from hydrus.client import ClientLocation
 from hydrus.client import ClientOptions
-from hydrus.client import ClientSearch
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
@@ -79,6 +78,7 @@ from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client.search import ClientSearch
 
 from hydrus.client.importing import ClientImportSubscriptionLegacy
 from hydrus.client.networking import ClientNetworkingSessionsLegacy

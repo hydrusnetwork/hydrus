@@ -8,7 +8,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientSearch
+from hydrus.client.search import ClientSearch
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
 CLIENT_API_PERMISSION_ADD_FILES = 1

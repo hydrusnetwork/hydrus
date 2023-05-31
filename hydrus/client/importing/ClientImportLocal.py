@@ -18,7 +18,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
-from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
@@ -29,6 +28,7 @@ from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     

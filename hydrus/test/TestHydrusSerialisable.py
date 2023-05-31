@@ -11,7 +11,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
-from hydrus.client import ClientSearch
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
@@ -22,6 +21,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 from hydrus.test import TestController as TC
 

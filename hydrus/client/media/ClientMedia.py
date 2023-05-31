@@ -11,11 +11,11 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, hashes ):
     
@@ -2133,6 +2133,21 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         self.sort_type = sort_type
         self.sort_order = sort_order
         self.tag_context = tag_context
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, MediaSort ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self.sort_type, self.sort_order, self.tag_context ).__hash__()
         
     
     def _GetSerialisableInfo( self ):

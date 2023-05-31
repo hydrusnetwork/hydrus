@@ -663,7 +663,7 @@ def SetDefaultDomainManagerData( domain_manager ):
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     from hydrus.client.media import ClientMedia
-    from hydrus.client import ClientSearch
+    from hydrus.client.search import ClientSearch
     
     rows = []
     

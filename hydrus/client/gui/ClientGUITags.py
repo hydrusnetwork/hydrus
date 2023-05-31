@@ -1932,7 +1932,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        
+        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+        
+        if HG.gui_report_mode:
+            
+            HydrusData.ShowText( f'Opening manage tags on these services: {services}' )
+            
         
         default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
@@ -1940,6 +1947,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             service_key = service.GetServiceKey()
             name = service.GetName()
+            
+            if HG.gui_report_mode:
+                
+                HydrusData.ShowText( 'Opening manage tags panel on {}, {}, {}'.format( service, name, service_key.hex() ) )
+                
             
             page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             
@@ -1953,7 +1965,16 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             select = service_key == default_tag_service_key
             
             self._tag_services.addTab( page, name )
-            if select: self._tag_services.setCurrentIndex( self._tag_services.count() - 1 )
+            
+            if select:
+                
+                self._tag_services.setCurrentIndex( self._tag_services.count() - 1 )
+                
+            
+        
+        if HG.gui_report_mode:
+            
+            HydrusData.ShowText( 'Opening manage tags panel, notebook tab count is {}'.format( self._tag_services.count() ) )
             
         
         #

@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client import ClientSearch
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesDuplicates
@@ -32,6 +31,7 @@ from hydrus.client.db import ClientDBTagSearch
 from hydrus.client.db import ClientDBURLMap
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 def intersection_update_qhi( query_hash_ids: typing.Optional[ typing.Set[ int ] ], some_hash_ids: typing.Collection[ int ], force_create_new_set = False ) -> typing.Set[ int ]:
     

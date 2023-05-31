@@ -33,6 +33,34 @@
     <body>
         <div class="content">
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
+            <ul>
+                <li>
+                    <h2 id="version_530"><a href="#version_530">version 530</a></h2>
+                    <ul>
+                        <li><h3>autocomplete and system predicates</h3></li>
+                        <li>the normal autocomplete text input in file search pages now parses system tags if you type them! For a long time, this cool system has only been awkwardly available, but now it should work straight out of the box. not every predicate is supported, and sometimes what parses is slightly different to what you see, but I am improving things regularly, so let me know what doesn't work</li>
+                        <li>the normal autocomplete text input in file search pages now has a paste button! it takes tags in the normal newline-separated hydrus format and is plugged into the system predicate parser too. it should obey the same rules as if you were typing, so if you put in a negated tag, or a wildcard or namespace wildcard, and that's allowed with your current settings, it'll propagate. anything that isn't allowed or won't parse correctly is skipped silently for now</li>
+                        <li>the system predicate parser now supports the new 'similar to data' similar files search added last week. there isn't an easy way to generate the pixel and perceptual hashes yet (this will come soon to the Client API), but if you have the hashes, the thing should now parse. same format as the existing 'similar to( files)', but just say 'similar to data' and mix and match the 64- and 16-character hashes and it'll figure it out</li>
+                        <li>fixed system predicate parsing for 'system:has note with name xxx', which was parsing as a borked 'system:has note(s)', and the same deal for 'has no note'</li>
+                        <li>also made the 'system:has/no notes' and 'system:has a note named xxx' more flexible. they can take more english variants of the phrase, and if you give a note name in "quotes" (e.g. if you copy the system predicate string and paste it back in), it'll strip them</li>
+                        <li><h3>misc</h3></li>
+                        <li>highlighting a gallery downloader or thread watcher is now asynchronous! this means if you load up a meaty uncached 3,000-strong downloader, the client will no longer lock up for a few seconds--it'll load the files in the background, in 256-file chunks like a normal search page, and then present them when ready. while in the loading state, the to-be-highlighted downloader will be prepended with `> ` instead of `* `, and its loading is completely cancellable--you can unhighlight it or highlight something else and the ongoing job will promptly cancel and let the new one start. if a loading job takes more than three seconds, it will make a popup window with its ongoing progress, which also has a cancel button</li>
+                        <li>when you say to 'open files in a new page', the current file sort and collect is copied to the new page, and if you have a collect set, the new page will collect</li>
+                        <li>when parsing URLs and attempting to match relative URLs (''/post/123456') to the original domain ('example.com'), if that join fails, it now just adds the parsed text. this should stop borked errors from halting the whole parse (e.g. mysterious 'Invalid IPv6 URL' error, which was probably an errantly parsed open square bracket) while also helping debugging</li>
+                        <li>improved URL-repairing in parsing. it trims gumpf before a recognisable URL (`title - https://example.com/123456`) is now more precise, and instances of weird scheme-spam (`https://http://example.com/123456`) are now fixed for mixes of schemes and replaced with the final scheme</li>
+                        <li>the thumbnail duplicate files menu now tries to recognise if the king of a group has been deleted and will say so rather than 'show the best quality file of this file\'s group'</li>
+                        <li>if you open some duplicate files from the right-click menu (e.g. show 'king') and the search can't find them, it now searches "all known files" as a backup and tells you in a popup if the backup worked or if it just couldn't find anything</li>
+                        <li><h3>some boring cleanup</h3></li>
+                        <li>refactored the media controller (which drives every page in the client) and the media controller panel (the actual UI) code into separate files; now the various other guys that look at the controller have proper typing and inheritance, and all the thumbnail grids are now explicitly told their respective media controllers and have better access to stuff like the current sort</li>
+                        <li>the sort widget no longer hangs onto the media controller--it just communicates changes through Qt signals</li>
+                        <li>same doubly so for the collect widget, which no longer has a mickey-mouse pubsub chain and just Qt signals its stuff now</li>
+                        <li>misc page code and sort/collect code cleanup, multiple orphaned pubsubs removed</li>
+                        <li>moved ClientSearch and ClientSearchParseSystemPredicates to a new 'search' module</li>
+                        <li>spun off the autocomplete parsing and result caching code into a new ClientSearchAutocomplete</li>
+                        <li>added a heap of note system predicates to the system pred parsing unit tests, and some for the new 'similar to data' too</li>
+                        <li>updated the `requests` in the requirements.txts up from 2.28.1 to 2.31.0 due to some security vulnerability related to `Proxy-Authorization` headers and in-url user/pass authentication when redirecting to an https destination. I don't think we used that stuff (unless the proxy settings cause it to happen under the hood), but let's update anyway. if you run from source, you might like to run setup_venv again</li>
+                    </ul>
+                </li>
                 <li>
                     <h2 id="version_529"><a href="#version_529">version 529</a></h2>
                     <ul>
@@ -16267,6 +16295,7 @@
                         <li>made db, playing around with LAMP</li>
                         <li>an initial p2p framework started</li>
                     </ul>
+                </li>
             </ul>
         </div>
     </body>
