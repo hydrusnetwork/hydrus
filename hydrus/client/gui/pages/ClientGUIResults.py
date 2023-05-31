@@ -1913,7 +1913,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         if hashes is not None and len( hashes ) > 0:
             
             media_sort = self._management_controller.GetVariable( 'media_sort' )
-            media_collect = self._management_controller.GetVariable( 'media_collect' )
+            
+            if self._management_controller.HasVariable( 'media_collect' ):
+                
+                media_collect = self._management_controller.GetVariable( 'media_collect' )
+                
+            else:
+                
+                media_collect = ClientMedia.MediaCollect()
+                
             
             HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
             

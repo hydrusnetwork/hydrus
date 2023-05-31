@@ -204,6 +204,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     def _InitialiseDefaults( self ):
         
         self._variables[ 'media_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._variables[ 'media_collect' ] = ClientMedia.MediaCollect()
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):

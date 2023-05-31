@@ -254,7 +254,16 @@ class ManagementPanel( QW.QScrollArea ):
         
         self._media_sort_widget = ClientGUIResultsSortCollect.MediaSortControl( self, media_sort = self._management_controller.GetVariable( 'media_sort' ) )
         
-        self._media_collect_widget = ClientGUIResultsSortCollect.MediaCollectControl( self, media_collect = self._management_controller.GetVariable( 'media_collect' ) )
+        if self._management_controller.HasVariable( 'media_collect' ):
+            
+            media_collect = self._management_controller.GetVariable( 'media_collect' )
+            
+        else:
+            
+            media_collect = ClientMedia.MediaCollect()
+            
+        
+        self._media_collect_widget = ClientGUIResultsSortCollect.MediaCollectControl( self, media_collect = media_collect )
         
         self._media_collect_widget.ListenForNewOptions()
         
