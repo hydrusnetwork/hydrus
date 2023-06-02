@@ -34,7 +34,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._name = QW.QLineEdit( self )
         
         self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self, media_sort = media_sort )
-        self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self, silent = True )
+        self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self )
         
         page_key = HydrusData.GenerateKey()
         
