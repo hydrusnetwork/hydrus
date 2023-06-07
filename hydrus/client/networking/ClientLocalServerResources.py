@@ -64,7 +64,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -164,6 +164,40 @@ def CheckTagService( tag_service_key: bytes ):
         
     
     return service
+    
+
+def GetServicesDict():
+    
+    service_types = [
+        HC.LOCAL_TAG,
+        HC.TAG_REPOSITORY,
+        HC.LOCAL_FILE_DOMAIN,
+        HC.LOCAL_FILE_UPDATE_DOMAIN,
+        HC.FILE_REPOSITORY,
+        HC.COMBINED_LOCAL_FILE,
+        HC.COMBINED_LOCAL_MEDIA,
+        HC.COMBINED_FILE,
+        HC.COMBINED_TAG,
+        HC.LOCAL_RATING_LIKE,
+        HC.LOCAL_RATING_NUMERICAL,
+        HC.LOCAL_RATING_INCDEC,
+        HC.LOCAL_FILE_TRASH_DOMAIN
+    ]
+    
+    services = HG.client_controller.services_manager.GetServices( service_types )
+    
+    service_dict = {}
+    
+    for service in services:
+        
+        service_dict[ service.GetServiceKey().hex() ] = {
+            'name' : service.GetName(),
+            'type' : service.GetServiceType(),
+            'type_pretty' : HC.service_string_lookup[ service.GetServiceType() ]
+        }
+        
+    
+    return service_dict
     
 
 def GetServiceKeyFromName( service_name: str ):
@@ -1458,6 +1492,9 @@ class HydrusResourceClientAPIRestrictedGetService( HydrusResourceClientAPIRestri
             HC.COMBINED_LOCAL_MEDIA,
             HC.COMBINED_FILE,
             HC.COMBINED_TAG,
+            HC.LOCAL_RATING_LIKE,
+            HC.LOCAL_RATING_NUMERICAL,
+            HC.LOCAL_RATING_INCDEC,
             HC.LOCAL_FILE_TRASH_DOMAIN
         }
         
@@ -1567,6 +1604,8 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
             
             body_dict[ name ] = services_list
             
+        
+        body_dict[ 'services' ] = GetServicesDict()
         
         body = Dumps( body_dict, request.preferred_mime )
         
@@ -2641,6 +2680,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         hide_service_keys_tags = request.parsed_request_args.GetValue( 'hide_service_keys_tags', bool, default_value = True )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
+        include_services_object = request.parsed_request_args.GetValue( 'include_services_object', bool, default_value = True )
         create_new_file_ids = request.parsed_request_args.GetValue( 'create_new_file_ids', bool, default_value = False )
         
         hashes = ParseHashes( request )
@@ -2944,6 +2984,11 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         
         body_dict[ 'metadata' ] = metadata
+        
+        if include_services_object:
+            
+            body_dict[ 'services' ] = GetServicesDict()
+            
         
         mime = request.preferred_mime
         body = Dumps( body_dict, mime )

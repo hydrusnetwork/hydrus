@@ -29,7 +29,9 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 * [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
 * [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
 * [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
+* [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): send URLs from your Android device to your client
 * [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): a userscript to simplify sending Iwara videos to Hydrus Network
+* [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
 * [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
 * [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
 * [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations

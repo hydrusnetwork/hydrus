@@ -667,18 +667,23 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             gallery_go = gallery_work_to_do and not self._gallery_paused
             files_go = files_work_to_do and not self._files_paused
             
-            if gallery_go and not self._gallery_working_lock.locked():
+            if gallery_go and not self._gallery_working_lock.locked() and self._gallery_repeating_job is not None and self._gallery_repeating_job.WaitingOnWorkSlot():
                 
                 self._gallery_status = 'waiting for a work slot'
                 
             
-            if files_go and not self._files_working_lock.locked():
+            if files_go and not self._files_working_lock.locked() and self._files_repeating_job is not None and self._files_repeating_job.WaitingOnWorkSlot():
                 
                 self._files_status = 'waiting for a work slot'
                 
             
-            gallery_text = ClientImportControl.GenerateLiveStatusText( self._gallery_status, self._gallery_paused, self._no_work_until, self._no_work_until_reason )
-            file_text = ClientImportControl.GenerateLiveStatusText( self._files_status, self._files_paused, self._no_work_until, self._no_work_until_reason )
+            currently_working = self._gallery_repeating_job is not None and self._gallery_repeating_job.CurrentlyWorking()
+            
+            gallery_text = ClientImportControl.GenerateLiveStatusText( self._gallery_status, self._gallery_paused, currently_working, self._no_work_until, self._no_work_until_reason )
+            
+            currently_working = self._files_repeating_job is not None and self._files_repeating_job.CurrentlyWorking()
+            
+            file_text = ClientImportControl.GenerateLiveStatusText( self._files_status, self._files_paused, currently_working, self._no_work_until, self._no_work_until_reason )
             
             return ( gallery_text, file_text, self._files_paused, self._gallery_paused )
             

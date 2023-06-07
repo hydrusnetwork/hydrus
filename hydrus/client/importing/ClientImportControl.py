@@ -92,7 +92,7 @@ def CheckImporterCanDoWorkBecauseStopped( page_key: bytes ):
         
     
 
-def GenerateLiveStatusText( text: str, paused: bool, no_work_until: int, no_work_until_reason: str ) -> str:
+def GenerateLiveStatusText( text: str, paused: bool, currently_working: bool, no_work_until: int, no_work_until_reason: str ) -> str:
     
     if not HydrusTime.TimeHasPassed( no_work_until ):
         
@@ -101,14 +101,16 @@ def GenerateLiveStatusText( text: str, paused: bool, no_work_until: int, no_work
     
     if paused and text != 'paused':
         
-        if text == '':
+        if currently_working:
             
-            text = 'pausing'
+            pause_text = 'pausing'
             
         else:
             
-            text = 'pausing - {}'.format( text )
+            pause_text = 'paused'
             
+        
+        text = f'{pause_text} - {text}'
         
     
     return text

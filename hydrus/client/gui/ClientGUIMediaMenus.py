@@ -448,11 +448,12 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         if len( focus_labels_and_urls ) > 0:
             
-            for ( label, url ) in focus_labels_and_urls:
-                
-                ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
-                ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
-                
+            MAX_TO_SHOW = 15
+            
+            description = 'Open this url in your web browser.'
+            
+            ClientGUIMenus.SpamItems( urls_visit_menu, [ ( label, description, HydrusData.Call( ClientPaths.LaunchURLInWebBrowser, url ) ) for ( label, url ) in focus_labels_and_urls ], MAX_TO_SHOW )
+            ClientGUIMenus.SpamLabels( urls_copy_menu, focus_labels_and_urls, MAX_TO_SHOW )
             
         
         # copy this file's urls

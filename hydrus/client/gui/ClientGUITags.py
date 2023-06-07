@@ -344,13 +344,12 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             page = self._Panel( self._tag_services_notebook, master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys )
             
-            select = master_service_key == select_service_key
-            
             self._tag_services_notebook.addTab( page, name )
             
-            if select:
+            if master_service_key == select_service_key:
                 
-                self._tag_services_notebook.setCurrentWidget( page )
+                # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
+                QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
                 
             
         
@@ -542,10 +541,12 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             page = self._Panel( self._tag_services, self._original_tag_display_manager, service_key )
             
-            select = service_key == CC.COMBINED_TAG_SERVICE_KEY
-            
             self._tag_services.addTab( page, name )
-            if select: self._tag_services.setCurrentWidget( page )
+            
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                self._tag_services.setCurrentWidget( page )
+                
             
         
         #
@@ -1955,6 +1956,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             
+            self._tag_services.addTab( page, name )
+            
             page.movePageLeft.connect( self.MovePageLeft )
             page.movePageRight.connect( self.MovePageRight )
             page.showPrevious.connect( self.ShowPrevious )
@@ -1962,13 +1965,10 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             page.okSignal.connect( self.okSignal )
             
-            select = service_key == default_tag_service_key
-            
-            self._tag_services.addTab( page, name )
-            
-            if select:
+            if service_key == default_tag_service_key:
                 
-                self._tag_services.setCurrentIndex( self._tag_services.count() - 1 )
+                # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
+                QP.CallAfter( self._tag_services.setCurrentWidget, page )
                 
             
         
@@ -1985,6 +1985,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         self.widget().setLayout( vbox )
         
+        QP.CallAfter( self._tag_services.currentChanged.connect, self.EventServiceChanged )
+        
         if self._canvas_key is not None:
             
             HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
@@ -1992,9 +1994,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
         
-        self._tag_services.currentChanged.connect( self.EventServiceChanged )
-        
-        self._SetSearchFocus()
+        QP.CallAfter( self._SetSearchFocus )
         
     
     def _GetGroupsOfServiceKeysToContentUpdates( self ):
@@ -2980,10 +2980,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             page = self._Panel( self._tag_services, service_key, tags )
             
-            select = service_key == default_tag_service_key
-            
             self._tag_services.addTab( page, name )
-            if select: self._tag_services.setCurrentWidget( page )
+            
+            if service_key == default_tag_service_key:
+                
+                # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
+                QP.CallAfter( self._tag_services.setCurrentWidget, page )
+                
             
         
         #
@@ -4073,6 +4076,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     self.EnterChildren( tags )
                     
                 
+                if self.isVisible():
+                    
+                    self.SetTagBoxFocus()
+                    
+                
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
             
@@ -4122,10 +4130,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             page = self._Panel( self._tag_services, service_key, tags )
             
-            select = service_key == default_tag_service_key
-            
             self._tag_services.addTab( page, name )
-            if select: self._tag_services.setCurrentIndex( self._tag_services.indexOf( page ) )
+            
+            if service_key == default_tag_service_key:
+                
+                # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
+                QP.CallAfter( self._tag_services.setCurrentWidget, page )
+                
             
         
         #
@@ -5454,6 +5465,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     self.EnterOlds( tags )
                     
                 
+                if self.isVisible():
+                    
+                    self.SetTagBoxFocus()
+                    
+                
             
             original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
             
@@ -5509,7 +5525,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if service_key == select_service_key:
                 
-                self._tag_services_notebook.setCurrentWidget( page )
+                QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
                 
             
         

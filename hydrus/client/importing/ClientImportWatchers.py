@@ -1488,18 +1488,23 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 checker_go = HydrusTime.TimeHasPassed( self._next_check_time ) and not self._checking_paused
                 files_go = files_work_to_do and not self._files_paused
                 
-                if checker_go and not self._checker_working_lock.locked():
+                if checker_go and not self._checker_working_lock.locked() and self._checker_repeating_job is not None and self._checker_repeating_job.WaitingOnWorkSlot():
                     
                     self._watcher_status = 'waiting for a work slot'
                     
                 
-                if files_go and not self._files_working_lock.locked():
+                if files_go and not self._files_working_lock.locked() and self._files_repeating_job is not None and self._files_repeating_job.WaitingOnWorkSlot():
                     
                     self._files_status = 'waiting for a work slot'
                     
                 
-                files_status = ClientImportControl.GenerateLiveStatusText( self._files_status, self._files_paused, self._no_work_until, self._no_work_until_reason )
-                watcher_status = ClientImportControl.GenerateLiveStatusText( self._watcher_status, self._checking_paused, self._no_work_until, self._no_work_until_reason )
+                currently_working = self._files_repeating_job is not None and self._files_repeating_job.CurrentlyWorking()
+                
+                files_status = ClientImportControl.GenerateLiveStatusText( self._files_status, self._files_paused, currently_working, self._no_work_until, self._no_work_until_reason )
+                
+                currently_working = self._checker_repeating_job is not None and self._checker_repeating_job.CurrentlyWorking()
+                
+                watcher_status = ClientImportControl.GenerateLiveStatusText( self._watcher_status, self._checking_paused, currently_working, self._no_work_until, self._no_work_until_reason )
                 
             
             return ( files_status, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._subject, self._checking_status, self._check_now, self._checking_paused )

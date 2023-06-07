@@ -465,7 +465,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
+        menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetUnknown ) )
         menu_items.append( ( 'separator', 0, 0, 0 ) )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
@@ -834,9 +834,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ResetUnknown( self ):
         
-        text = 'This will delete all the potential duplicate pairs and reset their files\' search status.'
+        text = 'ADVANCED TOOL: This will delete all the current potential duplicate pairs. All files that may be similar will be queued for search again.'
         text += os.linesep * 2
-        text += 'This can be useful if you have accidentally searched too broadly and are now swamped with too many false positives.'
+        text += 'This can be useful if you know you have database damage and need to reset and re-search everything, or if you have accidentally searched too broadly and are now swamped with too many false positives. It is not useful for much else.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         

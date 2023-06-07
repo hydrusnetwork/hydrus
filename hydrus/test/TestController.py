@@ -232,6 +232,10 @@ class Controller( object ):
         
         self._param_read_responses = {}
         
+        self.example_like_rating_service_key = LOCAL_RATING_LIKE_SERVICE_KEY
+        self.example_numerical_rating_service_key = LOCAL_RATING_NUMERICAL_SERVICE_KEY
+        self.example_incdec_rating_service_key = LOCAL_RATING_INCDEC_SERVICE_KEY
+        
         self.example_file_repo_service_key_1 = HydrusData.GenerateKey()
         self.example_file_repo_service_key_2 = HydrusData.GenerateKey()
         self.example_tag_repo_service_key = HydrusData.GenerateKey()

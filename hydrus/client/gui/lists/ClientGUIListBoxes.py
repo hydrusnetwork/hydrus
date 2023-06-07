@@ -1156,6 +1156,12 @@ class ListBox( QW.QScrollArea ):
         self._positional_indices_to_terms = {}
         self._total_positional_rows = 0
         
+        self._shift_click_start_logical_index = None
+        self._logical_indices_selected_this_shift_click = set()
+        self._logical_indices_deselected_this_shift_click = set()
+        self._in_drag = False
+        self._this_drag_is_a_deselection = False
+        
         self._last_hit_logical_index = None
         
         self._last_view_start = None
@@ -1174,7 +1180,17 @@ class ListBox( QW.QScrollArea ):
     
     def _Deselect( self, index ):
         
-        term = self._GetTermFromLogicalIndex( index )
+        try:
+            
+            term = self._GetTermFromLogicalIndex( index )
+            
+        except HydrusExceptions.DataMissing:
+            
+            # we've got ghosts, so exorcise them
+            self._DeselectAll()
+            
+            return
+            
         
         self._selected_terms.discard( term )
         
@@ -2924,6 +2940,8 @@ class ListBoxTags( ListBox ):
                         return service_key_group_names_and_tags
                         
                     
+                    MAX_ITEMS_HERE = 10
+                    
                     if num_siblings == 0:
                         
                         siblings_menu.setTitle( 'no siblings' )
@@ -2961,10 +2979,7 @@ class ListBoxTags( ListBox ):
                                 ClientGUIMenus.AppendMenuLabel( siblings_menu, '--{}--'.format( s_k_name ) )
                                 
                             
-                            for tag in tags:
-                                
-                                ClientGUIMenus.AppendMenuLabel( siblings_menu, tag )
-                                
+                            ClientGUIMenus.SpamLabels( siblings_menu, [ ( tag, tag ) for tag in tags ], MAX_ITEMS_HERE )
                             
                         
                     
@@ -2989,19 +3004,9 @@ class ListBoxTags( ListBox ):
                                 ClientGUIMenus.AppendMenuLabel( parents_menu, '--{}--'.format( s_k_name ) )
                                 
                             
-                            for parent in parents:
-                                
-                                parent_label = 'parent: {}'.format( parent )
-                                
-                                ClientGUIMenus.AppendMenuItem( parents_menu, parent_label, parent_label, HG.client_controller.pub, 'clipboard', 'text', parent )
-                                
+                            ClientGUIMenus.SpamLabels( parents_menu, [ ( f'parent: {parent}', parent ) for parent in parents ], MAX_ITEMS_HERE )
                             
-                            for child in children:
-                                
-                                child_label = 'child: {}'.format( child )
-                                
-                                ClientGUIMenus.AppendMenuItem( parents_menu, child_label, child_label, HG.client_controller.pub, 'clipboard', 'text', child )
-                                
+                            ClientGUIMenus.SpamLabels( parents_menu, [ ( f'child: {child}', child ) for child in children ], MAX_ITEMS_HERE )
                             
                         
                     

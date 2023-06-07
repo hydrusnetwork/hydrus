@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -104,14 +106,20 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     
     return menu_item
     
-def AppendMenuLabel( menu, label, description = '' ):
+def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
     
     original_label_text = label
+    
+    if copy_text == '':
+        
+        copy_text = original_label_text
+        
+    
     label = SanitiseLabel( label )
     
     if description == '':
         
-        description = f'copy "{label}" to clipboard'
+        description = f'copy "{copy_text}" to clipboard'
         
     
     menu_item = QW.QAction( menu )
@@ -129,7 +137,7 @@ def AppendMenuLabel( menu, label, description = '' ):
 
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', original_label_text )
+    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', copy_text )
     
     return menu_item
     
@@ -187,12 +195,14 @@ def AppendSeparator( menu ):
             
         
     
+
 def BindMenuItem( menu_item, callable, *args, **kwargs ):
     
     event_callable = GetEventCallable( callable, *args, **kwargs )
     
     menu_item.triggered.connect( event_callable )
     
+
 def DestroyMenu( menu ):
     
     if menu is None:
@@ -271,4 +281,52 @@ def SetMenuTitle( menu: QW.QMenu, label: str ):
     label = SanitiseLabel( label )
     
     menu.setTitle( label )
+    
+
+def SpamItems( menu: QW.QMenu, labels_descriptions_and_calls: typing.Collection[ typing.Tuple[ str, str, typing.Callable ] ], max_allowed: int ):
+    
+    if len( labels_descriptions_and_calls ) > max_allowed:
+        
+        num_to_show = max_allowed - 1
+        
+    else:
+        
+        num_to_show = max_allowed
+        
+    
+    for ( label, description, call ) in list( labels_descriptions_and_calls )[:num_to_show]:
+        
+        AppendMenuItem( menu, label, description, call )
+        
+    
+    if len( labels_descriptions_and_calls ) > num_to_show:
+        
+        # maybe one day this becomes a thing that extends the menu to show them all
+        
+        AppendMenuLabel( menu, '{} more...'.format( len( labels_descriptions_and_calls ) - num_to_show ) )
+        
+    
+
+def SpamLabels( menu: QW.QMenu, labels_and_copy_texts: typing.Collection[ typing.Tuple[ str, str ] ], max_allowed: int ):
+    
+    if len( labels_and_copy_texts ) > max_allowed:
+        
+        num_to_show = max_allowed - 1
+        
+    else:
+        
+        num_to_show = max_allowed
+        
+    
+    for ( label, copy_text ) in list( labels_and_copy_texts )[:num_to_show]:
+        
+        AppendMenuLabel( menu, label, copy_text = copy_text )
+        
+    
+    if len( labels_and_copy_texts ) > num_to_show:
+        
+        # maybe one day this becomes a thing that extends the menu to show them all
+        
+        AppendMenuLabel( menu, '{} more...'.format( len( labels_and_copy_texts ) - num_to_show ) )
+        
     

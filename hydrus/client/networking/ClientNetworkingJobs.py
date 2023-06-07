@@ -1711,15 +1711,20 @@ class NetworkJob( object ):
                     
                     self._WaitOnConnectionError( 'connection broke mid-request' )
                     
-                except requests.exceptions.SSLError as e:
+                except ( requests.exceptions.SSLError, requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ) as e:
                     
-                    # note a requests SSLError is a ConnectionError, so careful about catching order here
+                    # note a requests SSLError is a ConnectionError, so be careful if you extract this again
                     
-                    self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
-                    
-                    raise HydrusExceptions.ConnectionException( 'Problem with SSL: {}'.format( repr( e ) ) )
-                    
-                except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
+                    if isinstance( e, requests.exceptions.SSLError ):
+                        
+                        fail_text = 'Problem with SSL: {}'.format( repr( e ) )
+                        delay_text = 'SSL connection failed'
+                        
+                    else:
+                        
+                        fail_text = 'Could not connect!'
+                        delay_text = 'connection failed'
+                        
                     
                     self._ResetForAnotherConnectionAttempt()
                     
@@ -1729,10 +1734,10 @@ class NetworkJob( object ):
                         
                     else:
                         
-                        raise HydrusExceptions.ConnectionException( 'Could not connect!' )
+                        raise HydrusExceptions.ConnectionException( fail_text )
                         
                     
-                    self._WaitOnConnectionError( 'connection failed' )
+                    self._WaitOnConnectionError( delay_text )
                     
                 except requests.exceptions.ReadTimeout:
                     

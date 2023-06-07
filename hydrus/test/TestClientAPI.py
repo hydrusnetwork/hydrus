@@ -45,6 +45,84 @@ try:
 except:
     pass
 
+def GetExampleServicesDict():
+    
+    services_dict = {
+        '6c6f63616c2074616773': {
+            'name' : 'my tags',
+            'type' : 5,
+            'type_pretty' : 'local tag service'
+        },
+        HG.test_controller.example_tag_repo_service_key.hex() : {
+            'name' : 'example tag repo',
+            'type' : 0,
+            'type_pretty' : 'hydrus tag repository'
+        },
+        '6c6f63616c2066696c6573' : {
+            'name' : 'my files',
+            'type' : 2,
+            'type_pretty' : 'local file domain'
+        },
+        '7265706f7369746f72792075706461746573' : {
+            'name' : 'repository updates',
+            'type' : 20,
+            'type_pretty' : 'local update file domain'
+        },
+        HG.test_controller.example_file_repo_service_key_1.hex() : {
+            'name' : 'example file repo 1',
+            'type' : 1,
+            'type_pretty' : 'hydrus file repository'
+        },
+        HG.test_controller.example_file_repo_service_key_2.hex() : {
+            'name' : 'example file repo 2',
+            'type' : 1,
+            'type_pretty' : 'hydrus file repository'
+        },
+        '616c6c206c6f63616c2066696c6573' : {
+            'name' : 'all local files',
+            'type' : 15,
+            'type_pretty' : 'virtual combined local file service'
+        },
+        '616c6c206c6f63616c206d65646961' : {
+            'name' : 'all my files',
+            'type' : 21,
+            'type_pretty' : 'virtual combined local media service'
+        },
+        '616c6c206b6e6f776e2066696c6573' : {
+            'name' : 'all known files',
+            'type' : 11,
+            'type_pretty' : 'virtual combined file service'
+        },
+        '616c6c206b6e6f776e2074616773' : {
+            'name' : 'all known tags',
+            'type' : 10,
+            'type_pretty' : 'virtual combined tag service'
+        },
+        HG.test_controller.example_like_rating_service_key.hex() : {
+            'name' : 'example local rating like service',
+            'type' : 7,
+            'type_pretty' : 'local like/dislike rating service'
+        },
+        HG.test_controller.example_numerical_rating_service_key.hex() : {
+            'name' : 'example local rating numerical service',
+            'type' : 6,
+            'type_pretty' : 'local numerical rating service'
+        },
+        HG.test_controller.example_incdec_rating_service_key.hex() : {
+            'name' : 'example local rating inc/dec service',
+            'type' : 22,
+            'type_pretty' : 'local inc/dec rating service'
+        },
+        '7472617368' : {
+            'name' : 'trash',
+            'type' : 14,
+            'type_pretty' : 'local trash file domain'
+        }
+    }
+    
+    return services_dict
+    
+
 class TestClientAPI( unittest.TestCase ):
     
     @classmethod
@@ -726,7 +804,8 @@ class TestClientAPI( unittest.TestCase ):
                     'type': 14,
                     'type_pretty': 'local trash file domain'
                 }
-            ]
+            ],
+            'services' : GetExampleServicesDict()
         }
         
         get_service_expected_result = {
@@ -4056,7 +4135,7 @@ class TestClientAPI( unittest.TestCase ):
             metadata.append( metadata_row )
             
         
-        expected_identifier_result = { 'metadata' : metadata }
+        expected_identifier_result = { 'metadata' : metadata, 'services' : GetExampleServicesDict() }
         
         media_results = []
         file_info_managers = []
@@ -4287,10 +4366,10 @@ class TestClientAPI( unittest.TestCase ):
             with_notes_metadata.append( with_notes_metadata_row )
             
         
-        expected_metadata_result = { 'metadata' : metadata }
-        expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata }
-        expected_notes_metadata_result = { 'metadata' : with_notes_metadata }
-        expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata }
+        expected_metadata_result = { 'metadata' : metadata, 'services' : GetExampleServicesDict() }
+        expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata, 'services' : GetExampleServicesDict() }
+        expected_notes_metadata_result = { 'metadata' : with_notes_metadata, 'services' : GetExampleServicesDict() }
+        expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata, 'services' : GetExampleServicesDict() }
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
@@ -4386,7 +4465,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ) }
+        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
@@ -4478,7 +4557,7 @@ class TestClientAPI( unittest.TestCase ):
         self.maxDiff = None
         '''
         
-        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ) }
+        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
@@ -4538,7 +4617,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_result = { 'metadata' : list( expected_identifier_result[ 'metadata' ] ) }
+        expected_result = { 'metadata' : list( expected_identifier_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
@@ -4580,7 +4659,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ) }
+        expected_result = { 'metadata' : list( expected_only_return_basic_information_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
@@ -4620,7 +4699,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ) }
+        expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
@@ -4721,7 +4800,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result[ 'metadata' ].sort( key = lambda m_dict: hashes_in_test.index( bytes.fromhex( m_dict[ 'hash' ] ) ) )
         
-        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in hashes_in_test ] ) ) )
+        path = '/get_files/file_metadata?hashes={}&include_services_object=false'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in hashes_in_test ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         

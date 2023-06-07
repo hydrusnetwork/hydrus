@@ -443,7 +443,14 @@ def ParseURL( url: str ) -> urllib.parse.ParseResult:
     
     url = UnicodeNormaliseURL( url )
     
-    return urllib.parse.urlparse( url )
+    try:
+        
+        return urllib.parse.urlparse( url )
+        
+    except Exception as e:
+        
+        raise HydrusExceptions.URLClassException( str( e ) )
+        
     
 
 OH_NO_NO_NETLOC_CHARACTERS = '?#'

@@ -504,7 +504,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._first_session_loaded = False
         
-        self._done_save_and_close = False
+        self._done_save_and_hide = False
         
         self._did_a_backup_this_session = False
         
@@ -8192,7 +8192,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def SaveAndHide( self ):
         
-        if self._done_save_and_close:
+        if self._done_save_and_hide:
             
             return
             
@@ -8201,11 +8201,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
+            if self._have_system_tray_icon:
+                
+                self._system_tray_icon.hide()
+                
+            
             if QP.isValid( self._message_manager ):
                 
                 self._message_manager.CleanBeforeDestroy()
-                
-                self._message_manager.hide()
                 
             
             #
@@ -8226,11 +8229,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     tlw.hide()
                     
-                
-            
-            if self._have_system_tray_icon:
-                
-                self._system_tray_icon.hide()
                 
             
             #
@@ -8263,7 +8261,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._controller.WriteSynchronous( 'serialisable', self._new_options )
             
-            self._done_save_and_close = True
+            self._done_save_and_hide = True
             
         except Exception as e:
             

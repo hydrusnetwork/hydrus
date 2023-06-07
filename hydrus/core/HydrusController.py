@@ -290,6 +290,21 @@ class HydrusController( object ):
             
         
     
+    def ThreadSlotsAreAvailable( self, thread_type ) -> bool:
+        
+        with self._thread_slot_lock:
+            
+            if thread_type not in self._thread_slots:
+                
+                return True # assume no max if no max set
+                
+            
+            ( current_threads, max_threads ) = self._thread_slots[ thread_type ]
+            
+            return current_threads < max_threads
+            
+        
+    
     def CallLater( self, initial_delay, func, *args, **kwargs ) -> HydrusThreading.SingleJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )

@@ -882,6 +882,19 @@ class SchedulableJob( object ):
         HG.controller.sub( self, 'PubSubWake', topic )
         
     
+    def WaitingOnWorkSlot( self ):
+        
+        if self._thread_slot_type is not None:
+            
+            if not self._currently_working.set() and self.IsDue() and not HG.controller.ThreadSlotsAreAvailable( self._thread_slot_type ):
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def Work( self ) -> None:
         
         try:

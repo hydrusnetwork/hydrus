@@ -813,6 +813,8 @@ class Controller( HydrusController.HydrusController ):
             
             if self.gui is not None and QP.isValid( self.gui ):
                 
+                self.frame_splash_status.SetTitleText( 'saving and hiding gui\u2026' )
+                
                 self.gui.SaveAndHide()
                 
             

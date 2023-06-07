@@ -178,6 +178,124 @@ If you have a clever script/program that does many things, then hit up [/get\_se
 
 Also, note that all users can now copy their service keys from _review services_.
 
+## The Services Object { id="services_object" }
+
+Hydrus manages its different available domains and actions with what it calls _services_. If you are a regular user of the program, you will know about _review services_ and _manage services_. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.
+
+When it does this, it gives you this structure, typically under a `services` key right off the root node:
+
+```json title="Services Object"
+{
+  "c6f63616c2074616773" : {
+    "name" : "my tags",
+    "type": 5,
+    "type_pretty" : "local tag service"
+  },
+  "5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d" : {
+    "name" : "example tag repo",
+    "type" : 0,
+    "type_pretty" : "hydrus tag repository"
+  },
+  "6c6f63616c2066696c6573" : {
+    "name" : "my files",
+    "type" : 2,
+    "type_pretty" : "local file domain"
+  },
+  "7265706f7369746f72792075706461746573" : {
+    "name" : "repository updates",
+    "type" : 20,
+    "type_pretty" : "local update file domain"
+  },
+  "ae7d9a603008919612894fc360130ae3d9925b8577d075cd0473090ac38b12b6" : {
+    "name": "example file repo",
+    "type" : 1,
+    "type_pretty" : "hydrus file repository"
+  },
+  "616c6c206c6f63616c2066696c6573" : {
+    "name" : "all local files",
+    "type": 15,
+    "type_pretty" : "virtual combined local file service"
+  },
+  "616c6c206c6f63616c206d65646961" : {
+    "name" : "all my files",
+    "ype" : 21,
+    "type_pretty" : "virtual combined local media service"
+  },
+  "616c6c206b6e6f776e2066696c6573" : {
+    "name" : "all known files",
+    "type" : 11,
+    "type_pretty" : "virtual combined file service"
+  },
+  "616c6c206b6e6f776e2074616773" : {
+    "name" : "all known tags",
+    "type": 10,
+    "type_pretty" : "virtual combined tag service"
+  },
+  "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : {
+    "name" : "example local rating like service",
+    "type" : 7,
+    "type_pretty" : "local like/dislike rating service"
+  },
+  "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : {
+    "name" : "example local rating numerical service",
+    "type" : 6,
+    "type_pretty" : "local numerical rating service"
+  },
+  "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : {
+    "name" : "example local rating inc/dec service",
+    "type" : 22,
+    "type_pretty" : "local inc/dec rating service"
+  },
+  "7472617368" : {
+    "name" : "trash",
+    "type" : 14,
+    "type_pretty" : "local trash file domain"
+  }
+}
+```
+
+I hope you recognise some of the information here. But what's that hex key on each section? It is the `service_key`.
+
+All services have these properties:
+
+- `name` - A mutable human-friendly name like 'my tags'. You can use this to present the service to the user--they should recognise it.
+- `type` - An integer enum saying whether the service is a local tag service or like/dislike rating service or whatever. This cannot change.
+- `service_key` - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases 64 characters. This cannot change, and it is how we will refer to different services.
+
+This `service_key` is important. A user can rename their services, so `name` is not an excellent identifier, and definitely not something you should save to any permanent config file.
+
+If we want to search some files on a particular file and tag domain, we should expect to be saying something like `file_service_key=6c6f63616c2066696c6573` and `tag_service_key=f032e94a38bb9867521a05dc7b189941a9c65c25048911f936fc639be2064a4b` somewhere in the request.
+
+You won't see all of these, but the service `type` enum is:
+
+* 0 - tag repository
+* 1 - file repository
+* 2 - a local file domain like 'my files'
+* 5 - a local tag domain like 'my tags'
+* 6 - a 'numerical' rating service with several stars
+* 7 - a 'like/dislike' rating service with on/off status
+* 10 - all known tags -- a union of all the tag services
+* 11 - all known files -- a union of all the file services and files that appear in tag services
+* 12 - the local booru -- you can ignore this
+* 13 - IPFS
+* 14 - trash
+* 15 - all local files -- all files on hard disk ('all my files' + updates + trash) 
+* 17 - file notes
+* 18 - Client API
+* 19 - all deleted files -- you can ignore this
+* 20 - local updates -- a file domain to store repository update files in
+* 21 - all my files -- union of all local file domains
+* 22 - a 'inc/dec' rating service with positive integer rating
+* 99 - server administration
+
+`type_pretty` is something you can show users. Hydrus uses the same labels in _manage services_ and so on.
+
+If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure has recently been added to [/get\_files/file\_metadata](#get_files_file_metadata) for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.
+
+I expect to hang more information off these in future, particularly star info for ratings.
+
+Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _review services_.
+
 ## Access Management
 
 ### **GET `/api_version`** { id="api_version" }
@@ -302,7 +420,7 @@ Example requests:
     ```
 
 Response: 
-:   Some JSON about the service. The same basic format as [/get\_services](#get_services)
+:   Some JSON about the service. A similar format as [/get\_services](#get_services) and [The Services Object](#services_object).
 ```json title="Example response"
 {
   "service" : {
@@ -320,7 +438,7 @@ It will only respond to services in the /get_services list. I will expand the av
 
 ### **GET `/get_services`** { id="get_services" }
 
-_Ask the client about its file and tag services._
+_Ask the client about its services._
 
 Restricted access: 
 :   YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.
@@ -330,127 +448,18 @@ Required Headers: n/a
 Arguments: n/a
     
 Response: 
-:   Some JSON listing the client's file and tag services by name and 'service key'.
+:   Some JSON listing the client's services.
+
 ```json title="Example response"
 {
-  "local_tags" : [
-    {
-      "name" : "my tags",
-      "service_key" : "6c6f63616c2074616773",
-      "type" : 5,
-      "type_pretty" : "local tag service"
-    },
-    {
-      "name" : "filenames",
-      "service_key" : "231a2e992b67101318c410abb6e7d98b6e32050623f138ca93bd4ad2993de31b",
-      "type" : 5,
-      "type_pretty" : "local tag service"
-    }
-  ],
-  "tag_repositories" : [
-    {
-      "name" : "PTR",
-      "service_key" : "ccb0cf2f9e92c2eb5bd40986f72a339ef9497014a5fb8ce4cea6d6c9837877d9",
-      "type" : 0,
-      "type_pretty" : "hydrus tag repository"
-    }
-  ],
-  "file_repositories" : [
-    {
-      "name" : "kamehameha central",
-      "service_key" : "89295dc26dae3ea7d395a1746a8fe2cb836b9472b97db48024bd05587f32ab0b",
-      "type" : 1,
-      "type_pretty" : "hydrus file repository"
-    }
-  ],
-  "local_files" : [
-    {
-      "name" : "my files",
-      "service_key" : "6c6f63616c2066696c6573",
-      "type" : 2,
-      "type_pretty" : "local file domain"
-    }
-  ],
-  "all_local_media" : [
-    {
-      "name" : "all my files",
-      "service_key" : "616c6c206c6f63616c206d65646961",
-      "type" : 21,
-      "type_pretty" : "virtual combined local media service"
-    }
-  ],
-  "trash" : [
-    {
-      "name" : "trash",
-      "service_key" : "7472617368",
-      "type" : 14,
-      "type_pretty" : "local trash file domain"
-    }
-  ],
-  "local_updates" : [
-    {
-      "name" : "repository updates",
-      "service_key" : "7265706f7369746f72792075706461746573",
-      "type" : 20,
-      "type_pretty" : "local update file domain"
-    }
-  ],
-  "all_local_files" : [
-    {
-      "name" : "all local files",
-      "service_key" : "616c6c206c6f63616c2066696c6573",
-      "type" : 15,
-      "type_pretty" : "virtual combined local file service"
-    }
-  ],
-  "all_known_files" : [
-    {
-      "name" : "all known files",
-      "service_key" : "616c6c206b6e6f776e2066696c6573",
-      "type" : 11,
-      "type_pretty" : "virtual combined file service"
-    }
-  ],
-  "all_known_tags" : [
-    {
-      "name" : "all known tags",
-      "service_key" : "616c6c206b6e6f776e2074616773",
-      "type" : 10,
-      "type_pretty" : "virtual combined tag service"
-    }
-  ]
+  "services" : "The Services Object"
 }
 ```  
 
-    Note that a user can rename their services, so while they will recognise `name`, it is not an excellent identifier, and definitely not something to save to any permanent config file.
-    
-    `service_key` is non-mutable and is the main service identifier. The hardcoded/initial services have shorter fixed service key strings (it is usually just 'all known files' etc.. ASCII-converted to hex), but user-created services will have random 64-character hex.
-    
-    Now that I state `type` and `type_pretty` here, I may rearrange this call, probably into a flat list. The `all_known_files` Object keys here are arbitrary.
-    
-    For service `type`, you won't see all these, and you'll only ever need some, but the enum is:
-    
-    * 0 - tag repository
-    * 1 - file repository
-    * 2 - a local file domain like 'my files'
-    * 5 - a local tag domain like 'my tags'
-    * 6 - a 'numerical' rating service with several stars
-    * 7 - a 'like/dislike' rating service with on/off status
-    * 10 - all known tags -- a union of all the tag services
-    * 11 - all known files -- a union of all the file services and files that appear in tag services
-    * 12 - the local booru -- you can ignore this
-    * 13 - IPFS
-    * 14 - trash
-    * 15 - all local files -- all files on hard disk ('all my files' + updates + trash) 
-    * 17 - file notes
-    * 18 - Client API
-    * 19 - all deleted files -- you can ignore this
-    * 20 - local updates -- a file domain to store repository update files in
-    * 21 - all my files -- union of all local file domains
-    * 22 - a 'inc/dec' rating service with positive integer rating
-    * 99 - server administration
-    
-    `type_pretty` is something you can show users if you like. Hydrus uses the same labels in _manage services_ and so on.
+This now primarily uses [The Services Object](#services_object).
+
+!!! note
+    If you do the request and look at the actual response, you will see a lot more data under different keys--this is deprecated, and will be deleted in 2024. If you use the old structure, please move over!
 
 ## Importing and Deleting Files
 
@@ -1309,6 +1318,7 @@ Arguments (in percent-encoded JSON):
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
     *   `include_notes`: true or false (optional, defaulting to false)
+    *   `include_services_object`: true or false (optional, defaulting to true)
     *   `hide_service_keys_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
 
 If your access key is restricted by tag, **the files you search for must have been in the most recent search result**.
@@ -1328,9 +1338,11 @@ If your access key is restricted by tag, **the files you search for must have be
 This request string can obviously get pretty ridiculously long. It also takes a bit of time to fetch metadata from the database. In its normal searches, the client usually fetches file metadata in batches of 256.
 
 Response:
-:   A list of JSON Objects that store a variety of file metadata.
+:   A list of JSON Objects that store a variety of file metadata. Also [The Services Object](#services_object) for service reference.
+
 ```json title="Example response"
 {
+  "services" : "The Services Object",
   "metadata" : [
     {
       "file_id" : 123,
@@ -1363,23 +1375,14 @@ Response:
       "known_urls" : [],
       "tags" : {
         "6c6f63616c2074616773" : {
-          "name" : "local tags",
-          "type" : 5,
-          "type_pretty" : "local tag service",
           "storage_tags" : {},
           "display_tags" : {}
         },
         "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
-          "name" : "public tag repo",
-          "type" : 1,
-          "type_pretty" : "hydrus tag repository",
           "storage_tags" : {},
           "display_tags" : {}
         },
         "616c6c206b6e6f776e2074616773" : {
-          "name" : "all known tags",
-          "type" : 10,
-          "type_pretty" : "virtual combined tag service",
           "storage_tags" : {},
           "display_tags" : {}
         }
@@ -1404,29 +1407,17 @@ Response:
       "file_services" : {
         "current" : {
           "616c6c206c6f63616c2066696c6573" : {
-            "name" : "all local files",
-            "type" : 15,
-            "type_pretty" : "virtual combined local file service",
             "time_imported" : 1641044491
           },
-          "616c6c206c6f63616c2066696c6573" : {
-            "name" : "all my files",
-            "type" : 21,
-            "type_pretty" : "virtual combined local media service",
+          "616c6c206c6f63616c206d65646961" : {
             "time_imported" : 1641044491
           },
           "cb072cffbd0340b67aec39e1953c074e7430c2ac831f8e78fb5dfbda6ec8dcbd" : {
-            "name" : "cool space babes",
-            "type" : 2,
-            "type_pretty" : "local file domain",
             "time_imported" : 1641204220
           }
         },
         "deleted" : {
           "6c6f63616c2066696c6573" : {
-            "name" : "my files",
-            "type" : 2,
-            "type_pretty" : "local file domain",
             "time_deleted" : 1641204274,
             "time_imported" : 1641044491
           }
@@ -1452,9 +1443,6 @@ Response:
       ],
       "tags" : {
         "6c6f63616c2074616773" : {
-          "name" : "local tags",
-          "type" : 5,
-          "type_pretty" : "local tag service",
           "storage_tags" : {
             "0" : ["samus favourites"],
             "2" : ["process this later"]
@@ -1465,9 +1453,6 @@ Response:
           }
         },
         "37e3849bda234f53b0e9792a036d14d4f3a9a136d1cb939705dbcd5287941db4" : {
-          "name" : "public tag repo",
-          "type" : 1,
-          "type_pretty" : "hydrus tag repository",
           "storage_tags" : {
             "0" : ["blonde_hair", "blue_eyes", "looking_at_viewer"],
             "1" : ["bodysuit"]
@@ -1478,9 +1463,6 @@ Response:
           }
         },
         "616c6c206b6e6f776e2074616773" : {
-          "name" : "all known tags",
-          "type" : 10,
-          "type_pretty" : "virtual combined tag service",
           "storage_tags" : {
             "0" : ["samus favourites", "blonde_hair", "blue_eyes", "looking_at_viewer"],
             "1" : ["bodysuit"]
@@ -1497,6 +1479,7 @@ Response:
 ```
 ```json title="And one where only_return_identifiers is true"
 {
+  "services" : "The Services Object",
   "metadata" : [
     {
       "file_id" : 123,
@@ -1511,6 +1494,7 @@ Response:
 ```
 ```json title="And where only_return_basic_information is true"
 {
+  "services" : "The Services Object",
   "metadata" : [
     {
       "file_id" : 123,
@@ -1523,7 +1507,7 @@ Response:
       "duration" : null,
       "has_audio" : false,
       "num_frames" : null,
-      "num_words" : null,
+      "num_words" : null
     },
     {
       "file_id" : 4567,
@@ -1536,7 +1520,7 @@ Response:
       "duration" : 4040,
       "has_audio" : true,
       "num_frames" : 102,
-      "num_words" : null,
+      "num_words" : null
     }
   ]
 }
@@ -1556,11 +1540,7 @@ The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction
 
 #### tags
 
-The 'tags' structures are undergoing transition. Previously, this was a mess of different Objects in different domains, all `service_xxx_to_xxx_tags`, but they are being transitioned to the combined `tags` Object.
-
-`hide_service_keys_tags` is deprecated and will be deleted soon. When set to `false`, it shows the old `service_keys_to_statuses_to_tags` and `service_keys_to_statuses_to_display_tags` Objects.
-
-The `tags` structures are similar to the [/add\_tags/add\_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
+The `tags` structure is similar to the [/add\_tags/add\_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
 
 *   0 - current
 *   1 - pending
@@ -1570,9 +1550,16 @@ The `tags` structures are similar to the [/add\_tags/add\_tags](#add_tags_add_ta
 !!! note
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
 
-To learn more about service names and keys on a client, use the [/get\_services](#get_services) call.
-
 While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
+
+#### services
+
+The 'tags' and 'file_services' structures use the hexadecimal `service_key` extensively. If you need to look up the respective service name or type, check [The Services Object](#services_object) under the top level `services` key.
+
+!!! note
+    If you look, those file structures actually include the service name and type already, but this bloated data is deprecated and will be deleted in 2024, so please transition over.
+
+If you don't want the services object (it is generally superfluous on the 'simple' responses), then add `include_services_object=false`.
 
 #### parameters
 

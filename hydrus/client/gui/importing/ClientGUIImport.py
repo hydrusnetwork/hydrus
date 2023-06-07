@@ -823,13 +823,12 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             page.movePageLeft.connect( self.MovePageLeft )
             page.movePageRight.connect( self.MovePageRight )
             
-            select = service_key == default_tag_service_key
-            
             tab_index = self._notebook.addTab( page, name )
             
-            if select:
+            if service_key == default_tag_service_key:
                 
-                self._notebook.setCurrentIndex( tab_index )
+                # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab = first tab disappears bug
+                QP.CallAfter( self._notebook.setCurrentWidget, page )
                 
             
         
@@ -843,7 +842,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.currentChanged.connect( self._SaveDefaultTagServiceKey )
         
-        self._notebook.currentWidget().SetSearchFocus()
+        QP.CallAfter( self._SetSearchFocus )
         
     
     def _SaveDefaultTagServiceKey( self ):
@@ -862,6 +861,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
                 
             
+        
+    
+    def _SetSearchFocus( self ):
+        
+        self._notebook.currentWidget().SetSearchFocus()
         
     
     def GetValue( self ):
