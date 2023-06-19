@@ -156,15 +156,15 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
 === "Windows"
 
-    Run 'client.bat' to start the client.
+    Run 'hydrus_client.bat' to start the client.
 
 === "Linux"
 
-    Run 'client.sh' to start the client. Don't forget to set `chmod +x client.sh` if you need it.
+    Run 'hydrus_client.sh' to start the client. Don't forget to set `chmod +x hydrus_client.sh` if you need it.
 
 === "macOS"
 
-    Run 'client.command' to start the client. Don't forget to set `chmod +x client.command` if you need it.
+    Run 'hydrus_client.command' to start the client. Don't forget to set `chmod +x hydrus_client.command` if you need it.
 
 The first start will take a little longer. It will operate just like a normal build, putting your database in the 'db' directory.
 
@@ -175,7 +175,7 @@ The first start will take a little longer. It will operate just like a normal bu
 
 === "Windows"
 
-    If you want to redirect your database or use any other launch arguments, then copy 'client.bat' to 'client-user.bat' and edit it, inserting your desired db path. Run this instead of 'client.bat'. New `git pull` commands will not affect 'client-user.bat'.
+    If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.bat' to 'hydrus_client-user.bat' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.bat'. New `git pull` commands will not affect 'hydrus_client-user.bat'.
     
     You probably can't pin your .bat file to your Taskbar or Start (and if you try and pin the running program to your taskbar, its icon may revert to Python), but you can make a shortcut to the .bat file, pin that to Start, and in its properties set a custom icon. There's a nice hydrus one in `install_dir/static`.
     
@@ -317,7 +317,7 @@ If you don't have FFMPEG in your PATH and you want to import anything more fun t
 
 ### Running It { id="running_it" }
 
-Once you have everything set up, hydrus_client.py and hydrus_server.py should look for and run off client.db and server.db just like the executables. You can use the 'client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:
+Once you have everything set up, hydrus_client.py and hydrus_server.py should look for and run off client.db and server.db just like the executables. You can use the 'hydrus_client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:
 
 ```
 source venv/bin/activate
