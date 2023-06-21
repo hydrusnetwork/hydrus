@@ -83,14 +83,23 @@ class PubSubEventCatcher( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == PubSubEventType and isinstance( event, PubSubEvent ):
+        try:
             
-            if self._pubsub.WorkToDo():
+            if event.type() == PubSubEventType and isinstance( event, PubSubEvent ):
                 
-                self._pubsub.Process()
+                if self._pubsub.WorkToDo():
+                    
+                    self._pubsub.Process()
+                    
+                
+                event.accept()
+                
+                return True
                 
             
-            event.accept()
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             

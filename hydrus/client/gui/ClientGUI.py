@@ -100,6 +100,7 @@ from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientSearch
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
@@ -533,6 +534,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
         self._controller.sub( self, 'DoFileStorageRebalance', 'do_file_storage_rebalance' )
         self._controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
+        self._controller.sub( self, 'NewPageDuplicates', 'new_page_duplicates' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
@@ -7099,31 +7101,40 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def eventFilter( self, watched, event ):
         
-        if watched == self:
+        try:
             
-            if event.type() == QC.QEvent.WindowStateChange:
+            if watched == self:
                 
-                was_minimised = event.oldState() == QC.Qt.WindowMinimized
-                is_minimised = self.isMinimized()
-                
-                if was_minimised != is_minimised:
+                if event.type() == QC.QEvent.WindowStateChange:
                     
-                    if self._have_system_tray_icon:
-                        
-                        self._system_tray_icon.SetUIIsCurrentlyMinimised( is_minimised )
-                        
+                    was_minimised = event.oldState() == QC.Qt.WindowMinimized
+                    is_minimised = self.isMinimized()
                     
-                    if is_minimised:
+                    if was_minimised != is_minimised:
                         
-                        self._was_maximised = event.oldState() == QC.Qt.WindowMaximized
-                        
-                        if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+                        if self._have_system_tray_icon:
                             
-                            self._FlipShowHideWholeUI()
+                            self._system_tray_icon.SetUIIsCurrentlyMinimised( is_minimised )
                             
                         
+                        if is_minimised:
+                            
+                            self._was_maximised = event.oldState() == QC.Qt.WindowMaximized
+                            
+                            if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+                                
+                                self._FlipShowHideWholeUI()
+                                
+                            
+                        
                     
                 
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False
@@ -7437,6 +7448,29 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_database.update()
         
     
+    def NewPageDuplicates(
+        self,
+        location_context: ClientLocation.LocationContext,
+        initial_predicates = None,
+        page_name = None,
+        select_page = True,
+        activate_window = False
+    ):
+        
+        self._notebook.NewPageDuplicateFilter(
+            location_context,
+            initial_predicates = initial_predicates,
+            page_name = page_name,
+            on_deepest_notebook = True,
+            select_page = select_page
+        )
+        
+        if activate_window and not self.isActiveWindow():
+            
+            self.activateWindow()
+            
+        
+    
     def NewPageImportHDD( self, paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success ):
         
         management_controller = ClientGUIManagementController.CreateManagementControllerImportHDD( paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
@@ -7456,16 +7490,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         select_page = True,
         activate_window = False
     ):
-        
-        if initial_hashes is None:
-            
-            initial_hashes = []
-            
-        
-        if initial_predicates is None:
-            
-            initial_predicates = []
-            
         
         self._notebook.NewPageQuery(
             location_context,

@@ -166,7 +166,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
-        self.itemDoubleClicked.connect( self.EventItemActivated )
+        self.itemDoubleClicked.connect( self.ProcessActivateAction )
         
         self.header().setSectionsMovable( False ) # can only turn this on when we move from data/sort tuples
         # self.header().setFirstSectionMovable( True ) # same
@@ -598,7 +598,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         if self._activation_callback is not None:
             
-            self._activation_callback()
+            try:
+                
+                self._activation_callback()
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
             
         
     
@@ -743,7 +750,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         if self._activation_callback is not None:
             
-            self._activation_callback()
+            try:
+                
+                self._activation_callback()
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
             
         
     
@@ -1664,7 +1678,14 @@ class BetterListCtrlPanel( QW.QWidget ):
             return
             
         
-        self._UpdateButtons()
+        try:
+            
+            self._UpdateButtons()
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
         
     
     def ImportFromDragDrop( self, paths ):

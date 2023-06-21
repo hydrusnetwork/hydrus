@@ -538,7 +538,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         self.Clear()
         
-        self._listctrl.AddDatas( list( str_to_str_dict.items() ) )
+        self._listctrl.AddDatas( [ ( str( key ), str( value ) ) for ( key, value ) in str_to_str_dict.items() ] )
         
         self._listctrl.Sort()
         

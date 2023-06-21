@@ -583,11 +583,20 @@ class ButtonWithMenuArrow( QW.QToolButton ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.Show and watched == self._menu:
+        try:
             
-            pos = QG.QCursor.pos()
+            if event.type() == QC.QEvent.Show and watched == self._menu:
+                
+                pos = QG.QCursor.pos()
+                
+                self._menu.move( pos )
+                
+                return True
+                
             
-            self._menu.move( pos )
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             
@@ -1929,11 +1938,20 @@ class TextCatchEnterEventFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.KeyPress and event.key() in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+        try:
             
-            self._callable()
+            if event.type() == QC.QEvent.KeyPress and event.key() in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+                
+                self._callable()
+                
+                event.accept()
+                
+                return True
+                
             
-            event.accept()
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             

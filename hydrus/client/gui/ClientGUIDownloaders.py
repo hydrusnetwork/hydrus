@@ -2460,7 +2460,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parser_list_ctrl.AddDatas( new_datas )
             
-            self._parser_list_ctrl_listctrl.SelectDatas( new_datas )
+            self._parser_list_ctrl.SelectDatas( new_datas )
             
             self._parser_list_ctrl.Sort()
             

@@ -1418,94 +1418,19 @@ class ShortcutsHandler( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.KeyPress:
+        try:
             
-            i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
-            
-            shortcut = ConvertKeyEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                if HG.shortcut_report_mode:
-                    
-                    message = 'Key shortcut "{}" passing through {}.'.format( shortcut.ToString(), repr( self._parent ) )
-                    
-                    if i_should_catch_shortcut_event:
-                        
-                        message += ' I am in a state to catch it.'
-                        
-                    else:
-                        
-                        message += ' I am not in a state to catch it.'
-                        
-                    
-                    HydrusData.ShowText( message )
-                    
-                
-                if i_should_catch_shortcut_event:
-                    
-                    shortcut_processed = self._ProcessShortcut( shortcut )
-                    
-                    if shortcut_processed:
-                        
-                        event.accept()
-                        
-                        return True
-                        
-                    
-                
-            
-        elif self._catch_mouse:
-            
-            if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
-                
-                global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
-                
-                if event.type() == QC.QEvent.MouseButtonPress:
-                    
-                    self._last_click_down_position = event.globalPosition().toPoint()
-                    
-                    CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
-                
-                #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
-                if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
-                    
-                    if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:
-                        
-                        # first completed click in the time window sets us active instantly
-                        self._activating_wait_job.Cancel()
-                        
-                        self._parent_currently_activated = True
-                        
-                    
-                    return False
-                    
-                
-                if event.type() == QC.QEvent.MouseButtonRelease:
-                    
-                    release_press_pos = event.globalPosition().toPoint()
-                    
-                    delta = release_press_pos - self._last_click_down_position
-                    
-                    approx_distance = delta.manhattanLength() + CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
-                    
-                    # if mouse release is some distance from mouse down (i.e. we are ending a drag), then don't fire off a release command
-                    
-                    if approx_distance > 20:
-                        
-                        return False
-                        
-                    
+            if event.type() == QC.QEvent.KeyPress:
                 
                 i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
                 
-                shortcut = ConvertMouseEventToShortcut( event )
+                shortcut = ConvertKeyEventToShortcut( event )
                 
                 if shortcut is not None:
                     
                     if HG.shortcut_report_mode:
                         
-                        message = 'Mouse Press shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                        message = 'Key shortcut "{}" passing through {}.'.format( shortcut.ToString(), repr( self._parent ) )
                         
                         if i_should_catch_shortcut_event:
                             
@@ -1532,6 +1457,90 @@ class ShortcutsHandler( QC.QObject ):
                         
                     
                 
+            elif self._catch_mouse:
+                
+                if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
+                    
+                    global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
+                    
+                    if event.type() == QC.QEvent.MouseButtonPress:
+                        
+                        self._last_click_down_position = event.globalPosition().toPoint()
+                        
+                        CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
+                    
+                    #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                    if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
+                        
+                        if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:
+                            
+                            # first completed click in the time window sets us active instantly
+                            self._activating_wait_job.Cancel()
+                            
+                            self._parent_currently_activated = True
+                            
+                        
+                        return False
+                        
+                    
+                    if event.type() == QC.QEvent.MouseButtonRelease:
+                        
+                        release_press_pos = event.globalPosition().toPoint()
+                        
+                        delta = release_press_pos - self._last_click_down_position
+                        
+                        approx_distance = delta.manhattanLength() + CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
+                        
+                        # if mouse release is some distance from mouse down (i.e. we are ending a drag), then don't fire off a release command
+                        
+                        if approx_distance > 20:
+                            
+                            return False
+                            
+                        
+                    
+                    i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
+                    
+                    shortcut = ConvertMouseEventToShortcut( event )
+                    
+                    if shortcut is not None:
+                        
+                        if HG.shortcut_report_mode:
+                            
+                            message = 'Mouse Press shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                            
+                            if i_should_catch_shortcut_event:
+                                
+                                message += ' I am in a state to catch it.'
+                                
+                            else:
+                                
+                                message += ' I am not in a state to catch it.'
+                                
+                            
+                            HydrusData.ShowText( message )
+                            
+                        
+                        if i_should_catch_shortcut_event:
+                            
+                            shortcut_processed = self._ProcessShortcut( shortcut )
+                            
+                            if shortcut_processed:
+                                
+                                event.accept()
+                                
+                                return True
+                                
+                            
+                        
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False
@@ -1638,13 +1647,22 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.WindowActivate:
+        try:
             
-            self._shortcuts_handler.FrameActivated()
+            if event.type() == QC.QEvent.WindowActivate:
+                
+                self._shortcuts_handler.FrameActivated()
+                
+            elif event.type() == QC.QEvent.WindowDeactivate:
+                
+                self._shortcuts_handler.FrameDeactivated()
+                
             
-        elif event.type() == QC.QEvent.WindowDeactivate:
+        except Exception as e:
             
-            self._shortcuts_handler.FrameDeactivated()
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False

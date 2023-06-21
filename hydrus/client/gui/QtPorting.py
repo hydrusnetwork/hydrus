@@ -16,7 +16,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtInit
@@ -1287,20 +1286,29 @@ class CallAfterEventCatcher( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
+        try:
             
-            if HG.profile_mode:
+            if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
                 
-                summary = 'Profiling CallAfter Event: {}'.format( event._fn )
+                if HG.profile_mode:
+                    
+                    summary = 'Profiling CallAfter Event: {}'.format( event._fn )
+                    
+                    HydrusProfiling.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
+                    
+                else:
+                    
+                    event.Execute()
+                    
                 
-                HydrusProfiling.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
+                event.accept()
                 
-            else:
-                
-                event.Execute()
+                return True
                 
             
-            event.accept()
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             
@@ -2221,101 +2229,111 @@ class WidgetEventFilter ( QC.QObject ):
 
     def eventFilter( self, watched, event ):
         
-        # Once somehow this got called with no _parent_widget set - which is probably fixed now but leaving the check just in case, wew
-        # Might be worth debugging this later if it still occurs - the only way I found to reproduce it is to run the help > debug > initialize server command
-        if not hasattr( self, '_parent_widget') or not isValid( self._parent_widget ): return False
-        
-        type = event.type()
-        
-        event_killed = False
-        
-        if type == QC.QEvent.KeyPress:
+        try:
             
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_KEY_DOWN', event )
+            # Once somehow this got called with no _parent_widget set - which is probably fixed now but leaving the check just in case, wew
+            # Might be worth debugging this later if it still occurs - the only way I found to reproduce it is to run the help > debug > initialize server command
+            if not hasattr( self, '_parent_widget') or not isValid( self._parent_widget ): return False
             
-        elif type == QC.QEvent.WindowStateChange:
+            type = event.type()
             
-            if isValid( self._parent_widget ):
+            event_killed = False
+            
+            if type == QC.QEvent.KeyPress:
                 
-                if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
-        
-        elif type == QC.QEvent.MouseMove:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-            
-        elif type == QC.QEvent.MouseButtonDblClick:
-            
-            if event.button() == QC.Qt.LeftButton:
-            
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DCLICK', event )
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_KEY_DOWN', event )
                 
-            elif event.button() == QC.Qt.RightButton:
-
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DCLICK', event )
-
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-            
-        elif type == QC.QEvent.MouseButtonPress:
-            
-            if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
-            
-            if event.buttons() & QC.Qt.MiddleButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MIDDLE_DOWN', event )
-            
-            if event.buttons() & QC.Qt.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
-
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-            
-        elif type == QC.QEvent.MouseButtonRelease:
-            
-            if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
-
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-            
-        elif type == QC.QEvent.Wheel:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSEWHEEL', event )
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-        
-        elif type == QC.QEvent.Scroll:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SCROLLWIN', event )
-            
-        elif type == QC.QEvent.Move:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE', event )
-            
-            if isValid( self._parent_widget ) and self._parent_widget.isVisible():
+            elif type == QC.QEvent.WindowStateChange:
                 
-                self._user_moved_window = True
+                if isValid( self._parent_widget ):
+                    
+                    if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
             
-        elif type == QC.QEvent.Resize:
-            
-            event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SIZE', event )
-            
-        elif type == QC.QEvent.NonClientAreaMouseButtonPress:
-            
-            self._user_moved_window = False
-        
-        elif type == QC.QEvent.NonClientAreaMouseButtonRelease:
-            
-            if self._user_moved_window:
+            elif type == QC.QEvent.MouseMove:
                 
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE_END', event )
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
+                
+            elif type == QC.QEvent.MouseButtonDblClick:
+                
+                if event.button() == QC.Qt.LeftButton:
+                    
+                    event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DCLICK', event )
+                    
+                elif event.button() == QC.Qt.RightButton:
+                    
+                    event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DCLICK', event )
+                    
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
+                
+            elif type == QC.QEvent.MouseButtonPress:
+                
+                if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
+                
+                if event.buttons() & QC.Qt.MiddleButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MIDDLE_DOWN', event )
+                
+                if event.buttons() & QC.Qt.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
+                
+            elif type == QC.QEvent.MouseButtonRelease:
+                
+                if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
+                
+            elif type == QC.QEvent.Wheel:
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSEWHEEL', event )
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
+                
+            elif type == QC.QEvent.Scroll:
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SCROLLWIN', event )
+                
+            elif type == QC.QEvent.Move:
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE', event )
+                
+                if isValid( self._parent_widget ) and self._parent_widget.isVisible():
+                    
+                    self._user_moved_window = True
+                
+            elif type == QC.QEvent.Resize:
+                
+                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SIZE', event )
+                
+            elif type == QC.QEvent.NonClientAreaMouseButtonPress:
                 
                 self._user_moved_window = False
                 
+            elif type == QC.QEvent.NonClientAreaMouseButtonRelease:
+                
+                if self._user_moved_window:
+                    
+                    event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE_END', event )
+                    
+                    self._user_moved_window = False
+                    
+                
             
-        
-        if event_killed:
+            if event_killed:
+                
+                event.accept()
+                
+                return True
+                
             
-            event.accept()
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             
         
         return False
-
+        
     
     def _AddCallback( self, evt_name, callback ):
         

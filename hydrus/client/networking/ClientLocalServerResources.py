@@ -64,7 +64,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -948,6 +948,8 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
         share_key = request.parsed_request_args[ 'share_key' ]
         hash = request.parsed_request_args[ 'hash' ]
         
+        is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
+        
         HG.client_controller.local_booru_manager.CheckFileAuthorised( share_key, hash )
         
         media_result = HG.client_controller.local_booru_manager.GetMediaResult( share_key, hash )
@@ -963,7 +965,7 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
             raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
             
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path, is_attachment = is_attachment )
         
         return response_context
         
@@ -2597,7 +2599,9 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
             raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
             
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
+        is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path, is_attachment = is_attachment )
         
         return response_context
         

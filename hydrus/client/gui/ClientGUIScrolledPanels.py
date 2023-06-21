@@ -16,29 +16,38 @@ class ResizingEventFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.Resize:
+        try:
             
-            parent = self.parent()
+            if event.type() == QC.QEvent.Resize:
+                
+                parent = self.parent()
+                
+                if isinstance( parent, ResizingScrolledPanel ):
+                    
+                    # weird hack fix for a guy who was getting QPaintEvents in here
+                    if not hasattr( event, 'oldSize' ):
+                        
+                        return False
+                        
+                    
+                    old_size = event.oldSize()
+                    size = event.size()
+                    
+                    width_larger = size.width() > old_size.width() and size.height() >= old_size.height()
+                    height_larger = size.width() >= old_size.width() and size.height() > old_size.height()
+                    
+                    if width_larger or height_larger:
+                        
+                        QP.CallAfter( parent.WidgetJustSized, width_larger, height_larger )
+                        
+                    
+                
             
-            if isinstance( parent, ResizingScrolledPanel ):
-                
-                # weird hack fix for a guy who was getting QPaintEvents in here
-                if not hasattr( event, 'oldSize' ):
-                    
-                    return False
-                    
-                
-                old_size = event.oldSize()
-                size = event.size()
-                
-                width_larger = size.width() > old_size.width() and size.height() >= old_size.height()
-                height_larger = size.width() >= old_size.width() and size.height() > old_size.height()
-                
-                if width_larger or height_larger:
-                    
-                    QP.CallAfter( parent.WidgetJustSized, width_larger, height_larger )
-                    
-                
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False

@@ -988,6 +988,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.SetGUGs( gugs )
         
     
+    def DeleteParsers( self, deletee_names ):
+        
+        with self._lock:
+            
+            parsers = [ parser for parser in self._parsers if parser.GetName() not in deletee_names ]
+            
+        
+        self.SetParsers( parsers )
+        
+    
     def DeleteURLClasses( self, deletee_names ):
         
         with self._lock:

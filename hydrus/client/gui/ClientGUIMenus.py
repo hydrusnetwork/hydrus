@@ -221,9 +221,18 @@ class StatusBarRedirectFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.StatusTip:
+        try:
             
-            QW.QApplication.instance().sendEvent( HG.client_controller.gui, event )
+            if event.type() == QC.QEvent.StatusTip:
+                
+                QW.QApplication.instance().sendEvent( HG.client_controller.gui, event )
+                
+                return True
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             

@@ -1526,7 +1526,6 @@ class MediaContainer( QW.QWidget ):
     def _MakeMediaWindow( self ):
         
         old_media_window = self._media_window
-        destroy_old_media_window = True
         
         do_neighbour_prefetch_emit = True
         

@@ -1619,21 +1619,23 @@ Required Headers: n/a
     
 Arguments :
 :   
-    *   `file_id`: (numerical file id for the file)
-    *   `hash`: (a hexadecimal SHA256 hash for the file)
+    *   `file_id`: (selective, numerical file id for the file)
+    *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
+    *   `download`: (optional, boolean, default `false`)
 
-    Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
-    ``` title="Example request"
-    /get_files/file?file_id=452158
-    ```
-    ``` title="Example request"
-    /get_files/file?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
-    ```
+``` title="Example request"
+/get_files/file?file_id=452158
+```
+``` title="Example request"
+/get_files/file?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&download=true
+```
    
 Response:
 :   The file itself. You should get the correct mime type as the Content-Type header.
 
+By default, this will set the `Content-Disposition` header to `inline`, which causes a web browser to show the file. If you set `download=true`, it will set it to `attachment`, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.
 
 ### **GET `/get_files/thumbnail`** { id="get_files_thumbnail" }
 
@@ -1646,8 +1648,8 @@ Required Headers: n/a
     
 Arguments:
 :   
-    *   `file_id`: (numerical file id for the file)
-    *   `hash`: (a hexadecimal SHA256 hash for the file)
+    *   `file_id`: (selective, numerical file id for the file)
+    *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
 
     Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 

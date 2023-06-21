@@ -42,13 +42,30 @@ def CreateManagementController( page_name, management_type ):
     return management_controller
     
 
-def CreateManagementControllerDuplicateFilter():
+def CreateManagementControllerDuplicateFilter(
+    location_context = None,
+    initial_predicates = None,
+    page_name = None
+):
     
-    default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+    if location_context is None:
+        
+        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        
     
-    management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER )
+    if initial_predicates is None:
+        
+        initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
+        
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+    if page_name is None:
+        
+        page_name = 'duplicates'
+        
+    
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_DUPLICATE_FILTER )
+    
+    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = initial_predicates )
     
     synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
@@ -773,6 +790,21 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     def IsImporter( self ):
         
         return self._management_type in ( MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        
+    
+    def NotifyLoadingWithHashes( self ):
+        
+        if self.HasVariable( 'file_search_context' ):
+            
+            file_search_context = self.GetVariable( 'file_search_context' )
+            
+            file_search_context.SetComplete()
+            
+        
+    
+    def SetDirty( self ):
+        
+        self._SerialisableChangeMade()
         
     
     def SetPageName( self, name ):

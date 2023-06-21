@@ -1243,66 +1243,98 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def eventFilter( self, watched, event ):
         
-        if watched == self._text_ctrl:
+        try:
             
-            if event.type() == QC.QEvent.Wheel:
+            if watched == self._text_ctrl:
                 
-                current_results_list = self._dropdown_notebook.currentWidget()
+                if event.type() == QC.QEvent.Wheel:
+                    
+                    current_results_list = self._dropdown_notebook.currentWidget()
+                    
+                    if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
+                        
+                        if event.angleDelta().y() > 0:
+                            
+                            self.movePageLeft.emit()
+                            
+                        else:
+                            
+                            self.movePageRight.emit()
+                            
+                        
+                        event.accept()
+                        
+                        return True
+                        
+                    elif event.modifiers() & QC.Qt.ControlModifier:
+                        
+                        if event.angleDelta().y() > 0:
+                            
+                            current_results_list.MoveSelectionUp()
+                            
+                        else:
+                            
+                            current_results_list.MoveSelectionDown()
+                            
+                        
+                        event.accept()
+                        
+                        return True
+                        
+                    elif self._float_mode and not self._dropdown_hidden:
+                        
+                        # it is annoying to scroll on this lad when float is around, so swallow it here
+                        
+                        event.accept()
+                        
+                        return True
+                        
+                    
+                elif self._float_mode:
+                    
+                    # I could probably wangle this garbagewith setFocusProxy on all the children of the dropdown, assuming that wouldn't break anything, but this seems to work ok nonetheless
+                    
+                    if event.type() == QC.QEvent.FocusIn:
+                        
+                        self._DropdownHideShow()
+                        
+                        return False
+                        
+                    elif event.type() == QC.QEvent.FocusOut:
+                        
+                        current_focus_widget = QW.QApplication.focusWidget()
+                        
+                        if current_focus_widget is not None and ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
+                            
+                            self._temporary_focus_widget = current_focus_widget
+                            
+                            self._temporary_focus_widget.installEventFilter( self )
+                            
+                        else:
+                            
+                            self._DropdownHideShow()
+                            
+                        
+                        return False
+                        
+                    
                 
-                if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
-                    
-                    if event.angleDelta().y() > 0:
-                        
-                        self.movePageLeft.emit()
-                        
-                    else:
-                        
-                        self.movePageRight.emit()
-                        
-                    
-                    event.accept()
-                    
-                    return True
-                    
-                elif event.modifiers() & QC.Qt.ControlModifier:
-                    
-                    if event.angleDelta().y() > 0:
-                        
-                        current_results_list.MoveSelectionUp()
-                        
-                    else:
-                        
-                        current_results_list.MoveSelectionDown()
-                        
-                    
-                    event.accept()
-                    
-                    return True
-                    
-                elif self._float_mode and not self._dropdown_hidden:
-                    
-                    # it is annoying to scroll on this lad when float is around, so swallow it here
-                    
-                    event.accept()
-                    
-                    return True
-                    
+            elif self._temporary_focus_widget is not None and watched == self._temporary_focus_widget:
                 
-            elif self._float_mode:
-                
-                # I could probably wangle this garbagewith setFocusProxy on all the children of the dropdown, assuming that wouldn't break anything, but this seems to work ok nonetheless
-                
-                if event.type() == QC.QEvent.FocusIn:
+                if self._float_mode and event.type() == QC.QEvent.FocusOut:
                     
-                    self._DropdownHideShow()
+                    self._temporary_focus_widget.removeEventFilter( self )
                     
-                    return False
-                    
-                elif event.type() == QC.QEvent.FocusOut:
+                    self._temporary_focus_widget = None
                     
                     current_focus_widget = QW.QApplication.focusWidget()
                     
-                    if current_focus_widget is not None and ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
+                    if current_focus_widget is None:
+                        
+                        # happens sometimes when moving tabs in the tags dropdown list
+                        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+                        
+                    elif ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
                         
                         self._temporary_focus_widget = current_focus_widget
                         
@@ -1317,34 +1349,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                 
             
-        elif self._temporary_focus_widget is not None and watched == self._temporary_focus_widget:
+        except Exception as e:
             
-            if self._float_mode and event.type() == QC.QEvent.FocusOut:
-                
-                self._temporary_focus_widget.removeEventFilter( self )
-                
-                self._temporary_focus_widget = None
-                
-                current_focus_widget = QW.QApplication.focusWidget()
-                
-                if current_focus_widget is None:
-                    
-                    # happens sometimes when moving tabs in the tags dropdown list
-                    ClientGUIFunctions.SetFocusLater( self._text_ctrl )
-                    
-                elif ClientGUIFunctions.IsQtAncestor( current_focus_widget, self._dropdown_window ):
-                    
-                    self._temporary_focus_widget = current_focus_widget
-                    
-                    self._temporary_focus_widget.installEventFilter( self )
-                    
-                else:
-                    
-                    self._DropdownHideShow()
-                    
-                
-                return False
-                
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False

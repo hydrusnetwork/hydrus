@@ -2032,47 +2032,56 @@ class ListBox( QW.QScrollArea ):
     
     def eventFilter( self, watched, event ):
         
-        # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
-        
-        if watched == self.widget():
+        try:
             
-            if event.type() == QC.QEvent.MouseButtonPress:
+            # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
+            
+            if watched == self.widget():
                 
-                self._HandleClick( event )
-                
-                event.accept()
-                
-                return True
-                
-            elif event.type() == QC.QEvent.MouseButtonRelease:
-                
-                self._in_drag = False
-                
-                event.ignore()
-                
-            elif event.type() == QC.QEvent.MouseButtonDblClick:
-                
-                if event.button() == QC.Qt.LeftButton:
+                if event.type() == QC.QEvent.MouseButtonPress:
                     
-                    ctrl_down = event.modifiers() & QC.Qt.ControlModifier
-                    shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                    self._HandleClick( event )
                     
-                    action_occurred = self._Activate( ctrl_down, shift_down )
+                    event.accept()
                     
-                    if action_occurred:
+                    return True
+                    
+                elif event.type() == QC.QEvent.MouseButtonRelease:
+                    
+                    self._in_drag = False
+                    
+                    event.ignore()
+                    
+                elif event.type() == QC.QEvent.MouseButtonDblClick:
+                    
+                    if event.button() == QC.Qt.LeftButton:
                         
-                        self.mouseActivationOccurred.emit()
+                        ctrl_down = event.modifiers() & QC.Qt.ControlModifier
+                        shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                        
+                        action_occurred = self._Activate( ctrl_down, shift_down )
+                        
+                        if action_occurred:
+                            
+                            self.mouseActivationOccurred.emit()
+                            
+                        
+                    else:
+                        
+                        QW.QScrollArea.mouseDoubleClickEvent( self, event )
                         
                     
-                else:
+                    event.accept()
                     
-                    QW.QScrollArea.mouseDoubleClickEvent( self, event )
+                    return True
                     
                 
-                event.accept()
-                
-                return True
-                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False
@@ -2424,6 +2433,26 @@ class ListBoxTags( ListBox ):
         return False
         
     
+    def _NewDuplicateFilterPage( self, predicates ):
+        
+        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        
+        predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
+        
+        if len( predicates ) == 0:
+            
+            return
+            
+        
+        s = sorted( ( predicate.ToString() for predicate in predicates ) )
+        
+        page_name = 'duplicates: ' + ', '.join( s )
+        
+        location_context = self._GetCurrentLocationContext()
+        
+        HG.client_controller.pub( 'new_page_duplicates', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+        
+    
     def _NewSearchPages( self, pages_of_predicates ):
         
         activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
@@ -2597,48 +2626,57 @@ class ListBoxTags( ListBox ):
     
     def eventFilter( self, watched, event ):
         
-        # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
-        
-        if watched == self.widget():
+        try:
             
-            if event.type() == QC.QEvent.MouseButtonPress:
+            # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
+            
+            if watched == self.widget():
                 
-                if event.button() == QC.Qt.MiddleButton:
+                if event.type() == QC.QEvent.MouseButtonPress:
                     
-                    self._HandleClick( event )
-                    
-                    if self.can_spawn_new_windows:
+                    if event.button() == QC.Qt.MiddleButton:
                         
-                        (predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate) = self._GetSelectedPredicatesAndInverseCopies()
+                        self._HandleClick( event )
                         
-                        if len( predicates ) > 0:
+                        if self.can_spawn_new_windows:
                             
-                            shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                            (predicates, or_predicate, inverse_predicates, namespace_predicate, inverse_namespace_predicate) = self._GetSelectedPredicatesAndInverseCopies()
                             
-                            if shift_down and or_predicate is not None:
+                            if len( predicates ) > 0:
                                 
-                                predicates = (or_predicate,)
+                                shift_down = event.modifiers() & QC.Qt.ShiftModifier
                                 
-                            self._NewSearchPages( [ predicates ] )
+                                if shift_down and or_predicate is not None:
+                                    
+                                    predicates = (or_predicate,)
+                                    
+                                self._NewSearchPages( [ predicates ] )
+                                
                             
                         
+                        event.accept()
+                        
+                        return True
+                        
                     
-                    event.accept()
+                elif event.type() == QC.QEvent.MouseButtonRelease:
                     
-                    return True
+                    if event.button() == QC.Qt.RightButton:
+                        
+                        self.ShowMenu()
+                        
+                        event.accept()
+                        
+                        return True
+                        
                     
                 
-            elif event.type() == QC.QEvent.MouseButtonRelease:
-                
-                if event.button() == QC.Qt.RightButton:
-                    
-                    self.ShowMenu()
-                    
-                    event.accept()
-                    
-                    return True
-                    
-                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return ListBox.eventFilter( self, watched, event )
@@ -3046,6 +3084,10 @@ class ListBoxTags( ListBox ):
                             
                             ClientGUIMenus.AppendMenuItem( search_menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
                             
+                        
+                        ClientGUIMenus.AppendSeparator( search_menu )
+                        
+                        ClientGUIMenus.AppendMenuItem( search_menu, f'open a new duplicate filter page for {selection_string}', 'Open a new duplicate filter page starting with the selected predicates.', self._NewDuplicateFilterPage, predicates )
                         
                         ClientGUIMenus.AppendSeparator( search_menu )
                         

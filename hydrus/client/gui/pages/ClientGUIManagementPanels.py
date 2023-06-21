@@ -988,11 +988,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             page_name = 'preparation (needs work)'
             
-            if not self._have_done_first_maintenance_numbers_show:
-                
-                self._main_notebook.SelectPage( self._main_left_panel )
-                
-            
         else:
             
             self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
@@ -1001,8 +996,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
         self._main_notebook.setTabText( 0, page_name )
-        
-        self._have_done_first_maintenance_numbers_show = True
         
     
     def _UpdatePotentialDuplicatesCount( self, potential_duplicates_count ):
@@ -5216,6 +5209,8 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._management_controller.SetVariable( 'synchronised', synchronised )
             
+            self._management_controller.SetDirty()
+            
             if synchronised:
                 
                 self._RefreshQuery()
@@ -5320,6 +5315,8 @@ class ManagementPanelQuery( ManagementPanel ):
         file_search_context.SetComplete()
         
         self._management_controller.SetVariable( 'file_search_context', file_search_context.Duplicate() )
+        
+        self._management_controller.SetDirty()
         
         QP.CallAfter( qt_code )
         

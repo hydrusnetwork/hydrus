@@ -4932,6 +4932,24 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( hashlib.sha256( data ).digest(), hash )
         
+        self.assertIn( 'inline', response.headers[ 'Content-Disposition' ] )
+        
+        # succeed with attachment
+        
+        path = '/get_files/file?file_id={}&download=true'.format( 1 )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( hashlib.sha256( data ).digest(), hash )
+        
+        self.assertIn( 'attachment', response.headers[ 'Content-Disposition' ] )
+        
         # range request
         
         path = '/get_files/file?file_id={}'.format( 1 )

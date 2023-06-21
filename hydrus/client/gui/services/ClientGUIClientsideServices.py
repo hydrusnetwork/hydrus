@@ -4147,11 +4147,16 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
                 hashes = HG.client_controller.Read( 'trash_hashes' )
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
-                
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
-                
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                for group_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 16 ):
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
+                    
+                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                    time.sleep( 0.01 )
+                    
                 
                 HG.client_controller.pub( 'service_updated', service )
                 

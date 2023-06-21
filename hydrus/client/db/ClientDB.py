@@ -9392,6 +9392,56 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 531:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'pixiv file page api parser',
+                    'pixiv file page api parser (gets lower quality image if not logged in)'
+                ] )
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'pixiv file page'
+                ] )
+                
+                domain_manager.DeleteParsers( [
+                    'pixiv manga page parser',
+                    'pixiv manga_big page parser',
+                    'pixiv single file page parser - new layout',
+                    'pixiv tag search gallery page parser'
+                ] )
+                
+                domain_manager.DeleteURLClasses( [
+                    'pixiv manga page',
+                    'pixiv manga_big page',
+                    'pixiv tag search gallery page'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

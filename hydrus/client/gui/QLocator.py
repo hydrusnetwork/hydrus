@@ -58,9 +58,19 @@ class FocusEventFilter(QC.QObject):
     def __init__(self, parent = None):
         super().__init__(parent)
 
-    def eventFilter(self, object, event) -> bool:
-        if event.type() == QC.QEvent.FocusIn:
-            self.focused.emit()
+    def eventFilter(self, watched, event) -> bool:
+        try:
+            
+            if event.type() == QC.QEvent.FocusIn:
+                
+                self.focused.emit()
+                
+            
+        except Exception as e:
+            
+            return True
+            
+        
         return False
 
 class QLocatorSearchResult:

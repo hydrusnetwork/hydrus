@@ -396,14 +396,23 @@ class MediaCollectControl( QW.QWidget ):
     
     def eventFilter( self, watched, event ):
         
-        if watched == self._collect_comboctrl:
+        try:
             
-            if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.MiddleButton:
+            if watched == self._collect_comboctrl:
                 
-                self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.MiddleButton:
+                    
+                    self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                    
+                    return True
+                    
                 
-                return True
-                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False

@@ -596,6 +596,15 @@ class HydrusResource( Resource ):
         
         do_finish = True
         
+        if response_context.IsAttachmentDownload():
+            
+            content_disposition_type = 'attachment'
+            
+        else:
+            
+            content_disposition_type = 'inline'
+            
+        
         if response_context.HasPath():
             
             path = response_context.GetPath()
@@ -610,7 +619,7 @@ class HydrusResource( Resource ):
             
             fileObject = open( path, 'rb' )
             
-            content_disposition = 'inline; filename="' + filename + '"'
+            content_disposition = f'{content_disposition_type}; filename="{filename}"'
             
             request.setHeader( 'Content-Disposition', str( content_disposition ) )
             
@@ -672,7 +681,7 @@ class HydrusResource( Resource ):
             
             content_length = len( body_bytes )
             
-            content_disposition = 'inline'
+            content_disposition = content_disposition_type
             
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
@@ -1213,7 +1222,7 @@ class HydrusResourceWelcome( HydrusResource ):
     
 class ResponseContext( object ):
     
-    def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None ):
+    def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None, is_attachment = False ):
         
         if body is None:
             
@@ -1246,6 +1255,7 @@ class ResponseContext( object ):
         self._body_bytes = body_bytes
         self._path = path
         self._cookies = cookies
+        self._is_attachment = is_attachment
         
     
     def GetBodyBytes( self ):
@@ -1264,4 +1274,9 @@ class ResponseContext( object ):
     def HasBody( self ): return self._body_bytes is not None
     
     def HasPath( self ): return self._path is not None
+    
+    def IsAttachmentDownload( self ):
+        
+        return self._is_attachment
+        
     

@@ -1274,10 +1274,6 @@ class ClientFilesManager( object ):
                         
                         num_thumbnails_deleted += 1
                         
-                    else:
-                        
-                        HydrusData.Print( 'Wanted to physically delete the "{}" thumbnail, but it was not found!'.format( file_hash.hex() ) )
-                        
                     
                 
                 self._controller.WriteSynchronous( 'clear_deferred_physical_delete', file_hash = file_hash, thumbnail_hash = thumbnail_hash )

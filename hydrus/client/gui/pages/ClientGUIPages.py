@@ -443,6 +443,11 @@ class Page( QW.QWidget ):
         
         self._management_controller.SetVariable( 'page_key', self._page_key )
         
+        if len( initial_hashes ) > 0:
+            
+            self._management_controller.NotifyLoadingWithHashes()
+            
+        
         self._initialised = len( initial_hashes ) == 0
         self._pre_initialisation_media_results = []
         
@@ -2237,64 +2242,73 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
+        try:
             
-            screen_position = QG.QCursor.pos()
-            
-            if watched == self.tabBar():
+            if event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
                 
-                tab_pos = self.tabBar().mapFromGlobal( screen_position )
+                screen_position = QG.QCursor.pos()
                 
-                over_a_tab = tab_pos != -1
-                over_tab_greyspace = tab_pos == -1
-                
-            else:
-                
-                over_a_tab = False
-                
-                widget_under_mouse = QW.QApplication.instance().widgetAt( screen_position )
-                
-                if widget_under_mouse is None:
+                if watched == self.tabBar():
                     
-                    over_tab_greyspace = None
+                    tab_pos = self.tabBar().mapFromGlobal( screen_position )
+                    
+                    over_a_tab = tab_pos != -1
+                    over_tab_greyspace = tab_pos == -1
                     
                 else:
                     
-                    if self.count() == 0 and isinstance( widget_under_mouse, QW.QStackedWidget ):
+                    over_a_tab = False
+                    
+                    widget_under_mouse = QW.QApplication.instance().widgetAt( screen_position )
+                    
+                    if widget_under_mouse is None:
                         
-                        over_tab_greyspace = True
+                        over_tab_greyspace = None
                         
                     else:
                         
-                        over_tab_greyspace = widget_under_mouse == self
+                        if self.count() == 0 and isinstance( widget_under_mouse, QW.QStackedWidget ):
+                            
+                            over_tab_greyspace = True
+                            
+                        else:
+                            
+                            over_tab_greyspace = widget_under_mouse == self
+                            
+                        
+                    
+                
+                if event.type() == QC.QEvent.MouseButtonDblClick:
+                    
+                    if event.button() == QC.Qt.LeftButton and over_tab_greyspace and not over_a_tab:
+                        
+                        self.EventNewPageFromScreenPosition( screen_position )
+                        
+                        return True
+                        
+                    
+                elif event.type() == QC.QEvent.MouseButtonRelease:
+                    
+                    if event.button() == QC.Qt.RightButton and ( over_a_tab or over_tab_greyspace ):
+                        
+                        self.ShowMenuFromScreenPosition( screen_position )
+                        
+                        return True
+                        
+                    elif event.button() == QC.Qt.MiddleButton and over_tab_greyspace and not over_a_tab:
+                        
+                        self.EventNewPageFromScreenPosition( screen_position )
+                        
+                        return True
                         
                     
                 
             
-            if event.type() == QC.QEvent.MouseButtonDblClick:
-                
-                if event.button() == QC.Qt.LeftButton and over_tab_greyspace and not over_a_tab:
-                    
-                    self.EventNewPageFromScreenPosition( screen_position )
-                    
-                    return True
-                    
-                
-            elif event.type() == QC.QEvent.MouseButtonRelease:
-                
-                if event.button() == QC.Qt.RightButton and ( over_a_tab or over_tab_greyspace ):
-                    
-                    self.ShowMenuFromScreenPosition( screen_position )
-                    
-                    return True
-                    
-                elif event.button() == QC.Qt.MiddleButton and over_tab_greyspace and not over_a_tab:
-                    
-                    self.EventNewPageFromScreenPosition( screen_position )
-                    
-                    return True
-                    
-                
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False
@@ -3223,11 +3237,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return page
         
     
-    def NewPageDuplicateFilter( self, on_deepest_notebook = False ):
+    def NewPageDuplicateFilter(
+        self,
+        location_context = None,
+        initial_predicates = None,
+        page_name = None,
+        select_page = True,
+        on_deepest_notebook = False
+    ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerDuplicateFilter()
+        management_controller = ClientGUIManagementController.CreateManagementControllerDuplicateFilter( location_context = location_context, initial_predicates = initial_predicates, page_name = page_name )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportGallery( self, page_name = None, on_deepest_notebook = False, select_page = True ):
@@ -3285,7 +3306,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if initial_predicates is None:
             
-            initial_predicates = []
+            if len( initial_hashes ) > 0:
+                
+                initial_predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
+                
+            else:
+                
+                initial_predicates = []
+                
             
         
         if page_name is None:
@@ -3293,7 +3321,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             page_name = 'files'
             
         
-        search_enabled = len( initial_hashes ) == 0
+        search_disabled = len( initial_hashes ) > 0 and len( initial_predicates ) == 0
+        search_enabled = not search_disabled
         
         new_options = self._controller.new_options
         
@@ -3312,6 +3341,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         tag_context = ClientSearch.TagContext( service_key = tag_service_key )
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
+        
+        if len( initial_hashes ) > 0:
+            
+            # this is important, it is consulted deeper to determine query refresh on start!
+            file_search_context.SetComplete()
+            
         
         management_controller = ClientGUIManagementController.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
         

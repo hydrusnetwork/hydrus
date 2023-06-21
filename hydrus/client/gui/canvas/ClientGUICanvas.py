@@ -290,7 +290,16 @@ class LayoutEventSilencer( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if watched == self.parent() and event.type() == QC.QEvent.LayoutRequest:
+        try:
+            
+            if watched == self.parent() and event.type() == QC.QEvent.LayoutRequest:
+                
+                return True
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
             
             return True
             
@@ -1306,13 +1315,22 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
+        try:
             
-            self._canvas.BeginDrag()
+            if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
+                
+                self._canvas.BeginDrag()
+                
+            elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
+                
+                self._canvas.EndDrag()
+                
             
-        elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
+        except Exception as e:
             
-            self._canvas.EndDrag()
+            HydrusData.ShowException( e )
+            
+            return True
             
         
         return False

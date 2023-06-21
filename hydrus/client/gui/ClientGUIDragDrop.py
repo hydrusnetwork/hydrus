@@ -191,21 +191,31 @@ class FileDropTarget( QC.QObject ):
         self._media_callable = media_callable
         
     
-    def eventFilter( self, object, event ):
+    def eventFilter( self, watched, event ):
         
-        if event.type() == QC.QEvent.Drop:
+        try:
             
-            if self.OnDrop( event.position().toPoint().x(), event.position().toPoint().y() ):
+            if event.type() == QC.QEvent.Drop:
                 
-                event.setDropAction( self.OnData( event.mimeData(), event.proposedAction() ) )
+                if self.OnDrop( event.position().toPoint().x(), event.position().toPoint().y() ):
+                    
+                    event.setDropAction( self.OnData( event.mimeData(), event.proposedAction() ) )
+                    
+                    event.accept()
+                    
+                
+            elif event.type() == QC.QEvent.DragEnter:
                 
                 event.accept()
                 
             
-        elif event.type() == QC.QEvent.DragEnter:
+        except Exception as e:
             
-            event.accept()
+            HydrusData.ShowException( e )
             
+            return True
+            
+        
         
         return False
         
