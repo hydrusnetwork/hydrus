@@ -2035,7 +2035,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     def _ResetComparisonStatements( self ):
         
         statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
-
+        
         for name in self._comparison_statement_names:
             
             ( panel, st ) = self._comparison_statements_sts[ name ]
