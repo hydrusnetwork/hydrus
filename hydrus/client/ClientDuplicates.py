@@ -51,6 +51,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     duplicate_comparison_score_more_tags = new_options.GetInteger( 'duplicate_comparison_score_more_tags' )
     duplicate_comparison_score_older = new_options.GetInteger( 'duplicate_comparison_score_older' )
     duplicate_comparison_score_nicer_ratio = new_options.GetInteger( 'duplicate_comparison_score_nicer_ratio' )
+    duplicate_comparison_score_has_audio = new_options.GetInteger( 'duplicate_comparison_score_has_audio' )
     
     #
     
@@ -317,8 +318,30 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         score = 0
         
         statements_and_scores[ 'mime' ] = ( statement, score )
+
+
+    # audio/no audio
+
+    s_has_audio = shown_media.GetMediaResult().HasAudio()
+    c_has_audio = comparison_media.GetMediaResult().HasAudio()
+
+    if s_has_audio != c_has_audio:
         
+        if s_has_audio:
+
+            audio_statement = 'has audio, the other does not'
+            score = duplicate_comparison_score_has_audio
+
+        else:
+            
+            audio_statement = 'the other has audio, this does not'
+            score = 0
+        
+        statement = '{} vs {}'.format( s_has_audio, c_has_audio )
+
+        statements_and_scores[ 'has_audio' ] = ( audio_statement, score )
     
+
     # more tags
     
     s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
