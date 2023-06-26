@@ -29,3 +29,4 @@ setuptools==65.5.1
 
 zope==5.5.0
 PyQt6==6.4.1
+PyQt6-Qt6==6.5.0
