@@ -2189,7 +2189,7 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
 
 def ListsToTuples( potentially_nested_lists ):
     
-    if isinstance( potentially_nested_lists, HydrusData.LIST_LIKE_COLLECTION ):
+    if HydrusData.IsAListLikeCollection( potentially_nested_lists ):
         
         return tuple( map( ListsToTuples, potentially_nested_lists ) )
         

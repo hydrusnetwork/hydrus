@@ -1917,7 +1917,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             for item in names_and_notes:
                 
-                if not isinstance( item, HydrusData.LIST_LIKE_COLLECTION ):
+                if not HydrusData.IsAListLikeCollection( item ):
                     
                     continue
                     
